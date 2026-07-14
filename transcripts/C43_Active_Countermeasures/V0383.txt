@@ -1,0 +1,1098 @@
+0:00
+like right at the top of the hour. So, but with that said, hey, welcome to Fireside Fridays. I'm Chris. I will be
+0:07
+your host. Uh, this week we're going to be talking about firewalls. If you want a copy of the slides, they're in the
+0:15
+Discord fire content channel. Uh, please feel free to go help yourself out on that one. So, thank you to all of our,
+0:22
+you know, wonderful team of companies. And today's just going to be lecture. This is actually kind of a two-parter
+0:28
+because there's just too much content around firewalls to fit into one week. So, this week I'm going to kind of talk
+0:33
+about firewalls in general. Next week I'm actually going to have you set up some firewalls and do some testing
+0:40
+through them. Um, I'll get I'll talk more about that when we get towards it towards the end of the day. So, when you
+0:46
+talk about firewalls, when you talk about controlling traffic, they they tend to fall into two categories. We
+0:51
+have packet filters and we have proxies. and they're very different in the way that they interact with the traffic
+0:57
+that's going by and I'll I'll kind of dig into deep them deeper as we go through. Um there are also hostbased
+1:04
+firewalls. I'm not really going to be covering those today. Uh we've got some hostbased security content that's going
+1:10
+to be coming up in another month or two. So I'll get back into those at that point there. Typically hostbased
+1:16
+firewalls work pretty much like what we're going to discuss with packet filters. uh the exception being is that
+1:21
+some of them actually give you uh some control over the application that can run as well since the software is
+1:28
+running on that endpoint. It can not only look at you know what ports and what types of protocols are going over
+1:33
+the wire but it can use look at what uh applications are actually accessing them. So you could go in and you can say
+1:40
+hey you know Chrome can talk to TCP 443 but you know Firefox can't for whatever
+1:45
+reason. So, we'll get into those a little bit more, like I said, couple weeks out. But packet filters are basically
+1:53
+routers with the ability to control what traffic is allowed to pass through them.
+1:58
+So, a packet filtering firewall has to be in line, meaning it has to be along
+2:04
+the path of where you want to control traffic. If you put it out to the side, it's not necessarily going to do you any
+2:09
+good. So, it's got to be in the path. and it acts like a router in that it's going to route traffic across it, but it
+2:16
+gives you that additional functionality being able to create rules that describe what things should be allowed to pass
+2:22
+across it and which things will not be able to pass ac across it. So, you know, as the slide says, acts a bit like a
+2:28
+traffic cop in that aspect. Proxies totally different. with a proxy, it's
+2:34
+actually interacting directly with the application layer and it's typically acting like an application that's
+2:42
+associated with that protocol. So, for example, if it's a um excuse me, if it's
+2:50
+a if somebody's using a web browser, they may be talking to something they
+2:56
+think is a web server, but it's actually just a proxy. and then the proxy will terminate that end of the connection
+3:02
+acting like a server and then it may turn around and actually act like a web browser client when it talks to the real
+3:07
+server on the other side of it. I'll get into those a little bit more as we go through. So when you get into packet
+3:13
+filters, you typically have three possibilities and how to interact with that traffic. The first one is permit.
+3:20
+That one's pretty straightforward, right? So this is our role that says, hey, this traffic can go off and and do
+3:25
+this certain thing. So it can talk to TCP80, 443, whatever it is we want to go through and create a rule around.
+3:31
+Typically the constraints of the rules are around uh IPs and port numbers. So I can go in and I can say hey anybody who
+3:38
+wants to talk to port, you know, 443 can do that, but they can't talk to port oh,
+3:44
+I don't know, you know, UDP 500 or something like that. Drop is the
+3:49
+opposite of permit in a way. It's saying, "Okay, we're not going to let
+3:54
+this type of traffic pass through." So, I may have a web server that has a web
+4:00
+server process running on it and an SSH server process running on it. And I want people on the internet to be able to
+4:06
+access the web server but not access the SSH server. I only want that to be
+4:12
+accessible locally. So, I might have a rule that permits the web traffic but doesn't let the SSH traffic get through.
+4:20
+Now drop is the most common way we deal with traffic we don't want to pass
+4:25
+through and technically it breaks the RFC's by that I mean when you go back to
+4:30
+the original RFC's and you look at you know what are the acceptable ways to handle traffic if you don't let
+4:36
+something through you're supposed to return an administratively prohibited error you can rate limit the response on
+4:42
+that if you want to but you're supposed to send back something that says hey the the service you're trying to get to
+4:49
+there's a device on the way not letting you get to it. It might be running, might not. That doesn't matter. You're not allowed to access it. So, drops
+4:57
+aren't supposed to happen, but we do it anyway. Um, there's a misnomer that by
+5:03
+dropping traffic, we're stealthing the firewall. You know, I I I've heard that
+5:08
+way too many times. Oh, you drop rules, hide your firewall. No, they don't. You know, we talked about TCP and we talked
+5:15
+about how if I try to talk to a TCP port, if the port's open, I get back a sin act. If it's closed, I get back a
+5:22
+reset act. If it's offline, I get back a host unreachable. You know, I can go through a bunch of different errors I
+5:28
+might run into, but the only condition that will cause nothing to come back at all is a firewall. So, by dropping
+5:35
+things, you're kind of advertising that you have a firewall. It's not stealthing it. Uh, but no response is coming back.
+5:43
+Reject is the one that we're supposed to be using. And personally, I like using
+5:49
+it when I can kind of mess with what comes back. So reject is we're not still
+5:54
+not going to let it through. But like I said, we're going to send back some sort of a response that says, "Hey, this isn't being permitted to get by." For
+6:02
+most firewalls, when you set up a reject rule for a TCP, it'll send it'll try and
+6:07
+send back a TCP reset, faking and pretending it was actually the host that
+6:13
+sent it back. So, it'll change the uh source IP address and that type of thing. For everything else, it'll kick
+6:20
+typically kick back an admin prohibited. Some firewalls like net
+6:26
+filter give you the ability to control what type of reject messages you use.
+6:31
+And one of my personal favorites is host unreachable. So if somebody's trying to get to my web server and they're trying
+6:36
+to hit any port but the web server port, their tool gets an error message back
+6:41
+that says, "Hey, sorry, that box is offline right now." And a lot of times you can disable scanning by sending back
+6:48
+these these, you know, error codes that pretend that the host is offline when in
+6:54
+fact it actually isn't, which is kind of neat. Uh, let's see. drop for traffic
+6:59
+directly send a firewall i.e a scan. Well, again, Capgar, I'm kind of I'm
+7:06
+more of a reject guy. What I found, and now this is going to sound weird, what I have found is that most tools, if I send
+7:15
+back a host unreachable, even if it's the source IP address is the actual
+7:21
+host, that tends to fool a lot of tools into thinking the host is offline.
+7:27
+It's kind of weird to me because like if the host tells you, hey, I'm offline
+7:32
+right now, that's still looked at as an ICMP host unreachable. Therefore, the host must not be there. Uh just the way
+7:39
+the software tends to get programmed. Now, with that said, some tools like NMAP give you the ability to ignore
+7:45
+those. You know, you can tell end MAPAP, hey, I don't care if it's offline or online. Scan the whole damn thing
+7:50
+anyway. And you know, that might circumvent some of these errors that are coming back. At the very least, you
+7:56
+should be using reject for anything outbound that you're filtering because that's going to allow the application
+8:02
+that's trying to get out to return faster and not sit there in a hung state
+8:08
+for some sort of a response to come back. Possibly dumb question. Was drop
+8:15
+designed to do if not what we use it for? Well, it was uh it was designed to
+8:21
+be an option. I think it's a misunderstanding about how the
+8:27
+protocol works that led to that mistaken rumor. You know, I think folks felt
+8:32
+like, you know, oh well, if we send nothing back, they have no way of knowing we're here. You know, it's kind of like sit if you sit there quiet and
+8:39
+don't say anything, people might not notice you. You know, and I think they looked at it that way. But when you understand how the protocols actually
+8:46
+work, we always try to generate errors when something goes wrong. when errors don't get returned that that is actually
+8:52
+a suspect state. Uh, let's see. But responses that speeds up a scan, right?
+8:57
+Um, well, maybe. Again, it kind of depends on the scanning mode and the
+9:03
+tool you're using. But if, like I said, if I'm returning back a host unreachable, a lot of tools are going to
+9:09
+look at that and say, "Oh, that host is offline. Okay, I'm not going to bother scanning the rest of the ports." So, does it speed up the scanner? Sort of.
+9:16
+You're right. It gives up quicker. It doesn't find the actual open ports, but it does give up quicker. Um, you know,
+9:23
+would that speed it up? Yeah, you could argue it does, but it's also going to get back erroneous data. I like to I
+9:29
+like to kind of mess with the the attackers as much as I can. Anytime I can throw back like, you know, weird
+9:36
+stuff to them, I like to do it just because they spend so much time making our lives miserable, I don't think we
+9:43
+return enough in kind. Uh, one of my other favorites is, you know, and again, this is something you can do with Net
+9:48
+Filter. You can go in and you can say, "Hey, anything with a TTL of five or
+9:54
+less, quietly drop that packet or reject it or whatever. You reject it with a host unreachable." And what that does is
+10:02
+that makes that firewall go from looking like one hop to looking like five. So if
+10:07
+somebody's trying to trace route into your environment, they'll trace past the router. They'll get to the firewall. The
+10:13
+firewall will act like, you know, five hops of, hey, yeah, you still couldn't get to that web server yet. And then you
+10:20
+get to the web server and now it makes your perimeter look different. And you know, can the attacker figure out it's
+10:25
+fake? Maybe. It takes more skill. It takes more time. Again, anytime we can do something to make their lives more
+10:30
+difficult, that's only us stepping up to the game because, as I said, they invest a lot of time in messing with us. And I
+10:37
+think we fall flat on that. We we we don't return the favor enough in
+10:42
+kind. All right. So, let's talk about the different types of of uh static firewalls or excuse me, packet filtering
+10:50
+firewalls. So, the first type of of packet filtering firewall is referred to as static. What static does is it
+10:58
+pattern matches on a per packet basis. It has no concept of state. What do I
+11:05
+mean by state? State is some semblance of a memory of what may have transpired
+11:12
+between these two systems before. In other words, with a static packet filter, I can't say, "Hey, my internal
+11:20
+system sent a packet to that web server out on the internet. So, I should let the reply back in from that web server
+11:27
+out on the internet." It has no way to remember that first packet. So, when it receives a reply from that web server,
+11:35
+it has to all it has to work with is what's in that packet to decide whether
+11:40
+it should actually let it through or not. this becomes problematic because if
+11:46
+somebody starts crafting packets that may allow them to circumvent their firewall rules. So static so the upside
+11:53
+of static it's very fast it's very efficient. The downside of it provide I it's the most challenging
+12:01
+to work with because you end up having to make your firewall look a bit like Swiss cheese. So for example, I said,
+12:08
+"Hey, you know that web server, you know, needs to be able to send a reply back to that client." So with a static
+12:14
+packet filter, what would that rule look like? Well, what that rule would look like is I would have a rule that says,
+12:20
+"Hey, anything coming from the internet that doesn't look like connection establishment, meaning sin is turned on
+12:26
+by itself, go ahead and let that through." Well, that could be a reply
+12:32
+from the web server. That could be somebody doing an axe scan or a fin scan or some sort of scan where sin isn't
+12:38
+turned on by itself. Could even be like a sinf fin scan, right? That's still not sin turned on by itself. So static is
+12:45
+fast and efficient, but you end up with a piece of Swiss cheese because it doesn't do a very good job of giving you
+12:52
+the flexibility to control the control the traffic properly. Uh let's see. Network 6 says, "When I think about
+12:59
+[Music] uh when I think about what Chris lent me in webinar lent me in webinars, when you
+13:06
+scan stuff is not sin scanning faster." Um, usually, yeah, we kind of talked
+13:14
+about that when we got into scanning where you can do a sin scan, you can do a fence scan. Technically skins sin
+13:21
+skins tend to run a little faster than trying to use some sort of alternate flag
+13:27
+combination. So again static filtering this is our most rudimentary way of doing uh packet
+13:34
+control. So to kind of give you an example right let's say we were kind of running some tests against a static
+13:40
+filter. What would we expect to say? Well if an unsolicited connection establishment comes in from the internet
+13:47
+it's going to drop that. Right? have since turned on by itself. Everything else is turned off. If I have a firewall, let's say I have a policy that
+13:53
+says, "Let my internal users go out to the internet, let replies back in, but
+13:59
+don't let back in connection establishment." If someone tried to send connection establishment past the
+14:06
+firewall, the firewall is going to actually block that. It'll let Excuse me. Sorry, got something
+14:13
+stuck in my throat today. if uh outbound HTTP sessions or HTTPS sessions, it's
+14:19
+going to permit those through. Okay. Where it's going to start falling down, like I said, is anything that looks like
+14:25
+a reply coming back because that could be a legitimate reply. It could be somebody messing with the TCP flags, you
+14:32
+know, turning Sin and Finn on at the same time or only turning on the ACT flag or only turning on the, you know,
+14:38
+Finn flag or whatever. Um those are going to be able to punch through our
+14:43
+firewall because again we got to let all replies through just in case. Uh
+14:48
+unsolicited TCP FIN. Yep. That's going to sneak through. Inbound traffic with the source IP address of the internal
+14:55
+network spoof may be permitted. What I mean by that is the firewall doesn't automatically know what's internal,
+15:01
+what's external. You could fix this with a rule. I could create a role depending
+15:06
+upon the firewall. I could create a role that says, "Hey, my internal network address space." If I see that trying to
+15:13
+come in from the internet as is and it's listed as the source address, don't let it through. And static could take care
+15:19
+of that. I got it in kind of orange here because you got to actually know to worry about that and write your own rule
+15:26
+to kind of deal with it accordingly. Now with stateful packet
+15:31
+filters, we have the ability to remember earlier packets and make make traffic
+15:39
+decisions based on that information. So for example with a stateful packet
+15:45
+filter I might have a static rule that says let anybody go out to the internet
+15:52
+and I might have I might then go in and say hey for any traffic coming from the
+15:57
+internet look at my state table and if the reply matches something in the state
+16:03
+table let that through. So to give you an example, I send a sin packet to a web
+16:09
+server, right? That matches my outbound rule that says let anybody go out and that's fine. And then a state table
+16:16
+entry gets made that says, okay, Chris's system was at, you know,
+16:22
+192.168.1.10 and he was coming from port 1234 and it was going to port 80 and IP
+16:28
+address 1.2.3.4. So now if I see 1.23.4 4
+16:35
+responding from port 80 to port 1234 at
+16:42
+192168.1.10, I know to permit that throw. But if I see any other IP address trying to hit that port on that system,
+16:49
+I'm going to go through and drop it. So, one of the things that kind of happens with the stateful firewall that a lot of
+16:55
+folks miss is that your rules are that you see in your rule base are not
+17:00
+necessarily the first thing being processed. Most commercial firewalls
+17:06
+will process the state table first and if they don't see a state table match, then they'll get into actually matching
+17:12
+against the rules themselves. And that whole process tends to be kept kind of invis invisible from you. Now, with that
+17:19
+said, if you use something like Net Filter, the firewall that's built into Linux, you get to decide when you want
+17:25
+to process that state table. Most people choose to do it first because there's more replies than initial, you know,
+17:31
+start a session packets. So, that tends to be more efficient. But if for some reason you wanted to make sure that
+17:38
+things got filtered out, you know, and not matched against the state table, you could process the state table at any
+17:44
+time that you wanted to. So you get a little bit more control with something like that. Well, this is awesome because
+17:50
+now that hole we had, you know, we had to make our firewall look like Swiss cheese to let in replies. We don't need
+17:56
+to do that anymore, right? All we need to do is define what we want to let
+18:01
+through and the firewall will automatically assume anything we let through, we must want to see the replies
+18:08
+coming back and the state table will take care of that. The exception is ICMP
+18:15
+errors, right? So let's say I'm going to port 80 on
+18:21
+1.2.3.4 and I get partway there and back comes a time exceeded in transit. Well,
+18:28
+I said the state table is made up of the source and destination IPs and ports
+18:33
+that are talking to each other. That MP unreachable isn't going to match any of those state state entries. So, with a
+18:42
+stateful firewall, even though I can let replies back in, I'm still going to have problems with things like ICMP errors.
+18:49
+If I try to get to let's say UDP port, you know, 123 and
+18:56
+um you know that port, let's say uh let's say DNS port, that's one everybody's familiar with, UDP 53,
+19:02
+right? So, let's say somebody sends something to UDP port 53 to talk to what
+19:08
+they think is a remote DNS server, but that port's closed on that system. What's going to come back as an ICMP
+19:14
+port unreachable? Well, again, the state table entry is going to be the source
+19:20
+destination IP and port numbers based on UDP. When ICMP comes back, well, that's
+19:27
+different. That doesn't match the state table. So our state uh stateful packet
+19:32
+filters fix the reply problem but it still has issues with things like ICMP
+19:39
+errors. Uh NAT and PAT rules are generally match first then state table is applied um in in in a commercial
+19:47
+firewall. That's exactly right although I haven't talked talked about NAT and Pat yet. I'm going to get to that towards the end of the
+19:53
+presentation. So like I said our limitation here is that related traffic
+19:59
+like that port ICMP port unreachable like that ICMP host unreachable like
+20:05
+that ICMP time exceeded in transit those are related by related I mean they were
+20:11
+caused because of that session but the packet doesn't match the original session you know it's ICMP instead of
+20:18
+TCP it's coming from a different port than uh excuse me a different IP address versus what the original uh destination
+20:25
+IP address was do I care about ICM MP I
+20:31
+do because we kind of end up in a position where we're back to dealing
+20:36
+with Swiss cheese again where we say we're going to let it through all the time and we're not going to let it through at all. It's not as bad as what
+20:43
+we were dealing with with a static versus uh with a static firewall where we had to let replies back in all the
+20:50
+time. And if we didn't do that, our communication sessions would just never work. Right? If you let traffic out, but
+20:56
+you don't let anything in at all, it's it's just you might as well not have an internet connection because you're not
+21:02
+letting any of the replies back. The reply is going to be able to make it through. Well, with ICMP errors, your
+21:08
+system will still work. It'll just run slower, right? Rather than getting that
+21:14
+destination host unreachable error to tell you, hey, don't bother trying that system again, it's going to try again
+21:19
+and then double the timeout and try again and double the timeout, try again, so to speak. So things will run slower.
+21:25
+They won't run as well if you're not letting through ICMP, but you can at least still be functional. But it'd be
+21:31
+nice if we could kind of take care of ICMP as well. So one of the interesting things
+21:37
+about related traffic is it's in the payload. We talked about this when we talked about ICMP, right? We said
+21:43
+anytime an ICMP error gets generated, the packet that caused that error to get generated is down in the payload. So if
+21:51
+our state table could match on information in the payload versus the IP
+21:57
+headers, that would help us fix this problem. Well, this is where stateful
+22:02
+inspection comes in. So stateful inspection is stateful packet filtering
+22:09
+plus the ability to look at pattern match within the application layer and
+22:14
+use information there to be able to make good decisions. So again to go back to
+22:20
+this one, right, we originally had a UDP packet that was coming from this upper
+22:26
+port number going to port 389. And what came back was a UD ICMP error message
+22:33
+saying, "Sorry, that port is unreachable. You can't get to it." So, if I had a firewall here, right, and I
+22:40
+saw the original packet that, you know, came from here and went to their type, excuse me, uh, came from here and went
+22:47
+to there type of thing and said, well, I sent a UDP packet, but this is an ICMP
+22:53
+coming back. With a stateful packet filter, I'm hosed because again, I get to let them through all the time and not
+22:59
+let them through at all. But with stateful inspection, I can say, "Hey, anytime you see an ICMP type 3 error,
+23:07
+some sort of host unreachable error, don't match the IP headers against the
+23:13
+state table. Offset into the payload here. Look at this value, which is the
+23:19
+header that caused that error to take place, and use that information to match
+23:24
+against the state table. And if you see a match, let it through. If you don't see a match, don't let it through. Uh,
+23:31
+let's see. Chris, on a commercial type firewall, if stful and if set to pass
+23:36
+through mode, does it still perform stateful inspection?
+23:42
+Um, depends on how they define pass through mode. Um, that would be a lot.
+23:49
+So for some vendors when they talk about pass through mode, what they try to do is they try to act more like a bridge
+23:55
+than a router, but they're still implementing their firewall code in a normal fashion. But I can't guarantee
+24:01
+that every single commercial product is going to work that way. Uh that just seems to be the most common implementation I've seen. So stateful
+24:09
+inspection is where we want to be. And not only does it fix things like um does
+24:14
+it fix things like ICMP, but we have complex protocols like FTP. You know,
+24:20
+FTP sets up a command session to TCP port 21 and then when we want when you
+24:26
+want to transfer information, it negotiates what ports to use outside of
+24:31
+that. Right? So TCP21 is where we'll log in, where we'll send a get command or a
+24:38
+put command or that type of thing. But when we actually need to transfer a directory listing or you know file
+24:45
+content that needs to set up a second channel that data can't be transmitted through the command channel itself. Well
+24:52
+those command those data transfer channels those data sessions are negotiated on the fly. So we can't
+24:59
+really predict what'll get used to be able to set up firewall rules in advance. So with stateful inspection, we
+25:07
+can say, "Hey, this is what an FTP session is, and it's going to negotiate a secondary channel in this session
+25:14
+here. Here's how to look for that information." So you can now create a permit rule in order to be able to let
+25:20
+that information through. So again, stateful inspection. Now, we can get into the payload and we can pattern
+25:27
+match on certain values that we go in and we uh program in.
+25:34
+So stateful inspection is implemented on a per application basis. So I might
+25:42
+statefully inspect FTP and ICMP errors but I may not statefully inspect HTTP or
+25:51
+echo request echo reply packets or SMTP traffic or DNS traffic or whatever. So
+26:00
+inspec stateful inspection is on a per application basis. It doesn't apply to
+26:06
+the in to the firewall at its entirety. So when you're looking at a stateful
+26:11
+inspection firewall, one of the things you got to ask the vendor is what protocols do you statefully inspect? And
+26:18
+so long as they inspect at least one of them like FTP, they can call themselves a stateful inspection firewall. If the
+26:27
+uh application is not statefully inspected, then we fall back on how is
+26:32
+the transport handled. The transport is where we get to decide are we going to
+26:38
+have handle it in a static format or in a stateful format, right? Is it going to
+26:44
+be a stateful packet filter or a static packet filter? So, if we can't do stateful inspection, how is that
+26:49
+transport handled? So, we may say, hey, TCP has flags. We don't need to worry about that too much. So we're just going
+26:55
+to do static filters, but if it's UDP, we'll be stateful for UDP packets, but
+27:00
+not not TCP. So again, this comes down to a vendor implementation. You got to look at how the vendor uh handles it. If
+27:07
+we don't statefully packet filter the transport, it falls back on static. So,
+27:14
+one of the dirty little secrets in the firewall industry is that when a vendor says, "We're a stateful inspection
+27:21
+firewall, they could statefully inspect one protocol, have static filters for
+27:27
+everything else, and they can legitimately call themselves a stateful inspection firewall." Now, some firewalls may do
+27:35
+that. They may only do one. Some may do 50. You know, you got to ask the question. And if they're not doing
+27:41
+stateful inspection, you got to ask how how are you handling the transport? Is it in a static fashion? Is it in a
+27:47
+stateful fashion? Because again, that matters, you know. So, it's not uncommon
+27:54
+to have a stateful inspection firewall that's actually using staticbased rules
+28:00
+for a lot of the possible traffic control. They tend to focus on like the TCP, UDP, ICMP stuff, and a lot of the
+28:07
+other stuff is just static. Right. It's static filters only to deal with and that's it.
+28:14
+No, no. You know, if I'm if I'm doing IPSec, I want to be able to say, you
+28:21
+know, hey, I only want to permit UD, excuse me, protocol 50, which is
+28:27
+ESP, to this particular address. I don't want to let it pass in every direction,
+28:32
+you know, or let it pass outbound from that device. I only want to let it in type of thing. I want that stateful
+28:39
+packet filtering control. I don't want to handle it in a static format. So you got to ask the vendor.
+28:45
+Now a lot of times whoever you're talking to at the vendor has no clue. They have no idea. So how do you figure
+28:51
+it out? The way to figure it out, test it. Go in and test it for yourself. That I've always been a I don't trust the
+28:59
+vendor to give me the right answer. I want to test it myself to find out. And
+29:05
+over the years doing that, I have been amazed at how much traffic gets passed
+29:10
+through. One of the things Checkpoint was well known for. Now, disclosure, I haven't used a Checkpoint firewall in
+29:17
+probably over 10 years. So, they may have cleaned this up since then, but back in the day, if you created a single
+29:24
+rule in a Checkpoint firewall that said anywhere one going anywhere, drop it. You could still get ICMP through. You
+29:31
+could still get UDP53 through. There was a bunch of protocols they would still, you know, anything that looked like RIP
+29:37
+traffic. There was still a bunch of stuff that would get passed. They just wouldn't log it if you had an anyone
+29:43
+going anywhere drop it rule. So I always like when I work with a new vendor product, create one rule, anyone going
+29:50
+anywhere, drop it, and now start crafting packets and see do these actually make it through to the other
+29:56
+side. As far as I'm aware, checkpoint is the only commercial firewall that's fully stateful. Um, I don't think that's
+30:04
+a true statement. I know, uh, Cisco has been stateful way back to like the Pix
+30:11
+days. Um, Net Filter is like Net Filter, my personal opinion, the free firewall
+30:19
+built into Linux blows away Checkpoint. There's so much more I can
+30:24
+do with the free firewall built into Linux than you can do with the Checkpoint firewall. Uh, the downside is
+30:29
+you don't get the pretty gooey. Now, there are some folks that have built a pretty guey for net filter, but it tends
+30:35
+to dumb it down to like the checkpoint level. So, yeah, I've mentioned a lot
+30:42
+about net filter and we'll actually play around with net filter in the webcast next week. Uh we'll we'll go through and
+30:48
+we'll kind of look at, you know, how can you create rules and you know, what do they look like when you start testing it
+30:53
+with traffic? U this honestly is my favorite firewall. You can't bre beat the price point. It's built into Linux.
+31:00
+Uh but the flexibility on it is just amazing. You know, I can do things like I can say, okay, permit traffic to the
+31:08
+web server, but I'm going to rate limit every source IP address so no one IP
+31:15
+address can ever do that system and it's just built right in and it's there for free. Um there's a ton of different
+31:21
+expansion modules that have already been pre-built and quite honestly, it's not that hard to go in and kind of build
+31:26
+this stuff yourself. I mentioned one of the things I like about net filter is the ability to customize the reject
+31:32
+message. So I find that I actually get a lot of attackers to back off simply by saying hey host unreachable sorry that
+31:39
+host is offline even though it's actually not. Uh so you can do a lot of cool things with it and it is a full
+31:46
+stateful inspection firewall. It it understands FTP. It
+31:51
+understands last time I looked it had about a dozen different protocols that it was inspecting.
+31:58
+So, I keep talking about testing a firewall. Testing a firewall. What do I mean by that? Well, what I mean by that
+32:05
+is a tool to create packets on one side and a tool to listen for packets on the
+32:10
+other. Does it make it through? So, like I said, I like to start simple. Anyone going anywhere, drop it. And now I'll
+32:18
+start generating packets on one side, seeing if they make it through to the other. And, you know, you can run
+32:23
+through a bunch of different TCP ports, bunch of UDP ports. You can try IC unsolicited ICMP error messages. You can
+32:30
+try spoofing the source IP address of the internal network. There's all sorts of things you can go in and try to see
+32:37
+does any of that make it through to the firewall to the other side. And like I said, I've actually been unpleasantly
+32:44
+surprised by my results of that type of testing in the past. Uh source routing is another one that's kind of good to
+32:51
+test. go in and use loose source routing where you say, "Hey, you know, let's say you've got port 80 open on one system,
+32:59
+but you've got port 22 open on another. You can actually do some uh loose source
+33:05
+routing with some uh and over and some fragmentation to see if you can initially make it look like you're
+33:11
+trying to get to port 80 on the first system, but then change it to port 22 on the other and does the firewall fall for
+33:17
+that?" Now the other thing you get with uh packet filters is network address
+33:24
+translation or the ability to rewrite information in those packet headers to
+33:30
+be able to facilitate the fact that you might be using private addressing internally. So if I send traffic from
+33:38
+192168.110 that's a private address. If I try to let's say get to Google right
+33:43
+let's say I try to get to one of Google's uh DNS servers uh 4.4.4.4 for
+33:48
+that packet will make it to that system. But when that system goes to reply, it's
+33:56
+a private address. So there may be a number of static routes that point to
+34:01
+default routes that are close to the server trying to reply, which means it might make it three or four hops, but
+34:08
+it'll eventually get to a BGP router. And when the BGP router sees it's trying to get to 19268.1.10,
+34:15
+10. It says, "Hey, I don't have a route entry for that because it's a private address. You're not allowed to route that in the BGP routing tables. So
+34:22
+therefore, I'm going to kick back a host unreachable. Sorry, can't get there from here." Type of thing. So the server will
+34:28
+receive that error. So my packet makes it out with a private address stamp to it. I just don't get the reply back
+34:35
+because there's no way to route it back. Well, this is where network address translation comes in. I can go in and I
+34:41
+can re I can tell the firewalling device, hey, when my when my traffic
+34:46
+leaves the network, change that source IP address to be something legal. Change it to
+34:52
+something else. And there's all sorts of ways you can go in and kind of do this. And I'll I'll kind of talk about some of
+34:58
+them as we go through. So there's port forwarding, right? So with port forwarding, what I'm
+35:04
+doing, this is more used inbound versus outbound. With port forwarding, I say, "Okay, anything going to port 80 on the
+35:11
+firewall, I'm going to send it to port 80 on the web server, which is located at this IP address right here." So, all
+35:18
+I'm doing is any traffic that's going to a specific IP port combination, I'm always going to forward it off to some
+35:25
+remote host many to one. So, I can say, "Hey, all my internal systems when they
+35:30
+go out to the internet, I want them to use, you know, 1.23.5."
+35:35
+So anybody leaving the network looks that way. Now, we have a potential conflict when we do that, which is if
+35:43
+I'm rewriting that source IP address, that works great right up until I have
+35:48
+two systems trying to communicate at the same time and they both randomly happen
+35:53
+to select the same source port number because now if they So, I've got a uh
+35:59
+one system using source port 1 2 3 4 and now I have another system using source port 1 2 3 4. Well, if the firewall
+36:06
+changes the source IP address to always be that same legal IP address, and it does it on both, when that reply comes
+36:13
+back, it has no way to know which one to send it to. So, firewalls have a nice little trick for that. What they do is
+36:19
+they'll change the source port. Some firewalls do it all the time automatically. Some firewalls will only
+36:26
+change the source port if it absolutely has to because of a conflict like the one I'm talking about now. Again, that
+36:33
+comes down to the implementation of the firewall itself. But the idea is now when something comes back to that legal
+36:39
+IP address, the firewall says, "Oh, well, there's actually multiple systems hiding behind that legal IP. What port
+36:47
+is it trying to respond to?" Oh, that port maps to 1921 168.1.25.
+36:53
+Okay, I'm going to change the IP address to that IP and I'll change the the destination port back to the port that
+37:00
+that system was using. So that's typically how you're going to see many to one implemented. Uh you can also
+37:07
+usually do one one where I go in and say, "Hey, my web server, you know,
+37:13
+192.168.100, anytime that goes out to the internet, that gets mapped to
+37:19
+1.23 uh 1.2.3.6, six, you know, some legal address and now anything going to
+37:24
+that legal address that goes to that web server um net address pooling. So what I
+37:31
+can do with that is I can do one one address translation but I can do it as a
+37:36
+pool and I can rotate through. So if I need to use a fixed IP for an internal
+37:42
+system for some reason I can do that through this through nap pooling. So with nap pooling I go in and say okay
+37:48
+everything from 1.2300 2.3.00 to
+37:55
+1.23.199 is a pool of legal addresses available for my users to assume when
+38:00
+they go out to the internet and now that'll keep that one to one mapping. The challenge there is what if I have
+38:06
+more systems than I have in the pool? Well, that may not work. You may end up
+38:11
+with systems that are trying to communicate. There's no addresses left for them to be able to communicate with. So you don't see address pooling used as
+38:18
+often these days because we've gotten a lot stricter with how many legal addresses get uh added to
+38:25
+everybody. Most services updated work well with NAT. Yeah. So like one of the things we used to run into is uh
+38:33
+IPSE assumed the source and destination port would always be
+38:38
+UDP500. Well, if I'm trying to do many to one NAT and it changes that source port, ipseack would immediately break.
+38:46
+So, they rewrote the RFC's to have a little bit more flexibility to say, "Hey, that might be on that port, it
+38:52
+might not." Uh, DNS used to do the same thing. They back in the day, clients
+38:58
+used an upper random port number, but servers always used a source port of 53.
+39:04
+So when two servers were talking together, it was going from UDP53 to UDP553. Well, again, if I ended up going
+39:12
+through NAP, that would break that. So they changed the spec. So I'm not aware of any services that break if you change
+39:20
+the source port anymore. I think we've pretty much fixed them all. But if you're using some really some
+39:26
+proprietary protocol uh and it's not working through NAT for some reason, this is one of the places
+39:33
+to check packet filter firewall logs. So
+39:43
+um firewall logs tend to be fairly minimal, right? They'll tell you source
+39:49
+IP destination IP source destination port. Here's the time it was seen. Here's what I did to it. And that's
+39:55
+about it. Okay, that sounds good. But when did that connection stop? Is
+40:03
+there rate limiting in place? Like one of the things I've seen firewalls do is they'll rate limit how often they will
+40:10
+log sessions between two different systems if the port numbers stay the same. UDP is a big one for that. A lot
+40:18
+of times it'll say, "Hey, anything that's within the same 30- secondond window, I'm just going to call that one
+40:23
+session and be done with it." Well, maybe it is, maybe it isn't. It depends on the protocol. You know, with DNS
+40:30
+UDP53, you know, each one of those is going to end up being a unique session. So, you may not necessarily get log
+40:36
+entries for everything. You may not know when the connection stopped. uh one of the popular methods of C2 uh channels
+40:44
+these days or one of the popular implementations is to just keep the connection and hold it open. And the
+40:51
+reason for that is the firewall will log that initial sin packet but it doesn't
+40:56
+generate a log for anything else going on in that session. So you have no way of knowing did that connection only uh
+41:03
+last for a 100 milliseconds or has it been running for a 100 days. You don't know. A lot of times firewall logs won't
+41:10
+give you that information. Um, so it it's if you have them, it's definitely
+41:16
+good to use them, but they may not necessarily give you all the fidelity that you need. Uh, Chris, is stateful
+41:23
+inspection the same for IPv6 as IPv4, or is there additional checks for IPv6?
+41:29
+Awesome question. So it's handled in a similar fashion but
+41:35
+it's done a little bit differently. So for example uh just like throw out one
+41:42
+example with IPv4 if I don't want to let through IP
+41:48
+options some firewalls would just give me the ability to say hey anytime the IP
+41:54
+header is bigger than 20 bytes that's because options are set and I don't want to support options. So don't let that
+42:00
+packet through. And that fixes that problem. Well, with IPv6, we can't do that because IPv6 is a fixed length
+42:09
+header. So with IPv6, I need a way to be able to say, hey, the next protocol
+42:14
+field, these are the only valid values or, you know, don't let it through if
+42:21
+it's any of these values, but it's okay to let it through if it's anything else. Um, so the so the functionality ends up
+42:30
+being similar, but the implementation is going to actually end up being very different. That's an awesome
+42:38
+question. Okay, so that's packet filters. We also have proxies and
+42:44
+proxies are completely different. You know, with packet filters, we were talking about the kind of acting like a
+42:50
+router, the drop of the TTL by one. They might rewrite some information within the TCP uh IP headers, but it's
+42:58
+basically those same headers that's kind of getting passed through. It's just kind of dealing with it the same way a router would. Proxies, completely
+43:06
+different animal. Proxies act like a man-in-the-middle attack for all intents and purposes. Think of what a
+43:12
+man-in-the-middle attack is. I insert myself between your session. So, you think you're talking to some server,
+43:17
+you're actually talking to me, and the server thinks it's talking to you, but it's actually talking to me. That's how
+43:22
+a proxy works. It injects itself into the middle, but that's actually a feature. So, you know, here here's a
+43:29
+little little design here to kind of give you an idea. Now, it should be obvious for this to work properly, the
+43:36
+proxy needs to be application aware. So, that's one of the flexibilities you get
+43:41
+with pack filters that you don't get with proxies, which is with packet filters. If some new protocol shows up,
+43:49
+let's say, you know, protocol 200 is some new fancy protocol that folks want
+43:54
+to use with a packet filter, all I got to do is open up that
+44:01
+port or excuse me, uh, all I have to do is specify that protocol number and now
+44:08
+I'll have some semblance of control over it. But with a proxy, the proxy needs to be aware of the application. though if
+44:15
+something new comes out that the firewall doesn't understand you may not be able to pass that traffic using a
+44:22
+proxy though it does have some limitations to it. One of the strengths is you have a lot more control and a lot
+44:29
+better visibility as to what goes on at the application layer. So, for example, one of the things we're seeing these
+44:35
+days is attackers using um HTTPS as a command and control channel. And what
+44:42
+they'll do is they'll encrypt their data and then they'll wrap TLS around it and send it past your perimeter. And your
+44:48
+firewall will look at that and say, "Oh, it's going to TCP port 443. I'm allowed to let that through." Bang, it goes
+44:54
+through. So, that C2 is allowed to leak through your firewall. Well, with a
+45:00
+proxy, your client when it talks to the proxy, the proxy is going to act like a
+45:06
+web server. So, it's going to expect to see valid HTTP commands coming through.
+45:12
+And if it doesn't see them, it says, "Hey, this is not HTTPS. I'm not going to pass this
+45:18
+traffic." And it'll effectively break a lot of potential C2 channels, which is
+45:23
+kind of a nice thing. So on the plus side, it needs to be application aware because it's going to implement a better
+45:30
+level of security. On the downside, it needs to be application aware. And if it's not aware of your application and
+45:37
+how it functions, it's not going to be able to let it through. You're also more likely to run into a problem, right?
+45:43
+With um with a packet filter, I'm just blowing open a hole through TCP 80, TCP
+45:51
+443 in order to be able to support web activity. But with a proxy, it needs to be aware
+45:56
+of the application. What if the spec changes, right? What if some new RFC
+46:01
+comes out that you know you can get you can put and now you can punt, right? So
+46:07
+punt is a new HTTP command that we can go through and use. Well, if my proxy
+46:12
+doesn't understand what punt means, it isn't going to let that through. So you're more likely to kind of break into
+46:19
+break things if you know protocol changes take place and the proxy vendor doesn't keep up. So it's a little bit of
+46:25
+a balancing act. Uh proxies can also strip or add headers that the app doesn't understand. Yeah, CFGAR that is
+46:31
+absolutely a true statement. So one of the it can change fields. So for
+46:37
+example, I'm using a Firefox browser and I go out through a proxy and the proxy is premed to change it to look like
+46:44
+Chrome. Yeah, it can do that. It can change the user agent string as it goes by. No problem. So yeah, there's all
+46:50
+sorts of really cool things you can do with uh proxies,
+46:56
+but they tended to require a little more maintenance again because they're application aware again because they're
+47:03
+doing more than packet filters. And I think that's the part a lot of folks miss is they kind of look at packet
+47:09
+filter proxy. Well, packet filters tend to just work where proxies tend to be a little bit more problematic. And that
+47:15
+while that is a true statement, it's because the packet filters are doing less for you. They're not giving you the
+47:20
+same level of security, it also can be argued they're creating a single point of potential security failure. Right? If
+47:28
+all my users are going out through a proxy and an attacker can get access to that proxy, it's possible they could
+47:35
+start sniffing all the data that goes through it. So I got to make sure that box stays locked down. It can also be a
+47:42
+single point of performance issues, right? If all my users are talking to the web servers they want to on the
+47:48
+internet directly, all I'm doing is, you know, is is simple packet filter pattern
+47:53
+matching to decide what do I let through and what don't I and that's it. Well, if but if everyone is going through a
+47:59
+proxy, that proxy, you know, may be spinning up new processes for each connection going out to new each new web
+48:05
+server and that may be problematic. that may res uh exhaust resources on that
+48:11
+system. Um so again it can potentially be a performance gate. Sometimes it can
+48:17
+improve performance, sometimes it will degrade it. It really comes down to how
+48:23
+often are your users going to the same sites, right? Like if everybody in the office visits the 10 same 10 websites
+48:29
+out on the internet, yeah, a proxy is actually going to speed up their perceived internet speed, right? it's
+48:36
+going to seem like the internet is faster to them. But if I have 10 people and they're all going to different sites
+48:42
+all the time and none the two shall meet, yeah, I might feel like the internet's running a little bit slower
+48:47
+than it would if uh packet filter was being used. Would firewall protocol inspection
+48:53
+catch C2? Great question. There are vendors that try to
+49:01
+do that. The problem is it's signaturebased.
+49:06
+Meaning that what they tend to do is they say, "Hey, if this if I see this
+49:12
+string, right? If I see like the word PowerShell show up in the payload, don't
+49:17
+let that through." Well, maybe that's C2. Maybe somebody just talking about
+49:22
+PowerShell on a forum someplace. Who knows, right? So, they they tend to be a little bit more problematic because
+49:28
+they're kind of missing the context of how is that how is that string of characters being used? Is it being
+49:35
+executed as a command or is it just part of a sentence? And a lot of times packet
+49:40
+filters miss that because it's going in and just doing pattern matching. So, can they look for C2? Yeah, they can. But
+49:47
+sometimes pattern matching isn't enough to always be able to find it. Don't most proxies if they reach a traffic limit,
+49:53
+the default is to pass the traffic. No, because
+49:58
+um with a proxy it has to actually be able to service that application, right?
+50:05
+So again, web server proxy, right? It's acting like a web server for my clients. It's acting like a client when it talks
+50:11
+to the server. It needs to be able to launch that process. If it can't because it's run out of RAM or, you know, CPU
+50:18
+time or whatever, there's no way to get to the data on the other side. It needs an application to accept it and then
+50:25
+funnel it into the next process in order to be able to push that through. Good question though because I have seen that
+50:31
+question come up a lot. Um on my network I was able to bypass my firewall DNS by
+50:37
+switching from Chrome to firefox. Yeah, I I've seen that type of thing before, right? I've seen like um
+50:44
+so one of the popular ones I've seen is things like uh you you get an thread intel list that says hey these websites
+50:52
+on the internet these are bad don't let your users go there and now when a user tries to get to one of those websites
+50:58
+the f the packet filtering firewall will try and pattern match on that to see where is it going and if it sees that
+51:06
+fully qualified domain name or IP address it doesn't let it through well what a lot of folks don't realize is you
+51:11
+in most browsers will accept hex. So if I just put that website in in hex
+51:17
+characters instead of asky characters I can bypass a lot of those checks whereas
+51:22
+a proxy is not quite as easily fooled because I could give it hex but it needs
+51:28
+to translate that for the outbound process and the outbound process will see hey this is going someplace it
+51:34
+shouldn't be. Now, I've been talking mostly about
+51:39
+outbound proxies, but there are a thing called reverse proxies. And with a reverse proxy, what I do is I set up a
+51:45
+proxy in front of my web server. One of the nice things about this is these tend
+51:50
+to always run faster. Uh proxies handle uh try to
+51:56
+store everything in cache. It tries to store everything in active RAM. And as I'm sure we all know, accessing
+52:03
+something in RAM is always much faster than trying to access it off of a hard drive. So proxies tend to speed up web
+52:10
+servers as well as give you the ability to implement some level of protections. I can go through and I can say, "Hey, I
+52:17
+never want someone to try and write data off to my web server, right? I they can
+52:22
+get files off it. That's fine, but I don't never want them to try and send do the put command." Well, if I have a
+52:29
+proxy in the middle, I can tell the proxy, don't pass any put commands. Only pass get commands, you know, hey, I
+52:35
+don't even want them doing a head command for whatever reason. So, don't let the head command through either. You have that type of control with reverse
+52:41
+proxies. So, what you see for most websites today, and we do this setup with ours, is we have a web server, but
+52:49
+no one ever talks to the web server directly. What they do is they talk to proxies that are part of Cloudflare's
+52:55
+network that are spread out all over the world. So you're always accessing a proxy that's a bit more local to you.
+53:01
+And again, since proxies cache information, that access is going to be
+53:06
+faster. Now, there's a number of different ways I can implement a proxy. I can do it transparently, meaning the
+53:13
+end user doesn't know it's there. Typically, however, it tends to be uh it
+53:18
+tends to be uh some form of um non-transparent, meaning there's some something's changed. either it's DNS
+53:25
+I've you know put forwarded off some place or the client needs a specific configuration in order to be able to use
+53:32
+it. So the the there's some way of knowing a proxy is
+53:37
+in play but it is possible to do this transparently and I've seen folks do that. So you can uh so for example I
+53:45
+could set up a net filter firewall that is a stateful inspection firewall but
+53:51
+for HTTP and HTTPS traffic I'm going to use engine X and now I can tell the
+53:58
+firewall hey anytime someone's trying to go anywhere on the internet to port 80
+54:03
+or port 443 send it to that EngineX process that's running on you instead. So you can actually combine these in
+54:10
+certain situations as well. If you want to learn about more about networking, here's some good ones.
+54:16
+NIST has some really good firewall guidelines. I highly recommend going through and checking out that. So next week on Fireside Fridays,
+54:26
+we're going to be talking about firewalls again, but we're going to be doing some hands-on testing. So, I got a
+54:33
+couple of steps for you in case you want to prepare for the uh for next week so you can follow along with what I'm
+54:38
+doing. So, uh if you're on like a Red Hat flavored DRO, you know, change the
+54:44
+commands to use here appropriately, you know, using yum instead apt or a whatever the case may be. But all we're
+54:50
+doing is, you know, we're doing an update. The three tools we need is well, we need NCAA and we need HP 3. I pull
+54:58
+down wget just because hey, I'm using that in the command here. If you want to use curl, fine, go for it. You know, the
+55:06
+only thing I'm pulling down wget for is just to pull down this turbo. If you want to use curl for that instead, go
+55:11
+for it. Expand it out. It'll create a directory under your current location
+55:17
+called FW. And if you do an LSA in that directory, you should see something like this. So, what we're g what I've done is
+55:25
+I've automated everything. So, what we're going to do is we're going to run
+55:31
+a TCP and a UDP listener. And the listen script takes care of setting that up for us. So, you can go check out that script
+55:37
+and see what's going on in there. Once those ports are open, I can now go in
+55:42
+and I can implement some static firewall rules. And now we're going to check different ports to see how does this
+55:49
+thing respond while we go through and we run our scan script. Then what we'll do is we'll change it so that we're
+55:56
+actually uh using stateful inspection and then we'll do a comparison against that and see how it's different. So that
+56:03
+firewall testing I was talking about, I'm going to start introducing that next week, doing some hands-on labs, but
+56:09
+we're going to do it using only the loop back address just to try and keep things simple. Right? If I say, "Hey, so you
+56:16
+need to set up two servers with a firewall in the middle." Most people aren't going to be able to get that done. But hey, if all you need to do is
+56:23
+spin up a Linux box someplace, and it can even be a cloud instance, and that's fine because we're going to do all this
+56:28
+through the loop back interface, that makes this a lot more accessible for anybody. Is Windows native built-in
+56:35
+firewall, is that stateful or not? Just wondering. Also, if implemented uh IP
+56:41
+tables with WSL, is that better? Okay,
+56:46
+so to the best of my knowledge, the Windows firewall is static, but it also
+56:53
+lets you uh create some definitions around applications. So even though it's
+56:59
+not stateful, you get a little bit better control out of it that way. Um, as far as implementing IP tables under
+57:06
+uh under WSL, WSL does not control the I the
+57:14
+Windows IP stack. So that will work for
+57:19
+that virtual machine. It isn't going to actually protect the Windows interface
+57:25
+if you go through and try and do it that way. Cool. And that's it for today. So,
+57:33
+uh, thank you folks. I appreciate everybody for, uh, sharing your time with us today. Uh, like I said, I got a
+57:38
+hard stop. I got another one I got to jump into in just a couple minutes. So, we're going to call this done. But, if
+57:44
+you have any additional questions, the live chat channel is always here. We
+57:49
+have a freaking awesome community who's really helpful. So, if you have any questions, go ahead and post them there.
+57:55
+I will try and keep an eye out for questions, but usually someone else uh who's smarter than me in certain areas
+58:02
+uh jumps in and answers the questions relatively quickly. So uh thanks everybody. Enjoy your weekend and I will
+58:08
+see you here next week. Same bat time, same bat

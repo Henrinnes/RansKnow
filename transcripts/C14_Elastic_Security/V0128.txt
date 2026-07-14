@@ -1,0 +1,511 @@
+0:06
+Hey everyone, welcome back to  the Elastic coding sessions.   My name is JD and I'm a developer  advocate here at Elastic.  
+0:13
+For those who are new, Elastic  coding sessions is, is an   ongoing series where we show  quick and impactful coding   demos designed to make search  and AI work better for you.  
+0:21
+Today we're gonna be talking  about how to build an agenttic   rag assistant using Elastic  Search and the new agent builder  
+0:26
+and how these tools and  combinations help agents find the   most relevant information to complete its tasks. We'll be doing this in the context  
+0:32
+of fantasy basketball, but please don't hesitate to   extend it however you want. Um, you can easily apply  
+0:37
+the stuff we'll go over today to any other type of data sets you   want to tinker around with.   So feel free to engage with  us in the chat or share your  
+Why build an agentic RAG assistant
+0:44
+thoughts and questions in the comments below. I'll also be sharing some resources   in the description if you wanna learn more.  
+0:50
+So, let's dive into it.   Just a little bit of an agenda  of what we're gonna be going   through today. Um, we're gonna be  
+0:57
+talking about what's important in a fantasy basketball assistant   and kind of the limitations  around using raw LLMs,  
+1:03
+how Elastic Search and Agent  Builder helps out those,   um, those limitations. We're gonna be actually building  
+1:09
+that assistant with AgentBuilder.   We'll learn how to register tools, and we'll also learn how to build custom agents,  
+1:17
+and then we'll do   a quick demo on the using the built-in chat. Um, we'll also talk about how to expose your  
+1:24
+agent through MCP   and we'll plug it into uh cloud desktop. And hopefully at the end, we'll have a few  
+1:30
+minutes for questions.   And, um, so,   in fantasy basketball, the most important decisions  
+1:37
+or the most, um, the part that has the the most thought in it is   who to add to your, your basketball team because  
+1:44
+you only have a limited amount of pickups, right? So you want to be real precise with who you add   to your team.  
+1:52
+And what we want to achieve by  building this assistant is,   we want an assistant that can  give us quick insights and  
+1:58
+recommendations that are grounded in real data. So if I give it a query like who's a better  
+2:03
+pick up for my uh fantasy team, uh, LeBron James or Stephen Curry?  
+2:09
+Our agent will be able to grab  the data from our index, um,   the game stats, and base its  
+2:16
+recommendation, it's reasoning in that data. So we know that it's not just pulling random data  
+2:22
+everywhere, um, it's actually based on,   on real data. And  
+2:28
+We have two problems with using raw LLMs. Number 1, LLMs aren't great at math,  
+2:34
+and two, again, they, a lot of  times LLMs don't know where   to pull the data from, and um that can lead to hallucinations and that whole context problem.  
+2:43
+And How elastic search and agent builder.  
+Solving LLM limitations with Elasticsearch & Agent Builder
+2:49
+Um, help that out is that,   um, with the math problem,  Elasticsearch has aggregations  
+2:54
+built into it natively, so  you can find stuff like the   averages for a specific stat, um, and you could do that all  
+3:00
+within ElasticSearch already. And with the context problem.   Um, to expand on the  
+3:05
+problem a little bit, if you ask a raw LLM something like how many points did LeBron   average in his last 10 games,  
+3:11
+you know, it might just guess  or, you know, even worse, a   lot of times, it'll just hallucinate because LLMs aren't really built  
+3:19
+to engineer that context. They don't really know how to grab   the right, uh, the right data for,  
+3:26
+um, to ground their reasoning in it. And that's sort of the problem   that Elastic is trying to tackle with Agent Builder,  
+3:33
+because the, your agent is only  going to be ever as good as   the context you give it and in  a fantasy basketball or even  
+3:40
+an enterprise use case, bad context means bad   results and you need a way to guarantee that relevance.  
+3:48
+So, just a, uh, just a short little picture   on context engineering, it's not really one thing,  
+3:55
+um, but it's sort of a collection of practices, um.  
+4:00
+To curate the context for your  agent, and this is kind of   where Elastic shines, right? Elastic has always been  
+4:07
+great at relevance in search. Now with AI agents about,   it's about giving that same capability to agents,  
+4:13
+um, helping them to cut through  noise and retrieve the most   relevant data at the right time. So when you think of context engineering,  
+4:20
+think of it as relevance  engineering, and that's the layer   that Elastic owns. So again,  
+4:26
+LLMs are prone to hallucinate  without the correct data.   Bad data equals bad results, that's a no no, and we need a way to guarantee that relevance.  
+4:37
+And what we came up with is um Agent Builder, and it's gonna   be released on October 21 in tech preview.  
+4:45
+And what Agent Builder is, is  basically a framework to build   agents uh directly on top of your data. Traditionally, building an agent  
+4:52
+means wiring together an LLM, a vector database,   separate systems for logging and tracing that can take a lot of time to build,  
+5:00
+as you guys know, and integrate all those.   Um, so AgentBuilder kind of  integrates all that into the  
+5:05
+elastic stack, the data, the  tools, the reasoning loop,   observability, and here's a little bit of the architecture.  
+5:12
+So, with tools,   you can register tools that execute queries or actions and expose them with MCP.  
+5:18
+You can build custom agents  where you define objectives,   workflows, guardrails, etc. and expose that using A2A in the future.  
+5:26
+And it's all powered by the  tools you already know and love   from Elastic Search, which is,  as you know, built on top of  
+5:32
+your data. So   instead of building everything  manually from scratch, you  
+Context engineering & relevance
+5:37
+can focus purely what you want,  uh, on what you want your   agents to be able to do, and you'll have that peace  
+5:42
+of mind that its output is grounded in real data.   So let's get into it. Oh, quick note, uh, I am using  
+5:51
+a severalless instance of elastic search.   And, um, that's really cool  because we do offer a two week  
+5:58
+free trial of um. A 2 week free trial   without uh having to put in any types of payment methods, so you can easily just  
+6:05
+sign up and start tinkering around.   And once you have that up, you  should be greeted with a page   like this. And Agent  
+6:12
+Builder is actually not um enabled by default, it's still behind some feature flags, but we can  
+6:19
+uh enable it with one command. So all we need to do is head into   our developer tools here. Let's get rid of this  
+6:27
+uh boilerplate. And we're going to make a post request   to our Cabana settings. Inside the request body, we're gonna  
+6:50
+name a field for changes. Inside that  
+6:56
+We're gonna put agents. Builder  
+Setting up Agent Builder & importing data
+7:01
+Enabled, and we're gonna set this to   true. Alright, let's send this over.  
+7:09
+All right, so.   As long as you see the agent  builder enabled user valid true   here, you should be good. And if you look over to the left,  
+7:18
+you don't see anything about agents, right?   But if, if we have this enabled,  and we refresh the page,  
+7:23
+we should get a new option  in our navigation here.   So, we'll click into agents.  
+7:29
+But before we get started with  that, we're gonna need to get   some data into our indices, and um  
+7:36
+you could do this a few ways. You could do it programmatically   through um specific language clients.  
+7:41
+Uh, you could use the connect  to the language client, use   like a bulk API to ingest those, or you could just actually  
+7:49
+upload file, and we'll provide these files, uh, these sample data sets, um,   and we'll link them below,  so you can start tinkering.  
+7:57
+So all we're gonna do is select our files.  
+8:03
+First one is gonna be um sample MBA data.   Click to open that. We're gonna click import  
+8:13
+And we're gonna actually  go into this advanced tab.  
+8:18
+And make sure to pay   attention to what your mapping is, because if we want to run aggregations on specific  
+8:24
+fields like assist blocks,   points, we're gonna need   uh elastic search to see them as a numeric type.  
+8:32
+So, like long or double. Um, in order to run   those aggregations, yeah, like I said, you're, they're gonna need to be a numeric type.  
+8:40
+And one thing I do wanna change is game dates. Um, it is automatically formatting  
+8:45
+it already, but, um, to make it easier for our ESQL,   I'm actually gonna change this a tiny bit.  
+8:52
+So, I'll copy and paste this   for game dates. Well  
+9:10
+And that just makes it so that  we don't also include, um,   you know, the seconds and stuff. It just makes it easier when we build our  
+9:18
+uh ESQL queries uh as we'll see in a little bit. So we'll give this a name  
+9:24
+Sample NBA   data. And we'll click imports.  
+9:36
+Perfect. So, if you see all these green checks,   you should be good there.   And we are actually going to  head into Discover just to  
+9:43
+check whether we um have our   Data ingested correctly. We have our game date here  
+9:52
+showing up as a date type, so if you want to be able to search   through dates, you are gonna need to have this game date as  
+9:58
+um the date type. All of our, all of our   fields that we want to aggregate over are numeric types, which is good.  
+10:05
+Everything that we wanna  search keywords for are of the   keyword type. So  
+10:10
+That data set was ingested correctly, and we just have to do one more data sets.  
+10:16
+Now where is that option? So we're going to click upload file again.  
+10:22
+And this time we're gonna  do a data set for upcoming   matchups, which is just basically a list of upcoming games for each player in our data set.  
+10:31
+So we'll click to open that. Again, we'll click imports,   click on the advance tab. And again, we're gonna want  
+10:39
+to change the game date just so it's a little easier for us.  
+10:50
+Everything else looks good there. We're gonna name it  
+10:56
+NBA Upcoming   matchups, oops. Perfect.  
+11:04
+Hopefully we see we see those green checks. Amazing.  
+11:11
+So let's head back into Discover. To see  
+11:16
+If our data is there, it's in our index as the game dates,   opponent team name, player full name, player team name.  
+11:24
+All right, so our data has  been ingested correctly.   Now we can head into actually  building the agent, so we'll  
+11:33
+We'll head into the agent builder here and We do already include a built-in  
+11:39
+chat and you can already start chatting with your, your data here.   But we want, what we want to  do is um create our own agent  
+11:46
+and create our own tools so  that we have a little bit of   control over um everything that it runs, right?  
+11:52
+So just a little bit of an overview   of the tools we want to build. So if we give it a query like,  
+11:58
+who's a better pickup for my team, LeBron James or Stephen Curry?   Um, some of the tools we'll  need is to find the next  
+12:05
+upcoming matchup for each player. Then we want to find the historical   averages for each player against a specific opponents.  
+12:12
+And then we're gonna do the same  um for the season averages,   and those are sort of the, the  quick insights that we want  
+12:18
+um for the recommendations. So  
+12:24
+We're gonna go, we're gonna  head over to manage tools,   and as you can see, like I said,  it already includes a bunch  
+Creating custom tools for fantasy basketball
+12:30
+of built-in tools, um, like this, for example,   it'll generate an ESQL query from a natural language query,  
+12:37
+it'll execute that, it has tools to explore your index, your indices.   Um, but what we want to do is I have a bit more control, right?  
+12:47
+So we're gonna, we're gonna  initialize our own tool.   And again, we wanna find  the next upcoming matchup.  
+12:54
+So, we're gonna say,   find. Upcoming  
+13:00
+Match up, that's gonna be our tool ID. And the description,   you want to make this a natural language uh tool description,  
+13:07
+so the, the agent will be able to know kind of what the tool does.   So we're gonna say, finds  
+13:14
+the next matchup   for each player.  
+13:23
+And in here is where we can write our ESQL. So,   for, uh for those who are new  to ESQL, it's Elastic Search  
+13:30
+query language. It lets you search, filter,   and analyze data through across your indices.  
+13:36
+Um, pretty much like a, like a SQL-like syntax,   you can run fast, expressive  queries across logs, metrics,  
+13:43
+documents, or even vector data. So you can use it to filter, sort, join,   stats, aggregations, um, all in one pipeline.  
+13:51
+And again, what we want to do  is look through our, our data   sets, um, to find the first  game that they'll, that each  
+13:57
+player is gonna play. So we're gonna do   from. NBA coming matchup index.  
+14:06
+Oops! We're gonna do where?  
+14:12
+Player full name.   And we're gonna insert a  paras here for a player name.  
+14:24
+As you can see, sometimes it does uh infer   the parameters automatically, which is pretty cool.  
+14:32
+We're gonna sort By game dates.  
+14:39
+And the sort order is gonna be ascending. And finally, we are going to  
+14:52
+limit it to one, cause we just   want the first game. All right.  
+14:59
+So, we have our ESQL uh parameters here. We'll just give it a quick description of  
+15:05
+full player   name. It will be a text  
+15:15
+All right, so we player name, we'll save that.  
+15:25
+All right. So, as we can see here,   here's our, our tool that we created.   Perfect. Let's head back.  
+15:32
+We're gonna make another tool to find historical   averages against a specific team.  
+15:37
+So our tool ID we're gonna do. Historical averages against opponents.  
+15:44
+Fis Historical.  
+15:50
+Averages For each player   against  
+15:57
+a specific. Opponents.  
+16:03
+All right, for our ESQL, we are gonna do from.  
+16:08
+Our sample NBA data. And we're gonna do where?  
+16:18
+And again, we're gonna, we're  gonna pass and player full   name. Um, that's gonna be our first boolean filter,  
+16:32
+we're gonna do and.   Again, we want to do it against a specific team, so we'll have another parameter  
+16:40
+of opponent team name. And we're gonna say stats, and this is how we um  
+16:56
+start our aggregations. Stats over the field of.  
+17:02
+Games played. Actually, we don't need this.  
+17:12
+We can just go directly into, we want to see the average points.  
+17:20
+So we're gonna say For a field of average points,  
+17:26
+we're gonna take the average of the field for.  
+17:31
+Points We also want  
+17:36
+Assist All right.  
+17:49
+So if we infer the parameters,  we should have player name,   so full player name again. And opponent team name.  
+17:57
+So we can save that. Cool, now we can move on to  
+18:03
+the season averages. So we'll do   Season averages against an opponent for the description finds.  
+18:14
+Season averages.   For each player against a specific.  
+18:24
+Opponent. For our ESQL,   it's pretty much gonna be the same thing as our historical averages, um, with an extra  
+18:31
+boolean filter for   um game date for this, for the current season. So we're gonna do from.  
+18:38
+Sample NBA data. And   I'm gonna do. I do where?  
+18:50
+Again, play your full name. PAMs for a player name.  
+18:57
+And Opponent   team name. With a perm for.  
+19:06
+Opponent team name. And one extra boolean filter for  
+19:13
+game dates. And we're gonna say  
+19:21
+if the game date is greater. Or less than.  
+19:30
+2024, this was last season,  but again, you can change this   to to match the current season  depending on what your data  
+19:36
+set is. So 2024.   Around where the season starts. And  
+19:52
+Game dates. Less than or equal to.  
+19:59
+We're gonna do where where the  season pretty much ends, so   2025. Around June.  
+20:09
+All right. Again, we find   we want to find the stats. Get those aggregations.  
+20:18
+And we'll do average points.  
+20:28
+And Assist.  
+20:38
+OK. So let's infer those parameters   should be. All the same  
+20:46
+Let's save that. Perfect.  
+Building & configuring the NBA Fantasy Assistant Agent
+20:53
+So Now that we have our tool set.   We can go ahead and head back to the agents tab. We want to create a new agent,  
+21:01
+so we can give it some parameters, some guardrails,   um, basically a playbook of how to, um, of how to take queries and which tools to run.  
+21:12
+So, once you click that, some fields you can uh fill out is   uh the agent ID will do  
+21:19
+NBA Fantasy Assistant. And for the system prompt,   this is something that you're gonna want to kind of iterate over.  
+21:28
+Um, it really depends on the  model that you use on how good   it is at tool calls, how good it is at, um, At following directions,  
+21:37
+uh, with bigger models, usually  you don't have to be so   explicit in your instructions, um, but with smaller models, you're gonna be,  
+21:44
+you're gonna wanna be super explicit and kind of write down,   um, and, uh, instructions for every step. So, this might take a tiny bit of time.  
+21:54
+So I'll just copy over a prompt that I know   works and we'll just go over it. OK, so why this system prompt works,  
+22:05
+um, again, this is pretty much like a playbook, uh, for the agents, it tells it's um its role,  
+22:12
+it's primary function.   I say you're an NBA basketball expert, your primary function is to compare NBA players,  
+22:18
+we want to give it some guard rails. For, for example, in, in our sample data set,  
+22:24
+we only have these players,   so we do mention them there. We give it some input handling rules.  
+22:32
+Um, like if a player only  inputs one player, ask it to   clarify and add another player  from the list provided.  
+22:40
+Use the full team name.   And Um,   pretty much saying that if  it's anything outside of  
+22:47
+basketball, like, do not answer that question. So, also give it some instructions on tool usage.  
+22:57
+All right. And something to, to also note when uh  
+23:03
+when building a system prompt,   sometimes it's really useful  to give it an example output,  
+23:09
+so it kind of follows that example output. I have, uh, here in markdown because when   I do export this agent to another,  
+23:16
+uh, to a custom front end, um, I do want it to output in, in, in markdown, but you   don't have to do this  
+23:22
+if you're just wanting to use it here. So I say   next game info, and I kind of wanted to organize  
+23:30
+the information this way. And at the end,   give a fantasy recommendation. So, here you can also add some  
+23:38
+labels so that the um. So whatever you're using,   we'll be able to find these agents a little bit easier.  
+23:45
+We're just gonna save it there. Oh.   Will give it NBA fantasy assistance. And assistance.  
+23:55
+That's Compares   two players. And gives a  
+24:04
+recommendation. On   who to. Add to your fantasy team.  
+24:14
+Based on. Real   data. We'll save that.  
+24:27
+OK, now, now that we have that  initialized, we'll head over   to agents and we'll show you a little  
+Compare players in built-in chat
+24:33
+demo on using the built-in chat. So, on this dropdown,   oh, actually,  
+24:38
+forgot to do one thing. So, within, within um   your agents, you're gonna uh  have uh a tab for selecting  
+24:46
+which tools you wanted to have. Of course we're gonna want to include our.  
+24:52
+Custom tools that we built. I do exit out of the generating ESQL and uh.  
+24:59
+Actually, we do need to uh execute. Because sometimes it'll fall  
+25:04
+back on these built-in tools, and I don't really want it to do that.   Um, I don't need it to generate an ESQL query, um, I just need it to run my custom tools,  
+25:14
+so we'll save that.   Head back to agents. So like NBA fantasy assistants.  
+25:23
+And let's ask it a question like, who is a better  
+25:28
+pickup? LeBron,   James, or Stephen Curry.  
+25:37
+Let's see how it handles things not being capitalized correctly.  
+25:50
+All right, and one of the,  one of the neat things about   using this built-in chat, you can see the tool uh trace and the response.  
+25:59
+It shows us the ESQL query that it ran and the parameters that it inputted.  
+26:06
+It does it for both players,  so everything is good there.   Next, defines the historical  averages against the Knicks  
+26:12
+because that's LeBron's. Um, next matchup, and it does   that for Stephen Curry against the Chicago Bulls.  
+26:18
+It runs this query to find historical averages, and it also does it for season averages,  
+26:23
+so it's following the, the exact kind of workflow that we,   we set in the system prompt,   so it's all good there. Perfect.  
+26:31
+So, it does show the   the aggregations here and the stats, and it says that LeBron James is a better fantasy  
+26:38
+pickup for this matchup.   Awesome, that already that gives  you um an amazing edge when  
+26:44
+you're in a fantasy league, um, can guarantee you that   none of your other, you know, matchups will have this tool.  
+26:51
+And Um,   The way that it's configured  now, you, you can only use the  
+26:58
+default elastic managed LLM. In the future, you should   be able to bring in your, your own uh LLM uh using the elastic connectors,  
+Integrating with Claude Desktop via MCP
+27:08
+So, unfortunately, I think  we are running out of time.   I know I did talk about plugging  into um cloud desktop and  
+27:15
+um I'll just really quickly show you how to do that.   So we'll head back into  agents here and manage tools.  
+27:22
+All you want to do is copy  this MCP server endpoints.   And um edit the config within uh cloud desktop and to show you an example of how I ran it.  
+27:34
+I Check to see whether   my elastic NBA agent is, is enabled. I added, I asked it the same thing,  
+27:42
+like who's a better pickup, LeBron James or Steph Curry,   or who's a better pickup  Lucadonches for Anthony Davis.  
+27:48
+It was able to expose the correct tools and run those ESQL queries with   the correct parameters. Um, again, use the correct tools  
+27:56
+and it did work in cloud desktop.   So sorry for going over time, but um it does work pretty much as a plug  
+28:03
+and play with anything that supports MCP.   And that's pretty much the tour,  just to give a quick recap,  
+Recap, Q&A & closing
+28:09
+AgentBuilder takes away the hard  parts of wiring up those uh   AI agents. So   you can really focus on  building experiences that are  
+28:16
+grounded in your data, and the keyword that we,   I want to emphasize is relevance. Um, again, your agent is only gonna  
+28:23
+be ever as good as the context it has,   and Elastic always makes sure  that it has the most relevant  
+28:29
+information. Again, we'll link some resources   down below if you want to learn more.  
+28:35
+I think we do think we have  a few minutes for some   questions. Let's check the chats.  
+28:45
+OK, this one's a good one.   So what are some considerations  when deciding a large   language model to use for an agent like this?  
+28:52
+So, when you're deciding on  which model to use, definitely   do your due diligence one. So what are some  
+28:57
+considerations when deciding a large language model to use for an agent like this?   So, when you're deciding on  which model to use, definitely  
+29:05
+do your due diligence on the  capabilities of that model.   Some models are better than  others in finding, uh, in things  
+29:12
+like following your system  prompt and tool calling.   Some models don't even support  tool calling, uh, in general,  
+29:18
+larger models like the ones provided by OpenAI, Anthropic, Google, etc.   are much better at following  instructions without having to  
+29:25
+be too explicit, um, in comparison,   if you use a smaller model, um.  
+29:30
+You'll most likely have to tune  your system prompt and be a   lot more explicit in your  instructions at every step.  
+29:36
+And this can change as as these  models evolve, and there's   definitely a lot more to it  than that, but that's a good  
+29:42
+starting point. Thank you for that question.   And I think we'll have time  for one more question.  
+29:49
+So, OK, um,   how does the agent decide when  to call a tool and what helps  
+29:54
+it choose the right one? So,   a few things to keep in mind  when helping an agent call the  
+30:00
+right tool. Um, first, again,   it can be heavily influenced by which model you end up using.  
+30:06
+Second, this is where a layer  like agent builder can help a   lot. Um,   it's a lot easier to restrict  an agent to a certain set  
+30:12
+of tools, be able to define tool   description so your agent knows when and how to call that tool.  
+30:17
+And finally, maybe the most  important is your system prompt   because again, it's basically the, the playbook that the model will follow.  
+30:25
+And in the system prompt, like  we went over earlier, you can   tell it exactly when, uh, when  and how to use which tool,  
+30:31
+when, when not to use each tool, what output you expect,   and you can even give it a workflow, like if you get this prompt, use this tool,  
+30:39
+then use this tool.   Um, couple that with Elastic  Search's relevance engine, it   can help cut out a lot of  noise and make your agent more  
+30:46
+precise. you guys so much for sticking with me.   I hope you guys all learn  something and at the very least,  
+30:52
+if you follow these steps, you'll have an amazing advantage   to win your fantasy leagues.   Now it's kinda on y'all to build something. Connect with me on LinkedIn.  
+30:59
+Um, I'd love to chat about what  you're thinking of building.   If you ever have any questions,  don't hesitate to ping me or  
+31:05
+visit our discuss forum or  Slack channel if you have any   questions. Stay up to date with   all the cool stuff, uh, we're building, um, by visiting the Elastic Search labs,  
+31:14
+we're constantly uploading articles there.   And finally, subscribe to this  channel and we'll see you for   the next one. Thank you.

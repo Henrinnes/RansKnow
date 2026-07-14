@@ -1,0 +1,506 @@
+0:01
+Report a security issue to a bug bounty program,  and get money. Repeat that, and you get rich. But  
+0:06
+is it really that easy? Well… the problem is  you have to find vulnerabilities. You cannot  
+0:11
+report the same issue over and over  and hope to get money, right? Right?
+0:15
+In this video I want to talk  about a few “unfixable bugs”,  
+0:18
+or “unfixable issues”. And how they can maybe?,  be used to generate an endless stream of money.
+0:29
+Denial of Service with loooong passwords
+0:31
+Have a look at this bug bounty report.  “Possible denial of service when entering  
+0:35
+a loooong password”. And the issue is  quite simple. Go to the signup page,  
+0:40
+enter a looooong password. Aaaand “This may  lead to the website becoming unavailable or  
+0:45
+unresponsive.”. The argument here is that hashing  a large amount of data will take a lot of server  
+0:52
+resources. Result is a denial of service. So of course, you get 100$ bounty and even  
+0:58
+a CVE for it. Luckily for us, nextcloud is  open source, so we can see the actual fix.  
+1:04
+In the PasswordController.php they now check  the maximum length of the password to be 100. 
+1:10
+But… I’m a little bit suspicious here. In the  nextcloud documentation about password hashing,  
+1:15
+we can see that it uses Argon2, but you can also  configure it to use phps PASSWORD_DEFAULT. This  
+1:21
+tells me that it simply uses PHPs password-hash()  function. See here, there are options,  
+1:27
+PASSWORD_DEFAULT, PASSWORD_BCRYPT, or as the  documentation indicated, PASSWORD_ARGON2I.
+1:32
+Now fun fact, if you use the default  bcrypt, which is also not too bad,  
+1:38
+then “the password parameter is being truncated  to a maximum length of 72 bytes.”. So with that  
+1:42
+configuration, there wouldn’t be an issue.  But… is it maybe an issue for ARGON? Well?  
+1:47
+Let’s throw up a quick experiment. Here is a  loop, we generate some random password with  
+1:52
+increasing length $i. And then we measure the  time before and after the hashing to see how  
+1:58
+long it took. That’s a good indication for how  many resources it’s eating up. And we can see  
+2:02
+now that it always takes roughly 0.3s. But  the report was about 10.000 characters long  
+2:08
+password. We are slowly getting there… mhhh…  still 0.31s. Let’s wait a bit longer. UH,  
+2:15
+we start to see a few 0.32s. But we are now in the  millions. So like a megabyte long password. But  
+2:23
+now we finally see the time increasing more! But…  PHP Fatal error. This didn’t crash because of the  
+2:30
+hash. We generated a way too long password string  here. The last one was 51 million characters long. 
+2:37
+Long story short. I don’t believe “password  hashing process will result in CPU and memory  
+2:42
+exhaustion”. So as this comment by kotori on  twitter said it nicely in response to my question,  
+2:48
+“I guess you will most probably hit  maximum upload size limit first…”.
+2:53
+But who cares, if you get a bounty, and a CVE,  keep reporting it. Here is nextcloud again,  
+2:59
+just a different endpoint. This time in  the LostController, so forget password  
+3:03
+functionality. No bounty paid yet, but it  should get one. And this also got a CVE again.
+3:09
+Another report from imgur “the server  might not be able to handle such  
+3:12
+lengthy passwords coming from different machines  simultaneously”, you get a 250$ bounty for that.
+Invalid vs. Valid DoS Reports
+3:18
+So is this vulnerability an infinite money glitch?  Just keep reporting this, claim that it’s an issue  
+3:24
+and get bounty and CVEs? Luckily submitting  this is not always successful. GitLab for  
+3:29
+example pushed back against the reporter who  kept insisting that this is a vulnerability.  
+3:34
+Referencing other reports that were deemed valid.  But in the end not only was the report false,  
+3:39
+but GitLab already had password length  restrictions. So are these resorts all fake?
+3:45
+no… I have to admit, the issue is not always this  blatantly false. For example in the web framework  
+3:51
+Django in 2013, there maybe was a valid issue.  Django implemented pbkdf2 by hand. I took this  
+3:59
+code and cooked up another small test. So we  again generate increasingly longer passwords,  
+4:04
+and hash them with this function. And you can see,  it does take significantly more and more time.
+4:10
+The security advisory stated: “A  password one megabyte in size,  
+4:14
+for example, will require roughly one minute of  computation”. In 2023 this is not true anymore,  
+4:21
+a password of 1 megabyte on my laptop  is under 10 seconds. But still,  
+4:26
+it scales. Send 20 megabytes and you  are probably at the 1 minute mark.
+4:30
+But I have more to complain about here. You see,  okay the code might hang the process for a while.  
+4:36
+BUT the attacker also has to send MEGABYTES of  data, you cannot send this very fast. And so this  
+4:42
+DoS attack takes time and takes up resources on  the attacker side as well. Which leaves us with  
+4:48
+a big question, at what resource ratio does  a denial of service become an issue or not. 
+4:54
+It’s clear that an extreme example like a single  request killing the complete server is bad. But  
+5:00
+there is a lot in between. Where do we draw the  line? Is sending megabytes of data not already,  
+5:06
+you know, asking a lot from the attacker? That’s  debatable, and that leads us to the next argument.
+Deployment Differences
+5:11
+The impact of a denial of service and  generally “resource exhaustions” also  
+5:16
+depends on how the web application is deployed.  Actually most production server setups have  
+5:21
+timeouts. For example in PHP there is  max_execution_time, of 30s. And nginx  
+5:27
+has I believe 60s by default. Which means  even if the password would theoretically  
+5:31
+take 10 minutes to compute, the server  already kills the process after 30seconds. 
+5:36
+Now we can argue over these default numbers. Maybe  30 seconds is too long. But there is a reason why  
+5:42
+it's set to these numbers. Apparently we kinda  accept that some requests might take longer. 
+5:47
+But maybe we also say it is still an issue, a  couple of these hanging requests could maybe  
+5:52
+stop the server from being able to answer to  regular users. BUT on more modern serverless  
+5:58
+deployments, maybe they automatically just  keep spinning up virtual machines to handle  
+6:02
+more users. And that probably solves the  availability issue. At a cost though,  
+6:06
+maybe these VMs become expensive? But now ask  yourself. Is it more expensive to spin up a few  
+6:12
+machines when the attacker doesn’t even know how  much it will cost the business, versus spending  
+6:16
+hundreds of dollars on bounties, and the hourly  rate of an engineer triaging reports, writing  
+6:22
+security advisories and implementing “fixes”? So if the argument for these denial of service  
+6:27
+issues becomes that a denial of service is  costing the business for example lost revenue,  
+6:32
+then you have to balance that with the cost  of the supposed fixes. Generally we would say,  
+6:38
+“fix is always better”, because then it’s  fixed. Problem solved for eternity, right?
+6:43
+But what if I told you. you cannot “fix”  this issue? That’s basically the gist  
+6:48
+of this whole video. These are “Unfixable”  bugs. It’s a game of whackamole. I show you.
+Denial of Service vs. Bruteforce Protection
+6:54
+For example here is another nextcloud report  about “Denial of Service by requesting reset  
+7:00
+password”. This person apparently sent over  1000 requests to the password reset endpoint,  
+7:05
+which made the server not responsive for over 1  hour. Sounds bad. So the reporter got 250$ in bug  
+7:13
+bounty reward and a CVE on top of it. But to me my tingly feelers were telling  
+7:17
+me something is off here. That sounds weird. So I looked into the source code of the fix  
+7:20
+to learn about what the original code did. Nextcloud implements a BruteForceMiddleware  
+7:26
+which “performs the bruteforce protection”. And if  an endpoint is marked with “BruteForceProtection”,  
+7:32
+then the throttler->sleepDelay() function  was called. The fix to this issue is calling  
+7:40
+throttler->sleepDelayOrThrowOnMax instead.  But let’s think about the original code first.
+7:44
+Do you get a sense where this is going? Well…  sleepDelay() calls getDelay() with the user’s  
+7:50
+IP. So if one IP keeps sending more and more  requests, the delay will increase. The server  
+7:57
+process literally sleeps for many seconds. No  clue how large the delay can grow, but that could  
+8:03
+easily go up to minutes, maybe an hour. this code  was added in 2016 for security to implement brute  
+8:10
+force protection. And now a hunter 4 years later  in 2020 tries to bruteforce the password reset  
+8:16
+endpoint. Does it click? Because the attacker  sends the requests from the same IP, these  
+8:21
+requests start to sleep(). And now think about  what the bug hunter wrote “the server was not  
+8:26
+responsive for over 1h”. They triggered the sleep  with their own IP and couldn’t reach nextcloud  
+8:32
+again. So was this bug bonty report completely  bs? Well actually, probably it was a real  
+8:37
+denial of service, because request throttling,  when implemented like, is inherently flawed. 
+8:42
+If an attacker attempts to bruteforce, the  server will sleep, and regular requests  
+8:47
+by users can still be handled. BUT, if the  attacker does too many bruteforce attempts,  
+8:53
+then maybe too many backend instances sleep, and  regular users can not be responded to anymore. 
+8:59
+That’s a dos. But it is a working “fix” against  bruteforce. You cannot bruteforce because the  
+9:05
+server is sleeping. But the server is  sleeping, now you have a DoS issue. 
+9:09
+And so let’s have a look at the fix of this  bug report, we see the code was changed from  
+9:14
+sleepDelay() to sleepDelayOrThrowOnMax().  This code now gets a max amount of allowed  
+9:19
+requests for the IP, and if that is reached it  doesn’t sleep anymore, but immediately throws  
+9:24
+a 429 Too Many Request error. So okay, the bug report was  
+IP Rate-Limiting "fix"
+9:29
+valid? And the issue is fixed? Well… in my opinion not really.  
+9:33
+Because there is no real fix. It’s always a game  of whackamole. It’s unfixable. So listen now,  
+9:40
+because you now get a chance to submit  the issue again, get a bounty and a CVE.
+9:44
+Okay… listen. It all started apparently  
+9:48
+with a bruteforce issue on the login. There were  no bruteforce protection against bruteforcing,  
+9:53
+so they implemented request throttling. This  however caused a denial of service due to it  
+9:58
+being implemented with sleeps(). We get another  report and now we limit how much the throttling  
+10:04
+can sleep, and also how many requests per IP  can trigger it. So the solution seems to be IP  
+10:10
+rate-limit. Is that the answer to everything? It seems so when you look at reports. 100$ for  
+10:15
+login bruteforce, “fixed” with IP rate-limits. Here a report without a reward, but still  
+10:20
+valid and the fix implements  rate-limiting with IP address.
+10:24
+But, IP rate-limiting can always be  bypassed, with more IPs. There are  
+10:30
+attackers out there that can just send lots  of requests through TOR, use public proxies,  
+10:35
+use VPNs. Or an evil attacker simply has  a botnet. There are so many ways you can  
+10:40
+bypass this. Which means, you could  still cause this denial of service,  
+10:43
+or even perform the original bruteforce issue. Here for example a twitter bug report getting  
+10:48
+420$ for bypassing the IP rate  limit, by using different IPs.
+10:55
+Remember the weblate fix from before, where  they fixed bruteforcing with IP rate limit.  
+11:00
+The fix is from the 27. April. Literally  on the day of that fix, another user,  
+11:05
+“Shame upon him who thinks evil upon it”, reports  that you can bypass this with more servers,  
+11:10
+or more IPs. So you should actually  implement rate-limits per user account.
+11:16
+So yeah, you heard it here… I think we  could now report a DoS issue to nextcloud,  
+11:20
+arguing that you can simply use more  IPs. But I refuse to report that,  
+11:24
+I think that’s a dirty game. Because  honestly, how would they fix that issue?
+11:30
+okay, well, request throttling with sleeps is  inherently flawed due to the denial of service.  
+11:34
+So yeah, that’s a valid report I guess. BUT the  reason they implement it like this is for anti  
+11:40
+bruteforce. Removing the throttling allows  bruteforcing again. Prevent the bruteforce  
+11:46
+with IP rate-limits again? Well, if an attacker  really wants, they can always get more IPs and  
+11:51
+bypass this. So the complex reality is that yes,  request throttling with sleep is maybe causing  
+11:57
+the whole server to become unavailable. But at  least that definetly protects against bruteforce.  
+12:01
+Server down, no bruteforce. And depending on your  threat model, maybe that’s exacgly what you want.
+Locking User Accounts?
+12:07
+Okay, maybe we implement other ways of rate-limits  then. We talked about bruteforce, right? Maybe we  
+12:12
+want to make sure somebody cannot bruteforce the  password of a user? If IP rate-limiting is not  
+12:17
+perfect, maybe we just rate-limit logins per user? Instacart appears to do the same. On mobile the  
+12:24
+user didn’t get locked out, but the fix was  to lock the account. And the customer then  
+12:28
+gets an email to unlock the account again. Is this finally the end of the chain, did we  
+12:35
+finally reach the correct way to fix this issue? Well if we look into OWASP about Blocking Brute  
+12:41
+Force attempts, specifically combating it with  account lockouts, they write. “An attacker can  
+12:47
+cause a denial of service (DoS) by locking out  large numbers of accounts.”, “An attacker can  
+12:51
+cause a diversion by locking out many accounts  and flooding the help desk with support calls.”.
+12:57
+And so now we come into the realm of threat  modeling, and different users and different  
+13:01
+usecases have different requirements. Maybe YOU  prefer your nextcloud server to be locked up when  
+13:07
+being attacked, to stop any bruteforce attempts.  While somebody else doesn’t care about the  
+13:11
+bruteforce because they use secure passwords and  rather have the server just not do any throttling  
+13:18
+at all. It’s unfixable. There are always arguments  and edge cases and different requirements. 
+13:25
+But let’s say we like locking out users, that  fits our threat model. The problems just keeps  
+13:28
+going. From the instacart report for example  we know that they send out an email for users  
+13:33
+to unlock their account if it got locked due to  brutefforce attempts. So we could now abuse that  
+13:39
+and trigger sending lots and lots of emails.  Sending emails could cost money, but worse,  
+13:44
+it could result in the email being marked as a  spam by some systems, due to the flood of them.  
+13:49
+Which could really negatively impact the business.  Essentially blocking many legitimate users from  
+13:55
+receiving important emails, for example when they  try to signup or after they purchases something. 
+The Circle of Unfixable Security Issues
+13:59
+And suddenly we realize, we are right at  the beginning, back at triggering some kind  
+14:05
+of denial of service against the system. And we  now try to fix that. Request throttling? Ip-Rate  
+14:10
+limits? Take your favorite poison. And once the  drugs hit your brain, realize that it’s even worse  
+14:15
+than you imagined. We just talked about issues  surrounding logins. But those are not the only  
+14:20
+endpoints that exist. Every website, especially  a lot more complex website, probably have some  
+14:25
+HTTP API that is “expensive” to execute. Maybe an image upload, upload gigabytes  
+14:31
+of data without rate-limits, filling up their  cloud storage and triggering massive costs.  
+14:36
+Also many services generate thumbnails or crop  images on uploads, that’s all computing power.  
+14:41
+Maybe not much, but without rate-limit on those  endpoints, and maybe a little bit larger images,  
+14:46
+still causing some resource exhaustion. Any kind of “data import functionality”  
+14:50
+usually is vulnerable to denial of service  attempts. That’s just computationally  
+14:55
+expensive. Or maybe it’s even expecting a  .zip file. And you can throw in a zipbomb.
+14:59
+You didn’t find a site with such features?  How about submitting a very very long  
+15:04
+comment with 50.000 characters on  GitLab. Apparently that triggered  
+15:07
+some processing on the server resulting  in 1000$ bounty and a CVE-2019-15593.
+15:12
+I can almost guarantee you, you can find DOS  issues basically anywhere and everywhere.  
+15:17
+And they go hand in hand with “lack of  rate-limit” and no bruteforce protections,  
+15:22
+because there simply does not exist a clear  “fix”. You cannot really “fix” these issues.
+Vulnerability vs. Weakness
+15:28
+In my personal made up intuitive definition of  what is a “vulnerability”, a vulnerability has to  
+15:33
+have some kind of clear fix. SQL injection,  fix the SQL injection. CSRF, add a CSRF  
+15:40
+token. IDOR, add proper authorization. This is  not the case for most DoS or rate-limit issues. 
+15:44
+Small footnote here. Of course there  are also other DoS issues. Like complete  
+15:48
+server crashes that don't recover. Or a  6 digit verification code which can be  
+15:53
+easily bruteforced. But the solution there  is usually not rate-limit, but math. The  
+15:57
+code has to be longer, or include letters to  become probabilistically impossible to guess.
+16:02
+But generally, these DoS and rate-limit issues are  unfixable. You can always argue and find edgecases  
+16:10
+where it becomes weak again. This is especially  true for self-hosted service like nextcloud.  
+16:17
+Everybody has different threat models. If you  deploy that on a shared raspberry pi 1, if it even  
+16:22
+runs on there, then of course a dos is much easier  and might happen with 5 regular HTTP requests.  
+16:28
+But when it’s deployed on a large server, maybe  with sensible request timeouts and being able to  
+16:33
+dynamically spin up more nodes, even the most  expensive request is handled like “whatever”. 
+16:38
+So I hope I made it clear why I think  for these issues there is no “one fix  
+16:45
+for all”. It always comes down to very  unique situations and threat models.
+The Cybersecurity Industry
+16:49
+And now if you look around in the “cybersecurity”  industry, DOS is not the only issue of that kind.  
+16:55
+There are many more. For example “insecure  browser password storage”. Because somebody  
+17:00
+wrote a script, or malware, to steal the  passwords. It looks bad on first sight,  
+17:05
+but when you spend 1 minute thinking about it  you should realize it makes no sense. Of course  
+17:10
+malware can access the passwords. Even when a  company like kaspersky aggressively markets their  
+17:15
+own password manager to be so much more secure  than the browser password stores, it’s trivial  
+17:20
+to write a malware to steal the passwords out of  any password manager once it’s unlocked as well.
+17:27
+Another good example is software obfuscation  and anti-reversing. The game industry has  
+17:31
+tried for decades to solve the problem  of piracy. And yet every game still got  
+17:35
+cracked. And now we have smartphones, and  developers desperately want to obfuscate  
+17:40
+and prevent reversing of their apps.  With enough dedication and efforts,  
+17:44
+it can always be reverse engineered. It’s a  game of whackamole. It’s an endless circle.
+17:50
+And endless circle of moneyyy.
+17:51
+Maybe you have heard this from security  people before. “If we do our job right,  
+17:56
+we are not needed anymore”. That is true - if we  could solve and fix all the security issues, then  
+18:01
+there are no security issues left. Our profession  is not needed anymore. The problem is though,  
+18:06
+companies, and maybe we security consultants and  bug hunters as well, we slip right into those  
+18:11
+cracks. Companies selling android obfuscation  services. Security scanners reporting on CVEs in  
+18:17
+NodejS libraries that have 0 impact on the actual  web application. Password managers fear mongering  
+18:22
+against stored passwords in the browser, suffering  from almost the same threat model. Security  
+18:28
+Consultants reporting Account enumerations  on login forms, while there are a dozen more  
+18:33
+endpoints that leak whether a user exists or not. Or recently, credential stuffing! If hacking with  
+18:39
+real vulnerabilities becomes too hard and even  “black hats” cannot compromise databases anymore,  
+18:45
+and they just reu-used credentials and scrape  the data from these accounts, and then they  
+18:49
+call that a data leak. Think about that. When  security headlines are made without even any real  
+18:54
+security issue being exploited. I think that’s  the best example that security is getting better.
+18:59
+So maybe cynically speaking, maybe we have  to invent security issues to keep our jobs.
+Conclusion: Cybersecurity vs. Hacking
+19:04
+And so recently I thought about the terms  “cybersecurity” and “hacking”. And I came to this  
+19:09
+conclusion that cybersecurity describes the whole  package. Of course a denial of service is bad for  
+19:15
+a business. With this video I was not trying to  say a DoS issue is not an issue. It is an issue.  
+19:21
+BUT I did want to explain why for me these issues  are boring. They are not satisfying, because they  
+19:27
+are unfixable. For high reliability and critical  infrastructure it is an important topic. But you  
+19:33
+know who deals with that? Not security researchers  . Site reliability engineers and sysadmins. The  
+19:39
+job to “defend against Denial of Services” for  example, is the work of implementing failsafe  
+19:44
+processes, technical solutions to be notified  when something goes down, being able to on the fly  
+19:49
+divert malicious traffic, have backup instances  ready to go - it’s much more active work than  
+19:55
+we as hackers like to think. It requires dedicated  staff and monitoring. You solve the denial of  
+20:01
+service and availability issues when they happen.  And so I think for most businesses it’s nothing  
+20:06
+you need to worry too much about. Honestly, ignore  it and deal with it when it becomes an issue. When  
+20:12
+you actually have somebody attacking you. Then you  can start the whackamole game with that attacker.  
+20:16
+But I don’t think you need to start the whackamole  game with bugunters already. So when I mean ignore  
+20:21
+the issue, I don’t mean you not care about the  issue. You have to are about the issue. It’s  
+20:25
+basically blue team work you have to Implement  internal processes to deal with when it happens.  
+20:30
+I’m just saying there doesn’t exist a magical fix  you can figure out through a bug bounty report. 
+20:35
+And I just realized for myself, what exactly is  interesting to me. I think vulnerabilities and  
+20:41
+bugs that can actually be fixed, they are  a lot more interesting. And that work has  
+20:46
+direct impact. Because a fixed bug is fixed. And  that is satisfying, or actually more often it’s  
+20:51
+sad. “ spend so many hours on discovery  and exploitation of this vulnerability,  
+20:56
+and then this one line fix, took it all  away” *poof*. But that’s the game I enjoy.
+21:02
+Anyway. This was a little rant about the  cybersecurity industry. I really didn’t  
+21:06
+want to offend or attack anybody with this, if  anything it’s just my opening statement for a  
+21:11
+debate. Feel free to start arguing with me in the  comments. Also, huge thanks for all the bughunters  
+21:16
+with public reports, I really really appreciate  that. And just to make it clear, don’t feel bad  
+21:21
+about these reports. I report this kind of stuff  sometimes as well. It always depends on the threat  
+21:27
+model and simply what the customer demands. But I  do think it’s an interesting topic to think about.
+Outro
+21:34
+Alright. Thanks so much for watching, if  you are interested in more web security,  
+21:38
+checkout our online training platform  hextree.io. You can signup to the waiting list,  
+21:42
+while we are working on creating more courses.  And if you want to support LiveOverflow directly,  
+21:47
+checkout YouTube memberships or buy my shitty  handwritten font on shop.liveoverflow.com.

@@ -1,0 +1,911 @@
+0:01
+Hi folks, and welcome to an OALABS Patreon exclusive tutorial.
+0:05
+Today, we're going to be talking about emulation.
+0:08
+Now we've kind of flipped this tutorial series around and instead of telling
+0:12
+you all the wonderful things about emulation and how you can, use emulation.
+0:17
+I've decided to start with describing what an emulator is and having
+0:22
+you build a simple emulator just to understand the fundamentals.
+0:27
+I think once you understand how an emulator works under the hood, the
+0:31
+rest of the series where we talk about when you should use emulation
+0:35
+and when you shouldn't, will be a lot more clear, because you'll
+0:38
+understand the reasoning behind that.
+0:40
+Hey, so if you're seeing this, it's because you're watching this
+0:42
+tutorial on YouTube or Twitter ,x, I guess now it's called X.
+0:46
+So I'm going to take a minute to shill for our Patreon.
+0:50
+If you like this tutorial, if you like what you're seeing here, go check it out.
+0:55
+There's a lot more like this.
+0:56
+We have examples, labs to do that accompany the
+1:00
+tutorials, all that good stuff.
+1:02
+So if you like this, go check it out.
+1:03
+So with that, let's jump in and we'll start talking about how an emulator works.
+1:08
+under the hood.
+1:09
+So the first thing that we need to clear up is that emulation is
+1:13
+not the same as virtualization.
+1:15
+The two are sometimes used interchangeably when you're reverse engineering, but they
+1:20
+serve two different purposes and there are very big distinctions between the two.
+1:26
+So for emulation, the key component here is that it's an interpreter.
+1:31
+It interprets CPU instructions.
+1:34
+It doesn't actually execute those instructions on the CPU.
+1:38
+Whereas virtualization, that's actually what it does.
+1:40
+It actually executes the assembly code on the CPU, but in a little container.
+1:46
+So that's the main difference between the two.
+1:48
+And then from there, we follow into a few more differences here.
+1:51
+So for emulation, of course, because you're not running the
+1:54
+code on the CPU, you can run cross platform architecture code.
+2:00
+So you can emulate, say, an ARM Device on an x86 cpu because it's an
+2:06
+interpreter has nothing to do with the cpu that it's running on This
+2:09
+is how you get things like game boy emulators running on your pc or nintendo
+2:13
+emulators running on your pc Right.
+2:15
+Those architectures are very different But you're able to emulate them because
+2:19
+you're not actually making use of the CPU.
+2:21
+Virtualization, of course, you are executing the target code on the
+2:26
+CPU, so you need to have the same architecture on the CPU as the
+2:31
+target that you're executing, right?
+2:32
+You can't just take an ARM binary and virtualize , run it on an x86
+2:37
+CPU, it's not going to work, right?
+2:39
+So that's another fundamental difference is you can have a different
+2:44
+architecture between the target and the host for emulation, but for
+2:47
+virtualization, they need to be the same.
+2:49
+Now, because emulation is an interpreter and it's not executing natively
+2:54
+on the CPU, it is way, way slower, exponentially slower than virtualization.
+3:01
+Virtualization is close to native speeds, if done right,
+3:04
+emulation is much, much slower.
+3:07
+Now we will talk about how some frameworks have gotten around this
+3:10
+and sped things up quite a bit, but let's just leave that for right now.
+3:13
+The speed difference is astronomical.
+3:17
+All right.
+3:17
+So the final difference, final main difference here is that the
+3:22
+security model is very different between virtualization and emulation.
+3:27
+For an emulator, your security model is limited to the interpreter.
+3:31
+So if you want to break out of the emulator, you need to find
+3:35
+a bug in the actual interpreter, the parser of the code.
+3:40
+There's no danger of the target executing on your host because
+3:45
+it's not actually executing.
+3:47
+It's just being read, and I'll show you in a minute, chained through
+3:51
+a series of if else statements.
+3:54
+There's nothing really to execute on your host in an emulator.
+3:59
+It's very safe and very self contained.
+4:01
+The security model is basically limited to the interpreter.
+4:05
+Of course, you could find a bug in the interpreter, but that's, that's
+4:07
+not targeting the, the host itself.
+4:10
+There is an exception with JIT, but again, many exceptions with JIT.
+4:13
+I'll talk about that in a bit.
+4:15
+For virtualization, very different.
+4:17
+The security model rests on the virtualization boundaries in the CPU.
+4:21
+You're actually executing.
+4:23
+native code on your CPU.
+4:25
+It's just in a container, right, which is limiting access outside of the container.
+4:30
+So the security model is very different.
+4:32
+Obviously, virtualization has been around for a really long time, and
+4:35
+there's fewer and fewer breakouts.
+4:37
+In fact, quite rare, and they're quite expensive if you do find
+4:40
+an ODE for, um, but the security model is just, it's just different.
+4:45
+Okay, so what is an emulator?
+4:47
+I stole this from a random person on Wikipedia.
+4:50
+I don't really think it was cited on Wikipedia.
+4:52
+In its simplest form, uh, CPU emulator is an interpreter.
+4:58
+Basically what it is, is a virtual representation of a CPU,
+5:04
+registers, memory, et cetera.
+5:06
+In code, so like lists, dictionaries, etc.
+5:10
+Those are what represent the registers.
+5:12
+And each instruction that is interpreted, each CPU instruction,
+5:18
+the semantic equivalent of the impact of that instruction on a real CPU
+5:24
+is mimicked in the interpreter.
+5:27
+So that's basically all it is.
+5:29
+Now again, these things can get quite complex.
+5:31
+I'm going to talk about some exceptions in a minute.
+5:34
+But at its very core, An emulator is simply a series of if else statements
+5:40
+that take CPU mnemonics and operands and filter them through the if else
+5:44
+statements until they find one that matches and then perform a semantically
+5:48
+equivalent operation inside the interpreter as what would happen on a CPU.
+5:53
+It's basically building a CPU in if else statements.
+5:57
+That's what an emulator is.
+5:59
+Now let's talk about emulation boundaries.
+6:01
+So this is What parts of the code are emulated?
+6:05
+How much stuff is emulated?
+6:07
+I've broken these down into three main boundaries.
+6:11
+Obviously, with these tools, as you guys know, the boundaries are kind
+6:15
+of gray and some tools overlap.
+6:18
+But basically, we have three main ones.
+6:19
+We have CPU emulation, user mode emulation, and system emulation.
+6:24
+And the way that this maps to Windows is if you look at the Windows stack here, a
+6:29
+simplified Windows stack, You have your application, which talks to the Windows
+6:34
+API, which is just a series of DLLs.
+6:37
+Those DLLs use syscalls to interact with the kernel.
+6:41
+Inside of the kernel, you have drivers, which interact with the
+6:44
+HAL, the Hardware Abstraction Layer.
+6:47
+And the hardware abstraction layer is exactly what it sounds like.
+6:50
+It is a way for code to interface with the actual hardware of the computer.
+6:55
+So the actual CPU, the bus, et cetera, right?
+6:58
+So that's the windows stack.
+6:59
+Now let's talk about each one of those emulation boundaries
+7:02
+and how they map to the stack.
+7:05
+So the first one here is the CPU emulation.
+7:08
+So CPU emulation only emulates CPU instructions.
+7:13
+Sometimes you have a memory manager.
+7:14
+You usually have to have a memory manager.
+7:17
+The key component here is you're only emulating CPU instructions, which means
+7:23
+it has nothing to do with API calls, nothing to do with the operating system.
+7:28
+And in fact, at the CPU emulation layer, Windows looks the same as Linux, looks
+7:33
+the same as Mac, et cetera, right?
+7:36
+As long as they're on the same architecture.
+7:38
+So an x86 Mac looks the same as an x86 Linux machine, same as x86
+7:45
+Windows, because at the end of the day, the assembly code is the same.
+7:49
+We're not talking about doing any sort of calls or anything like that.
+7:53
+So, what is this good for?
+7:54
+Well, it's good for emulating shellcode where there's no calls,
+7:57
+good for emulating tiny little blocks, little thunks of code, right?
+8:01
+But anytime you have a call that might lead to a Windows API or
+8:05
+something like that, You can't emulate it with a CPU emulator.
+8:08
+You must fake it.
+8:09
+So how does that map to the Windows stack?
+8:12
+Well, here you can see an example.
+8:14
+The only thing you can really emulate with CPU emulation is
+8:17
+just tiny snippets of code.
+8:18
+Like I've shown you here, you can't really do anything else in the Windows stack.
+8:22
+Right?
+8:23
+So the next mode is user mode emulation.
+8:25
+This is where you're emulating the CPU instructions, but you also
+8:29
+have an OS specific API layer.
+8:32
+So what do I mean by this?
+8:34
+Well, I mean, anytime the code say makes a call to Kernel32 DLL, your emulator
+8:40
+has a fake Kernel32 DLL with fake exports that when they're called, the emulator
+8:46
+will mimic what actually happens when you call those API exports in windows.
+8:51
+So this actually is able to emulate it.
+8:54
+An entire user mode process.
+8:57
+There's two ways that this can be done.
+8:58
+We're going to talk a little bit more about that in a minute, but basically
+9:02
+you can either emulate at the high level.
+9:05
+So this would be the exports for the DLLs, or you can emulate at the kernel level.
+9:11
+This would be syscalls, and the emulating of the syscall layer, again,
+9:16
+we'll talk about this in a minute, but that has a smaller service to emulate.
+9:21
+So there's a lot less syscalls than there are API exports, right?
+9:25
+There's tons and tons of DLLs for Windows, only a limited number of syscalls,
+9:30
+but the syscalls are more complex.
+9:32
+So you have to handle more within the syscall, whereas if you emulate
+9:36
+at a higher level, at the DLL level.
+9:38
+Then you have a much larger surface area to cover, but each
+9:43
+API is specific to one task.
+9:46
+So they're easier to implement.
+9:47
+And when we talk about different emulation frameworks, we're going
+9:50
+to talk about that difference.
+9:52
+But for now, let's just assume that user mode emulation ends at the syscalls.
+9:56
+So this means anything inside of the user mode.
+10:01
+process for Windows you can emulate and the only thing you have to
+10:05
+fake is the syscalls, right?
+10:07
+So this is what we consider user mode emulation.
+10:10
+Lastly, we get to system emulation, where we actually can emulate
+10:13
+an entire operating system.
+10:15
+So you can load the operating system inside the emulator.
+10:19
+To make this happen, you need to virtualize or emulate hardware, right?
+10:24
+Because that's the interaction layer now.
+10:27
+The operating system is now going to be talking to a series of hardware
+10:31
+that it expects to be present.
+10:33
+So you have to Emulate that or fake that in your emulator.
+10:37
+However, you can run a full OS like this.
+10:39
+And just to show you guys what that looks like in the windows stack, basically
+10:43
+the whole OS runs within the emulator and what you're faking is the hardware.
+10:48
+So let's talk about how this maps to actual.
+10:51
+emulators that you would use, open source emulators.
+10:54
+So here we have the breakdown at the CPU level.
+10:57
+We have Ghidra's emulator, which many people probably don't
+11:01
+know about, but there is a full fledged emulator inside of Ghidra.
+11:06
+And also we have Unicorn, which everyone is probably familiar with because
+11:09
+Unicorn is the underpinning for most emulation in the malware analysis space.
+11:15
+Then at the user mode side, we have Speakeasy.
+11:18
+Qiling, Dumpulator, there's many, many emulators that sit in
+11:22
+this space that are open source.
+11:24
+I just grabbed three of the largest ones or most, most used ones, I guess.
+11:28
+And I'll talk a little bit more about those when we actually start
+11:30
+using the emulation frameworks.
+11:32
+There's large differences between them, but basically for right
+11:35
+now, you can consider them able to run a user emulation.
+11:42
+You basically have QEMU and Bochs, right?
+11:44
+So Bochs comes standard inside of IDA.
+11:47
+You can emulate Windows bootloader stuff in Bochs, et cetera, et cetera.
+11:50
+QEMU, you can run a full operating system.
+11:52
+So anyone who has an M1 Mac, if you've ever tried to run x86 Windows on your M1
+11:58
+Mac, and you wondered why it's so slow, it's because it is literally running
+12:02
+inside of an emulator called QEMU.
+12:05
+So.
+12:05
+That's basically how it breaks down for our tutorial series here.
+12:09
+We are going to be focusing on CPU emulation and user mode emulation, not
+12:15
+system emulation system emulation is.
+12:19
+useful tool if you are trying to do something like a large scale sandbox or
+12:24
+something like that, but you get a lot less control and you need to write a lot
+12:28
+more code in order to do instrumentation.
+12:30
+Uh, so if you're just trying to reverse engineer a binary, it's not as useful.
+12:35
+In fact, it's, it's quite useless.
+12:37
+Um, it's much better to use a user mode emulator.
+12:40
+You get a lot better control, and it's a lot faster to
+12:43
+implement stuff if you need it.
+12:45
+Um, so that's where we're going to be focusing for the tutorial series.
+12:48
+Now, there was one kind of troll here, and that's like basically All these
+12:53
+user mode emulators are just unicorn.
+12:56
+So unicorn is basically the framework that is used underneath all of these.
+13:01
+There's a mega troll later on.
+13:02
+I'm not going to spoil it for you guys, but remember the slide when we start
+13:05
+talking about unicorn later on, but basically speakeasy, Keeling, dumpulator,
+13:10
+they all use unicorn under the hood.
+13:12
+So that's the CPU emulator.
+13:14
+And then all these user mode emulators do is add their own flavor of fake
+13:19
+Windows APIs on top of, uh, Unicorn.
+13:22
+Okay, so let's talk a little bit about how an emulator actually works under the hood.
+13:28
+And in order to do that, we need to do a quick review.
+13:31
+of what execution of assembly actually looks like at the CPU level.
+13:36
+So I have a very simple example here.
+13:39
+We have two moves and an add, we move two immediates into EAX and
+13:43
+EBX, and then we add them together.
+13:46
+The result is stored in EAX.
+13:48
+And to make things easy to follow here, I've also.
+13:52
+written out the hex bytes that map to these instructions in orange here.
+13:56
+So what does this actually look like when you execute it?
+13:59
+Well, on our first step here, we move two into EAX.
+14:04
+So you can see the EAX register now has two and EIP has incremented
+14:08
+the size of the instruction, right?
+14:11
+It's important to remember that when you're writing an emulator,
+14:14
+you must account for all impacts.
+14:17
+Of an instruction on the CPU and talk a little bit more about why that's
+14:21
+difficult in a couple more slides.
+14:23
+But for right now, just remember that any sort of impact that you have of an
+14:27
+instruction on the CPU on memory must be accounted for in your emulator.
+14:31
+So we execute the next instruction here, we move 3 into EBX, and
+14:36
+EIP has incremented again.
+14:38
+Then we add them together, the result is stored in EAX, so EAX now has 5
+14:44
+in it, and EIP has incremented again.
+14:47
+So that's just a refresher of how assembly executes the impact on the registers.
+14:52
+And now that we know the impact that these instructions have on the CPU
+14:57
+registers, Let's build a simple emulator.
+15:00
+So here we go.
+15:01
+We have used the capstone disassembler to disassemble these
+15:07
+bytes instruction by instruction.
+15:09
+And for each instruction, we've passed them through a series of if
+15:13
+statements that check the mnemonic.
+15:15
+And once we match the mnemonic, we replicate the
+15:18
+CPU behavior on our fake CPU.
+15:22
+What is our fake CPU?
+15:24
+Well, it's actually just a Python dictionary with register labels
+15:28
+for the dictionary entries.
+15:30
+So that's actually what a CPU emulator looks like at its most basic form.
+15:35
+And just looking at this, hopefully a few things are starting
+15:39
+to make a lot more sense, i.
+15:41
+e.
+15:41
+how could you ever infect yourself with code if this is
+15:45
+how it's executing the code?
+15:47
+It's not, not really possible unless you break out of the Python interpreter.
+15:51
+Right.
+15:52
+Other things that might become pretty clear to you is that this is pretty slow.
+15:56
+It's a slow way of doing things.
+15:58
+And in a minute, I'm going to talk a little bit about speed and how
+16:01
+it actually compares, but you can immediately see that obviously a bunch
+16:04
+of if statements in Python is a lot slower than a CPU instruction, right?
+16:08
+And some other things you can see here is that we have only implemented two
+16:12
+registers in the CPU because it's a lot of code to implement all the registers,
+16:16
+and we only need two for this code.
+16:18
+So.
+16:19
+If you wanted to replicate an entire CPU, it's going to be pretty complex.
+16:23
+You're going to have a lot of registers, you're going to have a lot of if
+16:25
+statements, et cetera, et cetera.
+16:27
+But at its core, this is basically what a CPU emulator looks like.
+16:31
+So that brings us to the demo portion here.
+16:34
+I'm going to hop over to an editor.
+16:35
+And I'm going to show you guys how to use Capstone as a disassembler
+16:39
+to build a very simple emulator and emulate some shellcode.
+16:44
+So, for our demo here, we have, uh, set up Capstone, which is a disassembler.
+16:50
+Uh, there's a Python interface for it.
+16:52
+The way it works is you feed it...
+16:54
+I'm going to show you how to set up the X86 and 32 bit instruction
+16:59
+sets for the disassembler.
+17:02
+In our case, we are choosing X86 and 32 bit, right?
+17:09
+So once we set up...
+17:10
+the capstone disassembler for x86 32-bit.
+17:15
+We then have a capstone engine here.
+17:17
+We're setting two additional settings here, detail true and skip data true.
+17:22
+And what these will do is detail tells the disassembler to
+17:27
+include extra details about the instruction that it's disassembled.
+17:32
+This is important for our use as an emulator.
+17:34
+We want additional information, which I'll show you in a minute.
+17:37
+And skip data is actually not necessary in this case, but what it does is it skips
+17:42
+instructions that can't be disassembled.
+17:44
+So if you have data mixed in with your code, it'll skip over the
+17:48
+data as best as it can, right?
+17:50
+If you don't have that set, The emulator will actually stop as soon as
+17:54
+it can't disassemble an instruction.
+17:56
+So those are the settings.
+17:58
+The example that we're using here is a simple piece of shellcode called add.
+18:04
+bin.
+18:05
+And it's actually the same, uh, shellcode that we showed
+18:07
+you a minute ago in the slides.
+18:10
+And we're just reading that file in and storing it in code as bytes, right?
+18:15
+So that's the first part of our demo here.
+18:18
+We're reading that file in and we're setting up the
+18:21
+capstone disassembly engine.
+18:23
+Now, before we proceed, let me open that add.
+18:26
+bin in IDA and I'll show you what the contents look like
+18:31
+when you open it in IDA.
+18:32
+Again, it should be the exact same as what you just saw in the slides, but
+18:35
+I'm doing this so that you have the VM.
+18:44
+And you can see the file here is very simple.
+18:48
+It's exactly what we saw in the slides.
+18:51
+We move two into EAX, we move three into EBX, and then we add EAX and EBX.
+18:58
+So, we're back in our notebook.
+19:00
+We have our file read in and our engine set up.
+19:06
+Now what we need to do is we need to create some registers.
+19:10
+Now we know from looking at INET that only the EAX and EBX registers are used.
+19:16
+So, if we want to create our simple emulator, we only need two registers.
+19:21
+And these registers will be used to track the values, uh, that are placed in the
+19:26
+registers as we emulate this shellcode.
+19:29
+We also need an instruction pointer.
+19:32
+In x86 32-bit, the instruction pointer is EIP.
+19:36
+And of course the instruction pointer is going to start at the
+19:39
+beginning of the code, so its value is going to be 0, offset 0.
+19:43
+Now we get to the core of the emulator.
+19:46
+The core of the emulator is actually a simple while loop that
+19:52
+iterates through the code using EIP as an offset into the shellcode.
+19:58
+And as long as the offset is not equal to the end of the shellcode,
+20:02
+we continue the while loop.
+20:04
+So what this will do is this will iterate through the shellcode
+20:08
+until we reach the end of it.
+20:10
+Now, how do we iterate through it?
+20:12
+Well, if we look at the very bottom here, we have an increment for EIP and we
+20:19
+increment not by one, but by the size of each instruction that is disassembled by.
+20:27
+the capstone disassembly engine.
+20:29
+Now remember, each instruction is going to have a different size.
+20:32
+They can have up to 15 bytes, depending on what the instruction is.
+20:36
+So when you're iterating over instructions in an emulator, you need to make sure that
+20:40
+you have disassembled the instruction to determine the size, and then skip over
+20:45
+that to get to the next instruction.
+20:47
+So this is our increment, and this is our halt.
+20:53
+state for the emulator.
+20:54
+Now, once we get into the emulator, so for each instruction, we'll save the
+20:59
+address of EIP, and we're only doing that so that we can use that address inside
+21:04
+of our code without having to reference this clunky registers notation here.
+21:09
+So here is the key to our disassembly emulator.
+21:15
+We disassemble the first instruction up to size 15.
+21:21
+So we take the code, these are all the instructions that
+21:25
+we've been given to emulate.
+21:27
+We use the address.
+21:28
+So this is where EIP is pointing the instruction pointer plus
+21:33
+15 bytes to choose the maximum size that an instruction can be.
+21:38
+And we pass that to our disassembly engine.
+21:41
+Now, if we've passed additional bytes, it doesn't really matter.
+21:44
+The disassembler will only disassemble the number of bytes
+21:47
+required for the instruction.
+21:49
+And what's passed back is an instruction object which contains
+21:53
+information about the instruction that was just disassembled.
+21:56
+So we have things like the mnemonic, that's the actual name of the instruction,
+22:02
+and the operands, these are the values that are passed through the instruction.
+22:05
+Now, the first thing we do here is we do a nice debug print.
+22:09
+We print out the mnemonic.
+22:11
+And the op string, the op string is basically just all of the
+22:15
+operands together in a string.
+22:17
+And we print that out to the screen so that we know what's going on, right?
+22:20
+Then what we need to do is emulate the instruction.
+22:24
+So for our emulator, we have implemented two instruction handlers,
+22:30
+one for move and one for add.
+22:33
+Now of course if you're writing a generic emulator and you don't know
+22:37
+the shellcode that you're going to be emulating, You would have thousands of
+22:40
+instruction handlers, but because we know we only need two instructions handled,
+22:45
+we just have two instruction handlers.
+22:47
+Now, each instruction has various types or permutations depending on the
+22:53
+type of operand that is passed to it.
+22:56
+Of course, you can move a register to a register.
+22:59
+You can move an immediate to a register.
+23:02
+You can move a memory address to a register.
+23:05
+You can move a register to a memory address.
+23:07
+All different combinations of move need to be handled.
+23:11
+But in our case, we know that there's only one instruction variation we
+23:15
+need to handle, which is moving an immediate into a register.
+23:19
+So what do we do?
+23:21
+We check to make sure that the first operand, operand at offset
+23:24
+zero is a register and operand.
+23:28
+to operand at offset one is an immediate.
+23:32
+For any other case, we don't handle it, right?
+23:35
+Our emulator is very specific to the shellcode that we're analyzing.
+23:39
+Once we've established that this is the variant of instruction we want,
+23:43
+we grab the immediate value from operand one, and we place it into our
+23:49
+emulator register value at Whatever the register is in operand zero, right?
+23:57
+So this code right here is actually emulating what would
+24:02
+really happen in a CPU and a CPU.
+24:05
+You would have a series of registers, and any time you found an immediate
+24:10
+move into a register, you would take that immediate value and you would
+24:14
+place it into the register in the CPU.
+24:16
+In our emulator, our registers are just a dictionary of values,
+24:22
+and all we have to do is store that immediate in the dictionary.
+24:25
+That's the emulator, and this is the core concept behind the example and
+24:30
+the labs that you're going to be doing is that an emulator is truly just a
+24:34
+series of if statements that handle each instruction and an instruction variant and
+24:39
+replicate in code what happens in a CPU.
+24:43
+So the same is done for the ad.
+24:45
+In this case, we're only handling an ad between two registers.
+24:49
+So add register one into register zero.
+24:53
+So we have to check for that variant.
+24:55
+We check that the first operand is a register, the second operand is a
+24:59
+register, and once we've established that, we just add the two registers together
+25:05
+and store the value in the first register.
+25:09
+And again, in our case, the registers are just a dictionary called registers.
+25:13
+So how do you add the values?
+25:15
+Well, you index into the first register and index into the second register in
+25:20
+the dictionary and store the result.
+25:22
+In the first register place in the dictionary, and that's pretty
+25:26
+much all there is to our emulator.
+25:28
+If there's any other instruction, we print an error and halt emulation.
+25:33
+So what happens when we actually run this?
+25:36
+Well, shift enter.
+25:37
+You can see at the bottom, we already had the result.
+25:40
+We have a print statement for each one of the instructions that we handled.
+25:46
+And at the end, we're printing what's in our dictionary where EAX is located.
+25:52
+And the result is five.
+25:55
+So two plus three should be five.
+25:58
+We've correctly emulated this code.
+26:00
+So there you go.
+26:01
+That is a two instruction emulator built on top of the capstone disassembly engine.
+26:07
+And again, the core concept here, my dog was making lots of noise.
+26:11
+And again, the core concept here is that our simple Python emulator.
+26:17
+is conceptually no different from any commercial or open source
+26:21
+emulator that you might be using.
+26:23
+We have some if statements that check for different instructions and
+26:27
+replicate their behavior in code.
+26:30
+That's exactly what a emulator does under the hood.
+26:33
+All right, I hope you guys enjoyed that.
+26:35
+Uh, just a quick reminder, go check out our Patreon.
+26:39
+We have a lot more tutorials like this, hundreds of hours of live
+26:42
+streams with us at Reverse Engineering, and we have lab exercises that go
+26:46
+along with these tutorials if you want to get some hands on practice.
+26:49
+Go check it out.
+26:50
+We'll see you in the next tutorial.
+

@@ -1,0 +1,1071 @@
+0:00
+do it live hi folks and welcome to open analysis live today we're going to be taking a deep dive look at this new
+0:08
+ransomware called esxi args which is attacking a vulnerability in vmware's
+0:14
+esxi hypervisor and it's worming its way across the internet
+0:19
+ransoming all kinds of different hypervisors I I can't remember what the count is now but it's a massive number
+0:26
+of servers that have been impacted by this and to help us figure this out we have a special guest Fabian is joining
+0:33
+us today for those who don't know Fabian he is probably one of the number one ransomware crackers uh in the industry I
+0:41
+think he's responsible for breaking more ransomware than anyone I know of at least
+0:46
+um so we have him on and he's going to walk us through step by step through how this ransomware operates just a heads up
+0:52
+up front um I don't have any false promises here it turns out that there are no crypto
+0:58
+flaws in it so it can't be broken in however there is a way that you might be able to recover your data if you're
+1:04
+watching this video I will put a link down below sometimes when this ransomware is deployed there's a bug
+1:10
+with how it's deployed and it may not encrypt all of the files so they might be recoverable so I'm going to link that below if that's why you're watching this
+1:16
+video otherwise stick around and we'll be talking to Fabian about how all this works also obviously it won't be an OA
+1:24
+Labs video if I didn't chill for a patreon we have a video up there where Fabian takes us through a real world
+1:31
+example of ransomware which is vulnerable and he shows us how you can attack the cryptography and break it so
+1:38
+you don't have to actually pay the ransom if you're interested in that kind of stuff go check out our patreon if you
+1:43
+want to see more about esxi stick around and let's get into it okay um so let's take a look at esxi Ox real
+1:51
+quick um so ESX I ask it contains of like two
+1:57
+parts at least two parts that I know of so far it's a shell script and it's a
+2:03
+binary so I suggest we we will start just with the shell script first I would say and my experience somewhere yeah oh
+2:11
+yeah those those are their Commons yes this is like a file exactly as it was
+2:17
+deployed by um we ransomware threat actor my guess I
+2:24
+mean right now it seems to be they're like more than 2 000 servers affected by this
+2:29
+this is clearly like an automated attack right there's someone set up like a script who just does it automatically
+2:36
+deploys the uh ransomware payload like deploys these scripts and then just goes
+2:42
+off and let it run scan scan the whole internet and pop a couple of thousand Esq exposed esxi servers
+2:50
+okay so let's see what we got here so they are they are defining like a just
+2:56
+just a variable temp um as like a
+3:02
+honestly for like 95 to 99 of all cases when you deal with an encrypted esxi
+3:08
+server the rents were payload uh is to be found somewhere in temp just from experience
+3:15
+people just or threat actors they just uploaded there and then run it
+3:21
+um and that's it they seem to be increasing like the certain certain
+3:26
+limits a little bit Yeah makes sense um so they don't run into issues where they
+3:33
+can't open new files because they had like the file handle limit for example
+3:38
+um so next they are running ESX ESX CLI this xcli is like a command line tool
+3:47
+um on ESX that you use to interact with the VMS and it's essentially like a proprietary tool
+3:53
+and it does appear like they run esxi CLI VM process list I would assume that
+4:00
+gives you a list of all the VMS that are running and then they are grabbing for like config files so
+4:07
+um without an actual esxi system to run this but I would I would assume
+4:13
+that this will give you like a list of all the VM configuration files on the
+4:19
+system like all the vmx files of VMS that are running on that particular ESS server so they're trying
+4:27
+to get the path to the to the the path to where where the virtual machines are
+4:32
+stored essentially like where these configurations are being stored okay then they then they stop the oh sorry
+4:40
+voice crack then they stop the um vmx files
+4:46
+um uh yeah then they are stopping the the running virtual machines it's kind of interesting that they're using like
+4:52
+kill because I'm pretty sure there's like an esxl CLI command to shut down
+4:58
+the VM gracefully instead of just killing the process no more CPU time
+5:04
+I've got your [ __ ] PID and the bottom line is that you best not front or it's
+5:09
+kill Dash nine kill
+5:22
+that is that is true yes um then they are making another file
+5:29
+executable that is like this encrypts file that we have here as well
+5:35
+they then seem to enumerate all the different
+5:42
+um storages that are being configured um ESX is this concept of data stores
+5:48
+and data storages so um yeah those are essentially the
+5:53
+locations that will actually host the virtual disks and the configurations and stuff for you
+6:00
+um as you may may be aware when it comes to virtualization like the time where each
+6:07
+um where each server had its own local storage are long gone usually you have like some sort of
+6:14
+um um network attached storage that's like super fast and that is being used by
+6:20
+like multiple servers at the same time stuff like that and it then appears to be grapping
+6:28
+everything that's like mounted in the volumes folder this is by the way the default folder
+6:34
+where all the data stores are being mounted in esxi by default
+6:39
+um and it seems to be essentially like iterating over all these different volumes right so each volume has a name
+6:47
+um so this is to essentially get the volume name and then it uses find
+6:53
+to enumerate through all the files in each data store
+6:59
+and it's looking for anything that's of type f which means files and it needs to
+7:04
+have like one of these file extensions so essentially they aren't going to do
+7:10
+the enumeration within their ransomware themselves they are very they are embracing the Unix principle of
+7:17
+everything should only do one job and then you just swing like dozens of tools
+7:23
+together in order to create your makeshift shitty ransomware right I'm honestly I'm surprised they aren't using
+7:28
+like the open SSL command line tool to do the engine description yeah
+7:35
+um so yeah but but we can clearly see here that it's uh like getting all the fights that are ending or that contain
+7:41
+uh the following extensions so this check over here
+7:48
+um just make sure that the file actually exists I don't know why they are doing this but who knows they seem to be
+7:55
+getting the file size offset file
+8:00
+um and kilobytes it seems with like the minus K I think gives you the five size in kilobytes
+8:07
+um they then appear to check whether or not the size and kilobytes divided by
+8:13
+1024 is greater than 128. so this is essentially
+8:20
+um so what this channel pretty much does is hey is this file bigger than
+8:26
+128 megabytes because yeah one 10 24
+8:32
+megabyte 10 24 kilobytes are like one megabyte and then greater than 128 yeah
+8:38
+so they are for files greater than um 128 megabytes they seem to be setting
+8:46
+this particular size step variable otherwise it's being initialized with
+8:52
+just zero and usually in ransomware when you see something like this oftentimes
+8:58
+ransomware has like certain thresholds that after a file reaches this particular threshold they they are not
+9:04
+going to encrypt the whole file to save time they may only encrypt like certain parts of it so they may encrypt a part
+9:11
+then jump a bit a little bit further and then encrypt another part so this is what I would assume is going on here but
+9:18
+we will see later what exactly is going on and then it prints out like a little bit of
+9:23
+um uh and sidestep is um the size in megabytes
+9:29
+100 megabytes minus a minus one so
+9:35
+um Okay so 100 yeah it's the size
+9:42
+so it seems to be the side steps seems to be like in steps of like one 100
+9:49
+megabytes of some sort and this seems to be like some sort of Maximum so if a file is
+9:55
+like 900 megabytes um for example then this value would be
+10:03
+eight because 900 megabytes
+10:10
+um then yeah 109 yeah yeah okay so I would expect so
+10:17
+this is like eight that particular case it's just like some sort of arithmetic and honestly like
+10:24
+figuring out these custom chunking algorithms when they are being used is often what takes the most time when it
+10:30
+comes to Breaking ransomware because some ransomware authors get like very
+10:35
+creative when it comes to these specific algorithms it's not always oh we are
+10:40
+just going to jump by a fixed amount and then we will just encrypt another fixed
+10:46
+amount and then jump by another fixed amount sometimes it's like the result of like rather complex equations
+10:53
+sometimes they also make errors mistakes in these equations
+10:58
+um it's it's a horrible mess sometimes yeah and last but not least they seem to
+11:05
+be running this encrypt file passing in the public dot Pam so this is like an RSA public key
+11:11
+uh Pam is like popular format for that particular case um the file name then whatever they have
+11:19
+calculated as this step size um one and the file size essentially
+11:29
+because size size in KB times 1024 is
+11:34
+like decisions bytes right Okay so let's check out the actual encrypt
+11:41
+binary I'm not I'm not sure yet um whether or not there's going to be a
+11:47
+private key reveal party but we will see now the great thing about esxi and Linux
+11:53
+ransomware in general is that Rand Smith threat actors haven't caught on to the fact yet that release
+12:01
+builds of Linux and esxi binary still contain symbols
+12:06
+so um I wouldn't be surprised if yes so this contains like all symbols and we
+12:13
+have two choices now Chad do we want to use those symbols and potentially see whether or not
+12:19
+the threat actors made embarrassing typos when naming their functions or do we want to have at least a little
+12:26
+bit of Challenge and not use no use at all okay
+12:31
+Okay so back to source so okay okay okay
+12:37
+we are using symbols we're using symbols it's honestly sometimes they have like
+12:43
+really weird um typos in their code and it's nice yeah it says okay one person is asking
+12:50
+for hardcore mode what should we do it's you could do Hardware mode on your own
+12:55
+time yeah I will do I will do hardcore mode on my own time okay so yeah and we could see like
+13:04
+let's let's check out like the function names first to see if they're like any any weird function names in their print
+13:11
+error acts get file curl size get PK data
+13:16
+create RSA objects man those guys are really lame when it
+13:22
+comes to names oh we have oh friend French people
+13:27
+French people represent your French stream or like
+13:33
+yeah your French stream Cypher has been used by them there's only one other ransomer family that is using that
+13:39
+particular stream's iPhone that's babuk so I wonder if this is like somehow
+13:45
+based on the bubble code because there's like no real reason to to use
+13:50
+like French engineered encryption and algorithms did babook have a Linux version
+13:57
+yes they do and the public source code was leaked um so you can see them
+14:05
+yeah I I agree with with uh rothway if they wanted us not to use symbols they
+14:10
+would have stripped the binary well there's and yes noxic that is usually what happens quite quite a bit
+14:16
+that they forgot to strip the binaries because release builds by default still contain symbols on most Linux based tool
+14:24
+chains I I've noticed I don't know I mean you looked at a lot more of the of the stuff than I have Fabian but like I
+14:30
+noticed there's a skill difference between people who are riding windows ransomware and Linux ransomware
+14:40
+the first Linux ransomware I looked at it looked like they could barely get it to to work like I didn't it seemed like
+14:46
+they weren't familiar with how to write software for Linux esxi to be honest is
+14:53
+special beast in particular so early versions of esxi I think
+14:58
+versions prior to version five it was still called ESX back then they were
+15:05
+actually based they were using a Linux kernel so they used the Linux kernel to boot up and then they replaced the Linux
+15:12
+kernel using their hypervisor now esxi starting with version 5 I think or maybe
+15:19
+even earlier than that but when they changed the name from ESX to esxi they
+15:26
+also changed the kernel they are using so they are no longer using a Linux kernel they use their own kernel called
+15:33
+VM kernel and VM kernel is like a very kind of bizarre thing technically it implements
+15:41
+the Sysco Avi of an old Linux kernel so
+15:47
+there's like a certain degree of compatibility yeah but it's not 100 compatible and
+15:55
+even the Linux ABI or like this is called interface that they Implement is
+16:01
+like based on a I think 2.6 something so it's like ancient we are talking like
+16:08
+over a decade old so that poses a whole lot of challenges when you want to
+16:14
+compile any binary for esxi because there's essentially no documentation
+16:20
+it's not something that VMware wants you to do they don't want you to do this and in
+16:26
+order to get this to run is a challenge in and of itself because it's not as
+16:32
+easy as just oh yeah I'm just going to statically link G lip C into my ransomware and then it's going to run
+16:39
+it's not that simple there are a lot of very subtle
+16:44
+um issues with that and a lot of cryptography code just breaks and as a result
+16:51
+um oftentimes um esxi and Linux payloads as a
+16:56
+consequence are often vulnerable to certain floors or like to to certain
+17:03
+attacks that their Windows counterparts are not vulnerable to even though both of them
+17:12
+use are compiled from the same code base so it's quite interesting what is going
+17:18
+on over there um to to so Peter was asking whether or
+17:24
+not they are they have to statically link everything that they want to bring along them
+17:29
+um yes a lot of ransomware actually does that so they do links everything statically the problem is and that is
+17:36
+something that a lot of people um are oftentimes not aware glip C is
+17:43
+not designed to be linked statically glip c will break horribly
+17:49
+if you start mixing numbers or if you do anything that causes the real g-lib c
+17:57
+um from the system to be loaded inside your statically linked process otherwise and the problem is that there are a lot
+18:04
+of apis that will um load g-lib C that is on the system
+18:09
+without you noticing it for example when you do DNS lookups it just knows she lip
+18:17
+C even if it's linked statically it doesn't matter hmm so it's not as easy as just like linking
+18:24
+glibc statically what you would want well I don't want to give them tips how you do it properly
+18:30
+um yeah there are a lot of subtle bugs and it's not as easy as just oh let's
+18:35
+just link stuff statically and things will work out it's unfortunately not that easy
+18:41
+so yeah fun and they still forgot to strip the symbols
+18:46
+yeah um yeah serverless rename your main user to Windows I mean that reminds me of
+18:53
+like this you this incredibly dumb recommendation to oh just just install like the Russian keyboard layout
+19:00
+effect system which honestly was was being promoted as like a real like work
+19:08
+around a while ago and it's just the most stupidest thing ever because usually uh ransomware doesn't check with
+19:16
+what like an install uh keyboard layout is they check what the default keyboard
+19:21
+layout is so unless you also want to roll out acrylic keyboards in your company this is not going to work I'm
+19:28
+sorry it's just not and even even if it was like the thing is ransomware
+19:35
+nowadays at the time the ransomware has deployed the attacker knows pretty much everything about your company they know
+19:42
+whether or not you're a real Russian company or not it's
+19:47
+when they first got in yeah when they when they first got in and they probably
+19:52
+know your network better than you do that's just that's just the reality
+19:58
+um oftentimes ransomware threat actors spend like a week sometimes even multiple weeks inside your network
+20:05
+mapping out um your entire network figuring out what all like the high value targets within
+20:13
+your network um they want to exfiltrate data um first before they encrypt stuff and
+20:20
+most ransomware families yes why they do have like a check for the keyboard
+20:26
+layout for example Thatcher can often be disabled using just a config flag right
+20:32
+um so it's a completely non-nonsensical um sort of sort of fix and uh I haven't
+20:41
+met people are promoting I have a fully anonymized for everyone watching story uh about
+20:48
+something very similar where um you could you could watch the The
+20:55
+Operators so the people who are actually deploying the ransomware testing the AV at the victim to see what
+21:04
+it would stop and then modifying their their payload so it would work live
+21:11
+within the network so this was a long time ago I think things are have changed
+21:17
+a little bit and how how this works I think deployment time now seems a lot faster I haven't been I haven't been
+21:23
+looking at uh intrusions for a while so I don't really know what the state of the art is now but uh four years ago or
+21:30
+so um three years ago yeah it was pretty much they they were just test it and see it
+21:36
+doesn't work this uh this security solution is blocking it well let me try try something new so it was always kind
+21:44
+of weird when people would say like on the security teams they'd say oh well we're going to deploy this protection
+21:50
+against the ransomware and this protection against ransomware when really wanted to play a protection against
+21:56
+somebody sitting in your [ __ ] Network like that's really what you gotta focus on here not the not the ransomware
+22:03
+payload that's by the time that comes it's all that's awesome
+22:08
+I mean I mean from personal experience they still spend it has gotten a lot
+22:13
+shorter but most families will still they're almost always signs like three
+22:19
+to four days ahead still okay so you still have like a three to four day Head Start to stop the attack before the
+22:26
+ransomers actually deployed okay um but it yes you said it kind of
+22:31
+depends there's still a lot of um threat actors and groups out there who will take quite a quite a long time
+22:38
+before deployment others they oftentimes automated the entire process to a point
+22:43
+including the exfiltration yeah where you have like specialized exfiltration tools
+22:49
+um they they optimized it and automated to it to a point where the ransomware
+22:54
+deployment happens within 24 hours of the initial access right yeah I saw some
+23:00
+public reporting on some of that stuff which is what made me think oh maybe they've sped up the deployment time but
+23:06
+yeah that's I guess they're still doing some some people are still doing the long dwell time yeah and also always
+23:13
+sort of depends whether or not the initial access was
+23:18
+um whether or not there's like initial an initial access broker involved resolved the access to the network
+23:24
+because that takes time usually right or if um the group who is deploying the
+23:30
+ransomware is also the group who is getting or arranging the initial access right yeah whether it's Affiliates or
+23:36
+not and yeah I I fully agree okay let's let's go back to this amazing ransomware
+23:43
+though right um so yeah it's it's
+23:48
+so this is like what command line passing it looks like when you're a shitty programmer and you're restricted
+23:55
+to see only um so it seems to be initializing like the local
+24:02
+installed uh lip SSL so yeah they are using the
+24:07
+um available openssl Library so what are they importing so
+24:13
+um for those who've never looked at um like a Linux binary or something DL
+24:18
+open is like the Linux equivalent to load Library to translate it to Windows terms and
+24:25
+like DL Sim essentially looks up um a function by name so it's kind of
+24:30
+similar to get proc address and windows yeah so it's looking up so new memory
+24:37
+buffer so memory stuff memory allocation stuff uh so yeah so we are dealing with
+24:44
+RSA here um they are also using the openssl
+24:49
+random number generation a random number generator run pseudobites they are using RSA public
+24:57
+encrypts and there's also RSA private secrets that are that are being
+25:03
+important also RSA size so so we are dealing with RSA here most likely
+25:09
+um and um we also saw earlier that they are
+25:15
+using like uh Sosa manuk or susmanuk or however it's going to be pronounced
+25:21
+um which as I mentioned before is like a stream Cipher so my guess is they will
+25:27
+probably use sourcemannuk to encrypt the actual file
+25:33
+data and we'll use RSA to then encrypt the io
+25:39
+keys that they probably generate using run pseudo bytes that attach it to the encrypted data to
+25:45
+the encrypted files but we'll see so first of all they so they get all their function pointers in
+25:52
+order so everything's fine if that fails then they will just return
+25:57
+an error which is to be expected then they appear to be opening so the first
+26:04
+parameter they appear to be calling like the getpk
+26:09
+data when we look in our script again the first parameter was RPM file which
+26:14
+is essentially con most likely containing our our private key I I unfortunately don't have the private key
+26:21
+uh uh the the public key I unfortunately don't have if I had the private key that
+26:27
+would be great because like decrypt all the data right um no I unfortunately don't have the
+26:32
+public key file so I don't know what key size exactly we are we are dealing with
+26:38
+so we'll see um anyway let's go let's go back so yeah this opens
+26:48
+um so this is like our key file so it opens our key file we got file
+26:54
+descriptor back it checks for errors then it seeks to the
+27:00
+see what is seek and so it seeks to the end of the
+27:06
+file um so LC gives back the offset
+27:13
+that you end up at after the seek operation so this is essentially a way
+27:18
+to get the file size right you seek to like the zeroth offset relative to the
+27:25
+end of the file so um this is like a fat size then it checks if our file size so this
+27:32
+is like classical error checking again um if we got back a valid file size then
+27:38
+it's going to allocate a file size plus one memory bytes of
+27:45
+memory then it's so this is uh seek set so this seeks to like an
+27:53
+absolute offset inside the file zero so this seeks back to the beginning of the file and I would assume yeah so they are
+28:00
+going to read the file file the file data
+28:05
+um and that's it so that file pretty much does exactly what the final symbol told
+28:12
+us it essentially just reads out um so that's like the symbols are amazing yeah although sometimes like I
+28:22
+don't know because of incompetence but the sometimes the functions do something
+28:28
+completely different than the name which suggests right yeah that's true but somebody mentioned in the chat too The
+28:34
+Helpful error messages that they print so they oh yeah yeah error messages are thumbs up right there
+28:41
+um so that's like the key data um so then then so I would assume that
+28:48
+that then is the RSA object because they are passing in the key data that is still payment coded which is like base64
+28:56
+and stuff um and they are creating like an RSA object and
+29:01
+that's just a guess right now but let's see so they are allocating some memory
+29:07
+um yeah and then they just call read yeah so that is exactly so this
+29:14
+essentially just decodes the payment coded um RSA key and returns you like the key
+29:20
+object that is certainly being passed in so name checks out everything's fine so far and then they just call encrypt file
+29:27
+oh and they oh wow they have a home screen wow
+29:33
+so okay the first is the public key then the file name then the encryption step number of MB to
+29:40
+skip wire encryption number of them being encryption block and then we have the file size and byte
+29:47
+okay so they're nice one megabytes amazing is that what we saw yes so
+29:55
+um this is how how much they scare right
+30:00
+so that's why it's a minus one then that makes sense and then there's encrypting one one
+30:07
+megabit and then they encrypt one byte and this is like how large the file is ultimately yeah
+30:13
+yeah so the only thing 900 for like a 900 megabyte file they
+30:19
+would um encrypt one megabyte then jump eight megabytes then encrypt one megabyte a
+30:27
+jump eight megabytes because they like the size step is like
+30:35
+um yeah the size and KB divided by 1024 so you end up with megabytes
+30:40
+and then divided by 100 and then so it's definitely not restorable
+30:47
+yeah one megabyte blocks every 300 megabytes if you if you lose like
+30:54
+um it's it's not restorable that being said in a lot of cases
+31:01
+um in a lot of cases where this was deployed something like the script broke
+31:06
+or the in binary broke so the actual Oni
+31:12
+the vmdk files but not the vmdk flat files got encrypted so these emdk files
+31:19
+they only contain some um information like oh yeah the data
+31:24
+stored in these vmdk flat files yeah yeah and um like a guide and some other metadata
+31:32
+essentially so the data is still there and not encrypted but like the definition files
+31:40
+that Define the storage they are gone but they can be recovered in many cases so that is
+31:46
+if if you are affected by this then there's hope for a lot of people only the metadata
+31:52
+got encrypted not the actual data on the virtual disks and there are instructions
+31:57
+floating out there on how you can recover those if you're affected I would
+32:02
+suggest going over to bleeping computer really um giving computers like the yeah shout
+32:09
+out to Lawrence definitely do you think computers like the place to go to if
+32:14
+you're affected by ransomware if you need help dealing with it
+32:19
+um and it has been for yeah over a decade at this point right yeah
+32:26
+um and it's totally free like you don't need to pay anything right to register account over there and ask for help
+32:33
+um we can actually check out the um I think they have coverage oh yeah
+32:40
+yeah there you go he outlines the exact uh the steps that you can take in order
+32:46
+to recover the metadata um and we saw your VMS if you are
+32:52
+affected by this and I would suggest be careful make backups of your encrypted
+32:57
+data right that's always important um like an encrypted backup is better
+33:03
+than no backup at all and there have been many many cases where decryption tools actually both thread actor
+33:11
+encryption tools as well as encryption tools pre provided by like other parties
+33:16
+um damage data during the actual encryption process so there we go um let's go back
+33:23
+in here so yeah the encryption step um this is how many uh
+33:29
+um how many is being skipped also why it's like zero right for smaller files
+33:35
+where it's always zero it will just encrypt the whole thing yeah one uh less than 128 megabytes
+33:43
+um so yeah let's see so we know so this is like a crypted source do we
+33:50
+have anything else so the third parameter uh that's like our encryption step
+33:57
+that's the option uh chunk size
+34:02
+and that one was the file size there we go oh one thing why are they
+34:09
+passing in the file size it's like a command line parameter does anyone here have an idea why this might why they
+34:18
+might do this any guesses from the chat chat's delayed by like
+34:23
+a couple seconds yeah I know I know it should vary I I have been your your I have been in
+34:30
+your top two percent of of chatters of chatters yeah yes I was so proud
+34:37
+any any guesses why they may pass in the final science from from the outside
+34:43
+I have a guess I mean yeah you don't want to hard code the file size but you could totally
+34:48
+totally like just get the file size like they do getting the file size for the RSA key seek to
+34:56
+the end um know where you seek to because it's being returned by the seek API and then
+35:02
+go back to the beginning I mean yeah Peter that could be right but then again they know how much they append to the
+35:08
+things so they could just calculate it okay um any other guesses
+35:14
+you have 30 more seconds usually you don't run antivirus software
+35:19
+on esxi no that's a bad idea find a default size
+35:25
+yeah so the reason is that esxi allows for
+35:32
+something called thin provisioning yeah yeah so those vmdk data files on disk
+35:39
+might be a lot smaller than um
+35:44
+the disk they actually represent because um the vmfs file system Only Stores the
+35:50
+areas that have been changed as they need oh [ __ ] yeah so that is why they use
+36:00
+um like this yes yes xcli tool in order to sort of figure out how how
+36:07
+big this stuff is because it's um yeah it's like not exposed through a normal
+36:13
+API um it's it's something it's something that's specific to esxi
+36:20
+and vmfs in particular yes yes they they are passing in the the
+36:26
+maximum file size that this file could be instead of what it actually takes up
+36:32
+on the phone on the disk for all you of course EDR Developers definitely take a take a look at
+36:39
+ballooning file sizes balloonics are excluding disk usage on your ESX idrives
+36:46
+that might be a good tell uh 100 yes okay so we
+36:52
+um let's fix up the um the names here so the first one is like a file name
+37:00
+although God knows if it's actually going to take accurate
+37:06
+Ida why are you sometimes Ida is just soup let's be honest
+37:12
+I enforce software that is like so I mean I know you have the same opinion than I do it's
+37:21
+or something that's like so expensive you would expect something like really variable names to work yay it took it
+37:29
+did work amazing amazing so let's see what is it doing so it
+37:34
+opens the five for read write which is something you would expect right so we're getting our little file descriptor
+37:41
+here um that generates a key stream or oh no it's a stream key not a key
+37:48
+stream and this is like this um it's like a stack variable 40 bytes
+37:54
+in size um it's generating like 32 so let's see how it's being generated and yeah that's
+38:01
+used like Rand pseudobites which is an openssl I think it's
+38:07
+actually like a deprecated openssl function and um I think they are actually using it
+38:14
+incorrectly here let me look at the open SSL configuration yeah yeah we know that it
+38:22
+was deprecated we still need the main page though that's like this sort of issue that you
+38:28
+will get into when you deal with esxi since their stuff is like so outdated
+38:33
+oh yeah so so the random pseud random bytes to the buff up pseudo pseudo
+38:39
+random byte sequence is generated by pseudorandom bytes will be unique if they have sufficient length but are not
+38:45
+necessarily unpredictable that it's not something you want to hear when it comes to your key generation function
+38:52
+no they can be used for non-cryptographic purposes and for
+38:57
+certain purposes in cryptographic protocols but usually not for key generation okay
+39:06
+So Random pseudo bytes returns one of the bytes generated are cryptographically strong zero otherwise
+39:13
+both functions return minus one if they are not supported by the kronwren method
+39:19
+so right um this tracks if the value is zero non-zero so if the
+39:25
+either so this is true both if the random number generation failed
+39:33
+entirely or if the returned random numbers are cryptographically secure it
+39:39
+will only fail in the case where the cryptographic key material is not it
+39:44
+shouldn't be used for cryptographic operation so so if it fails completely they'll just
+39:50
+go on ahead yes it will just go on hand and move on with whatever was in that
+39:56
+memory in the first place thumbs up thumbs up oh by the way in
+40:04
+case you're curious why why why would this fail why would like any random number generation function fail right
+40:10
+there are different types of like random number generators
+40:16
+um there are true random number generators who are usually based upon some sort of physical phenomena atom
+40:24
+Decay for example um there's something called lava rent at
+40:29
+cloudflare where they have like this huge in installment in there in their uh
+40:36
+us office of like hundreds if not thousands of um hundreds if not thousands of like lava
+40:42
+lamps and then they um like record the movement of the lava
+40:49
+lamps in order to get like two random data into random information
+40:55
+um but the amount of um entropy like the amount of
+41:01
+information like truly random information that you can generate is being is pretty much limited so you can
+41:09
+only get like what are you doing kiddies hmm wow I'm sorry if you can hear the
+41:15
+cats in the background they're like running chasing each other all through the apartment right now so the amount of
+41:21
+like true Randomness that you can collect at any given time is is gated so
+41:29
+um usually what you do is you use these true random number generators to
+41:35
+generate seeds for you and these seeds are then used in order to see it a
+41:41
+different type of random number generator that is called a pseudo-random number generator
+41:46
+for you yeah blue or black is posted like a picture of the lava lamp so
+41:52
+this is actually being used by cloudflare to generate the key material for SSL handshakes
+42:00
+um it's quite cool there are a couple of YouTube videos out there that you can check out if you're interested in how
+42:06
+exactly this works but the idea is that the physical phenomena that is responsible for the pattern within the
+42:12
+lava lamp they are assumed to be uh very random
+42:20
+um and unpredictable so essentially they are recording this huge wall and use the
+42:26
+image data in order to turn that into encryption Keys it's pretty cool yeah
+42:32
+um okay back to this so there are two different times of types of like pseudo-random number generators
+42:39
+um they are cryptic cryptographically secure random number generators they are called csprngs
+42:47
+and they are insecure pseudo-random number generators like the rent function
+42:53
+and the C programming language for example um now the problem with these uh
+43:00
+pseudorandom number generators or and or in particular with the pseudo with the
+43:06
+cryptographically secured so the random number generators is that if you don't seat them correctly
+43:12
+um the the random data they are generating the keys they are generating they will still end up being insecure
+43:19
+um a couple of years ago there has been like a huge [ __ ] up
+43:25
+and um yeah in openssl specifically in
+43:30
+the openssl package used by Debian where they manage to [ __ ] up the
+43:37
+initialization of the openssl csprng so bad that there were only I think about
+43:44
+like 32 000 possible RSA private keys that can be generated for any given key
+43:51
+size um and yeah I mean the and the whole reason was that someone was running wall
+44:00
+uh Val grind on um on like the open SSL package and saw
+44:05
+oh this is like accessing uninitialized memory let's initialize with like something proper
+44:11
+but that uninitialized memory was like one of their entropy sources that they used to to essentially seat their their
+44:18
+random number generator with right and the result was yeah all the keys
+44:24
+generated by that particular version of openssl um were completely broken and
+44:31
+you can no longer use it so even if the point is even if you use uh secure
+44:37
+random number generator that is designed for cryptographic purposes you still need to make sure it is being seated
+44:44
+properly yeah um and this is essentially and my guess
+44:51
+is uh ramp pseudo bytes may have like a fallback if there isn't enough true
+44:57
+Randomness available to um seat their CSP their their
+45:03
+cryptographic cryptographically secure random number generator they will
+45:09
+probably return random bites with oh yeah those are random bites but please don't use them for cryptographic
+45:15
+purposes yeah which is kind of a dangerous uh architecture yes yes
+45:21
+and I think that's probably also why they deprecated this particular function
+45:26
+and moved to rent bytes because rent bytes either it gives you cryptographically secure uh bytes or it
+45:34
+doesn't give you anything nothing yeah um so which is the way better design
+45:40
+like don't use this but they probably had to use it because there's like an ancient open SSL version available on
+45:47
+es6i on me okay so this gives us like our random key
+45:53
+um so that's like our key buffer and then it's um next it seems to encrypt our RSA our
+46:02
+key buffer using RSA classic really RSA public encrypt totally makes sense
+46:09
+it's like the um it's using like the public key the public key to encrypt the data
+46:16
+um key buffer that's the size so let's see it's like uh
+46:22
+public key objects the second one is our buffer
+46:28
+that we want to encrypt the next one is like a buff size
+46:33
+and then those other two I would guess like this probably is like uh our
+46:40
+encrypted buffer and this one is like the uh encrypted buffer size
+46:47
+yeah I I don't know yet for sure but those are like educated guesses we can
+46:53
+look up the documentation in a bit so that is like all being passed in essentially what we would expect
+47:00
+let's see our encrypted buffer yeah it's like allocating some sort of memory this RSA size probably gives you
+47:08
+back what is like the map's maximum size of data that this RSA key can encrypt
+47:14
+um so in RSA 1024 key for example can at
+47:20
+maximum encrypt um 10 24 bits or in that particular case
+47:25
+128 bytes right so there's like a size limit for I say how much data you can
+47:32
+encrypt in one go without having to chunk it chunk the data do something else like split it up into different
+47:38
+smaller parts and for RSA that's determined based on the RSA key size
+47:47
+um so let's see um I would expect this to return the
+47:53
+um see can we can we do it here no it's not found so Google and also
+48:00
+it's once again it's like it's applicated API so thumbs up for that
+48:06
+yeah so it Returns the modular size and bytes it can be used to determine how much
+48:12
+memory must be allocated for an RSA encrypted value um and the other one is RSA public
+48:19
+encrypts can we just plop it in there yeah we can so
+48:26
+um it's like the length the from length then where it's being encrypted to
+48:33
+the RSA object and the padding let's see do is that essentially
+48:39
+yeah the length the buffer that we want to encrypt where it's being decrypted to
+48:45
+our public key objects and this is like the padding I think
+48:50
+was it the padding yeah the padding and padding of one is probably
+48:57
+pkcs uh one padding don't use peaky pkcs one padding in general I mean they
+49:06
+also say it here it's most likely to use both however it's like highly recommended because there's they're like
+49:13
+certain attacks that you can do like padding oracles if you if you want to go down that road you may want to look up
+49:20
+the bleichenberger attack um they are like certain padding oracles
+49:25
+and in the past like PK cs1 has been the downfall for many many times when it
+49:31
+comes to SSL in particular I think if we get into padding Oracle attacks our viewer will drop viewership
+49:37
+oh yeah just one good it's rattle rather final
+49:44
+engagement the stuff I'm interested in right so yeah this is like very much
+49:49
+encrypting the um the key buffer using using RSA
+49:54
+um and then it calls this needle function encrypt simple and it gets back
+50:01
+um yeah there we go so gets the file descriptor the file
+50:07
+buffer file size so let's see and here you can see it's like initializing
+50:12
+initializing the uh key schedule essentially
+50:18
+probably passes in let's see let's rename those real quick
+50:26
+um fire descriptor the encryption step the chunk size
+50:33
+the key buffer the key size and the file size
+50:40
+so let's go in here yeah so this V v14 seems to be like a local
+50:50
+local array of like 400 bytes this is probably like the context kind
+50:57
+of like a structure that contains like all the information to like where's the
+51:03
+key stream at at the moment um stuff like that then we have like this init thing
+51:10
+let me see I wonder if we can actually find the docs for it I'm not familiar
+51:18
+with this uh with this Cipher at all I've never seen it before yeah as I said like the only ransomware
+51:26
+family that I am aware um that I am aware of that is uh so that's suddenly gone way
+51:34
+back machine that I was just going to say hey yeah I have a feeling that it took
+51:42
+exactly this code I wonder why it disappeared um you heard it here first like this is
+51:47
+fine no no no no no no I'm not saying that I'm not saying just I was just joking oh
+51:56
+so it okay so this is just a copy taken from someplace else like from the e-crypt yeah so there I don't know if
+52:04
+it's still ongoing or if it wasn't the past so the EU is currently trying to standardize stream ciphers and also post
+52:11
+Quantum cryptography and ecrypt is yeah it's like this
+52:19
+so this is probably the source model code that was submitted to the e-stream
+52:25
+competition in order to be selected as a potential new official stream Cipher for the EU
+52:31
+so that's probably where they took that code from okay yeah that makes sense also babook
+52:38
+is using the e-stream codes like the ecrypt code so yeah it's probably
+52:44
+um probably that so yeah it checks the file size of the file size
+52:50
+oh so they still get like the current file size that's interesting weird
+52:56
+um and they check if the file size is smaller than the current file size and if it is it's being adjusted they then
+53:03
+allocate buffer I think that should be yeah that's one megabyte
+53:10
+so that's probably um the file buffer that they are operating yeah the encryption buffer you
+53:16
+can kind of weird because they are also see
+53:22
+they are like also passing it in so oh so they are doing it okay so they
+53:30
+this is actually just like a file buffer um that is being reused and they are
+53:36
+also using like the chunk size in order to um like do multiple reads you reads and
+53:42
+writes using the same buffer if the encryption song size is like more than
+53:47
+one megabyte it seems so yeah once again they are like reading the data into up to like one megabyte
+53:54
+into the file buffer and they are going to encrypt it and then like with the
+53:59
+windows ransomware so this is like our our secure they correct the file pointer
+54:06
+like rewind it to the original position from where they read the data
+54:12
+and then they are going to write a language the ransomware sandwich is
+54:17
+Sergey aptly named the train so like this sort of pattern you will
+54:22
+see all the time when you deal with ransomware like reads the data it calls like some
+54:28
+function on it it rewinds the file pointer then it writes it out again that's just
+54:33
+I haven't seen anything crazy here besides the funny not checking of the
+54:39
+RNG failed I haven't seen it yeah that's correct um this I mean there's a chance
+54:46
+like a lot can go wrong with generating RSA keys
+54:52
+um there are a whole bunch of things that you can do wrong however given that
+54:57
+this code is using openssl I would assume they also generate the RSA Keys
+55:02
+using openssl um an openssl generates proper RSA Keys
+55:08
+like unless you use the Debian version from like 2008 right then it doesn't but
+55:14
+in all other cases the generated RSA keys will be secure so overall also
+55:22
+um it generates like a new key for every single file um so there's like no
+55:28
+key reuse between files or within a file for example
+55:33
+so yeah this would be like a sample unless we could find the private key somehow
+55:41
+or something went terribly wrong with the generation of the RSA key this would
+55:47
+be something that is secure that we can't really do anything about yeah
+55:52
+so sorry but luckily for all the esxi
+55:58
+um arcs victims out there the ransomware kind of screwed up
+56:04
+um like the invocation sort of screwed up and it crashed all over the place so
+56:09
+there's a decent chance you can use this to recover your data
+56:14
+um to like data recovery the old way or the the hardware the the difficult
+56:21
+way the old school way so yeah okay so I guess that's one good example of
+56:28
+stuff that you can't crack so yeah honestly that is that is also like a pretty neat sample of like an es6
+56:35
+i ransomware yeah um if you want to get into analyzing this because it's like very much
+56:41
+straightforward and you have the symbols yeah you have the symbols right if you want to practice on your own going
+56:48
+through this try to understand what is going on um it's absolutely an excellent sample
+56:54
+all right that was a long video but I I thought it was interesting I don't know but you guys I think this stuff is very
+56:59
+fascinating um so hopefully you enjoyed it and again big thank you to Fabian go check them
+57:04
+out if you are dealing with ransomware he might be able to point you in the right direction I put some links below
+57:10
+again for resources that might be able to help you if your files have been encrypted and lastly of course a show
+57:15
+for a patreon go check it out if you like this kind of stuff uh we have a couple more hours with Fabian talking
+57:21
+about breaking ransomware and tons more reverse engineering content there all right until next time keep exposing the
+57:27
+mechanics behind the malware stay curious
+

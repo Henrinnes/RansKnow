@@ -1,0 +1,579 @@
+0:02
+As I was introduced, my name is Mahia. I'm a senior operator up in our security
+0:07
+and today I'm going to be covering from the PPI to abound loading credentials modern web browsers. Okay, the agenda
+0:14
+for this talk. I'm going to begin with talking about the challenges of credential setting on modern Windows
+0:20
+environments. um the few hardening enhancements that Windows 11 and server 235 have gotten
+0:28
+recently that why you will want to consider dumping credential from a browser instead of the usual credential
+0:34
+dumping mechanisms. I'm going to be talking about the web browsers as alternative targets as I just said. I'm
+0:40
+going to speak a little bit about the Windows data protection API the API. I'm going to cover application bound
+0:46
+encryption that is a new mechanism that has been implemented in chromium based browsers to kind of mitigate uh or make
+0:53
+it not so easy to ass credentials and secrets from web browsers chromium based
+0:59
+browsers. I'm going to talk about the ways to overcome about encryption that has uh surfaced
+1:05
+uh since since implementation and I'm going to talk about the new attack surface uh what's the current attack
+1:12
+surface of browser store secrets so uh about me uh as I said sen operator
+1:19
+server security uh my day-to-day is simulation writing operations and I also
+1:24
+do web sec uh security testing of web applications mobile applications s enterprise networks and infrastructure
+1:31
+in general via as it may act directory
+1:37
+networks in general etc. I'm an offensive security enthusiast. I'm always learning about new at
+1:42
+exploitation techniques and I like to recently delved into the development of
+1:50
+custom tooling for EDR and art reservation and I'm also a believer strong believer
+1:57
+of the supremacy of Linux in the desktop as much as I like to break it you will
+2:02
+not c me using a Windows machine and I like I love coffee
+2:08
+uh some of my publications are an exploit for a uh remote execution vulnerability in a IP tables wrapper web
+2:16
+application EC world and a UBS application uh before versions 117 it's
+2:24
+a technical support uh service ticket kind of application uh there's data and
+2:30
+some of the certifications I I have so why will anyone want to target
+2:37
+credential storing web browsers And let's talk about
+2:43
+uh some mitigations that have been introduced in Windows 11, Windows Server 2025 such as credential guard and
+2:49
+enhanced LSA protection. This is credential guard for example. It pretty much makes the Elsa process uh not store
+2:57
+credentials. There's another process isol that uses virtualization security
+3:03
+to store the credentials and from user mode. You pretty much will never have access to credentials and with this
+3:10
+enabled. This was until a week ago. Some guys from Spector Ops pretty much broke
+3:16
+credential guard wide open. Right now there is the guard dump tool running around less than a week old. Allows you
+3:24
+to dump cred from credit card guard. But let's imagine this is a week ago. And
+3:29
+there's also less protection which makes Elsa's C a protected process light which
+3:34
+makes you unable to obtain a handle to its memory. Oh to the process to read it memory even if you're an administrator
+3:41
+or have privilege in user mode to dump Elsa or to access Elsas. When this is
+3:47
+enabled you need something like a driver. So what I think is a great alternative
+3:54
+for traditional Elsa sequential dumping is web browsers. Why everyone uses the
+4:02
+browser credential manager? I mean almost everyone uh personally I mean
+4:09
+personally I mean my team our team we've abused the heck out of this during
+4:14
+engagements. Uh employees of all kinds of companies love storing complex
+4:19
+passwords in the browser. Uh but what is a browser credential manager? It's a
+4:25
+simple mechanism in the browser that allows you to erh
+4:30
+whenever you input a password in a web login it asks you do you want to set this password you say yes it's stores it
+4:38
+uh for chromium based browser this is a SQLite database and it's in the file
+4:43
+system in operating system and it provides you with autofill features
+4:48
+whenever you revisit that page it autofills the credentials that's it
+4:55
+uh how does it work? For this talk, I'm going to be talking about uh I'm going to be focusing on specifically Chrome,
+5:03
+which is the most complex of all the Chromium based browsers in this regard, but they all pretty similar. So, how the
+5:11
+browser stores your secrets, there's this file called the local state file that stores uh general metadata about
+5:19
+some browser settings. Within those settings there is the encryption key
+5:24
+with which is encrypts the for example passwords cookies payment methods in the
+5:30
+secular database that I mentioned and this is the local state file lives in
+5:35
+the users data profile uh a data folder in the user profile and it's accessible
+5:41
+by the user uh in the case of
+5:48
+what protects process store secrets from its inception from version one of
+5:53
+Google Chrome to version 127 released in July 234 all that protected the secrets
+6:00
+was Windows data protection API. So through all this time, through all
+6:05
+that time, it was extremely easy to get a hold of credentials. Uh when I say
+6:13
+credentials, I say passwords, storing web browsers, cookies, and I believe payment information wasn't being stored
+6:20
+for most of the time, but also was easy. And on July 204, Chrome 127 was released
+6:27
+and they introduced a new concept called unbound encryption. What a bon encryption
+6:33
+pretty much is is an enhancement of how they protect the user store secrets in
+6:39
+the browser and pretty much uh an improvement uh make it harder to steal
+6:46
+them. I'm going to be covering that in a sec. And April 25 creation finally
+6:52
+covers passwords and payment methods. First was introduced for cookies then was rolled out to other stuff in the
+6:58
+browser. So I said that from its inception to version 127 all that protected user uh
+7:07
+store data in the browser was DP API. So let's talk a little bit about what that is. It's an API that Windows provides
+7:14
+for pro to provide encryption service well not services uh provides encryption for allows
+7:22
+developers that want to develop applications for the Windows ecosystem to use the operating system itself to
+7:28
+encrypt data in the context of the user. It exposes two functions, pretty simple functions. Cry protect data. Cry and
+7:35
+protect data. And based on keys that are protected with the user's password, they
+7:40
+encrypt and decrypt data. Allow developers to encrypt and encrypt data. It's as simple as that. So why was it
+7:49
+extremely simple to get browser secrets that were protected with the PPI? As I mentioned, the master keys that were
+7:56
+responsible for uh protecting the keys with which browser store secrets were
+8:01
+encrypted are only protected by the user's password. If anyone [snorts]
+8:07
+uh managed to get code execution or run a process in the context of another user
+8:13
+of a user, that process be for example as something as notepad.c Let's see if it's running
+8:20
+at the same user has access to all the secrets stored in the browser because the operating system itself can make the
+8:27
+decryption possible. So uh
+8:33
+why was it phased out? Infostel malware as for decades now
+8:42
+has been targeted has been targeting user uh browser store secrets from users
+8:49
+and it had it extremely simple to steal the
+8:56
+answer from a user. All you had to do was get the user to click on something to execute something. You managed to run
+9:02
+something in the context of the user you had everything they had to store in the browser. That was it. That was extremely
+9:08
+simple. So this is why Google introduced this. Okay. What that is application B
+9:14
+encryption. Uh they released a blog post when they released it. Application B creation. It
+9:20
+was introduced in Chrome 127 and pretty much uh quoting their same blog post. It
+9:26
+was introduced as a new protection on Windows that improves the secrets stored in the browser and they stated that they
+9:33
+will be introducing it for cookie encryption. And then they will would have been rolling it out to payment
+9:39
+methods and credentials and whatnot all that the browser stores.
+9:44
+And an overview of how application bound encryption works is that now instead of
+9:51
+relying on DP API solely for encrypting the browser store secrets,
+9:56
+uh now the browser has what is known as elevation service. the elevation service
+10:02
+runs in the context of the system account and the authority and so they removed or isolated or added
+10:10
+a layer of protection around that. So now instead of the browser performing the decryption of the secrets that is
+10:17
+stored uh credentials or cookies or whatever now the browser has to talk to
+10:22
+the elevation service and ask the elevation service to decrypt set
+10:27
+secrets. The way this works is on the local state file before with the P API
+10:32
+all there was is the encrypted key value that was protected with the PPI. Now on
+10:38
+the local file there's the abbound encrypted key and the browser reads from
+10:43
+here and talks to the elevation service provides it with the encrypted abound
+10:48
+key and the elevation service pro makes some validations of the process that is
+10:54
+calling the function to decry the data if it's a legitimate browser or something running from the browser's installation pad validation passes and
+11:02
+the elevation service decrypts the encrypted key and returns it to the browser Why is it more secure now? Because
+11:10
+instead of solely relying on DP API with the user's password to encrypt the secrets, the elevation service now
+11:16
+encrypts it with DP API from the user which means uh secrets protected from the user's password and the DP API key
+11:23
+from the machine which uh a user does not have access. For someone to have
+11:29
+access to the DPI machine key, one will have to elevate to ent authority or system or extract LSA secrets from the
+11:36
+machine. And with that said, it is impossible now for a process running as an low
+11:43
+privilege user to access browser store secrets basically.
+11:49
+So how does the elevation service actually work? It is a con server and it
+11:55
+runs in the context of the system matching account and we can see all this without needing to do any reverse
+12:01
+engineering. Most of the of this code is open source in the coming project. Uh
+12:06
+here's a snippet of the definition of the decret data function in the elevation service. So when the browser
+12:12
+takes the encry key and provides it to the elevation service. This is actually what pares it. It receives the key and
+12:20
+performs the first step that is the decryption with the system DP API machine key. Since it's running in the
+12:26
+con system, it can do this and the next step it also decrypts it
+12:32
+with the user the P API key since uh
+12:37
+com in com you can impersonate the caller process. It impersonate the
+12:43
+process that called it and performs the decreation in the user's context. Since the browser runs in the user context,
+12:50
+after that DP API double decryption, what you get is uh data that has the
+12:56
+path of the browser installation directory. And with this, the elevation service
+13:04
+also performs validation to ensure that the one that called it is a legitimate
+13:10
+browser or a legitimate process running from the browser installation directory. uh here's a snip but also from the
+13:16
+chromium codes that shows the validation process
+13:21
+and after the data of the after the string of the path of the browser here's
+13:27
+more or less the structure that follows the data that you get once you do the double API decryption what follows is
+13:33
+one bite that is a flag pretty much specifies the encryion algorithm uh they've been changing it in Chrome
+13:40
+versions and the latest one I believe it was 140 something. Uh this is head
+13:46
+three. It basically means it will use as GCM as 256 GCM EES 256 GCM. It comes
+13:55
+with an encrypted AES EES key an IB the cipher test and attack.
+14:02
+So why is there an encrypted AES key and cipher test here? Because Google Chrome
+14:08
+does something special to other Chromebased browsers. At the beginning of the talk, I said Chrome is the more
+14:14
+complex of the chromium based browsers is precisely because of this. They have two functions that are not publicly
+14:20
+available. They're not part of Chromium based code. They're part of Chrome closed source code. It's the pre-process
+14:27
+data function and the post-process data function. uh before encrypting
+14:33
+everything and storing the the secret of the user, the preprocess data function
+14:38
+erh uses a key that is hardcoded into the database service binary uh to sort
+14:47
+uh an IS key and then encrypts it using CNG in Windows. I'm going to be showing
+14:52
+that in a bit. And the proposer postprocess data function basically does the opposite. And after the double DPI
+14:59
+decryption uh processes on that data to return it to a usable state. What I mean
+15:05
+by that uh this so the postp process function is not public. It's part of the
+15:12
+closur code after the double DP API decryption what I mean by this machine
+15:17
+the decryption using the machine key and then the user key uh with the encrypted
+15:23
+key that we return. What we have to do is decrypt this key using CNG. CNG is
+15:28
+crypton API. It's uh an AP technology in Windows to provide cryptographic
+15:35
+services to developers using what is known as key service providers. Uh what
+15:40
+this means is when applications first register with a key service provider, they can register a key and developers
+15:48
+can perform crypto using said key service providers without ever having to
+15:53
+touch the key itself. pretty much uh a safe way to decrypt in Windows uh keys
+16:00
+leaving the key isolation service within Elsa.c so it's tightly guarded
+16:06
+so when we are returned with this I a ees encrypted key we have to decrypt the
+16:12
+using cg the key service provider is Microsoft software key provider and the name of the key is Google chrome key one
+16:19
+after this decryption the key we actually return actually has to be sort
+16:24
+again I mean sort with a key that is a static uh stat it was I mean it's
+16:32
+released in the old versions of chrome is the same it's statically in the elevation service binary
+16:39
+and yeah most of the reversing work has been done by this guy his nickname is
+16:45
+ranasu I couldn't not I could not get a name but I put the reference to his
+16:50
+GitHub he made a a proof of concept for cookie decryption that highlights most
+16:55
+of these concepts. So if we want to see this is the sort
+17:01
+key that lives in the relation service binary. I'm going to be going back to this.
+17:07
+But if we were to talk about ways to overcome a bounding creation,
+17:15
+since I said that a bound encryption is basically the P API twice with the user
+17:21
+key and the system key and in Chrome the key also when you return it is
+17:27
+encrypted. you have to decrypt it using CNG or Windows cryptong and have to sort it with a key that is
+17:34
+statically compiled into the relation service binary and with that you can get the outbound key to the cry browser
+17:40
+secrets. So there are three ways to overcome a bounding creation. One is to
+17:46
+get code execution in the context of the chrome process since the elevation service makes bad validations to ensure
+17:53
+that whoever calls it is or the legitimate browser or an application running in the browser directory.
+18:00
+Erh if you manage to run a thread in the context of prom.c C you will pass the
+18:05
+pad validation and you can just interact with the elevation service call the decry data function and pass it the
+18:11
+encrypt data bank key from the local file and you can just return it and decrypt browser secrets with it.
+18:17
+Alternative number two, if drop a binary on Chrome's installation pad,
+18:23
+same reason as the first one erh for the pad validation that the elevation service the elevation service performs
+18:31
+since it will be running from the vars installation pad. It will pass the validation but this one requires local
+18:36
+administrator right on the machine. The first one does not. First one can be done from a context of of a low
+18:42
+privilege user. Second requirement and the third is to replicate the logic in
+18:48
+the elevation service and manually perform the decryption. What this means is pretty much manually do every one of
+18:55
+the steps that I mentioned. Decryption [clears throat] using the PPI with the user key, decreation using the PPI with
+19:00
+the machine key, the creation of the encrypted key using CNG and sorting the
+19:05
+key with the static key compile to the B series binary. This requires elevated to system
+19:13
+to perform the PIP the P API decreation with the machine key. So the first one
+19:19
+I'm not going to go into the details of process injection. There are many many
+19:24
+techniques of process injection in Windows nowadays but for the sake of uh presenting it I'm going to use a public
+19:32
+proof of concept. There is this one is Chrome elevator by
+19:37
+Alexander Hagena aka Saitets Sat. I hope I pronounced that correctly. If you go
+19:42
+right now in Google dumping credentials from Google Chrome about encryption, this is the first P that will pop up.
+19:49
+This is the mimikat of abound encryption kind of it's really popular does a lot
+19:55
+uh has a lot of obstac features but for the sake of the proof of concept basically uh does injection into chrome
+20:03
+and interacts with the elevation service to extract the bounding crypto key to
+20:09
+decrypt the bounding crypto key. uh with that it decodes it decrets browser store secrets and as seen with that you can
+20:16
+recover passwords. Another alternative is to drop a binary in chrome installation path. Basically
+20:24
+what you need to do to do that is to make a binary that will call the decry function in the elevation sorry
+20:30
+executable and pass it the the encrypted key that you will read from the local file. Since
+20:37
+you're running, since your process will be running from the browser installation pad, you will pass the pad validation validation service and it will decrypt
+20:44
+the key and return it to you. With that key, you can pretty much uh decrypt cookies, passwords and all browser store
+20:51
+secrets. A poke from a proof of concept of this uh has already been done and the name of
+20:59
+the person I mean the nickname of the person who did it is no crash. he made a tweet about it and here's an snippet of
+21:05
+the code and the link to the G on GitHub of uh his proof of concept but basically
+21:11
+uh it's just a standard binary made in C++ and here we see where he calls the
+21:18
+data function of the elevator service. If we run that, I mean if we download
+21:25
+it, compile it and run it from the browser installation directory in this case C program files Google Chrome
+21:30
+application, we can decrypt the abounding crypto key. And with that
+21:35
+decrypted key, we can do this. This is a simple Python tree script that
+21:42
+takes the crypto key and the creates good passwords for the current user.
+21:47
+Since passwords are stored in a SQL database in the user's data profile. If
+21:53
+we have the key which which the passwords in the database are encrypted, we can simply do a query and select user
+22:00
+origin and password and decrypt the password and print it out. The logic for the script is based on the this proof of
+22:08
+concept by zero edit that is a fork of the one I mentioned earlier from Renaiss. It's pretty much uh the same
+22:15
+only that it's adapted to use also passwords. Here is the proof of concept of the
+22:22
+Python script running but pretty much takes the boned key that we already decrypted by running a binary in the
+22:28
+browser installation path and decrypts the passwords stored.
+22:35
+Third approach replicate the logic on the elevation service. For this
+22:41
+elevation to system is required which means we need a local administrator in the machine. Same as the previous
+22:47
+technique and to do that I mean the steps we need to carry out once we have
+22:52
+that is read the encry key from the local file eleate to system or entry
+22:58
+authority and perform the PPI decision using the machine key. The operating system does it by yourselves by itself.
+23:06
+Then go back to the user context perform the PPI decryion with the user key. Then
+23:12
+with the data return from the WPI decryption we get the encrypted AES key.
+23:18
+We decrypt that key with CNG and sort it with the key that is static in the service binary and then that key that is
+23:25
+returned we can use to decry browser secrets.
+23:32
+So first step this is a proof of concept that I made uh based on the code
+23:39
+highlighted on the slide from the proof of concept from zero to 10 edit. The logic is taken from there and I cleaned
+23:46
+it up a bit to make it more readable. It uses this library called Windows for Python I believe that makes it extremely
+23:54
+simple to interact with the winter 32 API without having to do C++ which is a little heavy on the slides. So in Python
+24:02
+pretty much just it reads almost as English. We get the token that's the
+24:08
+token of the current thread. We tell it to enable the Cbook privilege
+24:14
+and we search for the process in the machine since we're a local administrator. We take the process the
+24:21
+token of the process running system in the case we log on and we take the token
+24:27
+and tell it to assign it to a process. pretty much token duplication and with that
+24:34
+we then read from the local state file we read the
+24:40
+encrypted key no sorry we don't read from local state file we receive the DPI
+24:47
+decrypted blob and we parse the structure that I mentioned earlier the encrypted as key the IB the separates
+24:52
+and the tag then we decrypt the AS key using Windows
+24:58
+CNG key. See here we see here that a provider the keystar provider is
+25:04
+Microsoft software keystar provider. The key name is Google Chrome key1 and we
+25:09
+call encrypt the create once to get the size of the output buffer and we call encrypt the qu twice to get the actual
+25:18
+decrypted data once we have the size.
+25:23
+And finally we take the key and sort it with the static key that I mentioned earlier that is taken from the elevation
+25:30
+service binary. We impersonate system and the crypt with CNG using that or
+25:37
+sorry it using that
+25:42
+and this is the main function of the script which pretty much reads the encrypted as key and every everything
+25:48
+that needs from the local state file in the user sub data directory impersonate system does the DP decryption then goes
+25:55
+back to user context performs user lip decryption and then calls the functions that were in the previous slides.
+26:01
+to perform the CNG decryption and the sorting and then decrypts the cipher
+26:07
+text that is returning the structure to get the final abound key decrypted.
+26:15
+Uh this is the this is what I just said it's doing that and here we see how it
+26:23
+selects the data from the SQLite database that stores the login in the browser.
+26:29
+There is a proof concept of it running
+26:40
+and it takes uh the SQL store in a chrome browser and decrypts it the credentials in this case.
+26:48
+So what does uh upbound encryion bring to the table?
+26:55
+Abound creation raises the bar definitely for secrets storing chro
+27:00
+chromium based browsers. However, it's not foolproof. Although uh users I mean malicious
+27:08
+actors now have to perform either chrome code injection have to have local or
+27:13
+have to elevate the system or dump from the registry. It is it is still possible
+27:19
+to get credentials from common based browsers and cookie stamp as well. But
+27:25
+now they leave more indicators since they have to perform this extra steps. But Google knew knew this when they
+27:32
+release a bounding creation. This is a quote uh sadly from the block because the bound service is running with system
+27:38
+privilege. Attackers need to do more than just cause a user to run a malicious app. Now the malware has to gain system privileges or inject code
+27:45
+into Chrome. something that legitim legitimate software shouldn't be doing. This makes the action more suspicious
+27:51
+transmitter software and more likely to be detected and I say they achieved
+27:56
+their goal. It is extremely it will be extremely hard for an EDR solution not
+28:03
+to notice process situation in a browser a binary being dropped in a browser's uh
+28:08
+installation directory or a user elevating to system.
+28:14
+Although idiotation techniques are uh every day now new ones are coming up or
+28:22
+new ways to perform the things I just mentioned. It's still a cat and mouse situation. Uh
+28:29
+they're going to be signaturing more and more of the techniques and redeemers and
+28:34
+adversaries are going to be coming up with more and more of ways to bypass these restrictions. But they definitely
+28:41
+achieved their goal of raising the bar and making it not so easy to get browser credentials because it used to be
+28:47
+extremely easy. So what are the obsc implications of abounding bypasses or the current one
+28:54
+ones at least uh I mentioned it most process injection techniques are highly
+29:00
+signature by the solutions. uh for system the PPPI decryption either
+29:06
+elevation to anti- authority system is required or dumping of LSI secrets both
+29:12
+which are highly signature by EDRs dropping a binaries in a browseration
+29:19
+path also uh not at the moment for some reason but will be highly signature
+29:25
+because it's extremely easy to signature just a or MSI dropping a browser's
+29:30
+installation pad should sound alarms and attacks now in the case of Chrome have
+29:37
+to be carried out on a live system. Before you could have the disk or a disk
+29:42
+image of a of a system and you could perform secrets from with just the browser files
+29:50
+or you could do it remotely on a live system. Since now you're required to use CNG, Windows script on API, you need a
+29:58
+live system. You need to run your code in a live system.
+30:03
+So some credits references to people from whose proof of concept I I've taken
+30:09
+ideas or the proof of concept themselves is Rasu which Booker decryption proof of
+30:16
+concept for Chrome that made a P for protecting the B encryption key
+30:22
+RPC by running a binary in Chromeation path. uh Lexander Hagena who made a
+30:29
+chrome process injection proof of concept to dump B encryption secrets and Sir Edit who made a fork of Nasus to
+30:36
+decrypt user passwords using the same logic he used first for cookie decryption.
+30:42
+So thank you for your time and hope you found this insightful.
+30:49
+[applause]
+

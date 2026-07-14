@@ -1,0 +1,701 @@
+0:01
+[Music] All right, good afternoon everyone. Thanks for taking the time uh to to be
+0:08
+here. Um really appreciate it. It's very nice outside so it's even nicer here. Hopefully this talk is uh as exciting
+0:14
+for you as it is for me and uh thanks to to uh the committee for giving us the time to talk and uh we're really excited
+0:21
+to kind of talk through our journey. Just a little bit of background about myself. Um I am at Booze Allen's dark
+0:27
+labs which is a R&D organization. Um so I get to do a lot of really fun stuff uh around research and development. So when
+0:34
+new technologies come out we get to try and play with them and see what we can do with it. uh and so a long line of of
+0:40
+various things uh within there uh but the latest of course for the last several years as you can imagine uh has
+0:45
+been AI and then a focus uh this year where we picked up uh with Agentic AI and so we put this put this talk
+0:52
+together kind of early on in the process and we've got a lot of hopefully usable information for everyone if you're
+0:57
+interested in using uh AI to do malware analysis uh or setting up an agentic workflow uh in your own organization so
+1:03
+hopefully that will be kind of the the key takeaway um agenda we'll go through all this stuff. But where we picked up
+1:11
+um just kind of a a fun background was we had created a a system um about a
+1:17
+year long long time ago, you know, every good story starts starts, you know, at a
+1:23
+point, but uh you know, a long time ago called 2024, which seems like it was like 30 years ago at this point. Um we
+1:29
+started in the spring to create for a particular customer uh a way of doing living off the land detection using AI.
+1:35
+So it was a lot of model training, a lot of that kind of really painstaking things that takes weeks and months um
+1:40
+possibly even longer than that to kind of refine what you're doing. Had a lot of great success with that. Right about
+1:46
+the time where we had stopped doing the that we, you know, we had an ask from
+1:51
+our boss, typical boss fashion, he's like, "Hey, this is really cool that we could do detection engineering living off the land. Can you do malware versus
+1:58
+engineering and malware analysis with AI?" And I was like, "No, that's the stupidest question ever. Of course not. This is the most difficult thing to do
+2:03
+in cyber. I'm a malware verse engineer. If you are too, you get the joke. Uh and so we said there's no way. And at the
+2:09
+time it wasn't a lie. Clearly something happened and we're here. Uh malware analys analysis in general is very
+2:15
+difficult. It's a very you know just pick up one day and say hey I want to reverse engineer binaries. I want to take apart malware. There's just a
+2:21
+mountain of things you have to learn uh when it comes to being able to do this. And so it's it's very difficult. It's very timeconuming. Obviously you can run
+2:28
+things through sandboxes and all these really cool capabilities that that are you know on the floor out there. But
+2:33
+there's always going to be certain amounts of things that get around uh sandboxes. They have evasion techniques
+2:39
+and when you have to do a manual reverse engineering, as you were all probably well aware, it can take several several
+2:44
+weeks to several months. And so we at the time AI didn't really work too well with it. Uh and so we were kind of just
+2:49
+going through looking at what we could do. And then and this is like my kids love that cool hand so I had to put it in there. The idea came around uh from
+2:57
+academia sometime last in in the spring of last year and about this time last year in the early summer. We took a look
+3:04
+at like this agentic AI thing. And so if you're not familiar with agentic AI, well it's kind of a buzzword now
+3:10
+unfortunately, but it is really cool. Uh it's real. U but the idea was the way that you can engage an LLM to do cyber
+3:17
+security wasn't necessarily the best way of of of using an LLM. uh for instance you would try to say hey find instances
+3:24
+of PowerShell happening in this environment uh and see if it's malicious and so LLMs with all the knowledge of
+3:30
+humanity uh it includes things from like Homer's Odyssey all the way through whatever's happening in the world today
+3:36
+uh you start getting hallucinations so you're looking for PowerShell it might start talking about Mario Kart or or
+3:41
+Ninja Turtles or something just based on the fact that it couldn't answer the question and so LLMs really didn't work
+3:47
+too well uh in this environment as well as with software Being able to leverage those inside a software was quite difficult. So the
+3:54
+idea of agentic AI is to break up what uh AI can do based on what a human would
+4:00
+take a similar process. And so the classic example is uh if I wanted to write a research paper uh about the
+4:06
+history of Copenhagen, uh you would just go to chatbt your favorite chatbot. You'd tell it, hey, write me a research
+4:11
+paper, this number of pages, this many sources about Copenhagen. And it would produce a research paper on Copenhagen.
+4:17
+it might make up uh sources that might not exist. Uh it might hallucinate in that fashion. It's very famous at this
+4:22
+point. And so that was you know less able to do recursion. There wasn't a whole lot of of ability to improve upon
+4:28
+itself when it does this kind of one shot. And so Agentic AI the idea in this case would say hey the way a human would
+4:34
+conduct this research would it would take a you know we would break it up into the fact of we're going to go do
+4:40
+research then we're going to write an outline. So you create agents that have access to tools. Some of those can be
+4:45
+backed by an LLM. some don't necessarily have to. And so in this case, you would have an agent that does the research, maybe that has access to like Lexus
+4:51
+Nexus or something like this. Uh then you'd have another agent who takes that information, compiles it into an outline, another agent who writes the
+4:58
+the first draft, an agent who will edit that draft, and another agent who who would write the final draft. Each one of
+5:03
+these would have access to specific tools. They'd be able to kind of choose uh what they think would be best for
+5:08
+goal-oriented completion, and then ultimately they'd be able to complete a much better uh research paper. or in this example there would be a program
+5:15
+manager type for lack of a better term uh over the top of that which is just another agent who has kind of the ideas
+5:21
+to say hey if I need this then go here if I need this then go to this agent uh and then along the way you you create a
+5:27
+system of thinking uh that mimics the way humans uh work which is also kind of the best way to to go after uh some of
+5:33
+these really difficult complex tasks I will say a lot of people think hey agent
+5:38
+that's just like an LLM by another name it's not uh not all agents necessarily need to have an LLM backing. They don't
+5:45
+need to have an LM any part. They just have to be able to access tools and then
+5:50
+they have to be given very hopefully uh narrow jobs, narrow focuses so that they can do what the task that they're set up
+5:56
+to do. Um it's not necessarily because you know a lot of people think like it's just taking chat GBT or Grock or
+6:01
+something and then putting a fancy interface on. It's really not. Uh so that's hopefully we're all you know great when it comes to to that. The last
+6:08
+bullet there is the checker agent. This is very important. uh we had a talk uh the first uh keynote u was talking about
+6:15
+bias in human analysis. You get the exact same thing happening with with AI um and with machine learning as well. So
+6:20
+the idea there is you have kind of an adversary agent that says hey is this the best uh research that you could have
+6:27
+done on Copenhagen? Maybe not. Can you can you think of a better way of doing it? And they go kind of checking uh
+6:32
+checking the work. And so we have kind of what we call the maker checker model. Um it doubles the cost but it does give
+6:37
+you better accuracy. So that's a gentic AI kind of in a nutshell. So that had come along. Uh and then we said okay
+6:44
+maybe we can actually do malware analysis to some degree. Maybe not full reverse engineering maybe we could um
+6:50
+using this this this sort of uh architecture within AI. So what we started with was
+6:56
+really kind of the keys for for what we found and again um we started this early last year um like in literally about
+7:03
+this time there wasn't a whole lot of frameworks there wasn't a lot of money u being thrown at it. It was just kind of this weird whisper. And so we I I
+7:10
+started this process. I had long flowing hair and now I don't anymore. It's all gone. Um but it was a lot of fun.
+7:15
+Hopefully I can give you some lessons on what not to do. But we ended up making our own framework because at the time there wasn't just a whole lot of
+7:20
+frameworks. Now there's a new agentic framework that comes out like every 37 seconds. Um there's new agent protocols
+7:26
+uh for multi-agent collaboration. These sorts of things also did not exist at the time. Uh and so we we painstakingly
+7:32
+and lovingly uh built our own. Uh but what we found in there uh was again like the keys that you need to have kind of
+7:38
+within there is um scope. So the narrower the task that the agent does uh
+7:44
+the more uh kind of granular it can do its job the better that it can get the results. Uh you always want to have like
+7:51
+a very narrow scope for those agents. Uh you want to be able to access the tools that it needs to be done. Uh but the
+7:56
+idea there is that you have to have kind of that that limited scope. What that means is you'll just chain a lot of different agents together. uh the
+8:02
+planning phase. The key there is that program manager, it has to be able to make decisions based on what needs to get done. So like in the malware
+8:08
+analysis example, you would drop it into and I'll show you what it looks like here in a minute into a dynamic environment. If it if it gets the IoC's
+8:15
+out, great. Um does it get function level analysis? Okay, maybe not. Maybe we kick that over to to a static anal
+8:21
+analyzer, uh a series of agents that do static analysis with things like Gerra or IDPRO. Um but then he also has to be
+8:27
+able to make those decisions uh and and when to stop and that's part of the task flow as well. And then accuracy. This
+8:32
+one is key. Uh the maker checker system. If you don't have that, things just kind of fall apart. Um
+8:39
+and then finally, once you kind of get this kind of idea in your head about like, okay, we're going to set up agents the way this workflow would work. Uh
+8:45
+then, you know, if you can focus on very specific tasks up front, it's going to make it a lot easier for what the agents want to do later on. So you can start
+8:51
+bolting on things. So maybe focus uh if you want to try this at home, uh focus a malware versus engineering uh agentic
+8:57
+system just on dynamic analysis first. And then once you build that out, you get the results that you want. You can bolt on other agents.
+9:05
+What this looks like at a very high level. Um, and again, this could have like 8,000 agents in there, but I just
+9:11
+wanted to go um at a higher level is you get that program manager, the orchestrator, he recognizes the malware,
+9:16
+recognizes kind of what that uh executable is or this DL or maybe it's an Excel document, whatever you want it
+9:22
+to to focus on, and then from there starts making those programmatic decisions. And so at that point, you could kick it over to a series of agents
+9:28
+that do the dynamic and static analysis. Within there, there'll be sub aents that have those specific tasks. So maybe one
+9:34
+that can just pull strings, you know, things that you just don't want to do as a malware analyst. Uh or if you don't
+9:39
+have any malware analysts in your in your office, uh people that you know that that are doing this, you just want to be able to do it yourself. You just
+9:46
+highlight what those agents can do. Uh unpacking, obviously, there's custom packers for some of the best malware, this sorts of stuff. You got to build
+9:52
+that in. I will say one of the things that we found is in doing all of this that um
+9:59
+if a human being can do it, you can train an agent to do it. I don't care what it is. Um maybe not like you know physically fixing you know electrical
+10:05
+outlets or something like this but anything you can do kind of in in the construct of of software on a computer.
+10:10
+And so the key for that we found for this too was the multi-agent collaboration. So very early on before a
+10:16
+lot of the multi-agent bits came out we we created our own framework for that. The idea here is that um LMS are
+10:23
+nondeterministic. So the way AI works uh it's not you know it's going to be kind of all over the place just based on uh
+10:29
+on that nondeterministic nature. You combine that with malware which may or may not execute which may have different variables built into it which might have
+10:35
+different functions that could or cannot be exercised. And so if you're trying to get complete code coverage with these uh
+10:41
+variables what we found was that you can't just set a one set of agents to move out on the problem. And so what we
+10:46
+do is we do kind of like if you think of like an AI swarm or sorry a drone swarm uh where you swarm just a whole bunch of
+10:52
+drones at a target. The idea is to do an AI swarm where you're going to put a whole bunch of different agents on it. So you'll have a grouping of agents. You
+10:58
+know these five or seven that you see here they move out as a unit. You have another one that does the exact same thing. It moves out and another one that
+11:04
+moves out. So you have the idea there is um number one you need to be able to do breakthrough sharing which there's a
+11:09
+bunch of stuff that allows that now new protocols with like MCP and A2A. Um, but the beauty of that is once one makes a
+11:16
+discovery can say, "Hey, I found the crypt key." And it can let everybody else know, okay, here's the cry key. And then now everyone, everyone, all the
+11:22
+agents at that point know exactly what they're looking for. They've got that knowledge that's shared between these units as they move out. Then the next
+11:28
+set of agents says, "Hey, cool. I found the function call that's going to do the networking." And at that point, that shares that out. So now we know what
+11:34
+it's going to look like. Now we know what the comm's going to look like. We know how, you know, maybe the crypto that's used for it. then you can start
+11:39
+making decisions on how to best get code coverage with things like interacting with the malware if you want to create like a C2 creating a agent that can give
+11:46
+you the code coverage. Uh so you can do all that kind of fun stuff. So that was one of the keys that we learned really
+11:51
+early on uh is to just move these things out as like squads that can talk to each other across. Um the other key component
+11:57
+too is um how much memory um I would say that you want a stateful agent. Um, what
+12:03
+we've been able to do with that is everything that gets done, every function that gets analyzed at the
+12:09
+function level for all these different pieces of malware, we throw that into a database. We do that because it saves a
+12:15
+whole lot of time. Uh, you're not reversing the same function over and over again. Uh, but then also you can start doing like function level
+12:20
+comparisons kind of on the back end, which is a whole other topic. Um, but at that point, you can do, hey, this malware has this particular function
+12:26
+that we found and where else did we find that? So, it's pretty cool. So being able to do all that kind of stuff is
+12:31
+also one of the things you have to do uh really early on. So the other bit was APIs are awesome. So
+12:38
+you probably if you're here uh your agency your your company has a whole bunch of different uh software that
+12:43
+you've you've purchased for security uh in the realm of cyber. So you want to make sure that you can integrate with that. Um if you wanted to you could
+12:50
+stand up some of this as uh an API that calls into an agent. The agent leverages that as a tool. Uh so you can do that
+12:56
+obviously with like a sandbox environment if you've paid into that. uh if you've got like an assembly line uh uh sort of malware structure going you
+13:02
+can you can dip into that before it hits agents and so that way you can kind of lessen the amount of stuff that you throw at it. So that was kind of one of
+13:08
+the the key components that we found uh within that high level architecture and all that is to say and uh I get people
+13:17
+this is where it gets kind of crazy a bit of an existential moment the team is four malware verse engineers and we
+13:22
+started looking at like okay this is what these guys have produced um and we would use because you're probably asking yourself right now it's a great question
+13:28
+how do you train uh the agents to know what is a good report what is a good action because these are autonomous the
+13:35
+agents themselves are kind of autonomous they should be iterative, which means that they'll make decisions, they'll execute the malware again, make
+13:40
+different decisions. Ultimately, what they'll do is with the maker checker model, they'll go back and get an output. So, we had that report
+13:46
+generation agent at the at the back end at the at the last diagram. But the the key was we had this a huge corpus of
+13:53
+malware we reverse engineered over the last 10 plus years manually. Um, things that we've looked at and we use those as
+13:59
+kind of the training, if you will, and I'm air quoting training. Agents is not the same as LMS, but I'll get that in a minute. But the idea is we were able to
+14:05
+take what we had done as humans uh and then improve the output and the decisions that these autonomous agents
+14:11
+are making on their own. The other cool thing about that is um and I should have specified actually I'll do it in a
+14:16
+minute um was that when they make a decision uh you can go back and do auditing for it. So you can say like hey you know on iteration three this agent
+14:23
+made you know whatever decision it was that was wrong go back and replay it you know with this. So you can kind of fine-tune those up front. But once you
+14:29
+get those agents tuned, uh, then you're going to be in a good position to just start dropping in malware and outputting
+14:34
+reports. So, couple ones that we did. Um, we tried to bat the cycle here. So, the pone Linux malware is a really
+14:40
+interesting one. It's it's, um, used by a bunch of, you know, attributed out there uh, a lot of really cool CTI talks
+14:46
+earlier, by the way, um, to to uh, Chinese actors. The idea here was that
+14:51
+we had done a report on that. took us about 3 weeks to do a function level analysis like a 40 something page report
+14:57
+really long in-depth report really great reverse engineer and you can see this was kind of like one of the
+15:02
+first ones where we got like comparable level uh from our system that we got from uh from the actual human analysis
+15:09
+and and it took less than 20 minutes which was kind of crazy for us things got a little faster um the next bit was
+15:14
+a is a small little windows dropper so it wasn't very complicated but you know still had some sort of um
+15:21
+anti- evasion techniques that we had to have the agents get around. But we were able to get that back in under five minutes, which again is crazy because
+15:26
+you can just output a report. Uh the reports are always pretty amenable. Um that's where you might want to use some
+15:32
+sort of ragging technique if you're familiar with that in AI. The idea is you can do uh retrieval of information. You can compare that AI uh like your
+15:39
+threat intelligence in this case to say, "Hey, do we have information on this already?" That would then uh kind of enrich your report. You can also use an
+15:45
+agent that has those capabilities to do the actual report generation as well. This last one I'll come back to uh was
+15:51
+pretty interesting because it was one that we somebody just said hey can you look at this is a piece of Linux uh
+15:56
+binary that we looked at and this one uh was interesting because it didn't call out it just would install and then it
+16:02
+would wait for magic string ICMP packet that was particularly crafted in a certain way um and underneath that would
+16:09
+be I think layers of AES or something but the the cool part was the system found that the m what the magic string
+16:15
+was and then actually reconstructed the ICMP packet based on a function analysis and then outputed like hey here's what
+16:20
+the ICMP packet would look like which then becomes an easy signature to deploy and took that like again less than five
+16:25
+minutes which is pretty awesome all of this is to say um existential moment did we just like automate ourselves out of a
+16:31
+job the answer is no AI is not replacing anyone um it's going to be useful for empowering people to do the jobs that we
+16:38
+do so even the systems that we build it's it's a huge time savings right so if I can do function level analysis and
+16:44
+I have like a strip binary I don't know if anyone in here is a reverse engineer and you've ever looked at a binary. It's terrible. It's the worst job in the
+16:50
+world. Uh you end up like uh reverse engineering some function like print f and you're like great that was like you
+16:55
+know several hours of my life just to show that like this function puts things on the screen and you've done it probably 15 times. You don't know what
+17:01
+you're doing until you start getting into it. Uh and so this idea is that if you have an agentic AI system that does
+17:06
+these sorts of things and if you've built this out hopefully it will be helpful to in the next couple slides for you to to try it at home. The idea there
+17:13
+is that that malware reverse engineer doesn't have to spend 15 hours mapping out functions. They can just go straight
+17:18
+to IDA or GEDAR and know exactly what function they want to look at and they can just manually reverse engineer that. So or it means you're not going to sit
+17:25
+there looking at a strip binary all day uh or days and wasting your time. So it's really about how you can actually
+17:31
+like empower the analysts that you have to do other things. It's also great from the standpoint of like if your maybe
+17:37
+your typical like assembly line and maybe some sandboxes might fail, a system like this might be able to do the extra step to get those comms that you
+17:44
+want out to then quickly put out some defense, some sigma signature, uh some detection engineering that you want to
+17:49
+do. And so that's kind of some of the key outcomes that we find uh in order to do all this. So now you want to try it
+17:55
+at home. Uh well, number one, hopefully everyone understands, do not do this on your gold load uh from your corporate
+18:00
+laptop because it'll end poorly for you and probably everyone involved. Uh please make sure that you're doing this
+18:06
+uh within the confines of a malware analysis, malware lab. Uh we first built this out as kind of a bare metal system
+18:12
+where we built it out on just a bunch of hardware. Uh which was great was also we wouldn't have gotten those really cool numbers that you saw there. Um we then
+18:18
+moved to a cloud service uh provider. uh you got to do some most of them I think
+18:24
+if not all uh you can do mau analysis you just have to fill out different forms and your account gets granted certain things you can and can't do but
+18:30
+it's very doable I will say um also because they're you know the primary sponsor AWS was what we used they've
+18:36
+been great I don't work for AWS but uh that's where we kind of were able to to put a lot of our um our uh systems in
+18:43
+now and so I'll skip to the third one the cloud scale is really cool so if you want to do this is you can do it uh on a
+18:48
+GPU doesn't necessarily have to have a GPU you can you can create these systems and I'll and I'll kind of go through the
+18:54
+list of of systems you might want to start with and not build one from scratch like we did. Uh but you're able to actually go in and uh use kind of
+19:01
+these hyperscalers. Uh we use AWS in a really weird way. Um and we're going to probably put something out with them
+19:06
+where we uh built all of our agents with lambdas and step functions. So they spin up, do their thing, spin back down uh
+19:11
+database things into like a dyno dynamob that can be pulled from for memory later. Uh but what that allows you to do
+19:17
+is like scale up really cool. Um, I will say cash is king. Um, so cash as much as
+19:23
+you can. Um, because number one, if it's something that you've already seen before, you don't have to spend any cycles at all. Again, some of this costs
+19:29
+like $3, so it's not kind of crazy. Uh, but you're not going to be able to you don't have to waste the time for the agents or the cost for you to actually
+19:36
+to redo that. Uh, caching also gives you that kind of that memory background for the agents to be able to pull from so
+19:42
+that the agent can say like, "Oh, yeah, I know what this is. This is cool." Or, "Hey, I made this decision once. It was wrong. Let's make the other decision
+19:48
+again as these are autonomous software. Um training agents again that's like uh
+19:54
+yeah that one training is is in air quotes the training in this case these are pieces of software and as software
+20:01
+they're going to get certain amounts of of kind of like if then functionality that's based on what they can and can't do. They can be trained up in the form
+20:08
+that you can go back in and do some sort of recursion with them. You can get them to to to do other things that they might have done uh separately. The cool part
+20:15
+about this is like you can create an agent in like I'm not even kidding like minutes now um with some of the frameworks that are out there. And at
+20:21
+that point you can fine-tune those in a matter of minutes to hours based on a very narrow function that it's doing
+20:26
+which is crazy because in LM tuning you're talking again months maybe years and it's just like it's it's a crazy
+20:33
+amount of of what you can do there. The other cool part about all this is when you use agents in these very specific
+20:38
+things uh then you're able to actually just the LMS don't matter. They're all great. um LM in general um you know as
+20:46
+they get better and they have like oh instead of six fingers on the video the guy now has five which is cool but like we see no difference in the actual
+20:52
+output we get from a malware analysis standpoint from cloud 35 to cloud 4 uh cloud just cost $4 more or 10x more uh
+20:59
+for cloud 4 than 35. So the LM themselves as they improve and do really cool stuff in the real world might not
+21:05
+necessarily impact you might not necessarily even need to do it. Um, last but not least, context window. You've
+21:11
+got to be able to give the agents uh these things are like little terminators. Uh, they'll keep going until they stop and uh and until they
+21:17
+find out uh what their answer is. And so there's two ways of getting around that. Number one, you can say like, hey, no
+21:22
+answer after a certain number of iterations is an answer and just report back that you could not get the the crypt key for the malware. That's fine.
+21:29
+The other thing you want to do is limit the number of iterations. And so as these things are autonomous and iterative, you don't want it basically sitting there all night long as you go
+21:35
+to bed and it's like your AWS bill or your Azure bill at this point is like $10 million when you wake up. So make
+21:40
+sure you put some some limiting factors on those. Uh context window stuff does is a bit of a limiter. Um you it is what
+21:47
+it is. Uh just based on on models uh and tokens in tokens out. So you just have to again the more narrow the scope the
+21:53
+agents task if they're using an LLM backing uh the the easier it will be for that particular piece. So hopefully that
+21:59
+was helpful. Now, uh, again, we started off with this and it was it was it was just like, okay, this
+22:05
+is cool. We built the thing. Don't do that. Um, every 5 seconds, I swear
+22:11
+there's like a new free I'm saying in air in quotes there, framework, uh, protocols are free, but all these things
+22:17
+are are coming out constantly. For a while there, we we were being tasked like future proof everything to make
+22:22
+sure make sure you're good enough. And it was like, okay, great. Which then means we're on Reddit like 24/7 looking at all these things that are coming out
+22:28
+there. you know, you've got cloud service providers putting out theirs, you got uh the the hardware providers putting out their frameworks, you've got
+22:34
+all these open source projects, and it was just like this crazy amount of still going on. Uh and so each one of those we
+22:39
+had to kind of look at just to make sure like, okay, should we use this, should we not? It's free in air quotes because the idea is, hey, we'll give this away
+22:45
+uh and we'll give it away because at that point, um you know, you come in and now you need to buy, you know, a million
+22:50
+or two dollars of GPUs and make it work. Great. So you can use you know is it agent IQ or agent blueprint from from
+22:56
+Nvidia or you get into the ecosystem for Azure AWS and then they that's how they make their money. The same with the LM
+23:02
+providers they're also uh creating their own agentic frameworks within there. Uh like bedrock uh for instance will be one
+23:08
+that you can use on AWS side. Um multi- aent frameworks are pretty awesome. They're all pretty good. It just depends
+23:15
+on what you're trying to do. I know the cyber the cyber guy answer it depends. Everyone hates that but it really does.
+23:20
+if if you need code execution, autogen is pretty good, but autogen in and of itself is more for like kind of that
+23:26
+chatbot creation on on the far end. Um, lang graph is is great for multi-agent collaboration, but you need
+23:31
+observability in the actual agents that you create so you know what it's doing. That's where lang fuse comes in, that's
+23:37
+also quite helpful. Um, if you're just doing like, hey, we're going to start small and we're going to do uh we're
+23:42
+going to do some string pulling and we're after we feed it from, you know, our assembly line or or sandbox, then you can pick one of these and you're
+23:48
+pretty much going to be fine. This is the non-exhaustive list, by the way. There's there's so many. Um, if you want to get the whole crazy system, it's I
+23:56
+was asked yesterday, actually this morning, too. Um, if you started over today, which one would you use? And, uh,
+24:01
+yeah, if if you wanted an end toend system that does the static dynamic function level analysis, you really can't use any of them. You have to do
+24:09
+still have to do some custom sauce just based on kind of the way that they work. So, that's where where um, again,
+24:15
+scoping it narrowly is going to be pretty good. Uh the last couple uh local models uh those are really important. So
+24:21
+if you have local models um used in your actual development cycle that means you're not spending a whole bunch of
+24:27
+money on tokens in tokens out. Um so you can play with those. When we when we played with this and started building
+24:32
+the system we started off with all the local models like Lama and some of the Gemini
+24:39
+because it was the cheapest. Uh and then now we we're messing around with claude. They're all amazing but local models are great. So if you want to play around
+24:45
+with this you can just kind of self-contain. and you're not causing any bills to go up. Or if you have a malware lab, it makes perfect sense. Um, and
+24:52
+then again, the idea is is whatever an a human would do, then make sure that it's
+24:58
+something that is, you know, repeatable, that that process you can train an agent for so that you can go forth and sort of
+25:03
+do that thing. Uh, what tools they want to leverage. Obviously, this is a non-exhaustive. This list of tools could be like 17 pages long, but you're all in
+25:09
+cyber security, not AI. So, you understand the amount of tools that you you would have agents leverage. As long as long as those agents have a
+25:16
+specialized task, they know what an endpoint looks like, they'll be able to leverage the tools as necessary. So,
+25:22
+hopefully that was pretty fun. Um, other things you can do, um, pretty much anything. Uh, there was a talk earlier
+25:28
+this morning on detection engineering and it was it was a great talk. was very well laid out as far as the detection
+25:33
+engineering um uh structure and and how the process works and there was a
+25:39
+question around like hey could you automate that with AI and I think that was like the first thing I saw too cuz well the first bullet here uh the idea
+25:45
+is when you have a great structure like was presented today it's it's very easy to then make agents that do the things
+25:51
+that humans do within that process you already have it laid out you can just go ahead and start making an agent you know choose lane graph whatever you want to
+25:57
+start with and then just go to town on it and once you kind of get that you can revise and and use. Uh so that we've
+26:03
+done one for detection engineering. Um it's it's not as complicated as as malware reverse engineering. So that's a
+26:08
+good one uh to do. Obviously, anything else that you do. Um
+26:14
+operational inefficiencies, finding inefficiencies and replacing inefficiencies with with agents is another good key key factor. Uh there is
+26:20
+some cost savings here. Of course, you can free up humans to do other things. And so if you only have, you know, three detection engineers and one threat
+26:26
+hunter, you know, if you start getting agents that can work 24/7, uh, they can always write new detections as threat
+26:32
+intelligence comes in. There's some new AP blah blah blah is using this cool technique. Okay, that's that's, you
+26:37
+know, germaine to my network. Then the agents will recognize that, create a detection. Um, I would not trust the AI
+26:43
+to deploy that detection right away. You have a human uh make sure that it works uh doesn't cause any sort of weirdness
+26:48
+uh on your on your defensive side. But that's the kind of thing that you can really plug in. Uh the beauty of that is
+26:53
+it's not malware. So it's like significantly easier to start playing around with uh and developing uh from that standpoint. And then I always like
+27:01
+to leave optimistic. Um I think agents are going to eat the world. Uh hopefully in a good way. It it really has changed.
+27:07
+Um I used to sit around about a year ago 2024 and and you know AI whatever that's
+27:13
+just that's just Python scripting. It's just nothing. And then we started you know as my job made me actually pay
+27:18
+attention to it. We started using it didn't really work. Agentic AI is is really changed the game. Um it obviously
+27:24
+in all things that do that they they sort of become um um buzzwords but I will say this is an example from that
+27:30
+Rakobi one they saw earlier and you can see the tokens per second how long it took to do the analysis today in
+27:35
+bedrock. Um the very near future is the next two Cberus uh is creating these wafer chips. There's another company
+27:40
+called Grock not that grock a different gro ends in a Q um that does a whole bunch of other um tokens per second and
+27:46
+optimization. And you can see that like the actual if you were to submit that same piece of malware in an optimized
+27:51
+way it would take less than a second to do the work that we had already done. And then of course quantum maybe we'll be talking about that in like 10 years.
+27:58
+Um but you can kind of see where we go with this. And so my excitement uh is that these things will be used kind of
+28:04
+to to for good. Obviously adversaries there's a talk on North Korea um that are create using AI to create malware.
+28:10
+Hopefully we can use AI to take that same malware apart and then as we can scale uh really the sky's is the limit.
+28:15
+So hopefully this was was helpful and uh right on queue for five minutes of Q&A.
+28:20
+All right. [Applause]
+28:27
+So any question here? We have one.
+28:33
+Hi. Thank you. Thank you for the presentation. The question is we also tried to do something uh similar but we
+28:41
+had the problem with um bias. So almost any uh binary or executable which you uh
+28:49
+nowadays have a legitimate ones they have let's say unpack packing unpacking encryption they also uh download some
+28:58
+extra stuff and installs I mean how you have solved this problem because
+29:04
+anything we have submit to the agent no LLM everything is malicious.
+29:10
+Yep that's a great question. So the best malware will always have some sort of custom packer that maybe you haven't seen. The answer there would be
+29:16
+typically again if a human could do it then you can train agent to do that. And so what we did on our side and it wasn't
+29:22
+the slides because I don't want to get too far into it but I will because it was a great question uh is uh we have our our custom unpacking agent. So what
+29:29
+that'll do is it'll have all the different unpackers that we've seen and it'll have it kind of built into it. It'll also um because it's stateful and
+29:35
+you can see where things failed. The other cool part is with the system, you can say, "Hey, it didn't work because of this." And that might get to like a
+29:42
+function. We've also got the ability to do um in our system what's called binary
+29:47
+hot patching. And so now I know that this function is some thing that the the um sandbox couldn't get around either be
+29:53
+it custom packer, some sort of custom environment variable. You can just basically hot patch out what the the adversaries put in with your own and
+30:00
+then it reiterates with that new binary. So then you can like really just get around anything that somebody's doing, which is really cool. Um, that one is
+30:07
+that one's pretty awesome. Uh, we also log whenever those decisions get made because then you can go in and say, "Hey, you know, this binary that was
+30:13
+analyzed had these changes built into it because of these reasons." Um, but ultimately, you get to the same the same
+30:19
+answer. So, that was kind of one of the the first things that we uh found the exact same situation. It was quite
+30:24
+difficult, but that that's kind of what we built into that. The second question you asked around call outs. So from that
+30:30
+standpoint, yeah, we we we don't have it built into like a sandbox environment to go say, "Hey, I'm going to grab the second or third stage piece of malware."
+30:37
+Uh the idea there is, okay, we know where it's going to call out to. If somebody wanted to go grab it, they could. If it needed a variable, they could plug that in uh from that analysis
+30:44
+standpoint. But it would be highlighted that, hey, this is the first stage. And if you want to go grab the second or alternatively, if you had both, then you
+30:50
+submit both at the same time. Uh then then it would be able to kind of work through the first stage and then to the second stage. Hopefully that helps. Hi,
+30:58
+thank you for the presentation. I was wondering how do you avoid hallucination? Do you use agents as well
+31:05
+for that? I'm sorry for for what part? Hallucinations of LMS. Hallucination.
+31:10
+Was it hallucinations? Oh, hallucinations. Sorry. Um hallucinations. Yeah. So, the idea there
+31:15
+is the more specific the the agent has a task, the less likely there's to be any hallucinations. Again, not all agents
+31:22
+are going to have an LLM kind of backing to it. Some are just going to be pure under the hood. is probably going to
+31:27
+just being Python. Um, they're going to have peer access to tools. They'll be able to leverage those tools that will get LLM ingestible output, but it'll
+31:33
+still be very specific. Uh, and at that point, we've seen that like the hallucinations from a big LLM gets a lot
+31:40
+lessened. That's the whole kind of nature of an agentic system is that you're not saying like, hey, find PowerShell and it starts it starts
+31:46
+dreaming. So, in that case, uh, that's how we we do that. The maker checker
+31:51
+system that I talked about is the other important aspect. So, what that means is um you can have the exact same agent and
+31:57
+all you would have to do at that point is something easy like giving a different LLM to back it up. Then you'll get a different answer. They talk it
+32:03
+out, figure out which who wins and then you know the idea is like you're never going to be 100% but it's still pretty
+32:08
+good. Um and it kind of removes that both the hallucination side as well as any sort of biases that have been put in for the for the backing.
+32:15
+It's about as good as you can get. Thank you.
+32:24
+First thing first, thank you for the exciting uh presentation. So the wonder
+32:29
+slide shows that the the diagram uh for the MAR analysis with five or six agent
+32:36
+right so do you think is it finalized or some uh space for development or
+32:42
+improvement for the efficiency or accuracy? Um so was the question was if there's
+32:48
+improvement for which aspect for the the Maria analysis system with LM
+32:55
+so do you think the diagram is finalized or some kind yeah sorry yeah the diagram is just a
+33:01
+high level um kind of conceptual just to talk through uh if I can get to it. Oh,
+33:07
+there we are. Yeah. No, it's not a final one. What I would say is just this is like the well, I'll use uh 40,000 feet.
+33:13
+I don't know what that is in kilometers. Uh overview of of kind of how the system works. So, when each one of those,
+33:19
+there's going to be several agents that do some of the dynamic analysis. They'll le leverage different tools. Um so, in that case, you could have a whole set of
+33:25
+agents that does with like say assembly line, another one that does things with cape, whatever that is. Uh you would also have a set of agents in on the
+33:31
+static side that would do leverage certain tools if you wanted if you had an idle license, you could do that. G or whatever. Um, and then I just kind of
+33:38
+did like a conceptual notional diagram of of like the unpacking agent. Um,
+33:43
+anything that you wanted to add to it. Once you get like the big muscle movements down where those agents can
+33:48
+work together, again, they move out together. Um, then you can start adding other agents that are like way more specific on on like, hey, a hot patching
+33:55
+one, an unpacking agent, that sort of thing. So, it's always growing. Um, it never really is going to be finished
+34:00
+probably. Uh, but yeah, that's that was a good question. So we are approaching the end of the time. So we have time for very one very quick last question. Other
+34:08
+than that I assume Justin is going to be around so you can approach him outside screen. So go with the last quick question and please quick answer.
+34:14
+Quick answer. Great presentation. Thank you. Uh thanks for sharing. Uh my question is around the time. So I
+34:20
+imagine this isn't the only job that you did was uh um how much of this time did
+34:26
+you spend like outside of your real job like dayto-day doing production of malware analysis?
+34:31
+Yeah, that's a great question. It was actually it was it was a full-time job and I say full-time I mean like 12 14 hours. Uh so yeah this was just kind of
+34:38
+like what our we were put on to say hey create a gentic AI framework to do malware to do these other things compliance whatever uh and so it just
+34:44
+became kind of like the full-time job once we made the framework the custom protocol for the collaboration then it
+34:50
+was just a matter of constantly refining it. So um luckily I got paid to do it um
+34:55
+maybe unluckily it was just like crazy hours because it became a bit of a passion project which hopefully you guys
+35:00
+found interesting. Perfect. Thank you, Justin. And let's thank him again with another big
+35:06
+applause.
+

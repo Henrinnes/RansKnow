@@ -1,0 +1,754 @@
+0:00
+Uh Ryan Emmens is here to chat with you and he's gonna tell you about what. So let's welcome Ryan to the stage.
+0:06
+Thank you so much. Thanks Bruce. All right. Hi everyone. Welcome to my
+0:12
+talk titled Disguise the Limit: Exploiting Synology Naz with delimiters and novel tricks. Let's get started.
+0:19
+Picture this. You're at home one day and the doorbell rings. You open the door and are handed a
+0:26
+package. It's addressed to you. After cracking it open and rifling through the
+0:31
+packing peanuts, you're greeted with a small black box. What is it, you might ask? A Synology Beast Station, a
+0:39
+consumer version of the Synology Nazine network attached storage. And it's going
+0:44
+to be a challenging adversary over the coming weeks of research. That's the position that I found myself in last
+0:51
+year when I wanted to participate in the pone to own exploitation competition. Uh this talk will discuss what I learned
+0:57
+while performing zero-day research on Synology network attached storage. And the end result of that research was a
+1:03
+$40,000 prize at the pone to own Ireland competition. Let's talk overview. First off, the
+1:10
+introduction and we're in it right now. Second, we're going to have a brief uh topic covering Synology NAS internals
+1:17
+and attack surface very high level. Uh number three, we'll dis we'll talk through discovering an unauthenticated
+1:23
+vulnerability via case study. This is the research I performed last year. Fourth, we'll have a novel exploitation
+1:30
+technique for Linux uh that I stumbled upon while developing the exploit targeting Synology last year. And fifth,
+1:37
+we'll have an exploit presentation so you can see everything come together in video. Let's get started.
+1:43
+Who am I? My name is Ryan Emmens. I am a staff security researcher at Rapid 7. I
+1:49
+have approximately four years of zeroday research experience and my day-to-day work is zeroday discovery and inday
+1:56
+analysis at Rapid 7. I've reported bugs to notable organizations like Oracle,
+2:02
+Microsoft, and Sonic Wall in the past. For this case study research, my project
+2:07
+goals were clear. I wanted to write an unauthenticated exploit. It should target Synology DSM or disk station
+2:15
+manager, the proprietary Linux-based operating system that most or all Synology NAS devices run. I wanted it to
+2:22
+work in the default config, no extra changes necessary to make the device vulnerable. I didn't want to employ any
+2:29
+adversary in the middle threat models. I just wanted to uh pointed shoot remotely.
+2:36
+I wanted the exploit to be highly reliable as opposed to leveraging bugs that were less reliable. And this was a
+2:44
+tough one. The timeline that I had to research was 3 and 1/2 weeks due to the conference uh registration. So I knew
+2:51
+that I had to move quickly. Let's talk about Synology DSM quickly.
+2:56
+Uh so Synology DSM is the proprietary Linuxbased operating system used by Synology NAS. It's used for file
+3:03
+management, multimedia, collaboration, productivity, virtualization, and surveillance. It acts as the brain for
+3:09
+any number of these workloads. And you can see a screenshot there on the right of the web service uh the desktop for
+3:15
+Synology desk. When talking about the device footprint, a naive shodden query for a Synology
+3:22
+DSM, which encompasses the B station line and the disk station lines, uh,
+3:27
+returns approximately 1 million public facing devices. So, these are devices
+3:33
+likely to be vulnerable exposed to the internet. I knew that there was significant potential impact, tons of
+3:39
+initial access. uh if an exploit worked on these devices then an attacker could
+3:45
+move laterally into the network of all of these organizations that had the device public.
+3:51
+All right, that brings us to a high level. Uh we're going to talk through Synology DSM internals and attack
+3:58
+surface on a high level. Uh so let's get started with that. When we're talking about research
+4:03
+targets, all Synology NAS run some variation of disk station manager OS or
+4:08
+DSM OS. The most affordable new hardware options for security researchers are
+4:13
+most likely the DS124 and the B station, both running a couple of hundred dollars more or less.
+4:19
+There's also a community project that's very helpful called virtual- DS DSM to run DSM in a Docker container. So, I
+4:27
+recommend that if an individual wants to spin up a quick DSM instance, test exploits, pull binaries or whatnot.
+4:34
+Different Synology NAS devices have different default configurations. For example, some disk stations
+4:39
+automatically have all web services HTTPS whereas others have HTTP uh and
+4:45
+the B station has a different configuration than most disk stations. Different Synology NAS products also run
+4:51
+different architectures. So the B station is ARM whereas the disk station
+4:57
+is x8664 and older disc stations are x86.
+5:04
+Synology offers a package manager, sort of an app store to install add-on packages for the uh operating system.
+5:12
+And despite these packages qualifying for the pone to own competition, I wanted to go for maximum possible
+5:18
+impact. So I wanted to stick to default packages only.
+5:23
+Synology BS station does not expose SSH or other advanced services by default. It's a consumer focused device. In order
+5:32
+to enable SSH, you have to go in and toggle Synology technology support remote access, uh, which is designed for
+5:39
+Synology employees, but it can be used to gain access to the root account on the operating system. Local access can
+5:45
+be enabled to configure local credentials and enable SMB, a useful target. And the Diskstation line of
+5:51
+products has an admin panel with an SSH toggle, so it's a little more straightforward for security
+5:56
+researchers. uh covering a brief history of exploitation at the time that I went
+6:02
+into my project. Uh pain in the Naz exploiting cloud connectivity to pone your NAS by clarity team82 from 2023 and
+6:10
+your NAS is not your NAS by DevCore from 2022. Both great pieces of research that
+6:15
+worked in different ways. Uh and both were primarily applicable to an attacker in an adjacent network position. So
+6:21
+already on the land most likely since Clarity Team82 targeted an information leak in a uh discovery protocol on the
+6:28
+LAN and the DevCore exploit was binary exploitation targeting the net talk service which is less likely to be
+6:34
+exposed publicly. Researcher Chen Chen presented an excellent overview of the JSON RPC like
+6:41
+Synology web API at power of community in 2019. And this is a great primer for
+6:46
+the web application, although I didn't end up leaning too much into it during my own research.
+6:52
+When talking about remote attack surface, the DSM web service is by [clears throat] far the most widely uh
+6:58
+exposed attack surface. It's enabled by default and virtually after
+7:03
+administrator web authentication, virtually all NAS functionality is exposed just via the web service. So
+7:09
+it's powerful if one is able to establish an authentication bypass or something of that nature. So the
+7:14
+question is what's reachable without authentication for the Synology DSM web service.
+7:20
+And that brings us to our case study uh discovering an unauthenticated vulnerability in Synology NAS. And we'll
+7:27
+dive in now. The DSM web service listens on ports 5000, 501, 6600, and 6601 by default
+7:36
+depending on the disk stationation that you got. A lot of researchers have tested this attack surface. In fact, it
+7:42
+was scoped for a few years at pone to own prior to me picking up the project. So, I knew they would be reason it would
+7:47
+be reasonably hardened. Uh, but the hope was that maybe we could do it in a new way.
+7:54
+Let's talk about the Synology DSM web service authentication workflow. Here's
+8:00
+the login portal that you see right here. So, step one for the BS station is to input a username. We'll do that with
+8:06
+the string username in all caps. Next, we have to input a password and we'll
+8:11
+just enter password. It's not a valid set of credentials. We'll click the blue button and the loading graphic will spin
+8:18
+for about 5 seconds. Now, during that 5-second period, some calculations are being performed under the hood to
+8:25
+determine whether the user should be logged in or not. And because we shouldn't be logged in,
+8:30
+we have invalid credentials. A generic failure message appears. The accounter password is invalid. Please try again.
+8:37
+Now, I was curious during that 5-second period, what exactly is going on under the hood of the BS station? What's it
+8:43
+what what kind of calculations is it doing? So, I wanted to dive in further and monitor at the OS level.
+8:50
+In order to do that, I used the ebpf tool, BPF trace with a simple script.
+8:56
+So, anytime the operating system processed a sys call, it would print the command line string as well as the
+9:02
+entire list of environment variables set for that process. It was very useful introspection.
+9:09
+So we'll kick off a BPF trace program. And when we log in again, we see three
+9:15
+executions take place. And number one, number two, and number three each do a
+9:20
+unique thing. So let's take a look now. Number one, the first execution, we see
+9:26
+command is null, which is unexpected at first until we dig a little bit deeper
+9:31
+and we see that the uh the program is a CGI binary execution. So, it makes a
+9:37
+little more sense. The environment variables are set such as script file name with entry.cgi and a number of
+9:43
+additional common CGI environment variables such as remote method equals post, remote address, so on and so
+9:49
+forth. Now, that's that. And it's not too exciting. But what happens next is a
+9:56
+little bit more interesting. So let's take a look at execution number two.
+10:02
+This time we see the command string set. It's senocgi-plugin-blog
+10:08
+and it has the argument dash pre. Note that we also see some additional environment
+10:15
+variables set that are different from the previous binary. User equals blank. Type equals password is known device
+10:21
+equals no. And then at the bottom we see co_plugin args a custom environment variable with
+10:29
+a temp directory and a randomized file path. So that immediately strikes our fancy seems very interesting
+10:37
+and we'll explore that a bit more here in a moment. The third execution when a user attempts to log in as seen through
+10:42
+the BPF trace monitor. We see uh the same binary is executed this time with
+10:48
+the uh the post argument. So before it was pre and now it's post.
+10:55
+We also see that the environment has been populated to a degree. User equals username in all caps. That's our tainted
+11:01
+data. That's our string that we provided as our username. We also see some additional information. The same information we saw previously. And we
+11:08
+see status equals fail. Result equals -2. So by this point in the process, we
+11:13
+know that the authentication attempt has failed. Once more, we see this interesting
+11:19
+environment variable seno_plugin args with a different file path in the
+11:25
+same temp directory. So, we really at this point want to know what's inside of that directory. What's inside of those
+11:31
+files? And when we go to look, they're not there. These are very ephemeral files that have already been deleted.
+11:36
+So, in order to see what those files contain, we're going to have to follow in the footsteps of these two gentlemen and do some investigative work.
+11:44
+To do so, we're going to use I notify, the I notify API for Linux. Uh more specifically, I notify wait. We'll
+11:51
+monitor that temp directory and we'll look for creation, modification, and deletion events in that directory. Uh
+11:57
+once we start that monitor, then we'll kick off another authentication attempt.
+12:02
+I notify wait picks up a number of different events. The creation of and modification and deletion of a couple of
+12:09
+files. We want to know what's in these files. And unfortunately, I notify is not quick enough to trigger catting the
+12:15
+file. So, we'll do it in a little bit more of a hacky way. We'll race with bash. You don't have to
+12:23
+know exactly what this bash snippet is doing nor pay that much attention. Essentially, it's just constantly trying to grab those files and when they're
+12:29
+written for a snap second, it prints them to the console. File one and file two. We're going to start this uh this
+12:37
+bash snippet and then we're going to attempt to log in again and see what it prints.
+12:42
+So first file user equals type equals password is known device equals no.
+12:49
+Pretty standard stuff. The second file user equals username. That's our data again. Type equals
+12:56
+password. Session equals web UI. So on and so forth. And we see status equals fail. Result equals -2. So these seem to
+13:04
+be similar to the environment variables we saw previously for the second and third process executions.
+13:10
+We also note once again that this is tainted data being written to a file before we've even authenticated which is
+13:16
+rather exciting as an attacker even if it's not much of a capability at this point. So user equals username is our
+13:22
+string and the user agent is also provided by the attacker.
+13:27
+Based on what we've discussed so far the workflow is something like this. The CGI binary which is native code executes.
+13:34
+Then the seno cggi plug-in-web login binary executes twice. First with the
+13:41
+pre-argument and second with the post argument making a total of three process executions.
+13:47
+And our hypothesis is that file number one is used to pass data between the CGI binary and the
+13:55
+first pre-execution and file two is used for the post execution and our data is
+14:00
+written into those files. We'll confirm the theory by going to varlog and checking the log file. We'll
+14:07
+grap for username in varlog coin.log. And indeed we see that for plug-in web
+14:14
+login user equals username is listed as one of the args for the process. And
+14:20
+these environment variables are passed in at to a root pro a root process
+14:25
+execution as environment variables and they're considered arguments by the underlying operating system.
+14:32
+Now, at this point, this is exciting. We have the ability to potentially mess
+14:37
+around in the environment variable world. Uh, and I love injecting. And so,
+14:42
+I pulled open my favorite web proxy and, uh, intercepted a login request expecting to have some fun. And
+14:49
+unfortunately, I was hit with some custom client side encryption, which was unexpected. So, you can see that when I
+14:55
+intercepted the request, there's this IK message parameter. And don't squint too closely. it's not too important. Uh
+15:02
+there's cipher text, a cipher text argument, and you can see that it mentions RSA, AES, things of that nature
+15:08
+with a lot of sort of scrambled text. So, there's some encryption at play here.
+15:13
+And the question is, what's the deal with the custom encryption scheme on the login page? Because we want to have fun.
+15:19
+A researcher named Fabian Tamp published a blog post in 2021 about this exact custom Synology encryption routine,
+15:26
+which was very useful. I recommend checking it out. Essentially, the uh the scheme is layered RSA plus AES to
+15:33
+satisfy customer encryption uh customer data encryption and transit requirements when using the HTTP web service that's
+15:40
+started by default in many Synology disc station configurations. So, uh
+15:45
+essentially Synology wanted to address this use case where the HTTP service starts by default and they want
+15:50
+encryption so that these credentials aren't transmitted in plain text. A series of network requests are per
+15:57
+performed to web APIs to gather the rec the required cryptographic materials.
+16:02
+Then a clientside JavaScript implementation is executed uh with the
+16:07
+login form data to encrypt it. And lastly, the encrypted data is submitted and then eventually decrypted in the
+16:13
+back end. So in order to inject, we're either going to have to deal with this in some
+16:19
+capacity or fall back on alternative tactics. And let's fall back on alternative tactics as we don't have
+16:25
+much time for this project. Uh in my position, the DSM web application is Vue.js clientside framework. We can
+16:32
+avoid this crypto soup side quest entirely by using a couple of tricks here. We'll install the VueDEV tools
+16:40
+extension, the official developer tools, and we'll install the Vue forcedev browser extension, which is an
+16:46
+unofficial tool that's incredibly useful. It tricks the official dev tools into thinking a view application isn't
+16:52
+in production mode. So it can be used to tamper a little bit with the application and then use Vue dev tools in its
+16:59
+intended capacity to be able to modify client side fields and debug in a proper capacity.
+17:05
+Once we have all that configured, we can tamper usernames. We'll find the DSM login form object and we see there that
+17:11
+username is a JSON string. So uh we'll set it to username in all caps as we
+17:16
+have been and submit our login request. Our bash snippet captures user equals
+17:23
+username in the second file which is the same thing we previously obser uh observed. So this is just getting a
+17:29
+sense of what was happening before. And now we'll inject a little bit. We'll do a classic username line feed next line a
+17:37
+classic line feed injection and hit submit and see what happens in our bash snippet.
+17:42
+This time something really notable happens. We can see user equals plug-in
+17:48
+value start username line feed next line
+17:53
+plug-in value end. Custom bookend delimiters have been injected to enase
+17:58
+the attacker provided data. So rather than stripping out any sort sort of line feeds, they're instead saying, "Okay, we
+18:04
+can expect this and we'll safely encompass them with these delimiters, one on each side."
+18:11
+We confirm this by checking the logs where we can see that args uh equals user equals username line feed which was
+18:18
+preserved in the log next line. But then most importantly there's a comma. So you
+18:24
+can see comma type equals password, session equals web UI. And that's the delimiter between arguments. We haven't
+18:30
+escaped the context we were hoping to even though our line feed injection was preserved in the logs and on the back
+18:36
+end. So to recap, by default, each
+18:42
+environment variable argument is on its own line as is the case if we submit user equals username.
+18:48
+When line feed characters are present, custom bookend delimiters are automatically added. User equals plug-in
+18:54
+value start. Then our data plug-in value end. And notably, we see type equals
+19:00
+password session equals web UI. Other environment variables for this native code root process execution. It would be
+19:07
+really nice to be able to escape our our contained context and be able to inject new environment variables for this root
+19:14
+process execution. So let's inject our own delimiters. As many of you may be thinking,
+19:21
+[snorts] in order to craft an injection, first we need to know what we have to deal with. User equals that exists by
+19:26
+default no matter what. And if we have line feed characters on our in our data, user equals plug-in value start. Our
+19:33
+data plug-in value end will be present. This is what we're working with to begin with.
+19:39
+Let's craft an injection. Plug-in value start username. Plug-in value end. We've
+19:45
+injected a delimiter. New variable equals plug-in value start. We're defining a new argument and root
+19:51
+environment variable. We'll set it to test and then close out the context with the pre-existing plug-in value end
+19:58
+delimiter. When we log in like this, we see that the second file logs something
+20:04
+interesting. So, it appears that the device has not escaped our content. Username plug-in value end. New variable
+20:11
+equals plug-in value start. test plug-in value end. And if we check the log files, indeed under args, we see user
+20:19
+equals username, comma, new variable equals test. We've injected a new
+20:24
+environment variable for this root process execution. Pretty exciting. Without authentication,
+20:31
+so without authenticating, we can set arbitrary new environment variables for a root owned native code process
+20:38
+execution. It's a strong primitive. However, we can't clobber or pollute
+20:43
+login success variables, which was something I tried right away. And it's because the uh overwrite essentially
+20:49
+happens when we can inject those happens after the login attempt has completed during the post execution and cleanup.
+20:56
+Moreover, reversing for Synology specific variables we might be able to target yields nothing. There are no
+21:03
+custom environment variables being checked for that might be injectable and uh there's nothing on that front that is
+21:10
+exploitable based on my experience. So the question really is how can this be weaponized?
+21:17
+That brings us to the main section of this talk weaponizing Linux environment variable control particularly in a
+21:24
+remote capacity as we've seen here. Let's talk about it now
+21:29
+and we'll cover existing techniques. So, by default, exploitation of
+21:34
+environment variables often focuses on local threat models. If you Google around, people usually tend to assume
+21:40
+that you're talking in a local context. However, there is quite a bit of work that's been done for remote environment
+21:45
+variable exploitation on Linux. Uh now my my disguise the limit white paper
+21:51
+that's being published today in tandem with this talk references remote exploitation work by Orange Saiy Felix
+21:57
+Wilhelm Y4 Watchtower and Elam a security research firm. So lots of good
+22:03
+research that's been published on that topic. In specific let's talk about Elam
+22:08
+publications because they nicely encapsulate all known techniques. The security firm Elteam has published some
+22:14
+great research on remote environment variable exploitation on Linux. Hacking with environment variables was published
+22:20
+in 2020 and in that they document a number of different techniques when the environment variables are being injected
+22:27
+into a well-known process. For example, Python, Pearl, Node.js or Ruby. If
+22:32
+you're injecting environment variables for a NodeJS process, you might be able to inject node options which is
+22:39
+evaluated by the node runtime and can be used to establish remote code execution.
+22:46
+They also published remote LD preload exploitation in 2017 and this is another
+22:51
+great piece of research. Typically LD preload is an environment variable that can be set with uh that's pointing to a
+22:59
+local native code library on disk and it can be used to load that library before
+23:05
+any other libraries in order to establish remote code execution. So if you have a clean disk right you can
+23:10
+upload a file then load it and establish arbitrary remote code execution.
+23:16
+In their in their publication, they documented a novel scenario where they did not have a clean disk, right? Uh
+23:23
+instead, they used LD preload to preload a mapped file descriptor in memory via
+23:28
+proc fs, proc self fd. So essentially they performed a web request and in the
+23:34
+body of the request they had an ephemeral file, their malicious library.
+23:40
+Then although the file was not uploaded to disk, they reflectively loaded it from memory using LD preload uh with
+23:47
+proc FS and established remote code execution. A really cool piece of research. But unfortunately during my
+23:54
+work I was not able to establish the ability to upload arbitrary files in a clean manner, nor were any file
+24:00
+descriptors mapped. So that brings us to some local techniques historically. Let's talk
+24:05
+through those. Researchers have targeted GIC C profiling features on Linux for
+24:10
+local privilege escalation in the past. In specific, I'll mention CVE2010 3856,
+24:16
+although the CVE details are not quite as important as the techniques used to exploit.
+24:21
+Travis Ormi abused PC profile_output part of lib PC profile and Todor Denev
+24:28
+exploited mem usage_output uh in order to exploit this vulnerability. So by setting these
+24:34
+environment variables on systems with these libraries available, they can be used to write debugging files, profiling
+24:41
+files to arbitrary file paths. And uh this technique leverages a
+24:47
+controlled file path, right? However, an uncontrolled file content, right? So an
+24:53
+attacker that sets these environment variables can create arbitrarily named files anywhere on the system without any
+24:59
+control of the contents of the files on the system.
+25:04
+So let's talk through our options based on what we've covered so far. We could target technology specific
+25:10
+variables. For instance, if Synology checked for certain arguments that weren't present by default or things of
+25:15
+that nature uh in interpreted language process injection perhaps, but those are present those were not viable based on
+25:22
+my research. We could get a file on disk or ephemerally mapped to then use LD preload to preload that library. And
+25:30
+unfortunately, try as I might, caching mechanisms, anything of that nature, I was unable to get an unauthenticated
+25:35
+file upload on Synology Diskstation Manager. We could also leverage a pro profiling
+25:42
+output variable to write a junk file with a controlled path for command execution. This is in line with CVE 2024
+25:51
+3400 affecting a PaloAlto piece of software. And what happened in that case
+25:57
+was an arbitrary file write was possible to create file names that contained command injections. Then once per hour
+26:05
+an automated telemetry collection service crawled that directory and unsafeely concatenated the poisoned file
+26:12
+names into a command string, thus establishing remote code execution.
+26:18
+Try as I might, I was unable to find a primitive of this nature, essentially a second vulnerability where file names
+26:24
+were unsafeely concatenated with command strings. So that brings us to the point of
+26:29
+needing a new technique.
+26:35
+What is LD debug? LD debug is a central figure in this exploitation strategy
+26:40
+that I'm presenting today. It's been around since GIB C 2.1 circa 1999. So
+26:47
+for quite a while and it's available on most modern systems. It outputs verbose debugging information about the
+26:53
+operation of the Linux dynamic linker. We'll see what some of the options it supports are. Now
+27:01
+you can write all bindings, files or libraries in the value. And we'll stick
+27:06
+to libraries for now in order to see that in action. We'll run the ID command with LD debug
+27:14
+set to libs to print the library search path information.
+27:20
+Down at the bottom, we see the expected UID information that we might expect from an ID command. However, in between
+27:26
+there's some other interesting info. In standard error, we see that there are five spaces followed by a process ID
+27:33
+number followed by a colon and then some information about the library search path.
+27:39
+So, it's attempting to find the library lib se Linux.sso.1 lib c.so.6 and one by one it's searching
+27:47
+known locations for libraries until it establishes where that library is is at and it loads it and then prints a blank
+27:53
+line with the exception of five spaces, a process ID number and a colon.
+28:01
+Now let's talk about LD debug output which is a partner variable of the last
+28:06
+environment variable we discussed. LDD debug output was implemented in the same circa 1999 version and it is essentially
+28:14
+a partner of LDDbug. Normally LDDbug output is written to standard error. But if LD debug output
+28:21
+is defined, then instead the contents of the standard error messages are written into a file specified by the value of
+28:28
+this environment variable. Notably, it's written with the suffix period followed by the process ID number
+28:36
+appended to the path name. So let's see that now. LD debug equals libs ld debug output
+28:43
+equals vart temp debug file. And we'll run ID once again.
+28:48
+This time we don't see anything printed as standard error. We see the expected ID output. If we check in varimp, we can
+28:55
+find our debug file. In addition to the file name we specified, a period and process ID number has been appended.
+29:03
+We'll grab the first three lines of this file and confirm that it contains the output that we expect, the LDBug
+29:09
+information. So you can see there a different process ID number, but the same five spaces, process ID number, and
+29:15
+a colon. So, at this point, we've accomplished something, although it's a little hard to say what. We sit and think for a
+29:22
+moment and try to determine what exactly we've accomplished at this point. We've been able to write an arbitrary file,
+29:29
+but we don't even control the full file extension, nor do we control any of the file contents. And so, we think to
+29:35
+ourselves that it might be valuable to be able to control more of the file. And uh we're going to try to do that now in
+29:41
+order to get at least a dirty file, right? Controlling some of the contents.
+29:47
+We'll fall back on LD debug to to do this. LD debug, as I mentioned, is an environment variable to load a library
+29:54
+before any other libraries on Linux. So, we'll set an LD preload of the string
+29:59
+test. Immediately, we see an error because the linker cannot find a library called
+30:05
+tests. And that is expected. If we check inside of our file, we see
+30:11
+that line one now has some in uh some user input there. You can see library
+30:16
+equals test. That's tainted data. We see a second line where we don't control anything.
+30:24
+So let's talk through our existing capabilities. We have the ability to write files to a path that we mostly
+30:30
+control. We do not control the created files extension. We only control a string in the middle
+30:37
+of a content line, just that test snippet in our example. Exploitation would require a very lax
+30:44
+parser. Even if we could inject a PHP opening tag with some malicious code and then a PHP closing tag, the file
+30:51
+extension is still not controlled and I wasn't able to find a way to escape that in any capacity.
+30:58
+Once again, we'll look in the mirror and think very hard. What have we done up to this point that worked? inject
+31:04
+delimiters. So, we're going to fall back on a common friend and try to inject some more delimiters to see what
+31:10
+happens. We'll set LD debug to libs ldb debug output to var temp out. And this time
+31:16
+we're going to LD preload test preload line feed line 2 line feed line three
+31:23
+with the ID command. So this time the error which is rebose
+31:28
+does indicate that object test preload line feed line two line feed line three
+31:33
+cannot be preloaded which is a promising start. And indeed if we check in our file we see that the Linux dynamic
+31:40
+linker does not properly handle line feed characters in a library search path
+31:46
+uh in a library path when uh printing to LDDbug. So you can see that we have those five spaces still with the process
+31:53
+ID number and a colon. Then we have some uncontrolled content test preload which is our content. And then on line two for
+32:00
+a beautiful moment we control all of the entire line which is an exciting primitive.
+32:06
+We also see line three which then escapes additional uncontrolled content. So there's lots of junk written after that. But for line two we control all of
+32:13
+that content and that's important to us. We have the ability to write files to a path that we mostly control although we
+32:20
+don't control the extension. We do not create control any of that extension and also it's randomized. So
+32:26
+that number is going to change making it difficult to predict in any exploitation strategy.
+32:32
+However, we do now control entire lines of the files contents as we saw there with line two. And as it turns out,
+32:39
+that's enough for remote code execution on most modern Linux systems when injecting into a root native code
+32:45
+process. Many of you may be familiar with the cron demon. It's an automated uh tool in
+32:53
+order to execute commands on a routine schedule. It's installed by default on most Linux systems. It parses files in
+33:01
+etsyron.d. It is file extension agnostic, so it
+33:06
+doesn't matter what the file name is, just so long as it's in etsyron.d.
+33:11
+It also has a permissive parser based on testing and often ignores malformed
+33:16
+lines depending on what characters are in those lines. Here's an example cron tab file. You can
+33:24
+see the first line is the hash symbol this is a comment. That's a comment line. And on line two, we see an
+33:30
+execution schedule of every 1 minute defined by those asterisks uh running as root to touch a file. Now note that the
+33:38
+second line is delimited by spaces. In between each character there are some
+33:43
+spaces. Here's what we're working with. On line one, we have a bunch of garbage and we
+33:50
+don't control most of the beginning of it. On line two, we have a number of asterisks and root and touch executed.
+33:56
+So, we're attempting to touch a file as root. Now, the question is, are we able to execute this in a meaningful manner?
+34:04
+And in order to test, we're going to set LD preload to knop
+34:10
+uh line feed in order to escape that first line of junk. Then an execution schedule and the user route. And we're
+34:16
+going to execute ID, then a line feed, and then NOP to escape that third line of junk contents.
+34:24
+This time something unexpected happens. We see that there are a number of different asterisk asterisks spread out
+34:29
+as different libraries. So we expected this all to be one library, but instead it's thinking that there are a number of different libraries. And when we check
+34:37
+our file, we can see that it's attempting to find library knop line feed asterisk and the rest of our
+34:43
+payloads cut off. So the question is really why is this happening? When we look at documentation for LD
+34:50
+preload, we see that the items of the list can be separated by spaces or colons and that there is no support for
+34:56
+escaping either character. So it's possible to LD preload multiple libraries and if you if you have a space
+35:03
+present in your data, it says all right, that's a delimiter for two separate libraries. But the problem is that we
+35:08
+need to inject spaces if we want to be able to write a cron tab file and execute malicious code.
+35:14
+So this is the face that I made at that point in the research cycle. So close but not quite there and not really sure
+35:20
+what to do next. So after thinking about it for a bit, I determined that the best
+35:26
+course of action would be to inject more delimiters. Delimiters are the name of the game with this project and we'll fall back on that classic friend.
+35:34
+Now as it turns out, although it's not formally documented, cron demon allows you to use tabs instead of spaces. So
+35:40
+we'll inject knop line feed then an execution schedule and a user and a
+35:46
+command ID delimited by tabs then a line feed and then we'll add a knop just to
+35:51
+escape that additional content on the third line. This time we can see that the linker
+35:57
+error maintains something exciting. So rather than splitting our payload out, we now have the second line asterisks
+36:04
+delimited by tab and then those additional fields for the cron tab payload.
+36:10
+And if we check our file, we can see that indeed in the first line we don't control all of the content, but on the
+36:16
+second line we do when delimited by tabs. So we see asterisk uh asterisk
+36:21
+asterisk every 1 minute the root user will execute ID delimited by tabs and then we escape the content on the third
+36:27
+line. So let's craft an injection now based on
+36:33
+what we know. By default, we're going to have user equals plug-in value start presence. And we're also going to have
+36:39
+plug-in value end assuming that we inject at at least one uh line feed character, which we will.
+36:46
+So here's a payload to try. Username plug-in value end. This is irrelevant. It's just necessary for the binary. Then
+36:53
+we'll say ld preload an environment variable definition equals plug-in value start knock line feed that's to escape
+37:00
+that first line of uncontrolled content. Then a reverse shell payload for a cron tab. We can see that it's tab delimited
+37:07
+and we're using a B 64 encoded string there to avoid bad character problems.
+37:12
+We'll decode that and execute it using the default shell. Then a line feed character and the string knop to escape
+37:19
+the third line of uncontrolled content. plug-in value end to end the definition of LD preload. LD debug equals libs ld
+37:27
+debug output equals etsy cron d hacks and lastly we'll define the escape
+37:33
+variable which is just garbage but it's required in order to cleanly escape. So we see plug-in value start kn and then
+37:40
+that initially injected plug-in value in to close things out in a clean manner.
+37:46
+Now, funny enough, this is a really interesting vulnerability because you can quite literally copy paste this payload and paste it into the username
+37:53
+field on the web service and hit login and get a reverse root shell which is pretty awesome. There's something to be
+37:58
+said about not requiring any form of automation and just being able to copy paste a payload in my opinion
+38:04
+while still breaking. All right, that brings us to the exploit presentation where you'll be able to see it in action. Let me pull up the video.
+38:17
+All right. Okay. So, we'll start a listener uh with
+38:22
+netcat on port 4444 and we'll launch our exploit against the web service. So, we
+38:28
+can see that the malicious login is performed and this is the login that I just mentioned with that username. It
+38:34
+will inject environment variables for that root owned process execution. There's a little bit of a wait here
+38:40
+because cron tab and cron demon has to run it every 1 minute but it won't run immediately. We see we catch a reverse
+38:46
+shell as the user root and we're on a Synology disc station of which there are
+38:52
+about a million public facing. So pretty exciting.
+38:57
+Thank you so much. Uh and then we also touched the Rapid 7 RC file just
+39:03
+for style. [laughter] All right, let me pull this back up.
+39:10
+Great. That brings us to the end of the talk. And I just wanted to extend a special thank you to everyone listed on
+39:15
+this slide, including some organizations and individuals that were cited as references. Without these people, it
+39:21
+would not have been possible to do this talk. Huge shout out also to the people uh that helped out after this slide was
+39:26
+finalized. Uh the team at Rapid 7. Huge thank you to all of them. And lastly, thank you to all of you for attending. I
+39:33
+really appreciate it. and you can find my info there. Have a great rest of your day.

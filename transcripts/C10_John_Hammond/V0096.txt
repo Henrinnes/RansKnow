@@ -1,0 +1,1028 @@
+0:00
+Consentfix.
+0:02
+Analyzing a browser native ClickFix
+0:04
+style attack that hijacks OOTH consent
+0:08
+grants. Listen, I feel like I had to
+0:11
+make this video. I wanted to cover this
+0:13
+cuz this is so cool. I got to be honest,
+0:15
+I was nerd sniped when I first read this
+0:18
+and I wanted to play with it and I
+0:19
+wanted to show it to you. So, there's a
+0:21
+lot of cool stuff I want to dive into in
+0:23
+this video. So, I think the way that
+0:24
+we'll structure it is first I want to
+0:26
+walk through the article so you get that
+0:28
+background context. Second, I'll show
+0:30
+off a little cool little oh teeny weeny
+0:33
+video demonstration. And then third, I'm
+0:35
+just kind of going to talk going to
+0:38
+pontificate, speculate, think, and
+0:41
+discuss a little bit more of the
+0:42
+conversations to have with this sort of
+0:44
+cool new thing. So, this writeup was
+0:46
+just previously released on December
+0:48
+11th, and they say, "Look, it's a
+0:50
+fishing campaign using a new kind of
+0:52
+attack technique that we're calling
+0:54
+consent fix. Combining OOTH consent
+0:56
+fishing with a clickfix style lure that
+0:59
+leads to a whole account takeover in
+1:02
+identity, like your Entra ID or
+1:05
+Microsoft 365 environment." So, normally
+1:07
+when you think of clickfix, the original
+1:10
+OG kind of traditional attack vector,
+1:12
+that's a social engineering ploy that
+1:14
+ultimately usually ends up an initial
+1:16
+access on the endpoint. Like a victim, a
+1:20
+user poor end victim target ends up
+1:22
+running malware on their computer and
+1:24
+they're infected by that technique of,
+1:26
+oh, a verify your human or click to
+1:29
+prove I'm not a robot button. But this
+1:32
+trick bridges the gap between that usual
+1:35
+classic traditional local device on the
+1:38
+endpoint attack to identity the cloud
+1:41
+your online environment. They're saying
+1:44
+that they saw some victims access a
+1:46
+malicious or compromised website they
+1:48
+actually got funneled to via Google
+1:50
+search and the attacker injects a fake
+1:52
+Cloudflare turnstyle like the Google
+1:54
+recapture like the oh verify you're
+1:57
+human I'm not a robot button. But they
+1:59
+have something interesting here. They
+2:01
+require you to type in your email
+2:03
+address. And I guess these iterations
+2:05
+have some fancy bells and whistles that
+2:07
+would check, oh, if it's a valid email,
+2:10
+if it's under a specific domain or maybe
+2:12
+group of victims that they're trying to
+2:14
+target in a given target list, then it
+2:16
+would end up oh, fluctuating, not
+2:18
+letting it progress if it wasn't who
+2:20
+they were actually going for. That's
+2:21
+kind of neat. That's kind of cool.
+2:23
+Making sure it's like a work email
+2:24
+account. But once you entered your email
+2:28
+address, then the gimmick was that it
+2:30
+would open up a Microsoft like entra ID
+2:34
+login page or what looks like one where
+2:36
+you could click to sign in if your
+2:38
+cookies and session is still there and
+2:40
+then it redirects you to a localhost
+2:44
+page that you would want to copy or
+2:46
+they're instructing the victim copy and
+2:49
+paste that URL so it goes back to the
+2:52
+hacker so that they have that as their
+2:55
+new breadcrumb and puzzle piece. What
+2:57
+that means is that they're handing the
+3:00
+bad actor a specific authentication
+3:03
+token for an OOTH app. And that special
+3:07
+code then allows the attacker to connect
+3:10
+this app to the victim's Microsoft 365
+3:14
+tenant and get the cookies, credentials,
+3:17
+session tokens, realistically refresh
+3:20
+token, and access token that could then
+3:22
+be used as cookies to get into their
+3:25
+entire Microsoft online environment.
+3:27
+We're talking your email inbox and
+3:29
+Outlook. We're talking Microsoft Teams
+3:31
+to chat with your co-workers. We're
+3:33
+talking One Drive, Sharepoint, all the
+3:35
+things. All of that from a little cutesy
+3:38
+little ClickFix technique. Hey, I'm
+3:41
+going to keep us cruising to do some
+3:42
+demos coming up next. But real quick
+3:44
+before we do, please let me take just a
+3:46
+quick moment to tell you about the
+3:47
+sponsor of today's video, Hexrays.
+3:50
+Reverse engineering is hard.
+3:52
+State-of-the-art binary code analysis
+3:54
+tools like IDA make it a little less
+3:56
+painful and a lot more powerful. IDA
+3:59
+enables you to disassemble, decompile,
+4:02
+and debug any application you're up
+4:04
+against. It helps you dig into how
+4:06
+software works under the hood, whether
+4:08
+it's malware, firmware, proprietary
+4:11
+software, or anything. And the Hexrays
+4:13
+decompiler is available on 11 different
+4:16
+platforms between x86, x64, ARM, Power
+4:21
+PC, MIPS, and more. These analysis tools
+4:24
+help you cut up code, unpack and
+4:26
+deopuscate threats, investigate
+4:28
+exploits, cheats and game hacks, binary
+4:31
+bugs and vulnerabilities. And IDA
+4:33
+version 9 takes things even further with
+4:36
+faster saves with smaller IDB databases,
+4:39
+expanded processor support for
+4:41
+Tririccore, RiskV, and RH850, and
+4:44
+smarter decompilers across ARM 64, Power
+4:48
+PC, Rust, Swift, and Golang. You'll get
+4:51
+clearer C++ exception handling, STL
+4:54
+structure recognition, Flirt signature
+4:56
+improvements, and even a dedicated
+4:58
+microode viewer to peak into the
+5:00
+decompiler's internals. With a brand new
+5:03
+plug-in manager, HCLI, the open-source
+5:06
+Python API, headless processing with IDA
+5:08
+LIB, and seamless team collaboration
+5:11
+features, IDA gives you the latest
+5:13
+innovations to stay ahead of modern
+5:15
+threats. IDA doesn't just decompile. It
+5:18
+gives you interactive control to dive
+5:20
+into binaries, annotate, patch, and
+5:23
+script your own workflows. And thanks to
+5:25
+our channel partner, Hexrays, we have a
+5:28
+special promotion just for our channel.
+5:30
+You can use code Hammond 50 for 50% off
+5:33
+any IDA Pro product or code Hammond 30
+5:36
+for 30% off any IDA Pro online training.
+5:40
+Offer expires 1 year after this video
+5:42
+release date with more details below in
+5:44
+the video description. Make reverse
+5:46
+engineering easy with the ultimate
+5:48
+analysis tools from hexrays.
+5:51
+Disassemble, decompile, and debug with
+5:54
+IDA. You can get started with my link
+5:56
+below in the video description.
+5:58
+jh.live/hex-rays.
+6:01
+Huge thanks to hexrays for sponsoring
+6:03
+this video. So, they have a video here
+6:06
+to really see this and visualize it, but
+6:08
+I'll talk through it because it's
+6:09
+realistically basically the same as
+6:11
+ClickFix. You click, oh, I'm not a robot
+6:13
+in this setup, in this scenario. enter
+6:15
+your email address and they're just
+6:17
+showing, you know, demonstrating, oh,
+6:19
+this setup has it constrained. So, it's
+6:21
+going to validate its specific account
+6:23
+or some online business corporate domain
+6:26
+or then once it finally has that
+6:29
+connected or is verifying once you have
+6:31
+given away your email address thinking
+6:33
+you're signing back in then it has a
+6:36
+cutesy little animation to show you look
+6:38
+a page will open up and you've got to
+6:41
+copy that localhost URL and then enter
+6:45
+it if you weren't signed in already.
+6:47
+It'll have you reprompt to go through
+6:49
+multiffactor authentication and all. The
+6:51
+gimmick is this is all going to real
+6:54
+Microsoft. It is a legitimate Microsoft
+6:57
+login and it's all in your browser. So
+7:00
+let's dive in a little bit more
+7:02
+tactically like actually how this is
+7:04
+done. They're talking about OOTH
+7:06
+shenanigans via Azure CLI. Normally the
+7:10
+wellestablished techniques or different
+7:12
+attack vectors for initial access or
+7:14
+initial foothold in a cloud Microsoft
+7:16
+365 environment are with like device
+7:19
+code fishing or ooth consent grant
+7:22
+attacks. We're talking specifically
+7:24
+about these OOTH consent grant attacks.
+7:27
+Normally they trick a victim into
+7:28
+connecting a malicious external app into
+7:31
+their tenant. And we've covered that
+7:34
+illicit consent grant attack or
+7:36
+malicious OOTH app attack vector before
+7:38
+on the channel. Oh, what was I doing
+7:40
+with that background? What is that? The
+7:42
+thing is typically that attack technique
+7:45
+requires you putting your hacker hat on,
+7:47
+acting as the offensive security
+7:49
+specialist, ethical hacker, penetration
+7:51
+tester here. When you create a rogue
+7:54
+app, you create that in your own
+7:56
+separate external Microsoft 365 tenant.
+7:59
+Then you're given a client ID or client
+8:02
+secret and that is what you'll end up
+8:04
+hooking up to your own server, your own
+8:07
+infrastructure. You acting as the
+8:09
+adversary set up all this infrastructure
+8:11
+and then fish the victim and have them
+8:14
+accept and connect your app. Look at
+8:17
+some of the setup that usually goes into
+8:19
+that. You'll end up creating the
+8:21
+permissions that are necessary for the
+8:22
+application. You'll have to connect that
+8:24
+client ID, client secret, blah blah
+8:26
+blah. You get those back and forth from
+8:28
+the Azure portal and then you prepare
+8:30
+your server to perform this technique.
+8:33
+So in contrast to that, that's a part of
+8:36
+why this consent fix idea is pretty
+8:40
+slick. Azure CLI is a firstparty
+8:44
+Microsoft app and it's implicitly
+8:46
+trusted in Entra ID and it doesn't need
+8:48
+anyone to end up clicking, oh, I accept
+8:51
+or approve these permissions. These
+8:53
+firstparty Microsoft official apps like
+8:56
+Azure CLI are trusted by default in all
+8:59
+tenants. They can request permissions
+9:01
+without admin approval and they can't be
+9:03
+deleted or blocked. That's pretty cool.
+9:06
+And to connect these dots for you, when
+9:08
+we're talking about the Azure CLI, we're
+9:10
+talking about the simple command line
+9:12
+ast.
+9:19
+You could use windget or whatever you
+9:21
+end up doing to install that. But then a
+9:23
+is just a command line client for the
+9:26
+ability to easily manage your Azure
+9:29
+active directory or now entra ID. Look
+9:32
+at this cutesy little asy art. It is the
+9:34
+cool new Azure CLI. You could log into
+9:36
+your account, manage the graph API and a
+9:39
+whole lot of the other bells and
+9:40
+whistles behind the scenes for the cloud
+9:43
+environment. We could do something like
+9:44
+az login and that will end up prompting
+9:47
+us to log into our Microsoft account.
+9:49
+And we could do this just kind of oh
+9:50
+walking through the steps here. But
+9:53
+notice this Azure signin display. We
+9:56
+could do this with a device code. Use
+10:00
+device code. And that will then give us
+10:02
+a specific unique code to open a
+10:06
+specific Microsoft URL. We've covered
+10:08
+that in another video, but it's really
+10:10
+just like sort of Netflix or Amazon
+10:12
+style thing connecting to like a
+10:13
+television, that concept. And then it
+10:15
+will end up connecting accounts. Device
+10:17
+code does give you a notification though
+10:19
+of what you're doing. If I were to click
+10:22
+and connect to this, it'll be like,
+10:23
+"Hey, are you sure you want to do that?
+10:24
+Make sure you trust it." And then it'll
+10:26
+get all the info as needed. But we're
+10:28
+not talking about the device codefish.
+10:30
+We're talking about an ooth application
+10:33
+and Azure CLI. But the consent fix
+10:36
+technique isn't even using the Azure CLI
+10:40
+like literally typing the a command on
+10:42
+the command line. No, it's using the
+10:44
+same sort of requests HTTP communication
+10:48
+between the real online Microsoft
+10:50
+environment so that it could
+10:51
+realistically genuinely log in to the
+10:54
+Microsoft account. It's just using this
+10:57
+trusted firstparty known and legitimate
+11:00
+application as the fingerprints that led
+11:03
+it through the door. Now, what I mean by
+11:04
+that HTTP communication, because all
+11:07
+this is realistically just interacting
+11:09
+with an API, like trying to talk to a
+11:11
+website, Microsoft online, this is the
+11:13
+URL that they're basically preparing.
+11:16
+And when they ask you to enter your
+11:19
+email, type in, oh, what account are you
+11:21
+trying to sign back into? It's already
+11:23
+prepared with the specific client ID for
+11:27
+the Azure CLI app and I think the
+11:30
+resource string just as well. You could
+11:32
+say, "Hey, I were maybe filling in to
+11:35
+log in as Joe uh johnhammer
+11:38
+onicrosoft.com."
+11:40
+Now, because I've pre-prepared that
+11:42
+email, let me open up a private window.
+11:44
+I could go ahead and paste in that, but
+11:46
+it will already know, okay, look, you're
+11:48
+trying to sign in to this specific
+11:50
+account. Clicking into this, it would
+11:52
+prompt for our password, do regular
+11:54
+multiffactor authentication as for a
+11:56
+legitimate, genuine signin. But let me
+11:58
+get back over to that virtual machine
+12:00
+that we were playing in where we did
+12:01
+have uh another M365 account ready for
+12:04
+us. Let me open a new tab and let me get
+12:06
+to that same URL. Joe as the victim user
+12:10
+is a real thing. So we just need that
+12:13
+address and URL. Once I click to sign
+12:16
+in, you see something weird going on
+12:18
+though. It redirects me to localhost.
+12:21
+Now, this is exactly what we would
+12:23
+expect to have happen in a real
+12:25
+legitimate OOTH app sort of server and
+12:28
+implementation, right? You're connecting
+12:30
+like you're developing an app to work
+12:32
+with Entra ID. It's just authenticating
+12:35
+and giving you the token that code
+12:38
+that's provided here. That's the secret
+12:40
+sauce and that's what the thread actor
+12:41
+is asking for. This is why you see the
+12:44
+push security write up include this uh
+12:46
+burpuite screenshot with this
+12:47
+loginicrosoft online URL because that's
+12:50
+real legitimate Microsoft login. But
+12:52
+once they've clicked that button once
+12:54
+they have signed in and it sends them to
+12:56
+localhost that big long code is what
+12:59
+they the thread actor then asks for.
+13:02
+Copy paste that in. And now some of you
+13:05
+myself included reading through this I
+13:08
+was really thinking who's going to fall
+13:10
+for this? Who would do this? And I know
+13:12
+some people would, but this back and
+13:16
+forth copy paste localhost that looks
+13:20
+clunky to me. I feel like there is a lot
+13:22
+of friction in the social engineering
+13:25
+user experience. You know what I mean?
+13:26
+The gimmick here though that I don't
+13:28
+think I did a good enough job explaining
+13:30
+was that look this URL once they've
+13:32
+entered their email and that gets
+13:35
+funneled along to the end user they
+13:37
+don't have to if they already have a
+13:39
+session and cookies established for them
+13:41
+getting their work done answering their
+13:43
+emails already being logged in to Azure
+13:45
+and enter ID they don't need to enter
+13:47
+their username password do the
+13:49
+multiffactor authentication crap they
+13:51
+just click and then they give away their
+13:54
+account well not their account but now
+13:57
+access to that environment. So again, I
+13:59
+am nerd sniped by this. I think the idea
+14:02
+is wild to bridge from the endpoint or
+14:05
+even oh you know classic cutesy fishing
+14:07
+that's not even fishing. This could just
+14:08
+be any web page out and about across the
+14:11
+internet as you're flipping through
+14:12
+pages and websites and then a couple
+14:14
+clicks then you've stolen a cloud
+14:16
+environment. Like that's bonkers. So I
+14:19
+had to play with it. I wanted to try and
+14:21
+recreate it and see it in action and see
+14:23
+what I could tweak and tune. So, I'm
+14:24
+going to play a video for you because I
+14:26
+wanted to show you what I had put
+14:28
+together. This is just a short little
+14:29
+cutesy demonstration, proof of concept.
+14:32
+But over on the left hand side in the
+14:33
+terminal here, that's where I'm going to
+14:35
+be starting up our little server just to
+14:37
+host and prepare our landing page or
+14:40
+like the fishing website web page lure
+14:43
+all on its own. I open that up. I just
+14:45
+host it and it's index.html. But here's
+14:48
+the little premise here. Microsoft page
+14:50
+says, "Hey, we're sorry. You need to
+14:51
+sign in again to access this resource."
+14:53
+Now, that's probably totally normal,
+14:55
+right? Maybe we're used to, oh, the
+14:56
+resignin, reauthor, SSO stuff that it
+14:59
+always tends to be whenever we're using
+15:00
+Microsoft. But look, it pops up in an
+15:03
+opening signin window and the cookies
+15:06
+and cache is already there. So, the
+15:08
+victim just clicks sign in. Now, you
+15:12
+can't track what happens in this popup.
+15:15
+So, I just had to try and time it or add
+15:18
+a little bit of delay so that look, if
+15:20
+you see this weird error, and I think we
+15:22
+do need to smooth over that user
+15:24
+experience. Oh, you're having trouble.
+15:25
+If you see an error, the site can't be
+15:27
+reached, then I don't want you to have
+15:29
+to copy and paste. That feels too
+15:30
+clunky. Why not just drag it? You could
+15:33
+drag the icon or that URL right into the
+15:36
+box to complete signin. And just like
+15:38
+that, you can see it over on the lefth
+15:40
+hand side. all of the refresh token,
+15:43
+access token, keys to the kingdom for
+15:46
+that environment with a tiny little
+15:49
+Azure CLI ooth app just added in and we
+15:52
+could do whatever else we wanted to do
+15:55
+from there. But you're keeping up the
+15:56
+ruse. The page says, "Oh yeah, you've
+15:58
+successfully signed in. Let's redirect
+16:00
+you." But the damage is done with just
+16:02
+what is it? Two steps, three steps. Drag
+16:06
+something in.
+16:09
+I think it's cool. Like I know I'm
+16:11
+wearing my hacker hat right now, but the
+16:14
+copy paste of like the thin line in the
+16:16
+address bar, local host port 8,400, like
+16:18
+that just looks a little bit sketch. So
+16:20
+we could smooth over that experience by
+16:23
+the cutesy little drag and drop. And if
+16:25
+we were thinking, you know, maybe make a
+16:27
+landing page where it's a little bit
+16:28
+more inline cuz they use a video like
+16:30
+they they had this animation of click,
+16:32
+copy this. It'd be pretty slick if the
+16:35
+Microsoft prompt for click the account
+16:37
+you want to log into or login here were
+16:38
+in line embedded within the page like an
+16:41
+iframe. But Microsoft doesn't let you do
+16:43
+that. It's got to be a pop out. It's got
+16:45
+to be a popup or another tab. But then
+16:47
+cross origin policy or same origin
+16:50
+policy won't let you see what's
+16:53
+happening in the URL bar. You don't know
+16:55
+the context of that new loose iframe or
+16:58
+popup, right? More specifically. So, you
+17:01
+don't know, you can't programmatically
+17:02
+tell with JavaScript as to when they
+17:04
+completed it, if they went to localhost.
+17:06
+And even then, if they see localhost and
+17:08
+it gives them this site cannot be
+17:10
+reached error, that also looks weird.
+17:12
+So, we want to smooth that over and say,
+17:14
+"Oh, if you're having trouble, oh, you
+17:15
+could finish your secure sign in. Haha."
+17:17
+The drag and drop works just as well as
+17:19
+copy and paste for the victim to
+17:21
+voluntarily give up that OOTH code. And
+17:24
+then we, the server, the fishing site,
+17:26
+ends up making the request to Microsoft
+17:28
+to go ahead and finish that app
+17:30
+registration, letting us in the door to
+17:32
+their cloud environment. But if I take
+17:34
+my hacker hat off now and start to think
+17:37
+a little bit more, uh, well, yeah, this
+17:40
+looks a little damning because there are
+17:42
+no endpoint artifacts. This happens
+17:44
+entirely in your web browser. Thinking
+17:47
+this through, right? You connect to a
+17:49
+fishing page to start. You enter your
+17:51
+email into that fishing page. It opens
+17:53
+another popup for the Microsoft login.
+17:56
+You drag in a gesture and then the
+17:58
+damage is done. The only thing you have
+18:01
+to key off of there is your browser
+18:03
+history. Maybe you could go find and
+18:05
+track down when you went to the login
+18:07
+Microsoft kind of component piece.
+18:08
+Hitting that URL on the history is one
+18:10
+artifact in Is there like a log or
+18:13
+record? Is there a forensic artifact of
+18:15
+what you drag and drop? I don't know.
+18:18
+Genuinely, I'm asking. Let me know in
+18:19
+the comments if you got something. And
+18:20
+then we're talking about the firstparty
+18:23
+trusted legitimate Azure CLI app. So
+18:28
+that you can't particularly make go
+18:30
+away, but the logs that you might see in
+18:34
+Azure like within Entra, you could see
+18:36
+maybe login events with the application
+18:38
+Microsoft Azure CLI and Azure Resource
+18:41
+Manager. But the thing is that could
+18:43
+just as easily be real legitimate actual
+18:46
+use of the Azure CLI, not malicious.
+18:49
+They got a little bit more tactical
+18:51
+details in the write up and article, so
+18:53
+I will link that in the video
+18:54
+description for you. But I just thought
+18:57
+this one was wild. Like this is the
+19:00
+lowest lift opportunity from any
+19:04
+website, any endpoint. Like it doesn't
+19:07
+even need a fishing email because this
+19:08
+can just be cast about and then get into
+19:11
+a cloud environment. Microsoft 365 entra
+19:14
+ID all via clickfix. I don't know. I
+19:17
+feel like it can't even be consent fixed
+19:19
+because you don't even get to deal with
+19:20
+or see a usual OOTH permission chart.
+19:23
+They just give you an easy one click and
+19:25
+you're in. I feel like it's like entraix
+19:28
+or there's got to be some other way way
+19:30
+to capture and name that. Let me know
+19:31
+what you think. I don't know if you're
+19:32
+playing with something like this. I
+19:34
+don't know if this is spooking you,
+19:35
+scaring you, giving you the
+19:36
+heebie-jebies, but uh look, it's a
+19:38
+matter of knowing that that threat is
+19:39
+out there and that's how it could be
+19:41
+done. That's it. That's the end of the
+19:42
+video. I've been talking for too long.
+19:43
+Thanks so much. I love you. See you in
+19:44
+the next one. Bye.
+
+All
+
+From John Hammond
+
+Exploit
+
+Learning
+
+Related
+
+Recently uploaded
+
+
+14:48
+Many P

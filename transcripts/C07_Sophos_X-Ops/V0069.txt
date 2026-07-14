@@ -1,0 +1,247 @@
+0:00
+Sergio: Hi and welcome.
+0:01
+I'm Sergio and with me I have Syed.
+0:04
+Syed: Both of us are senior analysts in the Sophos Incident Response Team.
+0:10
+Sergio: We will be discussing Group Policy attacks, starting with a
+0:13
+ransomware investigation case study.
+0:16
+We will cover malicious behaviors associated with Active Directory
+0:19
+and Group Policy attacks.
+0:21
+And finally, we will show you how to investigate and
+0:25
+remediate some of these threats.
+Cyclops attack and timeline
+0:27
+We were engaged in a Cyclops ransomware case, where the threat actor gained
+0:32
+initial access to the environment by leveraging a ProxyShell vulnerability
+0:37
+to breach an unpatched Exchange server.
+0:40
+Four days later, the threat actor began executing their attack using
+0:44
+encoded PowerShell commands from the web shell on the Exchange server.
+0:49
+They proceeded to disable endpoint protection as a defense evasion
+0:53
+technique, and clear Windows event logs and internet browser history.
+0:58
+The threat actor then leveraged Remote Desktop Protocol, or RDP,
+1:03
+to perform lateral movement to additional machines on the network.
+1:07
+Both Cobalt Strike command-and-control malware as well as AnyDesk remote
+1:12
+access software were installed on multiple machines to maintain access.
+1:18
+A day later, the threat actor used their network access to exfiltrate data to
+1:23
+multiple cloud storage hosting providers.
+1:26
+The threat actor then leveraged Active Directory Group Policy to
+1:30
+distribute the Cyclops ransomware binary to machines on the domain, also
+1:35
+creating a Group Policy to execute the ransomware binary using scheduled tasks.
+1:41
+In the final stage of the attack, the threat actor deleted
+1:45
+volume shadow copy backups.
+1:47
+Impact occurred when machines on the domain ran the scheduled task, executing
+1:53
+the Cyclops ransomware binary, encrypting files, and leaving ransom notes.
+1:58
+Group Policy attacks are an indication of a larger Active Directory attack.
+About Group Policy attacks
+2:03
+In a Group Policy attack, threat actors may leverage existing Group
+2:07
+Policy Objects, such as UNC path, to execute malicious payloads from
+2:13
+less-secure locations preset on a GPO, or the interception of user
+2:18
+passwords set via Group Policy with the vulnerable cpassword attribute.
+2:23
+Once a threat actor has escalated privileges, they oftentimes create GPOs
+2:28
+to accomplish goals at scale, such as disabling of core security software
+2:34
+and features including firewalls, antivirus, security updates, and logging.
+2:40
+The deployment of malicious tools through the creation of scheduled tasks,
+2:45
+startup or login scripts, or services to maintain persistence and execute malware.
+2:51
+Over to you, Syed.
+Forensic artifacts of Group Policy attacks
+2:53
+Syed: Thank you, Sergio.
+2:54
+When starting an investigation, you gather victim testimonies and forensic data.
+3:01
+Using the tools at hand, you search for indicators of compromise in the
+3:06
+standard forensic artifacts, such as Windows event logs, PowerShell
+3:11
+history, startup items, shellbags, scheduled tasks, shim cache, etc.
+Key indicators of Group Policy attacks
+3:19
+When performing an analysis, if synchronized or reoccurring
+3:24
+evidence is seen, it may be a key indication of a Group Policy attack.
+3:30
+For example, when a scheduled task or file execution is seen on multiple
+3:35
+machines, it indicates remote execution, or the use of Group Policy.
+3:41
+When system logs indicating the use of software deployment tools or Windows
+3:47
+Management Instrumentation are not present, it serves as an indication that
+3:52
+Group Policy was likely compromised.
+3:56
+This is especially evident during triage, when persistent scheduled tasks
+4:01
+reappear on systems after being removed.
+4:05
+Once a Group Policy attack is suspected, you need to look further by investigating
+4:11
+the group policy on the domain controller.
+4:14
+Here, we have a Windows shell on a domain controller from a
+Investigating the Group Policy attack
+4:18
+victim domain, AD-MCQUEEN01.
+4:23
+We will be using Sophos Live Response, a key feature of Sophos Intercept
+4:29
+X Advanced with XDR, our standard investigation tool, but you can replicate
+4:34
+these steps on any Windows shell.
+4:38
+All Group Policy objects may be listed on this domain using the
+4:42
+PowerShell command get-GPO -All.
+4:49
+Let's filter these results to see the modification and creation time.
+4:55
+Sorting by last modified date, we can find any GPOs created or
+5:01
+modified by the threat actor.
+5:03
+As we can see, there are three GPOs that have been recently created.
+5:09
+and have suspicious names.
+5:11
+Now let's run the command to obtain a GPO report for further investigation.
+The GPO report
+5:18
+Examining the GPO report we can confirm the purpose of three Group
+5:23
+Policy objects with suspicious names.
+5:26
+Looking at the first suspicious object named Pawn, here we can see that the
+5:32
+threat actor is using this GPO to install a scheduled task on domain
+5:38
+computers to run the program Rook.
+5:40
+exe.
+5:41
+The next suspicious policy object named Rook, as we can see here,
+5:47
+is being used by a threat actor to copy the binary file Rook.
+5:50
+exe to domain-joined machines from an administrative share on the file server.
+5:57
+Since we suspect this binary is malware, let's see if we are lucky and
+6:02
+a copy is still on the local system.
+6:06
+Excellent!
+6:07
+Let's make sure we can get a hash value for this file so we can check if it's
+6:12
+been seen before and so we can also block this file in the environment.
+6:18
+You will also want to collect a sample of the malware for forensic analysis.
+6:23
+Back to the last suspicious Group Policy Object, here we can
+6:27
+see that Queen is configuring Windows Firewall states to Off.
+6:33
+It also looks like this GPO is disabling the Windows Defender A/V,
+6:38
+including real-time scanning ability.
+6:41
+Sergio will now cover remediation steps.
+6:45
+Over to you, Sergio.
+6:47
+Sergio: Thanks, Syed.
+Remediation
+6:48
+Now that you've seen how to identify some of the malicious
+6:51
+behaviors in your environment, let's remediate these threats.
+6:55
+On our Active Directory management server, we will use
+6:59
+the Group Policy Management tool.
+7:01
+Syed identified three malicious Group Policies, which we can see
+7:06
+here, that we need to remediate.
+7:08
+We will start by disabling the Group Policy Object Syed found, which
+7:12
+was impacting Windows Firewall and Windows Defender antivirus operations.
+7:17
+Disabling this policy will prevent these settings from overriding the
+7:21
+default local Windows settings.
+7:23
+Next, let's disable the Group Policy Object Syed found responsible for
+7:28
+copying the malware binary rook.
+7:31
+exe to domain-joined machines.
+7:34
+Disabling this policy will prevent the malware rook.exe from being copied to
+7:41
+any additional machines on the network.
+7:43
+We also need to make sure we blacklist the malware executable file in the
+7:48
+global settings for our whole network.
+7:51
+This will eliminate the malware's ability to be executed in the future.
+7:56
+Finally, we need to remediate the malicious scheduled task
+8:00
+Syed identified, named Pawn.
+8:03
+By disabling this GPO, we will prevent additional deployments of the scheduled
+8:08
+task to computers on the domain.
+8:10
+These remediation steps will help prevent the spread of malicious
+8:14
+activity throughout the network.
+8:16
+We hope that these investigation and remediation efforts will be of
+8:20
+help in your next investigation.
+Wrapup
+8:23
+Thanks for watching.
+8:24
+See you next time.
+

@@ -1,0 +1,1262 @@
+0:00
+So today we're going to be talking about IP transports. Uh there isn't any going
+0:05
+to be any hands-on labs this class. Um I mentioned um I'm on vacay. I just like
+0:11
+got out of the literally just got out of the pool for this. So uh yeah, we're going to have a chill day. That way
+0:17
+everybody kind of gets to come along with me on vacation. You get to just kind of hang out and listen. Make life a
+0:22
+whole lot easier. This is going to be a quick review of like IP and IP communications in general. Um, it is not
+0:29
+designed to be a complete guide by any stretch of the imagination. Um, I just want to make sure that I give you enough
+0:35
+that we all kind of get on the same page. I'm going to skip some of the common stuff like ports, but I want to,
+0:40
+you know, go a little bit deeper than that. Um, if you do want to deep dive on this type of thing, uh, I do cover it in
+0:47
+greater detail in the getting started in packet decoding class. Uh, that's a, uh, pay which can class through in siphon.
+0:54
+Uh, I think it's like 25 bucks or something like that. And the next one is in May and I've done a big rewrite for
+1:01
+May. Yay. So, that one should be fun. So, you know, just as a reminder, you
+1:06
+know, we we look when we look at this stuff, we tend to look at it in ASKI, right? We're looking at like the IP
+1:11
+addresses and the port numbers and some of the different field values, but it's important to remember that all this
+1:17
+stuff is being transmitted in binary. We use binary overwhelmingly for a majority
+1:23
+of our communications. um just because it is very resistant to errors, right?
+1:29
+With analog, you can have a fairly high error rate that can slow down transmit transmissions even more. Digitals tend
+1:35
+to be a little bit more cumbersome, but because we're getting the error get rid of the error rates overall, it ends up
+1:41
+working a lot more efficiently. And when we're transmitting in binary, everything is always laid out in
+1:48
+a certain order. You I've seen folks talk about, you know, oh, hey, I once saw this packet that said it was an ICMP
+1:56
+packet, but it had a TCP header. No, no, that doesn't happen. That doesn't
+2:02
+happen. It can only be one specific transport, and that gets specified within the IP header itself. So, all
+2:07
+this stuff gets laid out a certain way. Um, I've talked in previous classes about, you know, this is a frame when we
+2:14
+include all the layer 2 and up information. This is a packet. When we talk about layer three and up, we tend
+2:21
+to ignore layer 2 a lot just because it's getting stripped off and replaced every time we leave a network. So we
+2:26
+tend to refer to, you know, packet decoding and packet this and packet
+2:33
+that and it's all offset measurement. Yeah. So anytime we're talking about how
+2:38
+does a receiving system know how to interpret certain data, it's all specified in the RFC's and it's all a
+2:45
+matter of offset measurement. So if I want to know what the protocol field is, if I want to know what transport is
+2:51
+running on top of IP and specifically for a second I'm going to talk about IPv version 4. Any device that sees those
+2:59
+ones and zeros coming by is just going to offset through till it gets to the beginning of the IP header. It's going
+3:06
+to offset and it's going to read uh bte 8 and excuse me bte nine. It's going to
+3:11
+go in and offset to bite nine and then it's going to read that single bite of information that that's going to be
+3:18
+interpreted as decimal which means it will have a numeric value and that numeric value gets uh gets checked
+3:25
+against a table that lists what codes go with what transports. So in other words,
+3:31
+if byte 9 within the IP header has a value of one, it's going to be assumed it's an ICMP header. If it's six, it's
+3:38
+TCP. If it's 17, it's UDP. You know, if it's 47, it's GRE. You know, if it's 50,
+3:44
+it's encapsulation security protocol. You get the idea. Whatever that number is is going to define how the data in
+3:52
+the payload section is going to go through and get interpreted. Now, IPv6, as Bill talked
+3:58
+about a couple of weeks ago, is a little bit different. IPv6 doesn't have a transport
+4:05
+field or what's called a protocol field. that has what's referred to as a next header field. And that's because with IP
+4:11
+version 4, one of the things we decided to include was IP options. And IP
+4:17
+options can actually change the size of the IP header, right? So if there's no options, the header is a small size. If
+4:24
+we start adding in options, that header gets bigger in size. With IPv6, the IP header is a
+4:32
+fixed length. It never changes. But we wanted to include some of those options,
+4:38
+you know, like um like record route and that type of thing. So what we did is we changed the
+4:44
+protocol field to be the next header field. And now if there's an IP option
+4:49
+turned on like record route, the next header field will point to a header that
+4:55
+is specifically for recording record route options. Otherwise, it'll be transport. So with IPv version 4 that
+5:02
+protocol field is always going to identify the transport. With IPv6 it
+5:08
+might identify the transport. It might identify another header and then we
+5:14
+might need to go look into that header to see okay does that reference a second header or a third header or is it going
+5:20
+to reference the actual transport inside of that at that point there. So ICMP this
+5:28
+is ICMP to me is deceptively simple by that I mean it's it's our smallest
+5:34
+header right it's four bytes in size or eight bytes in size depending upon who you talk to I consider it only four
+5:40
+bytes in size um just because that is only four bytes that are consistent with every single ICMP type code um and it's
+5:48
+not really used to transmit data or it's not supposed to transmit real data it's
+5:53
+just there for like connectivity ity checking and error reporting and that type of thing. So, it's it's has a very
+6:00
+simple use case, but it's probably one of the more complex protocols to deal
+6:06
+with properly. Uh we still have stateful inspection firewalls that don't know how
+6:11
+to handle ICMP properly, which is a real shame. Uh because it doesn't have to be that way. Um the probably one of the
+6:19
+best descriptions I ever heard of this was from Paul Vix. He's one of the folks that basically designed the internet. Uh
+6:25
+he referred to ICMP as the garbage troll of the internet and that that's kind of it. ICMP works in the background. Nobody
+6:32
+really pays attention to it, but if it's not working, things are going to break really quickly. And that that's probably a perfect description of ICMP. It
+6:40
+supports uniccast communications, meaning it can be from one host to another. It can be broadcastbased, which
+6:46
+means it can be one host to every other host on the network, or it can be multiccastbased, which is one host to
+6:54
+multiple select hosts. So, it supports all of those different types of uh communication, unlike TCP, which only
+7:01
+supports UK uh uniccast. You're not supposed to ever see TCP broadcast.
+7:07
+Doesn't mean you won't see them. doesn't mean somebody won't protocol uh code the stack wrong or you know someone might
+7:14
+not be messing around with a with a u um packet crafting tool like we were talking about last week. But you
+7:22
+know TCP should be uniccast only for all intents and purposes. ICMP could be
+7:28
+broadcast multiccast as well and firewalls seem to have a real
+7:35
+problem with this. So the problem firewalls have And I'm going to start getting into this next week, right? So,
+7:42
+I'm dealing with a little bit of a chicken in the egg issue. So, I was going to start talking about firewalls
+7:48
+this week and then as I thought about it, I was like, well, I got to give folks a little bit more information on
+7:53
+transports, but if I don't uh communicate with it or excuse me, if I
+7:59
+don't kind of cover the transport stuff, the firewall stuff won't make as much sense. So, I kind of ended up kicking it
+8:04
+back a little bit. uh kicking it back a week and ICMP really is one of the things that firewalls have the most uh
+8:11
+trouble with. Uh CFKA was asking is uniccast enforced by switches and
+8:16
+routers only? Good question. So the only thing switches
+8:23
+enforce is what MAC address is that going to and do I have a table entry
+8:28
+telling me where that is? So let's say I have a MAC address of 1 2 3 4. If the
+8:34
+switch has learned that the MAC address 1 2 3 4 is off of port two, anything
+8:40
+going to that MAC address is going to end up going to that port number. If it
+8:45
+doesn't know where the MAC address is or if it's going to the broadcast address,
+8:51
+meaning it's all set to all FS, that goes out every single switch port. So in
+8:56
+that case there if I let's say so let's say I sent a uh TCP packet to the
+9:03
+broadcast address a switch isn't going to pay any attention to the fact that well wait TCP doesn't broadcast this
+9:10
+doesn't make any sense. No the switch is going to look and say oh that's going to
+9:15
+fffff send it out to everybody no problem. So switches don't get into like
+9:21
+the protocol enforcement end. As far as routers go, routers have, excuse me, routers deal with uh
+9:30
+layer three information. So, is it going to the local network or is it going off to a remote network someplace? So,
+9:36
+routers will get involved at that point there. And whether we'll get passed outside of the network or not depends on what that uh destination network address
+9:44
+is. Okay, hopefully that clarifies that a little bit. So, like I said, ICMP two
+9:51
+main purposes, some relative connectivity checking and the ability to go in and do error correct or error
+9:57
+reporting. And error reporting tends to be what we use it for the most. So, ICMP is responsible for things like host
+10:04
+unreachable, right? I'm trying to get to a host on a remote network, but that host is offline right now. So, the
+10:11
+upstream router is going to send me back a host unreachable saying, "Hey, can't get there from here. That host isn't around." um it'll report things like
+10:18
+time exceeded in transit. So if that TTL value that gets decremented every time we cross a router drops to one, the
+10:25
+router after it has been dropped to one knows it can't drop it to zero and it'll
+10:31
+report back in MP time exceeded in transit. Well, the problem we have with
+10:37
+firewalls is that if I have a packet leave, right, let's say I have a TCP packet headed out
+10:44
+someplace to the internet, it's going to have a source port, a destination port, a source IP address, destination IP
+10:50
+address, and it's relatively easy for the firewall to look at that and say,
+10:55
+okay, any combination of those two is okay to go by. So if I now see the
+11:01
+source has been changed to the destination for the IP port and the same thing on the other side, well that's
+11:07
+just a reply and that's okay and I can let that go through. So when you deal with TCP and UDP firewalls can just kind
+11:13
+of look at ports and look at IPs and make some decent decisions based off of that. But ICMP throws a monkey wrench
+11:19
+into the whole thing, right? Like I talked about the host unreachable that's reported by the upstream router. So my
+11:25
+firewall might see me go to TCP port 80 on a remote IP address, but now I have
+11:31
+an ICMP error packet coming from some my I've, you know, no one's ever talked to.
+11:37
+Is that something that can be let through or not? And some firewalls struggle with that. And we'll talk more
+11:43
+deeply about why next week. I'll get into it a little bit this week, but yeah, I'll get in into it even deeper
+11:48
+next week. Um, and this is where like uh Dacket, well, it's called Dacket inspection really. That's just a
+11:55
+relabeling or marketing term for stateful inspection, but stateful inspection is designed to go through and
+12:00
+kind of help with those types of problems. But here's an example of an ICMP error. So, I know the screen looks
+12:09
+a little busy. Follow along with me here. So, see the little left hand uh
+12:14
+red bracket here and the right hand red bracket? that's showing a decode of the
+12:20
+MP header that is exposed on the outside of my packet. So this is an IP packet.
+12:27
+It's identifying that it's an ICMP packet. So bte 9 is going to be set to
+12:32
+one. It's going to say it's an ICMP packet. And this is set to administratively prohibited. So in other
+12:38
+words, the device that's responding here, right, this 24 220 616 168 is
+12:45
+saying, "Hey, I've been told not to let packets through to the IP port or
+12:50
+combination thereof that you're trying to access." So I'm telling you, you can't get there cuz I'm not letting you
+12:56
+get there. The host might be up, it might be down. You have no way of knowing. I'm not going to let you get there. So this is an ICMP error that
+13:03
+says you're trying to access a resource that I'm pre that you're being prevented from accessing. Now if we just look at this
+13:12
+outside here, right? How does the receiving system know what's been
+13:17
+prohibited? Because this is coming back not from the system that they were trying to talk to, but some intermediary
+13:24
+host that says I have filter rules in place saying I can't let this through.
+13:29
+Uh Chris, isn't stateful inspection more about the three-way handshake as opposed to UDP? So stateful inspection really is
+13:37
+about how deeply into the packet can we pattern match regardless of whether it's
+13:44
+TCP, ICMP, UDP or whatever the case may be. Um it's a little So I think where uh
+13:50
+CFA where you're going with that is TCP is a little easier to firewall
+13:57
+because TCP and we talked about uh this we'll talk about this in a little bit has flags that signify where it is in
+14:05
+that communication session. If sin is turned on by itself we know that's the first packet in the session. So, it's
+14:11
+easy for me to implement a rule to say don't let through connection establishment but let through replies.
+14:17
+With UDP, it's harder because there's no flags identifying where I am in the communication session. So, when I see a
+14:24
+packet go by, I don't necessarily know just by decoding the packet itself, is
+14:30
+this an initial query or is this a response? I got to go a little bit deeper to deal with that. And I'll get into that a little bit more as we go
+14:37
+through. And looks like uh coming at the club. Yeah. Yeah, Eric.
+14:43
+Eric's got a great description of stateful inspection as well. Thanks, dude. So, yeah, but this is my outside
+14:48
+header and like I said, it's coming from an intermediate area host. So, I have no way of knowing um what is this
+14:55
+associated with. So, what ICMP does to fix this is it embeds the original
+15:01
+packet inside of the payload and that's shown inside of these blue areas here.
+15:07
+Right? So down here you can see the red and then you can see the blue. That just
+15:12
+kind of correlates with up here. See this 4500? That's kind of a good value
+15:18
+to look for in hex when you're looking at packets because it's the start of an
+15:23
+IP header. It means that it's IP version 4. The packet is five 32bit words or 20
+15:30
+bytes in size and type of service has not been turned on because nobody uses
+15:35
+it. That's pretty common for most IP packets. And if you ever offset into a
+15:42
+packet and you see 4500 again, it's worth digging a little bit deeper to
+15:47
+say, hey, is this an IP packet buried inside of an IP packet? And that's in fact what we have here. So what's inside
+15:54
+of the blue is this is the packet that caused this administratively prohibited
+16:00
+to get triggered, right? This is the packet that I was trying to send to 8.26204.
+16:07
+2620425 that 82220.6.168 said sorry can't get there
+16:14
+from here. So you get the idea. So with ICMP errors the way we
+16:24
+track what caused this error to take place is we take the packet that was an
+16:30
+error embedded inside the body of the payload. uh up to um a total of 60 bytes
+16:37
+in size. So I don't get the entire original packet, but I'm going to have 60 bytes total, which is plenty to be
+16:44
+able to look at. You know, that's going to give me my IP header and enough of my TCP header to be able to see, yeah, this
+16:50
+is in fact, you know, what caused this error to go through and take place.
+16:55
+So stateful inspection decode the blue section and compare it to the state table. So what do I mean by that? I mean
+17:01
+that so this ICMP error comes in and as we said it came in from an unknown host.
+17:06
+How do we know if it's okay to let this through? Well, what our firewall needs to be able to do is say, "Ah, that's an
+17:13
+ICMP error. I won't necessarily see a response coming back from someone that
+17:20
+one of my internal hosts tried to talk to. I need to offset into the payload. I
+17:25
+need to decode this because this is the IP header and the original transport
+17:31
+header of the packet that caused this error to take place and I need to use that information to go match against my
+17:38
+state table. So again in this case here I had a system that was trying to get to
+17:44
+a DNS server and it's not allowed to talk to that DNS server. So that's why this system kicked back and said admin
+17:51
+admin administratively prohibited. can't get there from here. So, how do I know
+17:56
+which of my packets caused this admin to take place? Well, I can find that information right within the payload
+18:04
+here. And as I said, ICMP is not designed to transmit data, but you can
+18:11
+certainly transmit data inside of it. Um, the first command and control
+18:17
+channel that I ever ran across was based on ICMP error packets. Um, it was
+18:23
+actually kind of wild the way it happened. It this was right around circuit 2000, right? So, it was, you
+18:29
+know, oh, Y2K, you know, the whole world's going to end. It was when all that stuff was going on. Um, I got
+18:34
+pulled in as part of a group to provide security and tech support within the government to be able to look at things
+18:42
+to say, hey, does this look like a Y2K thing or does this look like somebody trying to do evil and make it look like
+18:48
+it might just be a Y2K thing, which is it? So, I was with a group of people, you know, that would go through and
+18:54
+review this stuff. So we'd have people submit stuff in and we had this MP error
+19:00
+packet that was being broadcast to the zero address which was the network
+19:06
+address of the network that it was being sent to and the person who saw it sent it to us and said this looks you know
+19:14
+hey seeing this packet you know and it repeats every now and then it looks kind of weird don't know where it's coming
+19:20
+from don't know what's going on check it out and of course what's wrong with that is an ICM MP error is a response to a
+19:28
+host that is having problems communicating. So why is it going to the
+19:33
+network address, right? The network doesn't send traffic.0 never transmits.
+19:39
+So why is it going to the network address? And I was working with a few people that like pulled some lame excuse
+19:45
+out of their backside and closed the ticket. And I looked at it and I'm looking at it and I'm like, you know,
+19:51
+that's just not making sense. And we were supposed to like get tickets closed as quickly as possible because hey,
+19:56
+that's what sport people are supposed to do, right? And I kept pissing people off because I kept opening the ticket back
+20:01
+up. Nope. That example you gave or that uh reasoning you gave makes absolutely
+20:07
+no sense at all. We need to open this back up again. Long story
+20:13
+short, go back to the early days of internet communication
+20:19
+and BSD systems used.0 as their broadcast address and
+20:27
+255, you know, as their network address, assuming a class C subnet, right? Really what I'm saying is, you know, the all um
+20:36
+all the low order bits turned off was broadcast. All the low order bits turned high was network with BSD. But system 5
+20:43
+was the other way around. Zero was network. 255 is broadcast. And we said,
+20:48
+"Hey, they're they're both Unix systems. They should be able to talk to each other. We need to fix this." And you
+20:55
+know they flipped a coin or however it went they decided okay zero will be network and 255 will be broadcast going
+21:02
+forward for all systems which meant BSD was doing it the wrong way around and what Sun said was okay fine we'll we
+21:09
+will accommodate that but for backwards compatibility since no one should be
+21:15
+sending to the network address anyway we're going to continue to rationalize that as being a potential broadcast in
+21:22
+older Sun OS systems And what was getting compromised was Sun OS systems.
+21:28
+So this was a real crafty way to send marching orders to a system that didn't
+21:35
+let you see what the system was. Right? If there's a command and control channel going to
+21:41
+192.168.1.10, hey, which system got compromised? That is pretty easy, right? 192168.1.10. That's the one doing the C2
+21:48
+session. But these were going to a network address which meant it could be
+21:54
+any sunos system on the network and if there's a couple dozen or a couple
+21:59
+hundred, good luck figuring it out. You may not necessarily be able to figure it out quickly. So what looked like a rogue
+22:06
+ICMP error turned out to be the first command and control channel I ever found. God, was that really 25 years
+22:12
+ago? Yeah, that was 25 years ago. That's how long we've been dealing with this crap flaw. So yes, you can in fact embed
+22:19
+data inside of ICMP packets. So changing gears a little bit,
+22:26
+we got UDP. So this came up a little bit from like a firewall perspective as well. UDP is lightweight. It is designed
+22:34
+for the bare minimum needed to try and transmit data from point A to point B. Right? So we've got some port numbers
+22:40
+here. We've got a CRC check. We've got a length field. and that's it because
+22:46
+that's like the bare minimum you need to get point data from point A to point B connectionless no concept of state I
+22:53
+said TCP is very formal right so think of TCP as being similar to you know me
+23:00
+walking in the room hi I'm Chris what's your name oh hey I'm Steve nice to meet you Chris nice to meet you Steve are you
+23:07
+having a good day yes you are okay great here's data I want to transmit to you now right that's a TCP conversation with
+23:15
+UDP. I might walk in and say, "Hey, where's that code asphalt and say nothing else, right? That's
+23:21
+UDP." Just straight to the straight to it. You don't even bother trying to establish a communication session first.
+23:28
+I'm not even, you know, at least by like shaking hands and greeting someone. I
+23:34
+know I have their attention. With UDP, you don't get that, right? Like maybe you have their attention, maybe you don't type of thing. So UDP is designed
+23:41
+to be the bare minimum you need to transmit data from point A to point B. So you'll hear TCP referred to as
+23:48
+reliable and UDP referred to as unreliable. This is one of the reasons
+23:54
+why UDP doesn't do connection establishment. UDP also doesn't have any error correction built into it. So
+24:01
+that's why most of our protocols today are built on TCP. Now here's the problem. TCP was written back in
+24:09
+1982 or early 80s anyway. It's been in use since about 82, longer than I'm
+24:15
+guessing a lot of people who are on this webcast have actually been on this planet fault. So you won't remember what
+24:21
+the internet was like back then, right? The internet back then was, you know, a high-speed internet connection was like
+24:27
+300 baud. And you know if that dropped 50 times a day that's what we called
+24:32
+stable because it was only going you could get an half hour worth of use out of it before the network went down. That
+24:38
+was considered stable back then. So TCP was written to be stable in those types
+24:44
+of conditions. We don't have those types of conditions anymore. So UDP tends to be a little bit more preferable. Uh
+24:51
+we'll talk about uh the quick protocol that gets used a lot these days. you know, that's based on UDP because we
+24:58
+don't need all that reliability that's built into TCP. Well, wait, Chris, does that mean that, you know, you can lose
+25:03
+transmissions and it's not reliable. You can't count on it. Not necessarily. I can build that I can build in
+25:09
+reliability at the application layer. It doesn't have to be done at the transport. It's just it's a laziness
+25:16
+thing, right? If I use TCP, I don't have to worry about reliability. The protocol
+25:21
+is already doing it for me. If I use UDP, well, now I have to build in some
+25:26
+le level of reliability at my application layer. UDP also supports
+25:32
+uniccast broadcast and multiccast just like we talked about with ICMP. The other thing that's kind of
+25:39
+interesting about UDP is that it can be birectional or unidirectional. So, for
+25:45
+example, what we're looking at here is a system sending log entries to a logging server. So when I send my logs to a
+25:54
+remote server, if I'm using UDP 514, no response back means they got
+26:00
+that log. Okay. Oh no, not that doesn't make sense, right? That's that's like,
+26:07
+you know, me saying something to someone in a crowded room and if I don't hear
+26:12
+anything back from them, well, they heard what I had to say. No problem. Well, no, you can't necessarily count on
+26:17
+that, right? The thought process is if that system didn't get the packet
+26:23
+because it was too many hops away, you'll get an ICMP error. If the port's closed, you'll get an ICMP error. So UDP
+26:29
+is really relying on, hey, for most things that might go wrong, I'll get an
+26:35
+an I'll get back an ICMP error to let me know something went wrong and I can take
+26:40
+action to it accordingly. If I don't get anything back, I'll just assume it made it through. Uh, no. That's not always
+26:48
+how it works, right? What if I have a firewall in the way with a drop rule? Well, the firewall will drop this
+26:54
+packet. No response will get sent back to the transmitting source. So, the transmitting source will think these log
+27:01
+entries are getting through when in fact they're not. And that's not a good thing. So, they can be unit
+27:07
+unidirectional. All my all my traffic is in one direction and one direction only. SIS log's a great example of that. or it
+27:14
+can be birectional. DNS is a good example of that. So I'll use
+27:19
+UDP53 to send a DNS query to a system and then it will send a response to that
+27:25
+query. So for example, I have a system here asking a DNS server, hey, I need
+27:30
+the A record or I need the IP address of
+27:36
+config.teams.microsoft.com. And then here is my response coming back. So I got three records back and it's telling
+27:42
+me that that this C name meaning hey that host name is associated with these
+27:49
+two hosts as well. The A record for it is this IP address right here. So ask a
+27:56
+question get back an answer. UDP can be birectional as well at the same time.
+28:04
+Um, let's see. Also, Internet Explorer was
+28:10
+classified as munitions, but that's another story. Yeah, that goes way back back when like, you know, should we let
+28:17
+things be more than 56 uh should we let people use encryption with bigger than
+28:22
+56 bit keys? It goes back to those days. [Music]
+28:27
+Um, really where that law came from was like back in World War II, right? So,
+28:34
+we're talking the 40s. Your average person did not encrypt their
+28:39
+communications. There was no reason to. But as time went on, you know, they were
+28:45
+it became easier to eased and therefore the need for privacy went up. So, people
+28:51
+wanted to start encrypting their communications, especially over the internet. and they kind of tripped over
+28:56
+that munitions law which was hey if you're encrypting data you must be up to
+29:01
+no good therefore it's illegal and you know that goes back to worrying about spies so you know they've had to kind of
+29:08
+modify the laws around that as time has gone on uh let's see isn't UDP a problem with IDS IP because of dead time then
+29:16
+i.e. no detection alerts. So, so there's kind of two ways
+29:22
+to look at it with IDs. It could be detection of of of uh events taking
+29:29
+place on the wire, right? Like the IDS. So, ids IPS is intrusion detection and
+29:34
+one is just detecting, the other one tries to do something to stop attacks if they take place, which don't work most
+29:39
+of the time, but that's another story for another day. Um, but one of the
+29:44
+problems you can run into is that I might have the data that would normally
+29:51
+get detected if it was all inside of a single packet spread out over multiple
+29:56
+packets. And some IDS systems may be able to consolidate all that data and then do the pattern matching. Some of
+30:03
+them may not. And for the ones that don't, they're not going to be able to go in and do a detection on that. So yeah, CFAR, I would absolutely agree
+30:10
+that when you're talking about IDS UDP, if it's spread out and that
+30:16
+isn't getting reconstrued back into its original datagramgram first, you're absolutely going to miss things. Um, as
+30:23
+far as it doing error reporting, yeah, you could run into the same type of problem where you're sending your
+30:30
+alerts, you know, via UDP 514 and they may not be making it through. That's
+30:36
+fairly easy to solve today though because most logging servers also support TCP. And then there's another
+30:42
+port up in I think it's like the 500 range where you can actually um encrypt those log entries as they get submitted
+30:48
+as well. Uh let's see. Yeah, the 128 bit version back in
+30:56
+the day. Yeah. Yeah, I had fun at the border one time when I had a customs
+31:01
+official asking if I had any 128 bit encryption on my laptop. Luckily, I
+31:06
+could dual boot into Linux with a guest account and they didn't know what to do when they moved around the mouse and
+31:11
+couldn't get a mouse character or couldn't get a little mouse pointer. So, that was fun. That was the only thing
+31:17
+that kept me out of jail that night. Uh, that used to be more of a thing then than it was now. And yeah, there's a lot
+31:22
+of things that went on with Zimmerman and Snyder back in the day.
+31:27
+Cool. So, yeah, UDPs and firewalls. Um, one of the biggest
+31:33
+problems you can have or we used to have was that DNS used to use a fixed source
+31:39
+port of 50 fixed port of 53 between servers. So the source port would be 53.
+31:44
+The destination port would be 53 and they had to change the DNS software to
+31:50
+to and the ROC's to kind of fix that one. Um, if we're talking modern DNS
+31:56
+with a decent stateful firewall, handling DNS queries should be no big deal. Right? Those are fairly easy to go
+32:03
+through and take care of. Usually no stateful inspection implemented. What do I mean by that? I mean that um we don't
+32:12
+necessarily go in and look to see what type of DNS queries are taking place and
+32:18
+make a decision based on that. We just kind of decide, hey, do I want to let UDP53 to the server or not? Yes or no.
+32:25
+And if I don't want to let it in because it's an internal resolver, I don't want people out on the internet doing it.
+32:31
+Most modern firewalls are going to be able to deal with that pretty easily. I talked about um IDS IPS with UDP if I
+32:38
+spread it out over multiple packets. One of the things you kind of run into with UDP is that you don't really know when
+32:47
+it's done, right? With TCP, we have a what's called referred to as a finac
+32:52
+exchange. So the idea is I'm done sending you data. So I turn on certain
+32:57
+flags to signal to you I'm done sending you data. And then when you're done sending me data, you turn on those same
+33:03
+flags. And now we know the conversation o is over. So it not only has a formal start, but has a formal way of ending as
+33:10
+well. UDP doesn't have that formality. So I see a UDP packet go by. Is it just
+33:16
+the one packet or is it going to be multiple? So most
+33:23
+tools hedge their bets. What they do is they say, "Hey, if
+33:28
+I see a UDP packet go by and another one goes by within 30 seconds or less, I
+33:36
+will consider that to be part of the same session." Well, we don't really
+33:42
+have sessions with UDP, though. So technically that's not correct. But if I
+33:47
+want to have some ability to pick up on patterns when they're spread out over multiple packets, I need some level of
+33:55
+timing to be able to say, "Hey, how long do I wait to see if more data shows up
+34:00
+so I can try and combine it with this data?" Uh, versus, you know, this must be a new transmission that's taking
+34:06
+place. 30 seconds tends to be the fault for most intrusion detection systems and most firewalls that are out there today
+34:13
+when we're talking about UDP. Then we get into TCP and TCP is the one
+34:20
+that most folks are more accustomed to. Uh more overhead than UDP. Yeah. The head header is bigger. So UDP the header
+34:28
+is eight bytes in size. TCP the header is anywhere from 20 bytes to 60 bytes.
+34:34
+So it can grow fairly large. that it doesn't sound like much, but when you're
+34:39
+talking about overhead in every single packet, you know, that's 40 bytes in every packet that could have been data
+34:46
+and now it can't be because we're using that space to transmit header information instead. So that's what we
+34:51
+mean by most more overhead. We also talked about, you know, there's that three packet formal handshake that needs
+34:57
+to take place before I start sending data. That's overhead, right? Anytime we're throwing packets on the wire or
+35:05
+we're in throwing stuff in the headers that doesn't need to be there specifically to transmit data, that's
+35:11
+overhead. And the more overhead we have, the less room we have left over to be able to actually transmit data.
+35:18
+Connection oriented, meaning state is maintained. Yeah, we talked about that and I'll get into a little bit more when we talk about flags. Has built-in error
+35:25
+reporting. Yeah, TCP has the ability to figure out when packets go missing.
+35:30
+Well, technically it's when data goes missing. It doesn't look at it as a packet or two packets went missing. It
+35:37
+just knows, hey, I'm missing a chunk of data here, right? I'm missing 232 bytes
+35:43
+right at this spot here. It doesn't know if that 232 bytes was transmitted in one packet or five. And it doesn't care. It
+35:51
+just knows this chunk is missing. This needs to get retransmitted. UDP doesn't have any ability to recover and figure
+35:57
+out when data goes missing like that. has built-in error reporting. So I mentioned that if I try to talk to a UDP
+36:04
+port and that UDP port is closed, I'll get back an ICMP error. Well, TCP has
+36:10
+that error built in built right in. It's called res a reset flag. So if I try to talk to let's say TCP port 80 and
+36:17
+there's no web server listening, I'll get back a TCP reset act packet. Hey,
+36:23
+sorry there's nothing listening on that port for you to be able to talk to. So the error reporting is built right in.
+36:28
+also has built-in flow control. So what flow control means is that let's say I'm
+36:35
+talking to a web server and that web server get is really busy because there's lots of other people talking to
+36:40
+it. If I try to send a data too quickly and it fills its
+36:45
+buffer when a buffer gets filled typically the only option is to throw
+36:51
+stuff away. Anytime you start throwing stuff away now it takes time to recover from that happening. So we want to avoid
+36:58
+throwing data away as much as we possibly can. So what flow control does is float control it gives that server a
+37:04
+way to communicate back to me and say, "Hey, you need to send me data slower."
+37:09
+And really what it's going to do is it's going to come back and say, "Hey, you can only send me 500 bytes of data
+37:15
+before you need to stop and wait for me to acknowledge the proper receipt of that data before you then again send me
+37:22
+another 500 bytes of data." And if that goes well and things are working fine, I
+37:27
+may kick that up to 600 bytes and 700 bytes and so on. If we start running into problems, I may make that number
+37:34
+smaller. So flow control allows one system to control the flow rate of data
+37:39
+that's being that's being received from another system. We talked about this TCP
+37:44
+uniccast communications only because of that formal handshake, right? like I can't send if I send a sin packet to the
+37:51
+broadcast address I'll you know if I start getting synax from a bunch of systems back it's
+37:58
+going to get really complicated to try and set up those connections with all those systems at the same time doesn't
+38:03
+make a whole lot of sense so TCP is specifically designed to only do
+38:09
+uniccast communications now with that said I've crafted some sin packets to the broadcast address on occasion and
+38:15
+been surprised by the systems that respond back to It can happen, but that is a coding
+38:21
+error. That's not a natural effect of what's been written into the
+38:31
+RFC's. And here's the TCP header. Much bigger, much more
+38:37
+complex. The other thing that's different about the TCP header, it has options to it. And the options can make
+38:44
+that header grow in size. So with my UDP, ICMP, most of my headers, they're a
+38:50
+fixed length. They're always going to be the same size. TCP can be as small as 20 bytes. Like we
+38:57
+said, it can grow from there. It can go up as large as 64.
+39:02
+Now, with I and I get into this more when I get into like packet decoding,
+39:08
+but the IP header, it's actually pretty rare to see someone turn on IP options.
+39:15
+And if you see IP options turned on in a packet, more than likely somebody's up to no good. More than likely somebody's
+39:22
+doing something they shouldn't be. It's not, you know, 99% of the time there's
+39:27
+that 1% of the time that there might be a legitimate use case for using IP options, but today in a modern network,
+39:33
+most of the time you don't need to use them. TCP, it's the complete opposite.
+39:39
+With TCP, it's more common to see options turned on in every modern-day operating
+39:45
+system. If you don't see options being used, that's usually an indic indication
+39:52
+somebody's doing some packet crafting, right? They're crafting a packet where they wanted to set a few values. They
+39:58
+didn't worry about the TCP values because they don't really care about a good communication session. So, that's
+40:03
+why no TCP options were turned on in that session. The other caveat is that
+40:09
+with the exception of one TCP option timestamp, all the other options only
+40:16
+take place in the initial packet of the session. So it's either in the sin packet or the synact packet. Those
+40:22
+options don't get indicated after that. Timestamp is the only one that's uh different from that. Uh C Brighton, how
+40:29
+does the MTU relate to packet size? if those packets are much smaller expansion when required or data transfer or is it
+40:35
+just mac max packet size. So good question. So, MTU uh maximum transfer
+40:41
+unit is different in that that describes how big of a frame we can have at layer
+40:48
+2, right? So, for most Ethernet networks, it's going to be around 1500 bytes. It might be 1480. You know, it
+40:56
+dep you know, it's going to change whether you know we're doing VLAN tagging and stuff like that, but for the
+41:01
+sake of argument, let's just call it it's around 1500 bytes in size.
+41:07
+When we talk about window size, how much data can be sent before you need to stop
+41:15
+and wait for an acknowledgement before you start uh sending data again.
+41:21
+Figuring out what to use a val in the as a value once we're into the communication session is pretty easy
+41:27
+because the system on the other side is going to say, "Hey, let's speed up. Hey, let's slow down. Let's speed up. Let's slow down based on how it's responding."
+41:33
+But I got to pick something to start with. And what a lot of f what a lot of operating systems do is they just kind
+41:41
+of like a back of the napkin calculation. They say about four or five times the MTU. So the MTU kind of plays
+41:49
+a part in the TCP window size based on that off back of the napkin calculation.
+41:55
+Um but not everybody follows that. Linux actually starts off with a much bigger window size than that uh just because it
+42:02
+knows it can. Uh so with that said that MTU restricts the size of how big the
+42:09
+frame can be which in turn limits the size of how big the packets can be in
+42:15
+size of that. So one of the things we have for a TCP option is a negotiation
+42:21
+referred to as maximum segment size MSS. And the idea is, hey, I'm gonna tell you
+42:28
+what my MTU is, and you tell me what your MTU is, and we'll both make sure
+42:33
+that when we send data, it fits inside of that. The thought process being that
+42:39
+a small MTU is most likely to be at one end or the other of the network. Now,
+42:44
+with that said, my experience has been it shows up in the middle a lot. Sometimes you end up over these, you
+42:50
+know, you'll end up going over like an older uh frame relay link, right? Frame relay still gets used and frame relay
+42:57
+supports a smaller MTU size. So that's not going to help. So I, you know, I
+43:03
+think it's, you know, so maximum segment size, which is one of the TCP options, tries to help solve some of that, but it
+43:09
+doesn't do the best job of it. So th those are the ways the MTU kind of relates to um TCP communications and TCP
+43:16
+options. case that's helpful. Good question though. Good question. So yeah, like I said, the TCP
+43:24
+header can grow in size if the options are set. With TCP, modern day, most
+43:30
+operating systems will use one or more TCP options, but it usually only gets
+43:36
+negotiated in the first packet of the session. Now, our TCP flags are how we
+43:42
+identify state. It's the six low order bits in bite 13
+43:47
+of the TCP header. So if we go back here a little bit, here's our flags, right?
+43:53
+But my flags are only from here over. I have two bits here that I'm not using
+43:59
+for flags. Those get used for ECN, explicit congestion
+44:04
+notification, which tends not to get used. Um ECN is kind of a way. So, we
+44:10
+talked about u flow control lets the endpoints control how quickly data gets
+44:15
+sent back and forth between them, right? Well, they're not the only two systems involved in the negotiation session.
+44:21
+There might be 15 routers that are in the middle of that session, those sessions as well, and they need to
+44:27
+handle those packets, too. What if one of those routers starts getting overloaded? Well, historically, the only
+44:34
+option was for the router to start throwing stuff away. What ECN tries to do is it it tries to be a method of
+44:41
+giving the router the ability to reach out to the endpoints to say, "Hey, you
+44:46
+need to even though the other side is doing just fine, you need to close up your window size because a router
+44:53
+between you and that endpoint is about to roll over and start throwing away packets because it's running out of
+44:58
+buffer space." Now, I think the thought process is, well, let other people use ECN. My data is important. and I want to
+45:05
+let it go through. That's why we tend to not use ECN. Um, but you know, it's
+45:11
+there. But yeah, those six bits are used to identify different portions of the
+45:17
+communication session. Um, I'm going to kind of flip around a little bit on these to do because I kind of listed
+45:23
+them out in the order of the bits, but I want to kind of talk through them in the order that they actually get used. So,
+45:29
+send turned on by itself. That's how I start a session. So when a system turns on the sin flag and all the other
+45:36
+TCP flags are turned off, that's its way of saying, "Hey, I'm trying to start a
+45:42
+new session with you. We may not have been communicating with each other yet. We haven't start we certainly haven't
+45:47
+been communicating as part of this specific communication session. This is a brand new session I want to start up
+45:52
+and talk to you with." The acknowledgement flag is a way of acknowledging receipt from data uh
+45:59
+receipt of data from the system on the other side. One of the interesting things about the acknowledgement flag,
+46:05
+it's turned on all the time. There's only two conditions I'm aware of where
+46:10
+you won't see the acknowledgement flag turned on. One is when the sin flag gets sent, right? Because sin's the only
+46:17
+thing turned on. ACT is off. So starting a brand new session, that's one case
+46:22
+where ACT won't be turned on. The other time I've seen it is if I send an
+46:27
+acknowledge if I send a TCP packet with the acknowledgement flag turned on to a
+46:33
+closed TCP port. Meaning there was no session. There should never be a packet
+46:39
+with just the acknowledgement flag turned on being sent to it. Somebody's crafted something. In that case, many
+46:46
+operating systems will return just the reset flag turned on and that's it.
+46:52
+Those are the only two times I've seen it. Outside of that, every packet you see go by should have the
+46:57
+acknowledgement flag turned on. When the session gets done, we have the FIN flag
+47:02
+that gets used. So, if I send you data, I'll send you a Finn act. And then when you're done sending me data, you send me
+47:09
+a Finac. And then we each acknowledge the FIN act sent by the other side. Once that happens, that session is considered
+47:15
+closed. Now, what if something goes wrong? What if, let's say, your system
+47:20
+loses power and I'm trying to communicate with you and you can't respond because you're offline. Well, I
+47:27
+don't want my session to stay you. We don't want the session to hang out there forever. So, my systems need some way to
+47:34
+close the session with you that doesn't involve using finac packets because you're no longer responding. And that
+47:41
+method is to send a reset. A reset means, hey, something's gone horribly wrong with this session. I don't see it
+47:48
+as being recoverable. You, you know, you're not responding to me anymore. So, yep, this session's kind of dead now.
+47:54
+So, reset. Consider it a dead session. The other flags you might see
+47:59
+is the push flag. So, the push flag data gets handled in chunks, right?
+48:05
+So, we're sending these packets that are about 1500 bytes in size, less once you
+48:11
+take off the Ethernet headers. It's more like 1480 on average. 1460 1480 bytes is
+48:17
+about what you're going to see for the average packet size and some of that is going to be IP and TCP header. So I've
+48:24
+got even less than that for a data chunk to work with. Right? So we're talking less than 2K less than 2K is getting
+48:31
+sent in every packet. Well, if my computer needs to interrupt and process
+48:38
+2K all the way up to the application layer every single time a packet gets received. that's going to chew up a lot
+48:45
+of free cycles, right? It's going to make trying to use the network very processor intensive. So, what we do is
+48:51
+we buffer it and the default is like 8K. So, it's not like you need a lot of packets to fill that buffer because it's
+48:57
+only AK in size, but it's also, you know, one we're we're pro we're
+49:04
+interrupting 16th as many times as we would if we did it for every single packet or possibly more. So there's like
+49:10
+an AK buffer that gets filled up and then that gets sent through the stack. The push flag is designed to say, "Hey,
+49:16
+this is the end of the data stream. If this doesn't fill that AK buffer on your side, you need to push it up the stack
+49:23
+anyway because there won't be any other data showing up after this." You'll see the push flag get used a lot with SSH,
+49:30
+right? If you watch an SSH session, try try this sometime. launch a packet sniffer, run an SSH session, and then
+49:38
+just type commands. SSH every time you hit a key on the keyboard sends that key
+49:44
+to the other side. So, you're sending one key. Well, that's not a cave worth of data that won't get read by the other
+49:51
+side. So, what you'll notice in an SSH session is the push flag is set all the time. Whereas, if you're using a
+49:57
+protocol that's designed to move big chunks of data, it's not going to set the push flag until it actually needs
+50:03
+it. The urgent flag is used for outofband negotiation. So SSH is probably another great example of that,
+50:09
+right? Because normally commands get processed FIFO, first in first out. So
+50:14
+if I go in and I type a command that says rm, you know, sl or pseudo rm space
+50:24
+slash-f, you know, force delete the entire drive from this point here from
+50:30
+the root of the drive. If I type in that command and I do it as root, that's going to try and nuke every f file that
+50:38
+is not currently locked on that system. My operating system is about to go away.
+50:43
+Well, if you've ever accidentally started deleting stuff and then used the control C command to kill it, you've
+50:50
+used the urgent flag. The urgent flag is a way for me to send data to a system
+50:55
+and say, "Hey, I know I've been sending you commands, but interrupt that for a moment and proc this process this
+51:02
+immediately because without the urgent flag, control C would never work. When
+51:08
+you'd hit control C, that wouldn't get implemented or that wouldn't occur until after the application finished, which
+51:14
+kind of takes takes away the use of using control C, right? So that's when you may see the urgent flag getting
+51:22
+used. I'll get into this a little bit more, but TCP is a lot easier to
+51:28
+firewall because I can basically say, hey, if sin is turned on by itself, that's a new connection. If sin is not
+51:35
+turned on by itself, then it's not a new connection. It's part of an established session. So, if I'm worried about people
+51:41
+doing brand new inbound connections, but I want to let through replies for data, I might say, "Hey, if sin is equal to
+51:47
+one and that's the only thing turned on for TCP flags, don't let it through." But all other flag combinations are
+51:54
+okay. Well, I'll get into this again when we get into uh when we get into
+52:00
+firewalls, but I we actually looked at this last week when we did packer crafting. We talked about how some
+52:06
+operating systems like Linux, if you turn the FIN flag on by itself, it'll
+52:12
+issue back a reset if that port's closed, but it won't respond if that port's open. Well, if I'm letting
+52:19
+through anything that doesn't have SIN turned on by itself, I'm going to let through those FIN flags. So, a static
+52:26
+filter is going to have problems protecting systems from a FIN scan,
+52:31
+which is not good. you know, not something we want to
+52:41
+say. So, again, I'll get into this a little bit deeper when we get into the stateful firewall stuff starting next
+52:47
+week, but stateful does allow us much better security with TCP, not just other
+52:54
+protocols as well. And again, I'll get into that a little bit deeper as we go
+53:01
+through. Originally, what stateful inspection was used for with TCP was for
+53:09
+FTP. FTP was this weird protocol we used to use. We don't use it anymore because
+53:15
+it sends credentials and clear text and that's bad. But FTP had what was referred to as a command channel and a
+53:21
+data channel. So, the command channel was where you would log in. It's where you would issue your commands. The data
+53:28
+channel was where you would actually transmit that file information. So, one of the problems you ran into is you
+53:34
+could say, "Hey, look through the command channel and that'll let you run commands, but you can't actually transfer any files because that's going
+53:41
+to use a different set of ports." So, stateful inspection was implemented in
+53:46
+order to be able to watch FTP sessions and open up the ports needed on the fly
+53:51
+in order to accommodate those data transfers. I'll get into this more when we get into
+53:57
+like the stateful firewall stuff and stuff like that. Um, but that was like the original use case for it. And when a
+54:05
+firewall says it's stateful inspection, it can make that claim if it
+54:10
+statefully inspects one single protocol, which means it might be statically
+54:15
+handling a majority of the traffic that's trying to go by, but if it inspects that one protocol, they're
+54:21
+going to call themselves a stateful inspection firewall. This is why you can have two stateful inspection firewalls
+54:28
+and they will handle different protocols completely differently, some more securely than the other. And I'll get
+54:35
+into that as we go through. FTP is still used by most
+54:40
+printers unfortunately. Yeah, yet another reason to stop killing trees, right? H Yeah, FTP got to make that go
+54:49
+away. Ports 21 and 22. Um, it was actually port 20. If I
+54:55
+remember correctly, 21 was the command channel. 20 was the port used if you
+55:02
+were using active FTP. The server would create a connection from port 20 to an
+55:09
+upper port number on your client which also caused problems because now the command session is going from client to
+55:16
+server but the file transfer session connection establishment is going from the server to the client and that might
+55:22
+cause firewall problems along the way. Uh then they implemented FTP passive mode that was from an FT upper port to
+55:28
+an upper port but that kept connections in the same direction uh client to server and that made life a little bit
+55:35
+easier there. And then we have the quick
+55:40
+protocol. So when you look at you know if you kind of do a statistical
+55:46
+breakdown of what is the most popular protocols being used on the internet today one of the top ones are going to
+55:52
+be DNS. That makes sense, right? We type in names, we need IP addresses. DNS is
+55:57
+what takes care of that. So, you see a lot of DNS traffic taking place on the internet. But if you look at what's the
+56:04
+next protocol being used, it's probably
+56:09
+HTTPS, right? It used to be HTTP, but we encrypt our sessions to everything now
+56:15
+just in case, you know, like your Google searches. Google will not let you do a
+56:20
+clear text search anymore. You got to use HTTPS. If you try to connect to port 80, it's going to redirect you to the
+56:26
+secured port. So, a majority of the traffic out there is HTTPS, which means it's HTTP traffic
+56:35
+that has been secured with TLS. TLS is I'll get into this when we get into VPNs
+56:40
+and stuff like that, but TLS is a protocol, which means it's a suite of
+56:46
+algorithms that does a couple of things. It helps to set up a secure channel over an insecure medium. It helps to
+56:53
+establish secure communications and then it comes up with an expedited way to
+56:58
+transfer data back and forth while keeping it in a private format and
+57:04
+validate that every packet received was actually transmitted by the host that we
+57:09
+think it is. you know is TLS rolls in an awful lot of security but it does that using HTTP and
+57:16
+HTTP leverages TCP and we talked about there's a lot of overhead with all that.
+57:22
+So what quick is is quick is HTTPS but using UDP port 53 or excuse me
+57:30
+UDP port 443. So TCP 443 is HTTPS.
+57:37
+quick is UDP uh port 443 and it operates
+57:43
+a lot like HTTPS or it support it provides the same security services but
+57:49
+it has a different set of protocols for being able to go through and do that like what
+57:55
+well unfortunately a lot of the changes that have been made have been in the
+58:01
+interest of speed and performance at the tradeoff of potential
+58:08
+security. So what do I mean by that? Uh let's see. CFKA was asking, is
+58:14
+TLS implemented at app layer or transport layer? Good question. Um it's actually at the session layer uh which
+58:22
+is right above the transport layer. So it's actually sandwiched in between those two.
+58:29
+So with an HTTPS session, let's say I go talk to a secure website and then five
+58:35
+minutes later I go and connect to that same secure website again. Then five minutes after that I go connect to that secure website. I'm going to establish
+58:43
+security each time. I'm going to get that server's digital certificate. I'm
+58:49
+going to check the signature on the bottom and make sure that was signed using the public key of the server that
+58:56
+issued that digital certificate. I'm going to use the public key that is inside the digital certificate to set up
+59:02
+a secure session with that system and I'm going to go through that every single time with quick. Quick actually
+59:09
+gives you the ability to say, "Hey, we already did that. Let's not bother going through it again." And it's done in the
+59:14
+interest of performance. Now, yeah, you get better performance cuz you're not
+59:20
+having to go through that negotiation again every single time, but there's a security trade-off with that. There may
+59:25
+be things that change that you didn't expect. Now, it's not an easy attack to
+59:31
+pull off by any stretch of the imagination, but it it's it's like we've
+59:36
+got this big huge brick wall, right? And we're trying to keep out the bad guys, and we've pulled out a brick. Now, you
+59:44
+can argue, hey, missing one brick. Yeah, the bad guys aren't going to be able to get in. It's only one brick that's
+59:50
+missing, but that one brick might make the difference, right? Maybe they use that to peek through to see when we're
+59:56
+actually watching. Maybe that's a leverage point to pull additional bricks out. You get the idea. Anytime we kind
+1:00:02
+of weaken security, there's a cost for that. And and Quick kind of does that in a
+1:00:08
+nutshell. And it's still kind of a work in progress. You're still we're still seeing updates for this. Uh and quite
+1:00:15
+honestly, quick to me is kind of how I want to say this without like
+1:00:21
+getting on my soap box. Okay, I can't. Uh but I'll keep it quick since we're already at the top of the hour. Um how
+1:00:27
+we develop RFC's have changed. We used to develop RFC's to make protocols the
+1:00:33
+best we can. that has changed so that companies that can financially benefit
+1:00:40
+from certain protocols being implemented are pushing engineering to get those
+1:00:46
+RSC's generated. A great example, DOT DNS over T over TLS, right? That
+1:00:55
+gets pushed as, oh, it's a privacy thing. Your ISP can't, you know, see what your DNS queries are anymore. Yeah,
+1:01:02
+you're right. They can't. But you know who can? The DNS server you're using out on the internet that you're connecting
+1:01:07
+your DOT sessions to. So all that does is move who can steal and sell your data
+1:01:13
+from your ISP to be someone else. It provides no security beyond that. But what it does do is it makes it harder
+1:01:20
+for security people trying to protect a network who are using DNS queries to do that to actually be able to do their
+1:01:27
+faking job. So, we're starting to see RFC's come out that are helping companies to monetize business models
+1:01:33
+that weren't uh initially available to them, but is making our job in security a lot harder. And I think that kind of
+1:01:41
+stinks. So, quick and firewalls, yeah, you're kind of limited around I can let
+1:01:46
+through UDP 14 or not. You can't really control a lot of what goes on. One of
+1:01:52
+the things I don't like about quick is that you can connect to a server using
+1:01:57
+quick and that server could generate new sessions back to your system. It can do connection establishment as a reverse uh
+1:02:05
+reverse channel and that's part of the specification to allow it to do that. Today with
+1:02:10
+HTTPS you s your client needs to start every single one of those sessions. The
+1:02:16
+server can't start something new. It can you know it can try and motivate you to do that but it's still up to your system
+1:02:22
+whether that's going to get created or not with quick yeah no birectional either end can establish on once the
+1:02:29
+secure channel is set up anyone can initiate new sessions and that goes out birectionally and haha it's crypted so
+1:02:37
+you can't tell which was doing which I hate it when that happens. So yeah, to me there's a lot of security concerns
+1:02:43
+here, but I'm like I said, I don't want to spend too much time up on my up on my soap box over
+1:02:49
+this. So that's our quick talk on transports. Next week I'm going to talk about
+1:02:56
+firewalls. We'll talk about the difference between static stateful stateful inspection packet filters.
+1:03:02
+We'll also talk about proxies. We'll talk about the strength and weaknesses from them from a firewall perspective.
+1:03:08
+So that'll be next week. There'll be no labs next week because the week after will be all labs using firewalls. So for
+1:03:17
+two weeks from now, what you'll need is access to a Linux system. And I'm going to give you a bunch of scripts you can
+1:03:23
+run on that Linux system. So we'll quickly set up static, stateful, and stateful inspector firewalls. So we can
+1:03:29
+go through and do some quick security testing to see what's the strengths and ew weaknesses of each. So that'll be a
+1:03:35
+couple of weeks out. But hey, this is all I have for today. Keith, you got anything else you want to toss
+1:03:45
+in? Keith, you're on mute. Yeah, it would help if I clicked
+1:03:51
+in the right zone there, but uh No, I have nothing to add. That was great. Thank you. Yeah, that was really good.
+1:04:00
+Same here. Nice work, Chris. Yeah. Yeah. Yeah. Great subjects. I mean, and I I
+1:04:07
+again, I just I love the engagement on Discord, you know? I mean, we just have such a great community. The threat
+1:04:14
+hunter community is just so cool. So, I appreciate everybody.
+1:04:22
+So, Oh, now I can't hear you, Chris. You're on mute now. That was
+1:04:28
+weird. Just all of a sudden the system said muted. So, I'll blame Bill. No,
+1:04:33
+must have been me. It must be HK. He's still hanging in the background. He's like, "Ah, if I don't tell on my camera,
+1:04:39
+they won't know I'm here. I'll get even with Chris for all the hazing he's been giving me as a new employee. Let me keep
+1:04:44
+putting him on mute. That must be it." Yeah. Well, it's the mute virus that got me first. The mute virus. Yes.
+1:04:54
+Awesome. Hey, also I'd like to mention that the the YouTube live feed for this week totally failed. So, uh, our
+1:05:01
+apologies for that, but the YouTube live feed will return next week. Bummer. Can
+1:05:07
+we, uh, get Can we get a recording of this put up on YouTube? Awesomeness. Yeah. Yeah, we'll end up doing that.
+1:05:13
+It's just before like for our Fireside Fridays archives page, which is at our website, the Fireside Fridays page. Um,
+1:05:20
+usually I'll add the archive recording the same day, so it would be there today, but in this case, uh, it may be
+1:05:27
+Monday, Tuesday by the time we get that up there. Uh, yeah. and and I have to come up with a better way to uh monitor
+1:05:34
+questions on that. Like it's easy when it's your account that posts, but since
+1:05:39
+we post it from the active countermeasures account, I have to respond from my personal account and I don't don't always see when comments get
+1:05:46
+posted. So, I need like a hacky bill script or something to go through everything that ACM has posted for
+1:05:53
+videos and see if there's new comments. There you go. And as far as their
+1:06:00
+certificates for the session, uh they they should go out today. I mean, I should be able to get those out today. So, uh so anyone who's authenticated
+1:06:07
+into this Zoom session will receive a certificate. Yeah. But hey, give them
+1:06:12
+till Wednesday. Uh give them till Monday cuz you know, let's be chill.
+1:06:18
+Okay, that works for me. Cool. All right. Thank you folks. Yeah, appreciate
+1:06:23
+everybody joining in. Thank you for your time. We will catch you next Friday. Awesome. Have a good one. Thanks, Chris.
+1:06:30
+Thanks, everyone. Bye-bye.

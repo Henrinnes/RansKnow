@@ -1,0 +1,696 @@
+0:00
+The single hardest part in building agents isn't what Raphael and I showed you here around plugging these graphs
+0:05
+together and getting them to execute. It's the data retrieval. Doing that in a deterministic way that's reliable, not
+0:12
+overloading the context windows of these agents and making sure you're compressing and summarizing that data
+0:18
+down, right? Um, and every time you do that, it's changing the underlying characteristics of how that agent might
+0:24
+interpret certain words, might interpret certain data sets. And so you have to
+0:30
+constantly measure and improve these. That's why it's so important to have um you know this instrumentation like uh
+0:37
+evaluations um evaluation data sets the sort of concept of back testing. A lot of the
+0:43
+machine learning backgrounds that that you would have when it comes to building and training and preparing a machine
+0:49
+learning model to go in production, it's the exact same amount of rigor and process you would follow when you're
+0:54
+building an AI agent, back testing that AI agent. We call it paper trading kind of like in finance where you're going to
+1:01
+try to run trades in real time and track them to see how they do, but it's not real, right? We do all these sort of
+1:06
+methods internally just to make sure that we're constantly keeping up with that.
+1:15
+Thank you everybody uh for tuning in for this this uh this week's office hours.
+Welcome to Red Canary Office Hours
+1:20
+Um you're stuck with me and Raphael this week. Uh so hopefully that's okay. Uh just really quick intros from us and
+1:26
+then we'll we'll dive in. Um one subtle housekeeping note is that uh my internet has been really flaky and so if you see
+1:32
+me pop out and Keith Keith automatically pops in and takes over for me, I apologize. Um but we're going to power
+1:39
+through this. So uh just really quickly, my name is Jimmy Ael. Um I lead our data science and and machine learning
+1:44
+practice here at Red Canary. My background my entire career has been in offensive and defensive cyber security
+1:50
+and been at Red Canary for almost 5 years now. Uh Raphael, over to you. Okay. My name is Rafael De. I'm a
+1:56
+principal machine learning engineer specialized in cyber security for the last 20 years in machine learning and
+2:02
+agentic AI. Awesome. So we we got some of um you know Raphael and I sort of
+Fundamentals of building AI agent workflows in the SOC
+2:09
+co-lead our architecture design engineering implementation around our machine learning and AI practices at Red
+2:15
+Canary. And we've sort of been talking a lot behind the scenes about we need to
+2:20
+do more. Let's talk more about democratizing this this unbelievable technology, bringing more transparency
+2:26
+to the industry in sort of that red canary way. And so we are uh the first
+2:32
+of a four-part series of uh AI and the sock from hype to outcomes. So we're
+2:37
+going to give you no kidding concrete examples. We're going to show you how to build an agent quasi live on this
+2:43
+webinar today towards the end and that's where Raphael will come in. We're going to give you real data. We're going to show you consistency metrics. We're
+2:50
+going to show you sort of the fundamentals of how we think about building these AI agents, applying it to
+2:55
+cyber security, trying to tee up sort of the key things to ask, and then we'll give you these concrete examples of how
+3:01
+to measure, improve, and tame the AI, going from fully autonomous, fancy agents to more of these deterministic
+3:08
+workflows. So, let's hop on to the next slide. So, here's our agenda today. Um, you
+3:15
+know, the the bulk of this topic at a high level is going to be out these agent workflows. There's so much
+3:21
+terminology out there. This isn't like an RFC standardized thing quite yet. And so, we're going to talk about
+3:27
+determinism and non-determinism using agents. You might think that, well, a deterministic agent is way better than a
+3:34
+non-deterministic agent. So, why would you ever even care about it? So, we'll talk a lot about that. You actually might be surprised where these fully
+3:40
+autonomous non-deterministic agents are really helpful uh especially in like the ideation and experimentation phases.
+3:47
+Then throughout this presentation, we're going to talk a lot about how we think about using AI in the sock. The various
+3:53
+AI agents that we have out in production today, helping us do uh bring bring great great outcomes for our regenerary
+3:59
+customers. And then we're going to try to do this sort of build it live, do it live style thing of uh taking a
+4:06
+hypothetical scenario of hey, I got this email. Can we classify is it classify
+4:11
+this email as a fish or not a fish? We're going to walk through how we think about building um an agent like that. So
+4:17
+really excited and that's going to be the bulk of the presentation. So Raphael, why don't you kick it over to the next slide here
+Choosing your AI automation style
+4:24
+and we'll start right off. So this is a slide that that we uh that we took from a presentation I gave uh at Black Hat
+4:30
+Toronto Sector uh this past fall and I I just think it does a really good job of
+4:36
+just a highlevel zooming out about these AI agents are all about automation, right? How can we use large language
+4:43
+models to automate tasks? Because this is across every industry right now. Cyber security specifically has all of
+4:49
+the sort of knowledge worker roles and ways to automate tasks. And so what this this table helps you do is ask yourself
+4:57
+this question. How defined is a problem? What's the human's role in this automation? How predictable can it be?
+5:04
+And then you have these two distinct sort of AI engineering styles, right?
+5:09
+And by the way, this isn't an or. You can have a an organic sort of and on
+5:15
+this or you can use both. You can use one or the other. It doesn't matter. It depends on the problem that you're
+5:20
+trying to solve. And Raphael will walk through what that looks like live. We're going to do a full-on fully agentic a uh
+5:28
+autonomous agent. We're going to explore how good it is at certain tasks. And then what you'll see is we'll start to
+5:34
+pair that agent down. We internally we call it taming that agent. And how do you do that? You do that by adding more
+5:40
+of these deterministic structured workflows that bring predictability, you know, a human in the loop, clear steps
+5:47
+in your workflows that you know are going to be executed the same way every time and leave the more ambiguous sort
+5:53
+of harder tasks to these autonomous loops that these agents will go through. So this is how you want to think about
+5:59
+when you're kicking off and you're thinking about how I want to build an AI agent. We typically always start in this
+6:05
+fully autonomous way. We'll build chat bots around it because you need to get a feel. You need to understand how these models behave and over time you can
+6:12
+start to pair them down and make them into these more structured workflows. Next slide.
+Embracing deterministic tasking
+6:19
+So what this slide is building on is you you saw that table. This is sort of that table visualized now. And you might say
+6:26
+a fully autonomous agent that's what it looks like, huh? Yep. I think this is sort of the industry standard way of of
+6:32
+looking at it where you have an agent that is working in this loop. So, you give it a task. The agent has very
+6:38
+specific instructions. It'll create to-do lists. It'll know what tools uh it can it can use and what those tools do
+6:45
+if they're used, what what data comes out of it. And so, it's going to break down the problem that you give it. It's
+6:50
+going to go and call tools to retrieve data um to go enrich data, etc., etc.
+6:56
+And then that agent's going to run in a loop until it either comes to an outcome that you asked it to do or it reaches a
+7:02
+loop limit and then it will exit and say, "Sorry, I wasn't able to do it. Let me ask you some more questions." That's typically how you see that. But over
+7:08
+time, what you end up seeing when you instrument these is that, well, I don't need the agent to to reason and say,
+7:13
+"All right, in order to analyze this email, go retrieve the email and parse it." Well, I don't need an AI to figure
+7:19
+that out. Why don't I just cut some of those steps out, make them more deterministic and faster, right? And
+7:25
+then bring that data to a more paired down tamed agent loop, right? So, this is what we talk about when we bring
+7:31
+determinism into auton AI agent autonomy, right? And you do that by making sure these agents are working on
+7:37
+very clear, concise uh um problems. You break those problems down for the agents
+7:42
+to fully understand. We're not trying to, you know, solve all of cyber security's problems in one agent. We
+7:48
+bound it right to the problems and the tools that it can call. And we relentlessly measure these agents over
+7:54
+and over and over again, tens of thousands of times. And Raphael has some really great examples to show you how to
+8:00
+interpret that data and make improvements to your agents over time. So next slide.
+8:07
+So here's your your key sort of AI agent workflow patterns and these sort of three pillars here, right? So at the end
+Key AI agent workflow patterns
+8:14
+of the day, you're always going to want to bring more determinism into your AI agent workflows. And that's where these
+8:21
+structured workflows come down to. But if you double click into that, right, you're always going to want to pick a task like, you know, let me let me
+8:27
+classify this fish as a this email as a fish or not a fish. Well, how do I
+8:33
+actually do that? What questions should I ask myself? What questions would a human analyst ask when they're analyzing
+8:38
+an email? You're going to want to encode those into your agents through those structured workflows, right? You're going to want to make sure that you keep
+8:45
+those agents bound. Like I said, you don't want to build the sock AI agent analysts. You're going to want to build
+8:50
+the Microsoft endpoint uh investigation agent. You're going to want to build the CrowdStrike endpoint investigation
+8:56
+agent. You're going to want to build the Octa identity investigation agent, and so on and so forth. When you really keep
+9:02
+the agents narrow, outside of all the technical magic to tame them, keeping it
+9:07
+narrow also helps with hallucinations and making sure you're getting the correct outcomes. And over time, you can
+9:12
+chain those agents together to maybe build that that higher level sock agent, but you need to sort of build those
+9:19
+important foundational building blocks before you move on. And finally, remember at the end of the day, a
+9:25
+customer is going to consume the output of these AI agents, especially in the cyber security world, right? And so,
+9:31
+you're going to have a human in the loop a lot of times, essentially receiving the output of these agent
+9:38
+investigations, right? I like to call them interceptor agents where they're sitting in the middle of pulling an alert in, doing a bunch of busy work,
+9:44
+investigation steps, and then handing that off to a human to do that final stretch usually, right? And so that's
+9:49
+sort of the entire purpose of that is building trust. If you're not maintaining that trust, say, "Great, I
+9:55
+built an agent. It's working really well. Hand it over to your sock team to start using it." 3, four months go by
+10:00
+and all of a sudden the agent just really isn't performing as well as it used to. Right? The key here is taking
+10:06
+that constant feedback, iterating, and making sure that you continue to maintain that trust with the folks that
+10:12
+are using your agent. So um this is sort of that highlevel workflow pattern that we have codified internally that a lot
+10:18
+all of our engineers follow when when when bringing agents to market for our sock to use.
+10:25
+And then finally um one last slide for y'all um before before we dig into the fun nerdy stuff with Raphael. We have a
+10:32
+ton of agents. I was actually just doing a bunch of uh reporting on on our agent statistics from last year. We have uh 21
+10:39
+agents now in production working in our sock alongside our incredible analysts and you can see here that our agents are
+10:46
+very narrowly focused across cloud um identity and endpoint right so we we we
+10:52
+very u we make them very strategic in what they're working on the data that they're able to pull and the decisions
+10:58
+that they're able to make we're taming a lot of that stuff and some of the statistics from last year are pretty awesome like our those 21 agents triaged
+11:05
+over 30 million cyber security events last year. U so it's a pretty significant number. It's it's it's
+11:12
+making a significant dent in our humans ability to really focus in on that higher level um you know more
+11:19
+independent creative thinking that humans are really good at and let's offload a lot of that busy work investigation tasks to these agents. Um,
+11:26
+and so without further ado, I'm gonna bring Raphael in here. And to tee up what Raphael is going to work on is, um,
+AI agent tutorial
+11:33
+we're gonna pick this hypothetical scenario where we're going to build a an email fishing triage agent. And so what
+11:39
+Raphael is going to do is he's going to walk you through the mindset of what we brainstorm about, what we think about, how to pick these problems apart, and
+11:45
+then we'll go on and build that fully autonomous agent all the way through to that tamed agent. And so, Raphael, over
+11:51
+to you. Thank Thank you, Jimmy. So, as Jimmy said, our hypothetical agent, uh, we're
+11:58
+going to build an agent that can analyze an email and classify it as either a fish or not a fish. It's a highly
+12:05
+simplified, uh, agent created specifically for this presentation. So, each step in this demo is backed by
+12:13
+running code. Hopefully, you're going to be releasing this code in our in a in a further blog. The graphs and metrics you
+12:19
+see are real calculated from agents running on email samples. So the very
+12:24
+first step in creating a cyber security agent is trying to mimic how a human analyst would work. What are some of the
+12:31
+typical questions we would want to ask when analyzing an email to determine whether it's official or not? We would
+12:38
+want our analysts to be able to pull the mail content of course including headers, subject, body, attachments and
+12:45
+other metadata. We would want to look up senders reputation, senders email reputation. We
+12:53
+would also want reputation details for URLs, IP addresses, attachment, hashes,
+12:59
+domains, phone numbers and etc etc. Those lookups could come from commercial
+13:05
+reputation services, in-house data sources or even some internal machine learning models that we we have been
+13:11
+building. Uh, we would want to check whether the mayo uses emotional manipulation such as urgency, fear,
+13:18
+threats, promises of gang, or if it tries to induce the user to disclose
+13:23
+sensitive information. We would also check for grammar and spelling mistakes,
+13:29
+inconsistencies, and header authentication fields, and other common fishing indicators. Think of this stage
+13:36
+as training a human analyst on a sock team. uh very quickly you will begin to
+13:41
+understand which data you need, which tools to use and which questions matter most when classifying an email. Let's
+13:49
+proceed to the next step where we really start building the agent code. So the second step in building an AI
+13:57
+agent is to create a chatbot with a simple react loop. Could be also a DP
+14:02
+agent deep deep agent loop depending on your use case with a clear set of instructions and access to tools much
+14:10
+like the ones we discuss discussed in the previous slide. This is an exploratory stage. This agent allows us
+14:17
+to explore the problem space simply by talking to it. It's very very cool. Of
+14:22
+course, we need a large set of email samples pre previously labeled by human expert. This is where red canary has a
+14:29
+lot has red canary has a lot of label data. It's amazing. It's a dream dream for any data scientist or machine
+14:35
+learning expert. You see this agent represented in two graphs here. This is a normal classical react loop and I
+14:43
+decomposed the the tools so they become more evident and more visible for for
+14:48
+the sake of clarity. Uh you can see that this agent has access
+14:54
+to multiple tools just just like those that we discussed in the previous step.
+14:59
+At this stage we interact with the agent by chatting with it asking questions that triggers the tools that we have
+15:04
+defined. This allows us to iterate on the instructions improve the tools experiment with different memory
+15:11
+strategies refine contextual summarization. This is very important. Anyone that created agent know that
+15:17
+summarization or compression is very important. uh and identify whether we need more or
+15:22
+maybe fewer tools. This is how we typically start building a new agent with a fully autonomous J agent
+15:29
+observing how it behaves and improving iteratively. Through this process, we gain a clear
+15:35
+sense of the agents viability. It's very important to fail fast and this approach enables exactly that. If the agent does
+15:42
+not perform well in this exploratory stage, we can stop and rethink our approach before investing additional
+15:48
+time and resources and well many companies stop at this stage and move directly to production
+15:55
+after seeing a good chatbot performing. Uh this is likely one of the reasons why
+16:00
+over 95% of GNAI projects fail maybe. Well, so assuming we conclude that this
+16:07
+agent is worth investing, we can move to the next stage. So we intend to use the
+16:13
+this agent in production either to fully automate decisions or to serve as a
+16:18
+reference for human analysts. Because of that we must define very specific inputs
+16:24
+and outputs. As you can see here in the code snippet, in this case the input would be the username and email ID and
+16:32
+the output will be the classification like fish not a fish and an explanation.
+16:38
+Using structured input and outputs instead of a free form chat interface
+16:44
+allows us to run simulations at scale and measure accuracy and consistency. This is probably the most important part
+16:51
+of the whole presentation being able to create these simulations at scale. Uh
+16:57
+this approach requires hundreds of ideally thousands of label in Mayo samples to run these simulations against
+17:04
+this is something that red has a lot label data. During the simulations we
+17:10
+can systematically vary model providers, agent architectors and other parameters we want to evaluate. This methodology is
+17:17
+directly inspired by established machine learning practices. We can see a simplified report from a
+17:24
+simulation of this agent. Uh the first thing you'll notice is that the agent does not always get the classification
+17:30
+right. The results can v v across runs on the same samples. This results in
+17:35
+lower accuracy and poor consistency. The set of tools called by the agent
+17:41
+changes a lot depending on the run. Uh we also observe that in certain case the
+17:47
+the agent simply fails to call certain tools even the retrie retrieve email to
+17:52
+sometimes this does does happen. Uh this is noral behavior given the
+17:57
+probabilistic nature of LLMs. Yeah. And and Raphael, on this specific case for the for the folks at home, when you look
+18:04
+at this table down below, this is the same email being analyzed right over and
+18:10
+over and you can see that how inconsistent these agents are when they're fully autonomous. What Rafael is
+18:16
+pointing out. Yeah. So what appeared to be a very strong agent during the
+18:22
+exploratory stage is now revealing some weakness when evaluated at scale with structural inputs and outputs. This is
+18:30
+precisely why these simulations are so important. Uh okay we saw that if you
+18:35
+give an agent too much autonomy it may be more prone to make mistakes. It may get things right like 70 80% of the time
+18:42
+but this is just not enough in cyber security world. uh we need to tame its autonomy and make
+18:49
+the agent more predictable and consistent. And how we do this uh Jimmy
+18:54
+presents some some some techniques. There are multiple techniques to improve this but in this presentation I'm going
+19:00
+to be focusing on just two of them. So let's go to the next slide.
+19:06
+The first technique uh whenever possible move tools from the react loop or deep
+19:15
+deep loop or from inside uh some nondeterministic code to specific parts
+19:21
+of of the agent workflow. In this case we move the mail retrieval
+19:27
+tool and a few simple reputation lookups into workflow nodes. This also required
+19:32
+parsing the email content of this in this uh node. Uh and these tools whose
+19:40
+invocation would be handle and decided by the agent are now being in
+19:45
+unconditionally being executed through the agent uh graph.
+19:50
+We then run the simulations again and we observe a sign significant improvement on accuracy and consistency. uh the
+19:58
+agent now classify emails 100% of course in this small data set that we created
+20:03
+for this presentation uh and and it produces consistent results across runs
+20:10
+execution time also decreased. We could take this a step further by turning these workflow nodes into sub
+20:17
+aents uh specialized sub aents each one performing a specific task with reduced
+20:23
+context and tighter focus but for the sake of simplicity in this case we we just using normal deterministic code
+20:31
+remember the agent is the whole workflow by having deterministic nodes operating
+20:37
+with the same framework in our case it's lang graph we benefit run observability,
+20:44
+error handling, retries, parallelization, memory, short-term, long-term, and all of the features
+20:50
+provided by the workflow engine. Let's move to the next slide and explore another technique to tame a agent
+20:56
+autonomy. Now you can see that we have an early
+21:02
+exit. We make u like this. This has early exit node.
+21:08
+This step checks whether the email sender or IP address is a no fishing is
+21:15
+in a no fishing list. If it does, the flow immediately goes to the end and
+21:20
+classified the emails as malicious or fishing. So why go through the whole process if
+21:26
+we can have a high confidence that email is malicious? Uh as expected we run the
+21:32
+simulations again and as expected the execution time drops significantly for some samples and two calling consistency
+21:39
+the average call consistency uh improves as well the accuracy remains at 100% but
+21:45
+this is a small as small data set so uh hey Rafael a live question came in from
+21:52
+Kevin how often are we reviewing agents for accuracy and retraining them uh
+21:57
+inside of regular I can tell you about We we're going to have an a new release in a few days for
+22:03
+a new agent. Uh it's being run more than 20,000 times.
+22:09
+Yeah, just for example, and it's a an an example of an agent that we run very quickly. The release and development
+22:16
+process has been accelerated. We run thousands of times. And Kevin on our our agents that are in
+22:23
+production today, uh it's a it's a continuous process. We continuously will grab feedback either uh actively a
+22:30
+customer can hit thumbs up, thumbs down, give us feedback andor from our security operations sides. We have lots of
+22:37
+dashboards and metrics where we actually look at the um alignment of what an
+22:42
+agent decided versus what a human decided. Uh and we're throughout the day always sort of shipping tweaks and
+22:48
+improvements to our agents in production. There's there's not like a waterfall effect at all. Okay. So we could apply these two
+22:55
+techniques with other nodes with other tools but for the sake of simplicity I believe that this this make our point.
+23:02
+Uh so we might say that agent is ready for production right not quite yet. Uh
+23:09
+we still need to run the agent in shadow mode against real email traffic. What this means we run in parallel to
+23:16
+production. Why we have humans analyzing, we have also the agent and we compare the alignment of the decisions.
+23:23
+Uh so and we monitor this the performance through time and sometimes this may takes weeks sometimes months
+23:29
+depends on on the agent. Uh this process combined with an
+23:34
+extensive set of unit integration system tests. We are very proud of our uh test
+23:40
+suites using techniques such as semantical similarity, LLM as a Jude and other evaluation methods as well as
+23:47
+feedback from customer and internal analysts. All of these help ensure that the agent is production ready and
+23:54
+remains reliable as we continue to make changes and improvements over time. Now, some key points for you to remember
+Q&A with our experts
+24:00
+for this presentation, but AI agents are workflows. Even with the most autonomization possible, if you
+24:07
+zoom zoom in enough, you see all the tool and VR workflows.
+24:13
+Simulation at SC at scale reveals the truth. This is the most important thing of the whole presentation. Being able to
+24:19
+run the simulations or back testing depending how you you call things. Autonomy is the enemy of reliability at
+24:26
+least at the current state of LLM technology. Shadow before shipping. I mean running
+24:32
+parallel production. Sometime they call this forward analysis before you ship to production. Feedbacks never never stops.
+24:41
+Okay. No. Jimmy. Yes. So next week we're going to
+24:48
+continue this miniseries and you get the pleasure of Brian Donahghue and Caleb to join you and just talking about AI
+24:56
+powered attacks. the sort of ways the things that we're seeing internally, the way that we like to apply these uh the
+25:02
+different signals that we that come out of our AI agents and we investigate them uh and some of the controls we have
+25:08
+around around our agents in production. So again, more of peeling that onion back or and and and sort of demystifying
+25:15
+and showing more of the world um about how we work and how we operate these agents at scale. It's a super important
+25:21
+skill for everybody in security operations. we're seeing live in front of our eyes the entire cyber security
+25:27
+industry sort of transform into this you know this is not a hyped up technology this will be table stakes technology
+25:35
+inside of every single sock probably by the end of the year right um and so Raphael looks like we have a few more
+25:41
+questions um and so Nicholas you asked uh so you said you sort of you stated a
+25:47
+a question about like you know the idea of having very specialized AI agents is to have more control predictability and
+25:54
+to ensure they will execute correctly along thousands of executions. Uh and
+25:59
+this for sure uh makes maintenance more simple. Yeah, exactly. And and not only that, but when
+26:06
+you do this um Nicholas, so remember AI inference is very limited. You can't
+26:13
+just have unlimited LLM calls. It's expensive. There's a lot of roundt
+26:18
+tripping. It slows things down. And so by keeping things concise, it you can also do things like caching, right? In
+26:26
+cyber security, you often see a lot of repetitive alerts over and over and over again. So if your agent already
+26:31
+investigates that and it's similar to another one, why do we need to go through an entire workflow together?
+26:36
+Raphael showed you a little bit of that and hinted about that on some of those early exits. Yeah. Um
+26:43
+and uh Raphael Jake asked a really good question. Feel I I would love your input on this. Does a fish quote unquote
+26:50
+include scam and impostor uh emails? This is this this was a demo agent, but
+26:56
+we have an agent in in production that does exactly that. Is a much more complex agent with sub agents and other
+27:02
+other architectural advancements. But it's but yes, it would be analyzing all
+27:09
+types of categories of fishing. Yeah. And the agent actually one of the outputs would be the category of
+27:14
+fishing. Yeah. and and Jake, a large language model, as it turns out, is really good
+27:21
+at analyzing language. And that is really at the heart of all of these sort
+27:26
+of fishing emails, right? Um, and and go off and experiment, and I bet you'll be
+27:31
+very surprised at how well these models are at sort of helping you pinpoint exactly what part of a fishing email um
+27:38
+could tug on the hearts of somebody, right, to click on a link or something. Rafael, um, really quickly, what kind of
+27:46
+technologies did you use to build this demo um, in data sets and and those
+27:51
+types of things? Yeah. May I may I share another screen? Absolutely. Okay, let me see.
+28:00
+Are you seeing my screen? Yep. So, this is exactly what we use. This is lang graph. This is lang lang
+28:07
+studio. So, these are our agents. This is the initial agent with structured output and all the tools here in a react
+28:14
+loop. This is a very simple agent by the way. We have graphs here that would that
+28:19
+would be enormous. But this is what we did. We moved the
+28:25
+nodes instead instead of being we moved here and here. Uh
+28:32
+get IP reputation. This is what we did in order to make uh
+28:38
+sorry this this one first this is this is the result of that
+28:45
+movement. So this is leng graph it's a very lowlevel framework
+28:52
+uh it doesn't uh mandate you to follow a certain approach so you can build your
+28:58
+graphs. It's amazing. It's an amazing technology. And this length myth studio is allows us to do observability retries
+29:05
+and everything. It's pretty good. And yeah, and and and Rafael, we we figured
+29:10
+earlier when we were building these things early on, we realized like visually showing these and being able to
+29:16
+debug them uh is a really helpful thing. As you saw in this presentation, it really helps you wrap your head around
+29:22
+like and demystify what the heck these agents are doing, right? Yeah. It's way easier to discuss with
+29:27
+people with technical people, nontechnical people when you present them these agents and you can actually run this agent.
+29:34
+Yep. Let's let's hope the
+29:46
+let's see. Yep.
+29:52
+Yeah, there it is running on the right. Yeah, it's on on the React loop. It's you see it calling the tools. It's it's
+30:00
+cool to see that it working. Yeah. So, this is like the inards of how
+30:06
+what an AI agent is thinking live, right? It's pretty neat to see. While this is running, we had a couple other
+30:11
+questions. Um Nick asked, you know, what does the security scope look like when
+30:17
+you essentially give access to third parties to all of your data in order to utilize an LLM? It's a really good
+30:23
+question, Nick. Um, you know, we use hyperscalers like AWS and Azure to
+30:29
+provide our foundational large language models. Um, all of those hyperscalers
+30:34
+have all the sort of terms and conditions where they're not training on your data. It's no different than
+30:39
+storing your data in an Azure data blob or running a database with all of your customer information and insights inside
+30:46
+of a cloud um, you know, provider, right? Um, and so make sure whatever hyperscalers you're using or LLMs you're
+30:53
+using to do this, you have approval and you understand that that data is not going to be used to be trained on
+30:58
+anything. Um, the sort of my advice is like if you're using an LLM provider and it's free, it's not they're harvesting
+31:05
+all of your data, right? You need to be very aware of that. Um, but you know, we
+31:11
+use Azure OpenAI models, uh, an enthropic models through AWS Bedrock. Those are the two big families of models
+31:18
+that we use. Um, uh, I saw a question from George Hurst.
+31:23
+Yeah, you have an example of agent degradation as its perview is expanded such as
+31:28
+adding a module or expanding the data the agent exposed to. We see this all the time. I don't have an example on
+31:34
+this presentation, but this happens more frequent than we realize. Sometimes we
+31:39
+want to add a new data source and the agent start misbehaving a lot or sometimes you add multiple tools and by
+31:46
+the way timing the amount of tools you don't want to have an agent with access to multiple tools be then direct tools
+31:53
+or MCP servers uh MCP tools. So you really need to understand and every
+32:00
+every single tool you change, every single letter that you change in the instruction sets of the multiple agents
+32:06
+or sub agent that you have, you need to run simulations to make sure that the accuracy remains the same and the
+32:12
+consistency. Yeah. And I I'll I'll I'll add on to that for George's answer. um is when you
+32:19
+add new data into an existing agent, you're changing the entire behavior and
+32:24
+task that that agent needs to be done. The single hardest part in building agents isn't what Raphael and I showed
+32:31
+you here around plugging these graphs together and getting them to execute. It's the data retrieval. Doing that in a
+32:37
+deterministic way that's reliable, not overloading the context windows of these agents and making sure you're
+32:42
+compressing and summarizing that data down, right? Um, and every time you do
+32:48
+that, it's changing the underlying characteristics of how that agent might interpret certain words, might interpret
+32:54
+certain data sets. And so, you have to constantly measure and improve these.
+32:59
+That's why it's so important to have um, you know, this instrumentation like uh, evaluations
+33:05
+um, evaluation data sets, the sort of concept of back testing. A lot of the machine learning backgrounds that that
+33:12
+you would have when it comes to building and training and preparing a machine learning model to go in production, it's
+33:18
+the exact same amount of rigor and process you would follow when you're building an AI agent, back testing that
+33:24
+AI agent. We call it paper trading, kind of like in finance where you're going to try to run trades in real time and track
+33:30
+them to see how they do, but it's not real, right? We do all these sort of methods internally just to make sure
+33:35
+that we're constantly keeping up with that. You know, one of the biggest things that we that you'll deal with when you're building agents is upgrading
+33:41
+the actual large language model because when you go from GPT5 to GPT5.1,
+33:48
+the agents will completely change and you're going to have to go and change all of your instructions and things like
+33:54
+that. That's why it's so important to have a very big uh test with making sure that
+34:00
+the agent is still behaving properly. One of the things that we use when we have agent in production or in shadow
+34:07
+mode, we start to accumulate a lot of features. We also use LLMs and deterministic code to extract what
+34:13
+features normal ML features and then we we are able to train models using this
+34:19
+LLM or code features. Then we could have some early exit points that use this
+34:25
+machine learning models. It's another another technique we use. And so
+34:31
+the Mayo uh analyzer model that we have in production, it's already pro probably
+34:37
+getting close to 200k and we train machine learning models with with the feature that we strapped.
+34:43
+Yep. Yeah. And just to to wrap things up, um Nick, love this sort of banter
+34:48
+back and forth. It's what these these these um office hours are for. Yes. The
+34:53
+key to making sure your agents are making the most accurate decisions possible is giving them access to your
+34:59
+data in a responsible way that you can control, that is how you start to really see the magic because the foundational
+35:06
+model in these models is pretty good. Um, but when you start to give it the context and the sort of you're feeding
+35:11
+it, hey, in this data set, the answer is going to be in there. You just need to find it. Um, that is really when you
+35:17
+start to have those aha moments and starting to to really wrap your head around this agent engineering concept.
+35:22
+Um, so I know we had a lot to cover. We covered a ton. We're a little bit over. Um, but hopefully this is a this gets
+35:30
+you all excited for sort of what's to come in future episodes. And we're really looking forward to to y'all
+35:35
+attending those and continuing to expand your horizons on this new world of agent engineering. So, thank you so much for
+35:41
+your time today. We really appreciate it. Thank you.
+35:49
+[Music]
+

@@ -1,0 +1,1107 @@
+0:13
+Heat.
+0:20
+Hey, heat. Hey, heat.
+0:37
+Hey.
+1:24
+Heat. Heat.
+2:06
+Hey, hey, hey.
+2:23
+Hey,
+2:35
+hey, hey.
+2:50
+Hey.
+3:10
+Hey. Hey.
+3:28
+Hello Google Cloud Security community. It is really great to see so many of you
+3:34
+online today. It makes me really excited to know you are all here to learn about
+3:39
+how to better use our sec ops tools and understand the ins and outs of data
+3:45
+pipeline management in vine plane. Thank you all for joining us today. Really
+3:50
+sincerely thank you. Before we start, I want to give a huge sincere thank you to all of you that not are only on this
+3:56
+webinar but those listening to the recording later and to every single one of you in community that's actively
+4:03
+engaged today. We have come a long way since we first launched. And it's because of your dedication, your
+4:10
+vulnerability, your patience, and your willingness to connect, to network, to
+4:16
+share, to help for the greater good of solving each other's problems and sharing your experiences and
+4:22
+understanding of how you use our tools. So, a huge round of applause and thank you to all of you that are part of this
+4:28
+amazing journey. Let's continue to build great things together. I am and we are
+4:34
+committed to your success. So, let that inspire all of us and continue fighting the good fight, helping to protect
+4:41
+against the bad guys. We have a few items of business I'd like to address just real quick. Thank you all that
+4:48
+submitted your questions. We plan on covering them today during this webinar. And then also this webinar specifically
+4:54
+covering Google security operations tools. If you have additional questions on the topics we covered today that we
+5:00
+did not answer, please feel free to post on the page that we promoted this webinar, uh we will get to them as
+5:07
+quickly as possible. Also, this will be recorded and we'll be hosting it in
+5:12
+community after today's presentation. This is my first webinar for community and to avoid any technical difficulties,
+5:20
+we decided not to include chat this time. So, thank you for your patience. We will get that added to our our next
+5:27
+webinar. Appreciate you all understanding. All right, with that we'll go ahead and kick things off. I'd
+5:34
+like to introduce to you Greg Kushik from Google and Craig Lee from Bine
+5:41
+Plane. Greg and Craig, thank you all for joining us today and I'll turn it over to you guys.
+5:51
+And thank you very much, Matt. Um, I appreciate that warm introduction. It's a pleasure to be here today representing
+5:58
+Google and the community. Uh, some of you might have seen me post in the past. Uh, so now you can put a face to the
+6:04
+name. Uh, I am, uh, very happy to be joined here today, uh, by Craig Lee, uh,
+6:10
+principal partner engineer at Bindplane. He's going to help out, uh, with the hard questions that I certainly can't
+6:15
+answer. He's also going to help us by doing a nice little demo later on. Uh but yes, we we want to give you a uh
+6:22
+nice little perspective on how this works and how you can use it. And to that end, our agenda is we're going to
+6:28
+first talk a bit about installation. And I have to say like this is, you know, one-hour webinar. There's only so much you can do in the time. So this is meant
+6:34
+to give you a broad view. We're not going to get into nitty-gritty details on installation, but more like what does
+6:39
+the landscape look like? We're going to then cover some some use cases, get into that demonstration, talk about some
+6:46
+resources, and we'll have time for Q&A at the end. We did receive some Q&A questions in advance. Uh we're prepared
+6:52
+to answer those. Uh and if we have time for others, of course. Uh I actually I'll leave it to Matt since we don't
+6:58
+have a chat how we'd actually handle anything else. But uh he's got eagle eyes. I'm sure he's watching what's happening in the community.
+7:06
+Just for perspective, um, wanted to start with a little quote here from Alli Melon and Forester. Uh, the benefits of
+7:12
+a purpose-built data pipeline tool are to reduce the data preparation necessary to interpret the streams of data and
+7:19
+events to specific specific to security insights and this this is a step forward
+7:25
+for uh what is secops. Now I started here when it was chronicle uh it had been backstory became chronicle there
+7:32
+was no case management and back then it was very simple. you get data in and that's that. And if you wanted to do
+7:39
+anything else with it, there weren't a lot of options. The forwarder had some options for regular expression matching,
+7:45
+but you know, it wasn't really it wasn't designed to start to filter things out,
+7:51
+for example. Uh and also the the general idea behind Chronicle was well, you
+7:56
+know, we price in such a way that, you know, you shouldn't have to worry about the way data goes into the system. So if
+8:02
+all data just goes in, then you have less of an opportunity to actually miss a security incident. And I still
+8:08
+generally believe in that, right? Like we believe at Chronicle or Google Secops, you should be sending all of your DHCP logs in so we can help make
+8:14
+that affiliation between what is the machine that's reporting something that has a 10 dot address and what machine
+8:19
+was assigned that 10 dot address, right? You have to have those logs. But the flip side of course is that when you
+8:25
+start sending in a ton of data and you've paid for a certain block of it, you may very well know that there are things that you don't need or you have
+8:31
+other requirements to manipulate the data. The market has told us repeatedly that they need this and we have introduced it.
+8:37
+So let's talk about how you get rolling. The first thing I want to point out and
+8:43
+thank you to Bplain for providing a number of uh slides for today's presentation including this one here. uh
+8:49
+just if you take a 50,000 foot view right the goal of course is to get data into Google secops like I mentioned um
+8:56
+then the question of course is how does it get there now this is looking at places where you would have a collector
+9:02
+uh this is excluding anything that would include a cloud-tocloud type of resource like you know an SQS feed uh a pub sub
+9:09
+feed right you know choose you know fire hose right choose choose your your feed type from cloud to cloud here we're
+9:15
+talking about especially on prem it could be anywhere you can deploy collector though um and in that case you
+9:22
+have effectively two broad things that you could be talking about installing.
+9:27
+One would be the collectors themselves, the agents that would sit on a machine like a domain controller for example. So
+9:34
+you see that there's either open telemetry collectors or bind plane collectors uh that you could have in a
+9:39
+machine. Uh you'll notice that in this diagram there's uh you know either the hotel or the bind plane going to a a
+9:45
+bind plane gateway. Uh that could today also be a Google psychops forwarder but
+9:52
+our goal like we've been partnering with bine plane. Uh our goal is to drop the
+9:57
+forwarder. I think this year we're going to have to be careful don't quote me for sure on that but our goal is definitely
+10:04
+to replace the forwarder with the collector and I believe that this year that by the end of this year that will
+10:09
+happen. Uh in any case, you can either be sending them to a collector that acts
+10:14
+as a forwarder uh to the forer itself these days or you could have these reporting directly to secops. So that's
+10:21
+one nature of what I need to install and of course those need to be managed and today you know when you get the
+10:27
+collector from um from GitHub for example uh you have uh a YAML file that
+10:34
+you need to configure and YAML files are as much fun as going to the dentist in my opinion and one of the ways we can
+10:40
+help get around that is that well there's this also this bind plane capability that you can host pretty much
+10:46
+anywhere. So there is a um a self-hosting capability. You could download the server and you could just
+10:51
+stand it up on name your server. Uh there is there are other options inside Google cloud and and bind plane
+10:58
+themselves they also have a managed option right. So either way, right, this is an excellent way to configure your
+11:04
+your um your endpoints that you want to have as collectors, uh to reconfigure them, to deploy processors, right? But
+11:11
+it's it's a much better way to uh manage what collectors you have than just
+11:16
+having to custom do YAML files inside, you know, Notepad++ VI, name your
+11:22
+editor. If you want to get an agent installed
+11:28
+and you have secops and if you have secops I imagine you're that's one of the reasons why you're on this call but
+11:34
+if if you go into secops there is a collection agents under settings and you'll notice that there's either
+11:40
+installation files that is a link to uh the the uh GitHub repository that's
+11:47
+controlled by bindplane uh you also have the installation authentication file that you need to have that secure
+11:53
+connection just remember that by default Google as a platform supports TLS1.3 by
+11:59
+default. So that would be your default authentication uh when you're when you're doing these connections. And of
+12:05
+course there's also a configuration file which you can use to start to create
+12:10
+your YAML file. Uh and as I mentioned writing YAML files isn't necessarily the
+12:15
+best way to go. And we we you know we we do um have an option for you and one of
+12:20
+them is that you can leverage the bind plane management console. And one option, of course, is as I mentioned,
+12:25
+there's the bring your own server, literally meaning you can stand it up anywhere that you have an IP address
+12:31
+that can talk to your collection agents. To be honest with you, when I first started fooling around with this, I deployed a server um in my own private
+12:39
+cloud instance, and it didn't have connectivity to anything, but I still went in there, set it the way I wanted
+12:46
+to, generated a YAML file, and downloaded the YL file because it was still better than editing the YAML file.
+12:52
+And I did one version in the editor. Then I needed to make changes. I'm like, I'm done with editing the file. Uh, so
+12:58
+that's actually, you know, the poor man's version. If you really just want to get started. Uh, there is of course the buying plane SAS as I mentioned. And
+13:04
+if you're a GCP customer, which again probably are if you're here, if you have
+13:10
+rights to do this in the cloud, and I recognize that not everybody on this call has necessarily the rights, but
+13:15
+this link here, console, cloud, Google, the marketplace, there's this product, Blue, Madora, buying plane enterprise
+13:21
+solution. That will bring you to this page where in your project you could stand up a server and it tells you it's
+13:28
+going to stand up a VM that has, you know, certain resources that are being consumed. Then you have to go through
+13:33
+the whole process of how are you going to control its access to the outside world, right? If it's standing inside
+13:40
+Google cloud, do you have a VPCSSE connection or some kind of natted connection? You know, how are you getting out to the world? How do you
+13:46
+connect to your collectors? But, you know, you take care of all of that connectivity magic and then you can
+13:52
+deploy your your collectors from bind plane, control their configuration and
+13:57
+update them as well. But either way that functionality exists no matter how you
+14:03
+deploy the bind plane console right the bind plane SAS on prem whatever
+14:10
+the bind plane team themselves they have created an integration page that you can
+14:15
+use uh that talks an awful lot more about how all of this works for you as a
+14:21
+customer. So there's the different additions features use cases that are supported uh you see it's
+14:26
+bindplane.comgoogle. So this is a great place to go just for general information about this and I
+14:32
+should note um there has been a very significant um investment in this partnership. It's not only are we Google
+14:40
+Google cloud security using the hotel collector with Google sec ops and as I
+14:46
+mentioned you know to the point where we intend to get rid of the forwarder. I know that there was a co-equal uh process uh with the cloud logging team
+14:54
+to use hotel as well so that bind plane functionality is optimized for cloud
+15:00
+logging capabilities too and if you're in that use case where you are considering sending operational data
+15:06
+into cloud logging for example uh you could have one stream and we'll talk more about this but you know you have
+15:11
+the confidence that it's configured to be able to work with cloud logging and I believe that some of the use cases that
+15:17
+are on this page will discuss this further as as well. Now, a couple of things that are worth
+15:23
+noting and I took this directly from our documentation. Um, so it is quite literally the copy paste it looks like.
+15:30
+Uh, there really are two bindplane editions that are the Google edition.
+15:36
+One of course bindplane Google edition, right? You'll notice it says all Google sec ops customers get bind plane at no
+15:41
+additional charge. That's 100% true. Um and there are you can route your data
+15:48
+only to Google right whether it's Google sec ops or cloud logging right big query cloud storage right so that's where that
+15:54
+partnership starts to come in um and then there is a basic filtering with regular expressions capability available
+16:01
+right so there's something there um there's no redaction capability um you
+16:06
+have some transformation capabilities there there are limits and then um you
+16:12
+can also use use it as a gateway, right? You know, it's you there in the fine print about how it's available uh for
+16:19
+you to set up. How does that differ with the bind plane enterprise edition if you
+16:24
+are an enterprise plus customer of secops? You'll notice that not only can
+16:29
+you send it to Google, the telemetry that comes out, but you also for 12 months have the ability to route it to
+16:35
+one additional source. The use case this is especially meant to help address is
+16:40
+enterprises that are doing a migration from SIM A to Google sec ops and whatever that SIM is. Most people don't
+16:49
+flip a switch turn off their existing SIM and just turn on Google sec ops and
+16:54
+go over. Generally people like to have data going to both for some period of time so they can make that transition
+17:01
+doing their testing all the rest and then switch with confidence. And that's what this is meant to help provide in
+17:06
+those that case after 12 months. You know, if you wanted to do it further, um
+17:12
+it would not be for free. There is also advanced filtering processors that are
+17:17
+available to you. So there's and some of this we'll talk about a little bit more when uh Craig comes on to talk about uh
+17:23
+you know how these use cases work. But you can filter by condition. There's field severity that you can use for what
+17:30
+you want to filter in terms of filtering what what you drop, right? There's also data reduction capabilities and
+17:35
+duplication capabilities. Uh you also have PI masking. I've been on a number of calls. I mean I've been with with I
+17:42
+started when it was Chronicle. I've been here about four years now. And when I started um and for a long time
+17:49
+afterwards, anytime somebody said I have data source X, it has sensitive PIA data
+17:55
+in the logs. I need that to be screened or masked when it goes into sec ops or
+18:00
+at the time Chronicle. The answer was you has has always been you have to do
+18:06
+your masking before it goes into secops and to that end this is what bindplane
+18:13
+will let you do is that you have that ability to define what those terms are and you can automatically redact it as
+18:18
+part of the stream um and you see you also have the ability to delete your fields delete empty values right do
+18:24
+coallesctions for transformation so a lot more transformation capabilities I've I've talked to customers about the
+18:31
+need for this like they they they helped me understand like because again my position had always been like well if we
+18:36
+make it available to you right you know at at a point where you can just ingest we're an exabyte based platform you need
+18:42
+to send pabytes go for it but people like well you know why do I need to send this log when I know that some
+18:48
+percentage of it is literally something I don't have any interest in it doesn't have a security use case it's excess
+18:54
+there's stuff that I want in here there's stuff that I why should I pay for it and so that is really why we've come up with this answer because I mean
+19:00
+I know people who have been using commercial products to help screen and they said that they have with their
+19:06
+other SIMs they've been able to recoup their costs from what they've been able
+19:12
+to exclude right so you pay X for a commercial product you recoup your cost by what you what you you know exclude by
+19:18
+not going in therefore right you know it's been a win for them when you know
+19:24
+this became abundantly clear this is why we've entered with this partnership and have this functionality
+19:29
+now the collection agent itself has the ability to as I mentioned send logs to multiple destinations. So you know as
+19:36
+I've was said earlier you can send it to Google sec ops you can send it to cloud logging but you can also send it to
+19:43
+other sources right. So in earlier I mentioned it could be BQ it could be uh
+19:48
+cloud lo cloud logging it could be pub but of course you know it could go to a
+19:53
+completely different sim and that is you know that is a powerful feature especially when you also have the
+19:59
+ability to throw in the processing capability for what you want to do further to the data. Um, so you could be
+20:05
+putting on labels when it goes to stream A versus stream B, which makes it easier for you to know where it is and how it's
+20:10
+being controlled and you can make measurements off of it, for example. And you can have multiple processors in the stream uh so that you're able to do
+20:17
+further work on it, right? And and the flexibility, I mean, I mean, I've
+20:23
+certainly played with it. The flexibility is really really good for you in this case about how far you can
+20:29
+go, how you manage the logs, how you can identify content. Um you can have
+20:34
+multiple processors on data. It there's a lot of flexibility built into this.
+20:41
+So if we move over into some of the use cases,
+20:47
+there are really four broad use cases, right? You can route your data as we've been talking, sending it to different
+20:53
+destinations, but you can also filter your data to control the volume and scale, redacting your data for sensitive
+20:59
+data or transforming it as you're preparing it for downstream use. And along those last three, right, you see
+21:05
+like, hey, when I want to filter something, ingesting every log, right, and the metrics, they're costly. I don't
+21:10
+need all that data. I only want to ingest the logs I need, and I want to route the rest to a lowcost storage for
+21:16
+archival and compliance. And that is a key point, right? a lot of people like so secops doesn't have a cold storage
+21:23
+capability everything's hot and and then it's like well all right there are just
+21:29
+some things that I all I need is to just archive it and you always play that line right you know some people say they want
+21:35
+cold storage and then they want to they want to reingest something later on if it becomes useful I personally don't
+21:41
+advise that uh because you lose out on the enrichment capabilities so you you
+21:46
+have to figure out where that line is where do I ingest something versus where do I throw it into cold storage? But if
+21:51
+you know that the only reason you'd ever want to have it there is because you have to show a compliance officer that
+21:56
+you have the data and otherwise you don't intend to be searching through it to help identify attack X, right? You
+22:03
+know, potential problem Y, then at that point it does make sense to say, all right, let's just throw it into cheap
+22:09
+storage somewhere, whether it's, you know, a GCS bucket or whatnot. you know, as well with transformation,
+22:15
+you can um you know, you you you can have your your system with a non-standard log structure and as as
+22:22
+anyone who spent time on this, the minute you start talking custom and a
+22:27
+and a Google sec ops feed, you're probably in trouble because right, you
+22:32
+know, we have close to like a thousand parsers now, but the one basic assumption that we put in every one of
+22:38
+our parsers is that you're working with the data as is expected from the
+22:45
+original supplier. So if you take a log from a supplier and you strip out a field uh or and I and I've talked to
+22:52
+customers who have very strong needs like they'll use they'll use their own DPM services internally to take logs
+22:59
+from different places and they'll add tags on things and they'll strip other fields out and maybe change formats and
+23:05
+then they'll send this to a wide variety of consumers internally. And then when you try to take that massively changed
+23:12
+stream and send it over into secops, it typically doesn't parse. It's almost guaranteed to break at that point. And
+23:19
+then you're in the what next category. One option, of course, is you could build a custom parser. When you build a
+23:26
+custom parser, you're responsible for maintaining the custom parser. All right? Maybe you can achieve what you
+23:33
+want by using an extension. If you're not familiar with extensions, extensions work at the database level, meaning that
+23:40
+the data comes in from the stream, the parser has worked on it, and then an extension can do something further. Now,
+23:45
+if the data isn't parsing in the first place, that's a problem. The extension isn't going to solve it for you. On the
+23:50
+other hand, if the data's come in and there's just been something minor and it managed to make it so that, you know, two fields aren't parsing properly, you
+23:56
+could probably fix that with an extension, but you're still responsible for maintaining the extension. It's still better to send us something as
+24:03
+close to raw or raw as original the original format. And in that case, if you can untransform something,
+24:11
+remove the addition or just, you know, transform it somewhere else and just send the stream straight over to us,
+24:17
+you're in a better position. But either way, you have that flexibility. And of course, then there's redaction, right?
+24:22
+you know, as I mentioned before, you know, somebody has PII, for example, um, and they want to announce an anonymize
+24:29
+the the PII data. In that case, right, it makes an awful lot of sense to grab
+24:35
+something in stream and get rid of the details.
+24:42
+In terms of enriching security logs, something you can use uh the bind plane
+24:48
+processor for um you can't we have to be really careful when we use the term enrichment with secops, right? You know,
+24:55
+just just to take a step back, enrichment can mean a few different things to a few different people. Um one
+25:00
+is when the data comes into secops, we take for example um you know like
+25:07
+there's a holy trinity of what you pull in. If you pull in your network logs, your identity logs, and your EDR logs,
+25:13
+right, we're able to take these three things and do a lot of cross references so that we see that this IP address on
+25:18
+this EDR uh was associated, as I mentioned before, with this 10 dot address assignment from DHCP and the
+25:24
+firewall log saw that go out. We can we can trace all that and have better movement. And if you're user ID maps to
+25:31
+something and your email address is what's being reported, then the enrichment can associate your email address with your user ID. like, oh,
+25:37
+that's all the rich that happens in the logs. We're not talking about that here, right? We're talking about here is that
+25:44
+you have a wide diversity of sources coming in from different places and you want to add on labels and name spaces
+25:51
+that you can better sort them. And that can be very helpful for even things like writing rules or performing searches,
+25:57
+running statistics. And so that's 100% available so that you can say that this is the source like you know we have
+26:04
+people talking about federation use cases, right? they they they have different departments. They all have
+26:09
+their different 10 dot networks, but they all use the same, you know, nomenclature. Uh so they want to they
+26:14
+they want to then say, well, this came from that department, that department, that department. Make sure that you have a label on associate appropriately as
+26:20
+it's coming out. This is what it's very useful for. There are of course also this idea about
+26:28
+sending data to multiple Google destinations. You can send the raw logs to sec ops for sim and you can send
+26:36
+parsed logs if you have something that's doing parsing for you uh to Google cloud logging right or to Google cloud
+26:42
+security. I'll I'll notice that if you're sending if you're if you're sending um parse
+26:49
+logs to Google cloud security uh one interpretation of that would be it's something that you've parsed in advance
+26:55
+meaning you've probably written as UDM. um you know that that's always been
+27:01
+available to you. What's not happening of course is that we're not using Google parsers in the streams to normalize the
+27:09
+data to UDM. So you'd have to be doing that on your own. Um there is of course one other option that's not on here is
+27:15
+that you could be sending um logs to Google Cloud Logging and to Google Cloud
+27:20
+Storage, right? So if you think about that, cloud logging gives you search capabilities. Yes. Right. It's um it's
+27:29
+not parsed per se. You don't have quite the same scale capabilities, search and scale like you would with secops, but
+27:35
+your opex logs are going in there fine. Um meanwhile, then there's the other logs where just for compliance purposes,
+27:42
+you have to collect them. You don't care so much about being able to find them. You can always throw them into BQ Omni later on and just figure it out. Uh but
+27:50
+otherwise, they just sit on disk, right? You just want the cheapest option possible. Cloud storage is perfect for
+27:55
+that. And then there's silent host monitoring.
+28:00
+This is something that has been a steady drum beat of a request for years. If I
+28:07
+have an individual machine that is no longer reporting in logs, how do I know
+28:12
+it's gone quiet? And the bind plane system has a way to do this and that's
+28:19
+something that um that's something that's coming up a little bit more in the how it's done. you know, you you effectively you identify that host with
+28:26
+a processor and and so you you are labeling the sources as they come in and
+28:33
+then now that they're coming in, you have Google Cloud uh logging
+28:39
+capabilities where you you're leveraging this technology inside of GCP to create an alerting policy. That's the general
+28:45
+view of it. But this answers a question that we have been getting time and time again that like you know I have one
+28:52
+customer they literally have tens of thousands of Windows domain controllers. If a couple of them go offline, if one
+28:58
+goes offline, how do you know? Right? Just being able to monitor the stream of data and knowing that something's
+29:03
+reporting in less data that may not be statistically significant. You can't be tracing every one of those down. So now
+29:08
+we have a definitive way of talking about, oh, a certain log is not coming in. this host has just gone dark
+29:16
+and then of course data reduction right this is an enterprise edition feature here so sec ops works on the raw body
+29:25
+and you can be looking at the stream saying that well before that raw data
+29:32
+comes in what is it that we want to exclude and one of course is you can do it based on attributes you have you've set up a severity attribute right you've
+29:39
+done something to say that um based on uh the nature of this log and where it comes from. I just don't want to put it
+29:45
+in on this stream. Another way, of course, is that you can be looking inside the stream itself. Like I have
+29:50
+Windows events coming in and I have a particularly chatty domain controller that I'm pulling it off of and there's
+29:56
+just a whole series of other events. I can't turn it off on Windows events, but I certainly don't want to pay for it on
+30:01
+the back side. So, I'm just going to say grab this matching string and any logs
+30:07
+for that completely exclude it from coming in. also good for creating data sampling if you sampling is a dangerous
+30:15
+place right you know if you take the position of how do you know something is a problem if you're not recording it
+30:23
+then saying like well I'll take a stat statistically significant sample instead to reduce cost you you you get into this
+30:31
+territory of like well what is significant what is the risk that I'll still miss something so I'm not going to
+30:36
+tell you that you should just automatically drop ingest everything But you could determine like, hey, I'm
+30:42
+pulling in flow logs. I'm pulling in zeke logs. And those logs are very noisy. And at that point, all right,
+30:48
+fine. Sampling probably makes more sense. Then you just figure out like what's the volume? What's statistically significant? We'll drop x number of logs
+30:55
+so we just don't have to pay for the ingestion on that. Okay, I can see that. Um, and of course with dduplication as
+31:01
+well, um, it is possible that you're going to see the same thing happen repetitively. You could be looking for
+31:06
+certain patterns there and remove that, too. And finally, of course, masking, right?
+31:12
+You again, this is an enterpriseonly feature, but you can take PII data and
+31:17
+you can then identify that and have it come out. You see that, you know, on the bottom right hand side, there's an
+31:23
+example here where we're just identifying a string and saying we're just going to take that and change it into something else like all stars, for
+31:29
+example. Um, so once it's in, it's in
+31:34
+forever until it rolls off, right? you know, if you have tenants by default have a one-year retention and you can't
+31:41
+delete logs. So, if you really want to make sure that the data isn't visible
+31:46
+and data arback isn't going to be a solution for you, this is your best bet.
+31:54
+And with that, I'm going to hand it over to Craig. Thank you, Greg. So, happy to walk
+31:59
+through a little bit about Bind. We're going to build a configuration together and then dive into some use cases specifically. So bear with me one second
+32:06
+while I go ahead and share my screen. Move that over.
+32:12
+Okay, great. Looks like you can see my bind plane instance. So when you first log into bind plane, this is what you normally see. It's overview. It's in the
+32:19
+visualized view. And what we see are many different configurations and we're actually going to build a configuration together here. But effectively what it
+32:25
+is, it's what you're collecting. So the different log sources, the processing configuration and where you're sending
+32:31
+that data to in the destinations. Those configurations are associated with many different agents. So I have a few as you
+32:36
+can see noted here. And then sending data on to things like my psychops destination or Google cloud for Google
+32:42
+cloud logging. Where I recommend everybody start their day is in the overview summary uh tab and you can see
+32:49
+the total amount of agents uh uh collect connected and what these agents are. These are the managed open telemetry
+32:56
+collectors. So today that is a bind plane distribution of the open telemetry collector. We're using the open source
+33:02
+op amp protocol to then uh connect back to bind plane whether it be something you hosted within your own environment
+33:07
+or like I'm demoing out of here. This is our our SASbased environment. And then from there you can you have command and
+33:13
+control functions. You can look at the status of the collectors and push down configurations and updates and a few
+33:19
+more things it'll show off. But we can see that we have eight that are connected here. I'll mention that this is my kind of small demo environment. We
+33:26
+have actually tested bind plane for a single cluster to have over 500,000 collectors connected. Uh and we are
+33:34
+looking to scale up to a a uh uh million as well. So we can do this at at a
+33:39
+broader scale. These are all interactive. So for example, I can click on outdated and then these are all of my
+33:46
+outdated collectors. I can click on this to select them all and also upgrade
+33:51
+those agents. So I have that option here. So jump back over to summary view.
+33:57
+The other thing that I find really interesting is this data summary uh graph. So for example, I'm looking at
+34:02
+logs. Let me zoom this out. For the last 30 days and for my destination, so sending the logs over to secops, the
+34:10
+total amount of agents and configurations sending data to SECOPS, we have about 20 gig in. And because of
+34:16
+the filtering we're doing, I'll show this off in a second, we're getting about a 36% reduction. So this is data
+34:22
+that is not making it over to sec ops. is being filtered directly at the source.
+34:28
+So, diving into further and how this is actually done. We're going to look at the agents tab. So, this is a list of
+34:34
+all of my agents. I'm going to go ahead and install an agent. Clicking here and
+34:40
+I have uh several different platforms which are supported. Uh the reason why we call this out one to actually uh
+34:46
+build the configuration for the proper package and then two also tie those configurations that make sense. So, for
+34:52
+example, Windows events to Windows operating systems. We can do that here. So, from here, I'll pick Linux. And I
+34:58
+actually have two different uh agent types. I recommend for at least for now, stick with 1.0. It's what is stable.
+35:04
+With version 2.0, we're actually opening things up where folks can bring their own open telemetry collectors. And
+35:09
+there's even things in the road map for Google building a distribution, for example, of the open telemetry collector. That is the work that 2.0 is
+35:16
+going to be able to support. We have that in beta today. So, we'll go with 1.0 for now. We'll hit next. And what
+35:23
+this gives us is a single line installer where it will reach out to our GitHub
+35:28
+repo, pull down the installation script, and then there's two interesting pieces of data. Uh one is this op amp
+35:35
+connection uh back to uh your bind plane server. In our case, it happens to be our SAS instance and the secret key. And
+35:43
+why I'm highlighting this is what we see when folks roll this out at scale, they use things like Ansible, Puppet, Chef,
+35:48
+System Center, Configuration Manager to perhaps pull down the packages from our GitHub directly. Maybe they want to do
+35:54
+their own security scans and then roll them out at scale, you know, using whatever configuration manager um that
+36:00
+that uh folks are using within the enterprise. And then with those two pieces of data, the secret key and then
+36:05
+that URL for the opamp connection, they can then update this manager.yamel file. It's very easy to do. Once that
+36:12
+collector is restarted, it will then be available within bind plane for you to manage. So you can do this at scale.
+36:19
+I wanted to highlight that piece. And now we now we have agents that are
+36:24
+installed on several different systems that we can then build configurations for.
+36:29
+So I'll go ahead and go to create configuration. And for this one, we're going to start easy. We're going to go
+36:35
+to sec ops uh windows. And we're go I will pick Windows as the
+36:40
+platform. Then next then go to add source. So sources are the metrics, logs
+36:47
+and trace sources that we have integrated within bine plane. These are pulled from upstream. These are metrics,
+36:52
+logs or trace receivers that are part of the bindplane project and we've even developed some of these uh jointly with
+36:57
+Google. And and from here we have what we call intelligent defaults. So often it's just a couple mouse clicks and it's
+37:04
+everything you need to do to to collect uh that the the type of telemetry that you're looking for. In this case, I'm
+37:11
+going to go ahead with Windows events and we're going to go with system application security. So again, good
+37:17
+with the defaults. In the case of us sending data over to secops, we want everything to be parsed within the
+37:23
+platform itself and and uh we'll dive into that here in a bit. So we want to send raw logs and we'll highlight we do
+37:30
+support custom channels. So very common type of architecture for sending data to secops is to have many different windows
+37:36
+systems send to one window system using windowed event forwarding and then we can then pull off of those custom
+37:42
+channels. So common scenario for us we can support that and then purpose of the demo I'm going to go ahead and start at
+37:48
+beginning just so we uh frontload a lot of Windows events that can make things interesting for the demo. So I'll go
+37:54
+ahead and hit save here and then next and then add destination. Here you'll
+38:00
+see a list of all of our supported destinations and I'm going to go ahead and highlight a few that we have for Google. So we're
+38:06
+going to build one for sec ops. We do support sending to the forwarder and that's to help people transition as they're rolling things out. But
+38:13
+ultimately um with the open telemetry collectors and the gateway functionality that's what I would recommend people
+38:18
+start with today. We can also send data um recently we just added this for Google Cloud Storage. So we can send to
+38:25
+both SECOPS and Google Cloud Storage uh from within that same agent, that same pipeline configuration and that is great
+38:31
+for compliance reasons or perhaps there's an IT operations type of use case where you want to send things to
+38:37
+Google Cloud observability suite and that's why you would use this destination in parallel with Sack Ops.
+38:42
+For the demo though, I'm going to send things over to Sack Ops. I have some configurations that I have set up ahead
+38:48
+of time using the two different APIs available. Um I'm going to go ahead and click on one of these. And I want to
+38:53
+note that all the the different configuration um uh uh uh uh
+38:58
+destinations you you can save also for the processors and sources and you can save those within our library. You can
+39:05
+reuse these over and over again. So perhaps you have a sec ops destination set up with a secret key. You can save
+39:11
+that in the library to be reused for all of your configs. So go ahead and hit save.
+39:19
+And now we have a basic configuration. Oh, failed the create config.
+39:25
+Sting. Okay, we'll go ahead and add agents. I'm going to roll this this configuration out to some agents.
+39:32
+Click here and apply. And so now the configuration is saved.
+39:38
+And I'll go ahead and hit start roll out. And so what that will do is we'll make a
+39:43
+connection to my collectors over that opamp protocol. These are being managed. It will then push down the configuration
+39:49
+and restart the collectors with the new configuration applied. We also keep track of of the different versions of
+39:56
+the configuration. So in this case, this is on configuration version one. And what's pretty interesting here uh Greg
+40:01
+was mentioning about the uh config yaml file. So this that's what is actually being constructed here. You can view
+40:06
+that at any time if you click on view config file. And this is that that that
+40:12
+configuration pipeline which is being created and then pushed down to those open telemetic collectors.
+40:19
+You can look at that for reference. So I have three different Windows systems running this config. They're collecting
+40:25
+raw Windows events and sending over to secops. And I'll go ahead and click next on this
+40:31
+processor view. So this is these are processor configuration tiles. There are two of them. Um, when you click on this
+40:37
+one, this is everything that goes to sec ops will uh go through this processor configuration.
+40:43
+Let me zoom out so you can see this here. So, this is a great sandbox view. It's great to play around with the
+40:48
+different processors. And what we do is we make one sampling call out to one of
+40:53
+these agents. So, A, B, or C. They're both send they're all of them are sending data. And what these windows
+40:58
+events look like and this is actually a raw event where we have things from the open telemetry collector for example
+41:03
+like time or observe time you know things like severity and then the actual body. So again this is raw and this is
+41:09
+something that um sack ops can do parsing on. So right out of the gate we're getting
+41:15
+two different recommendations because we're sending data over to secops. So the first one is add log type and
+41:21
+ingested labels to secops telemetry. So this is alluding to that use case that Greg talked about earlier. I'll hit view
+41:28
+and now we have the recommendation here. So I'll add a log type and this is uh
+41:34
+win evv log. Um so this is specifying the parser that is going to be used on
+41:40
+the psychop side and we actually tag that data. So if you're interested in what is supported you can click on
+41:46
+supported log types and then this pulls up the full list of log types and default parsers. And in this case, um,
+41:53
+win evt log is is what we're going to be sending data to.
+42:00
+So from here, the namespace, it's all configurable, but perhaps you want to do something like namespace when app team
+42:06
+for the ingestion labels. I recommend, you know, adding these for context. Great key value pairs to add a lot of data for sorting later. So things like
+42:13
+application name, data center, perhaps the customer name, and then hit accept.
+42:19
+And then let me move this over a little bit. You can see in the right hand side after
+42:25
+that processor has done its thing what is being added as far as attributes. So here we have the chronical ingestion
+42:30
+label for the app team chronicle log type namespace all this being set here.
+42:35
+So what I would recommend best practice for any pipeline you're building forums ops make sure to use the standardization
+42:41
+processor. And the other thing I would recommend, we're adding this now as a smart default, is add batch processor to
+42:48
+secops telemetry. And what this will do is it will batch the various logs as
+42:54
+they are being sent over to Google. So we're sending these over in these payload batches. So how many um messages
+43:01
+get batched together? And this is great. This the defaults will allow us to scale even for high throughput type of of of
+43:08
+uh Windows systems just as a example. And then it's as easy as that.
+43:15
+I will go ahead and save. And now this is in draft mode. So I can
+43:21
+see the changes within the processor view, but it's not been rolled out to the agents. I hit start roll out.
+43:27
+And then it makes that connection over the opamp protocol, pushes the configurations down, and then restarts
+43:33
+the open telemetry collectors. So now I'm sending this data over to sack ops. And this is a basic configuration for
+43:39
+sending windows. So great. So now let's go a little bit further, you know. So this is again
+43:45
+basic configuration. Now we want to go to I'll show some more advanced use cases. I'm going to jump
+43:51
+over to another config that I have here. So this is on Linux and this is a little more elaborate. So I'm gathering using
+43:58
+TCP raw, some SIS log firewall logs, things from like Linux D. I have a a
+44:04
+flat file from my application server. And you may notice that this looks a little bit different than the other
+44:09
+screen. This is actually our version two routing which is available to everybody. If you click on the gear, you can upgrade your config to version two. And
+44:15
+we're doing something interesting. For example, we're sending the audit logs right over to Google Cloud Logging. So we can add that in as part of our
+44:21
+routing functionality for the data I'm sending over to secops. You'll see a reduction of 52.7%
+44:29
+and it's based on the four processors uh that I have here. So, it's giving you that direct feedback and the type of
+44:35
+filtering and and how effective it is. So, I click on the processor configuration. You can see there's a little bit more going on here. Uh, I
+44:42
+have 107 logs that are coming in and we're filtering uh based on severity.
+44:48
+So, we're filtering out the debug logs and things like warning and then you can see what is being passed down here. So, fatal error and whatnot's being sent
+44:55
+over. When I open this up, you can see similar to what I built with the other
+45:00
+configuration, we're adding some attributes in. Um, but one unique thing we're doing is if you look and see that
+45:06
+there's this Linux app a for this ingestion source. So what this is is I
+45:12
+have a copy field process configuration processor config where I am taking the
+45:17
+host name. So this is actually added by default for all open telemetry collectors. I am saying that the log
+45:23
+source is Linux app a. from the host name and then I'm sending it to this attributes field of chronicle ingestion
+45:28
+label ingestion source. And by the way, everything I'm showing you here, we have a how-to in our docs and how to do it. So, um you don't you don't have to take
+45:35
+notes on the name. And what this allow us to do is identify the source of of
+45:40
+the logs. So, Linux app a we are then sending that to this ingestion label for
+45:45
+ingestion source. And then the interesting thing here when I go over to my incidents, this is that
+45:53
+silent host alerting um that use case that Greg showed off earlier, how we can, you know, actually go from the
+46:00
+Linux log source to identify it and then ultimately go to Google Cloud operations here and to have the alert. So when I
+46:06
+click on the incident summary, I could see that for a time that I had my VM turned off and I turned this off at
+46:12
+night. Just wanted to save money in my demo environment. Uh the ingestion source Linux appc was was down. So it's
+46:18
+giving me alerts here in the real world like Greg mentioned s the folks may have you know hundreds of systems Windows
+46:25
+systems Linux systems at scale have seen it all be by copying that that host name
+46:30
+or perhaps things like a computer name and we can also perhaps also extract that via reax or things like sis log we
+46:36
+can identify that and then add that as the ingestion source label. So all this can happen automatically within your
+46:42
+pipeline at scale what the actual alert configuration looks like. So I'll zoom out and go to
+46:48
+the policy name here. I'm going to go to edit and I am alerting based on
+46:54
+chronicle collector ingestion total adjusted log count and then I have a
+46:59
+trigger here. So when this metric or any of these host that that it knows about is not being sent um for over five
+47:07
+minutes to fire the alert. So simple silent host monitoring type of configuration, but you can definitely
+47:12
+take these methods and then scale them up as we're going.
+47:18
+So final thing I'll mention here uh masking sensitive data very easy to to um configure and uh one other point you
+47:26
+know this has a lot of things out of the box as far as defaults um but that is configurable and I've seen folks
+47:31
+especially within like the banking world um put in a custom rule for rejax for like folks account names just as an
+47:38
+example and to be able to filter those out. So definitely flexible. But I'll go ahead and uh stop there
+47:44
+because I think my my demo is at time. Um but if you have any other questions about use cases, you know, two things I
+47:50
+would encourage you. Go ahead and sign up for buying point SAS. It's totally free for every Google customer. You can
+47:55
+build your own sandbox from within that environment or if you have anything specific, please reach out and uh we'll
+48:01
+be happy to go further. Thank you very much, Craig. That was a great demo. Fun fact, back when I was
+48:07
+doing DLP work, I remember we had reaxes at a bank looking for credit card numbers and it frequently caught FedEx
+48:13
+tracking numbers. So, you can always have fun with your reaxes.
+48:18
+All right, we're just about done here. I want to mention a couple of resources that are
+48:24
+available to you. Um there is um Google Cloud community, right? Presumably if
+48:30
+you're in this session today, you've heard about it through the community, but if not, it is a great resource. I I
+48:36
+I mean, so kudos off to the cloud community team, right, Matt, Erica, you know, this this has been a growing
+48:43
+enterprise. Uh it it is something where I'm watching customers ask real issues
+48:49
+um and having them addressed. Um there there's a lot of work to get people from Google Cloud Security to come in and
+48:55
+answering things. It's not an SLO, but you know, if there's not an answer, uh people are people are being encouraged
+49:01
+to look and and get an answer and and you know, the the crew definitely does invest to, you know, to do what it can
+49:07
+to help there. Um uh we also welcome your feedback, right? Go. GCC event
+49:13
+feedback. Please let us know the first first uh one of these webinars. And if uh if your comment is never let Greg
+49:20
+present at one of these again, I can take it, right? But uh please do provide your feedback. And of course, we have other events coming up, you'll see that
+49:27
+um if you're in Melbourne, right? And I'm presuming that that's in Australia, not Florida. We're going to have an
+49:34
+event in June 19th. Uh same thing with Sydney. Uh I happen to be in Cambridge, so I suppose I should show up for the
+49:40
+June 27th event in Boston. And um then you see July 3rd, fishing for gold,
+49:45
+cyber threats. So we've got a lot of fun things on the calendar. Uh and to that
+49:50
+uh it is time for some questions. Uh we do have some that came in in advance. Um
+49:56
+first one I'm going to lob over to Craig. What are the best practices for
+50:02
+managing a large amount of data in bindplane? Excellent question. So there's kind of
+50:08
+two two different aspects I'm going to answer on. One on the architecture side is to use gateways. So what gateways are
+50:14
+they are open telemetry collectors that you can then forward multiple open telemetry collectors telemetry streams
+50:20
+into. you can aggregate at those similar to like the chronicle forwarder. Um when you have a large amount of data, put a
+50:26
+load balancer in front of it and then you can run those gateways within a HA mode. Um so that can be highly available
+50:31
+and you can really help to scale. So that's kind of one way I've seen it. Also with those kind of configurations,
+50:36
+folks will send very high throughput SIS log streams at something like that. So you have a low balanced front of you
+50:43
+know kind of larger systems and then the processing is done at the gateway level. So that is one way to handle it. The
+50:48
+other way too to manage large amount of data within bind plane you saw within the configurations where you can say
+50:54
+like for this config here's what the amount of throughput is for a certain log type. So you can really get granular
+50:59
+here where perhaps you can have a configuration for a certain type of application and then you know you you
+51:06
+then know you know how much is is is being sent from that type of application where you can then do things like
+51:12
+dduplication or filtering. Great. Thank you Craig. Uh, next one
+51:17
+actually I'm going to send your way as well. Are are there any plans for a data process function for work with sources
+51:23
+like IP info? Yeah, excellent question. So today we
+51:28
+have a what's called a lookup processor and then so with that and it's it's you know most simple type of configuration
+51:34
+would be powered by a CSV. So something would come in within the log stream perhaps like a username. you could then
+51:41
+look up uh uh perhaps the detailed version of that username or the IP address range and you can change that.
+51:47
+We do have capability to back that via Reddus. I believe that is coming in our road map. Um but as far as using IP info
+51:54
+and reaching out, you know, that's something where if the folks who are requesting can reach out to me um we'd be happy to look at that as far as a
+52:00
+road map item. Thanks Greg. Uh the next question is please talk more about custom dashboards
+52:06
+in Google sec ops and create a demo with string and numeric functions if possible. I would personally love to do that right now because I geek out and
+52:12
+doing that kind of stuff and I've got a bunch of great examples for it, but it's not really appropriate for this session. So, we're gonna have to delay that for
+52:18
+another uh session. Uh we could probably also post something internally on the um
+52:23
+the community page. Then there's uh what is Google's Google Chronicle strategy to
+52:28
+monitor silent log sources? You've you've seen the first part of that, right? The there is an answer here. When
+52:34
+you use bind plane, you now actually have this ability to do so. Um, and I
+52:40
+will note that there's a second part to that question that isn't being answered. What about cloudtocloud sources? What
+52:45
+about that thing you said with fire hose, Kinesis, you know, S3, GCS? What about those? The fact of the matter is
+52:53
+that we don't have that answer today. I spoke to the product manager who owns
+52:58
+that. He has a very strongly defined product management roadmap to do that. I
+53:04
+can't say more because I'm not authorized to but we are very well very well aware of the ask and we are very
+53:10
+much working on a solution for that we do want to provide for that. Um there was a second part to that question
+53:15
+assuming you have obs with regards to silent log monitoring assuming you have obsolete operating systems like sun
+53:22
+solaris or aix that one I'd rather push back to Craig. Sure I can I can answer that. So we
+53:28
+we've actually dealt with this with uh customers particularly in the financial space you know a lot of AIX still
+53:33
+running there where for the older operating systems I would have them forward SIS log to a collector that is
+53:39
+running on a modern Linux distribution and Solaris can also support SIS log. So that is another way to do that. Um
+53:45
+perhaps both of those instances could also write their custom logging out to like a NFS mount and again read that in
+53:51
+via a Linux. So that's how I would I would um suggest that from an architecture per perspective. For a
+53:57
+modern version of AIX, we actually have a a version of the open telemetry collector um that is that will be uh
+54:04
+available to run on AIX. So we have our our um um a distribution that's underneath development right now a
+54:10
+package for AIX and then we are working to get that sent to the upstream.
+54:15
+Great. Thank you Craig. Uh, another one here is what are the best practices for ingesting unstructured logs and
+54:21
+developing custom parsers for these? This is a tricky question. Um, let's just assume for a moment that when we
+54:28
+talk about unstructured logs, we're talking about any raw log. And we're getting beyond any question about what
+54:34
+you'd want to filter, right? Mask any rest of that. It's like, all right, I have a log source and I don't have a
+54:40
+parser for it. What? Now I'll point out that it is Google's policy that if you are taking a log source from a
+54:46
+commercially available product uh there's probably some parameters around here but it has to have it like you have
+54:52
+a legitimate business reason to pull it inside of sec ops Google will develop the parser
+54:57
+um that that we do um this is why we have we have dedicated teams of people
+55:03
+to do it when I first arrived here that definitely wasn't the policy but no we do that now on the other hand right what
+55:10
+if You have something like my favorite example is I wrote a Java app or somebody, you know, Todd before he
+55:16
+retired five years ago, right? You know, wrote 25 years ago a Java app that sits in a server in the closet. It does this
+55:22
+one thing, right? We can't turn it off. We don't want to turn it off. We want to get the data in, but you know, it's like
+55:27
+it's completely unknown to anything else. How do I parse that? All right. Um, there are things that we're doing
+55:34
+inside of Google for these types of use cases. If you have structured JSON,
+55:40
+there is now an automatic UDM mapping capability that comes in. So you have a
+55:46
+key value pair inside JSON and the data comes in, it will be automatically put into extracted fields, UDM fields.
+55:52
+They're not indexed. Uh but we're also then working on ways that you could manage that. So you could identify
+55:57
+something to be indexed. Uh you could of course write an extension that will uh
+56:03
+take something and then remap it to a known field. There is a page inside of our documentation about important fields
+56:10
+for UDM mapping which if you want to if you need to write your own parser uh we tell you these are the fields that are
+56:16
+really optimized these hit curated detections these are ones that we index off of right these handle enrichment
+56:22
+these go into the entity graph knowing those is very important you could always do a minimalist approach where you say
+56:27
+I'm going to take like this is clearly IP this is clearly you know username this is clearly host name right I'm
+56:33
+going to take these things I'm going to map them to known like principal. And you know, whatever, right? You know
+56:39
+th those known fields. The rest of them could just go straight to extracted fields. Um, and you could just work with
+56:45
+that. You can write rules on them. You can do searches on them. It works. Uh, but then like what if I have something
+56:53
+that just like it's just way out there and it doesn't really map to anything. You could always write a parser um
+57:00
+that's going to get to some of the things or you could just leave it to extracted fields. If it's not key valued pair structure JSON today you would have
+57:08
+to do something like writing your own parser. Uh we do have documentation for that. Partners are always available to
+57:14
+help with that as well. Uh there are a variety of resources. This as a topic is something that could
+57:20
+be gone on to much deeper. So I'm staying at a high level especially mindful of time. Uh there was one I
+57:26
+believe one last question here which um actually was there. Sorry I'm just
+57:33
+looking at the list or was that the last one? I think that was the last one Greg.
+57:40
+Oh actually I think no. Is there a way to leverage the dduplication features in bind plane to optimize decrease your
+57:45
+Google psychops ingestion rates? Although I think we kind of covered that today a bit. So uh go back. I believe
+57:53
+that Craig gave you a couple of good examples for that. If any of these answers gave you a taste
+57:59
+but didn't give you enough information, please go to the community pages and post there and I'm sure that we can, you know, we can do more to get your answers
+58:06
+there and share with others. Uh, and with that, I'm going to thank everyone for their time today. Uh, I appreciate
+58:13
+especially Craig for all the help and I will hand this back over to Matt Nichols for any last words.
+58:19
+Thank you, Greg and Craig. really appreciate your expertise and walking us through data pipeline management and
+58:25
+bind plane. Thank you so much. Uh thank you to all that joined. Hopefully you got all the answers you needed for your
+58:31
+questions and to get you through these new cool features. If you have additional questions, please go and ask
+58:38
+them in the post for this webinar or post in the sec ops simcom store forums
+58:43
+and we'll get to your and we'll get some answers to you. Um thank you everyone for your time and joining us today. and
+58:50
+we look forward to having you on the next webinar. Thanks Greg. Thanks Craig. Thanks Erica. Everyone have a wonderful
+58:56
+morning, afternoon, and evening. Cheers and we'll see you soon.
+

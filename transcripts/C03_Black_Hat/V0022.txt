@@ -1,0 +1,696 @@
+0:02
+Hi, I'm Ellen Kowalsik. I'm a member of the review board here at Black Hat and
+0:07
+I'm very excited today to introduce Alex Kchillian and Ellie Ellie Berstein from
+0:14
+Google. Google has a unique challenge when it comes to insider threat with hundred over 180,000 employees at a
+0:22
+culture of creativity of research of experimentation and so I'm excited to see the research that they have done and
+0:28
+how we can use it in our own environments. So welcome Alex and Ellie
+0:51
+My name is Ellie and this is Alex and we both work on research at Google. And today we are really really excited to
+0:58
+talk about uh one of our flagship system called Facad which is a anomaly
+1:04
+detection system we use to detect inside risk at Google. Before getting started, if you would like to have a copy of the
+1:10
+slide, you can head to that URL or use your QR code to download the slide so you can follow along. Uh we will show
+1:16
+the QR code at the end of the talk as well, so you can review the slide at your own time.
+1:26
+With that out of the way, let's get started. At Google we process over 10 billions
+1:32
+event every year to try to find insider threat which target Google and Alphabet
+1:37
+in generals. What we call insider threat is can be
+1:43
+broken down into three type of potential risk. The first one is what we call intentional
+1:49
+insider threat which is a rogue employee trying to access and excfiltrate for example some of our data. a unwilling
+1:57
+employee which has been deceived or is coerced into uh performing an attack against Alphabet. And last but not
+2:04
+least, we also have accidental insider threat which are employee who are well-meaning but for example might
+2:10
+decide to do an action which is putting alphabet at risk. Uh here's a few concrete example of the type of threat
+2:17
+we see. So we all on the same page. uh for intentional uh we can have access of
+2:23
+confidential documents without business justifications uh through access permission abuse. So
+2:30
+it's not a secret Google use workspace uh to share our data. We use Google slide, Google Docs and so forth. And
+2:36
+sometime people share document to a broader or two board of a group. So you could imagine an insider attacker trying
+2:43
+to exploit some of the sharing it has to access document it's not supposed to and further out etc some of our trade
+2:49
+secrets that is a intentional abuse of the permission unwilling
+2:56
+it happen sometimes that some of our employee are compromised with malware and then the malware is used to exploit
+3:02
+the access control the access of the unwilling employee to access some of the
+3:07
+data and again cause harm to Alphabet And last but not least, we have uh
+3:12
+employee who want to share data with a partner and didn't realize the partner is not under NDA or are sharing it to a
+3:19
+way which is not approved and put some of our proprietary data at risk. So those are some example of what we do
+3:25
+call insider risk. Uh so that's what we try to detect.
+3:30
+Now why is detecting insider risk so difficult? The first thing is insider
+3:36
+risk is extremely low incident. Um we as I mentioned we have billions of events
+3:41
+every every year from people accessing different document doing some SQL
+3:46
+queries looking at some access control and we are literally trying to find the very very few events which are
+3:53
+suspicious that we can investigate and our investigation team can look at to detect just right. The second problem is
+4:01
+um two employee doing the same action have very very different result. If one
+4:06
+employee is actually working on a special project, it is absolutely normal to access sensitive document. If the
+4:12
+employee is on a completely unrelated organization and accessing the same document, that is a problem because it
+4:18
+has no business reason to access it. So there is no specific pattern to look for into the logs. There is no specific uh
+4:25
+exploit signature to look out for because it's all about context. And the last but not least
+4:32
+uh those are people who are employed by Alphabet. So they already have access.
+4:37
+We we're not trying to prevent them to have access. They are supposed to have access. The problem is by giving access to a bunch of tools and a bunch of
+4:44
+document. We have a very wide attack surface for each employee and we try to figure out how to do uh detect those
+4:51
+things when legitim legitimate credential and legitimate tool are used. And so that hope explain why instead of
+4:57
+risk is such a difficult and different uh type of detection you need rather
+5:03
+compared to traditional intrusion detection system and so
+5:08
+since 2018 actually Alex had the idea in 2016 and took two years to incept the
+5:13
+project we were working on facad and so facad is a high precision which mean it
+5:19
+has very very low false positive alert because we don't want to have a lot of fatigue where was optimizing for being
+5:24
+sure rather than to do as much as we can. uh which use deep learning uh so
+5:30
+tensorflow specifically we use tensorflow to do it contextual meaning that we take into context who is
+5:36
+the user and uh what is the resource access and Alex will tell you how we do that later in the talk to perform
+5:43
+anomaly detection which is trying to predict whether or not this user accessing that resources is normal or
+5:50
+not and that is what fast is trying to do and one of the interesting things
+5:55
+when we start to talk was faceted. Externally a lot of people told us well you know anomaly detection has been tried again and again and no one can
+6:02
+make it to work. There is a lot of paper in the academic settings which says detection doesn't work. So reality is we
+6:10
+think facad works because we work at a very very very large scale as I mentioned we're working at a billion
+6:16
+scale. Uh we don't think work at the small scale. So bear that in mind when
+6:21
+we're going to talk about the open source implementation that we are releasing today. uh we don't expect it
+6:27
+to work out of the box and we don't expect it to work on small data set that is not what automation is is for like
+6:33
+very very large scale data set so how good is it well without spawning what Alex is going to tell you we run a bunch
+6:40
+of red team attack and every and in many cases facad is able to detect the red
+6:46
+team as a 0.01% 1% most suspicious event which means that with very very few
+6:53
+investigation of event we're able to catch right teams and those are
+6:58
+tests we perform on tens of millions of events again the scale is important here is literally finding a needle in a h
+7:04
+stack in a very very accurate way so the investigation team only have to look at a very very few percentage so Alex will
+7:11
+tell you a little bit more at the end of the talk on how we vary that in detail but this is to give you confidence that
+7:17
+what we're going to talk about is actually doable. It require quite a bit of personalization and fidgeting to make
+7:25
+sure that it works for your use case, but you can absolutely get there. So today, what we're going to do is we're
+7:30
+going to going to give you a brief overview of how fast work. Then Alex will tell you how we convert resources
+7:36
+and user into a dense embeddings to represent them. Then we're going to tell you how we use a system to score uh
+7:44
+anomalies across various time period and then we will Alex will finish by telling
+7:52
+you how it is used in practice and how we find find attackers and so forth. So by the end of the talk you should be
+7:58
+able with open sourcing to adapt it to your own use case. So facad how facad works well the
+8:06
+problem formulation we use is is it normal for a given user to access a
+8:11
+given resources. So let me give you a practical example. We have for example a
+8:16
+hardware division at Google which works on TPU pixel phone and so forth. And this division is supposed to access TPU
+8:24
+schematics. It is normal for our hardware designer to access the schematics of the TPU as based of their
+8:31
+role. Now if we have a rogue actor which let's say works at ad sales and start to access a
+8:38
+TPU schematic that is extremely suspicious. Why why would a ad sales person access for business reason a TPU
+8:44
+schematic? Of course, this is a very contrived example and probably the most extreme, but it's to highlight that
+8:51
+depending on what the document is and where the the user is, some pattern are totally fine and some pattern are
+8:57
+clearly abnormal. And what we try to say is fast should predict that the second one is really abnormal and the first one
+9:03
+is absolutely normal. What we try to do with the system, so how did it work in practice? Well, we
+9:11
+have a user embedding which is a dense representation of what is a user, what
+9:16
+is his role, which organization it belongs to, what group does it have access and so forth. And then we have a
+9:22
+resource embedding and the resource embedding is what is the access pattern for a given document but also can be a
+9:29
+query of SQL, can be access to a table, can be access control. We do that for many many things and Alex will explain
+9:36
+to you how to do it for any type of uh resources that you would like. That's why we say you have to adapt the system
+9:42
+for your own need is depending on how your logs are structured and the type of events you have you'll have to adapt and then we feed that to a TensorFlow model
+9:50
+and the TensorFlow model return a single score which is an anomaly score. If the score is close to zero it's fine. If the
+9:56
+score is close to one well it's very very anom abnormal. And the idea is we
+10:02
+rank for every time period by that score and the one who have the highest score are the one which are investigated for
+10:08
+potential insider risk. So that's the base that's the gist of how facad works.
+10:14
+Um the thing is one of the trick and one of the thing which actually makes the
+10:21
+whole thing work and is the least known I we believe is how do we train such a system when we literally have so few
+10:28
+example of insider risk usually when you have a machine learning system it is
+10:35
+assume that you're going to have uh let's say for the Gmail classifier that we work on uh a lot of spam and a lot of
+10:41
+ham messages and you try to balance the data set and the model learned from creating a boundary between uh good and
+10:48
+bad email for intell risk as I mentioned we don't have that we have very few incidents and we have a vast amount of
+10:56
+normal event so how do we do this the answer is we actually do not use at all any insider risk information we only
+11:02
+train with a very neat trick that I'm going to explain we start by computing for all the
+11:09
+activity we have the two embedding which are normal embeddings so For example, we would compute for the user of the
+11:15
+hardware division it uh their embedding and the embedding of the TPU TPU document. And then if we
+11:23
+have someone from deep mind uh who work on alpha secret our new secret model uh
+11:28
+we're going to have the user be embedding and then we have alpha secret doc embedding. So we have different
+11:33
+embedding and those are completely normal. Then when we try to train what we do is we start to create a data set
+11:40
+of those normal embeddings. So group of twos right and then we swap. So we start
+11:47
+to say okay now the user B is going to access a TPU document that is not normal and B uh the user A is accessing the
+11:55
+alpha secret document which is not normal either. So basically we create anomalies by swapping the embedding and
+12:01
+that way we can create a almost infinite data set by balancing out.
+12:08
+So that's how it works in pract was basically the the core idea that you need to to remind to to build an
+12:15
+understanding of what facad is which is we use anomaly detection by compra contrasting the user embedding with the
+12:23
+resource embedding and try to predict the score which is used to rank the event and the way we train is by
+12:29
+basically at training time mixing and matching embeddings so that we create a balanced data set that we fit to the
+12:36
+machine learning. Now what Alex is going to do is going to go and give you way more detail on how we create those
+12:41
+embeddings so you can reproduce the same thing. Alex, thanks Ellie.
+12:47
+So that's the theoretical framework for facade and what we're trying to achieve. So let's dive into the details and what
+12:54
+it means to have a user embedding and a resource embedding and everything else that follows.
+13:00
+So we have to start by first representing these entities in the system. So we talk have to talk about
+13:07
+featurizations. So I'm going to start with the resources. So let's have some um shared
+13:14
+understanding on what we're trying to do here with the resources. Um the first thing is that whatever method we
+13:20
+developed must handle a very large scale um heterogeneous set of resources. Uh so
+13:27
+we're talking here about billions of distinct items and the types of those items is quite different. We have
+13:34
+documents, we have spreadsheets, video data tables, RPC endpoints, URLs, etc.
+13:40
+Any type of resource, corp resource that you have that you that you want to protect, u we want the system to be able
+13:47
+to operate on it. Um, so that's already going to create a challenge here uh for
+13:53
+contentbased features. So one thing we don't want to do is spend a lot of
+13:59
+development time um on a case-by case basis for each resource type and then if
+14:05
+we do that um if we have made that choice then we'll have to have large maintenance cost cost as well and on top
+14:12
+of that it's quite computationally expensive at inference time in particular for um multimedia type of
+14:19
+resources as well. The other issue here is that um in a
+14:26
+corporate environment the there's a large distribution shift and drift with time. So new resources appear constantly
+14:35
+like people create documents, people create spreadsheets etc every day and and the system needs to be able to
+14:41
+handle that without requiring a very long retraining.
+14:47
+Um there's also a very um at some point philosophical but still
+14:53
+inherent difficulty in predicting the appearance of novel topics uh in the content. So this is a problem we don't
+15:01
+want to have in the system. So let's see how we do uh how facad
+15:07
+deals with those problems. So I'm going to give you a piece of intuition here that will I think help build uh the case
+15:13
+for our futurization. So let's say we lived in a perfect world on a very simplified world where the set
+15:20
+of resources is small um is constant and
+15:25
+the meaning of each resource is also stable in time. There would not be any problem here because you would just be
+15:32
+able to featurize each resource resources as categorical features essentially.
+15:38
+Uh this is however not the case like all of these three um constraints are
+15:43
+violated in practice. So the main intuition here is to project
+15:50
+those project the resources into a more stable set of similarly opaque identifiers. And a good stable set here
+15:58
+in a corporate environment is the set of user ids or users. Um
+16:04
+and I'll give you a few examples of that. So, so this gives rise to what we call history based featurization for our
+16:10
+resources. And a history based featurization is is simply a bag of words um of the user user ids who have
+16:17
+previously accessed a given resource. So now I'll give you give an example of this. So here you have a document. Let's
+16:24
+say we're we're looking at document resources and you have its access history from the logs. So the document
+16:30
+is first created by user A then accessed by B, C, D and A again.
+16:37
+So what facad does is that it computes the feature of the document uh in given
+16:44
+time periods between accesses and um for every given time period the feature of
+16:51
+the document the featurization of the document is just the bag of words that corresponds to the previous set of users
+16:56
+who have accessed the document. So for the first time period when the document is created by user A it's simply
+17:03
+represented by A's user ID. For the second time period it's the set of two
+17:09
+elements A and B then ABC then ABCD and then again ABCD is just a set. Um so
+17:16
+this is a little bit of a simplified picture of what we're doing because in practice we use weights uh and other
+17:23
+features on those accesses but this is really the core idea for representing um
+17:29
+um resources. So as Ellie mentioned, we're also
+17:34
+releasing a reference implementation and I want to show you how easy it is in the reference implementation to represent um
+17:42
+such a such a resource, such an access uh event. So basically
+17:49
+uh you have a few fields, you have a time stamp obviously, you have the principle that's accessing the resource
+17:55
+and you have the type of the resource. Uh this is just for internal bookkeeping. And finally, you have the
+18:00
+resource ID. So this is simply an opaque identifier that allows you to identify the document across time or the resource
+18:07
+across time. And the only thing you have to do uh in uh in the facade framework
+18:14
+is specify that resource ID uh and create those docu and create those um um
+18:23
+um records of access and facad will take care of the rest. facad will take care
+18:28
+of uh the history based featurization of the document through time.
+18:35
+So at this point you might have a different question. Okay, now we have this uh set of user ids. How do we go
+18:41
+from that set of user ids to uh a dense vector representation of the document?
+18:46
+So let's go through that. So somewhere we're going to learn a
+18:52
+dense um ma dense matrix of embeddings. So every row in this matrix represents
+18:57
+the embedding of a given user and every column is a dimension of the embedding. So this is all learned. This
+19:04
+is this is part of the TensorFlow model. Um so to create the first step that
+19:09
+we're going to do to create the embedding that corresponds to that particular resource at that particular time is to fetch the user ids embeddings
+19:18
+from that embedding matrix and gather them and finally sum them
+19:23
+together. And there's a little bit of a normalization step that I'm um removing
+19:28
+here but this is essentially how you get to a dense representation of the
+19:34
+resource. You simply sum together the embeddings of the users that have previously accessed the resource.
+19:44
+All right, let's look at what we do for featurizing users because as you remember facade is a two-part system. We
+19:50
+have the embedding of the user and the resource. All right, so there's generally speaking
+19:56
+two types of user attributes. Um the first type is relatively easy to deal
+20:02
+with it. These are low cardinality and stable features. things that um for example job titles uh
+20:10
+for example in in in any given company there's a usually a very small finite
+20:15
+number of job titles you can have uh so here there's no problem you can really
+20:20
+use a direct categorical featurization um what is more interesting and more powerful for a system like facade is the
+20:28
+high cardality and unstable attributes so things like team assignments project
+20:34
+assignments meetings that people attend together, um, uh, pull requests that are reviewed
+20:40
+like code reviews, etc. And, and those are particularly tricky to to deal with
+20:46
+because there are large distribution drift. Uh, for example, every time the company is reorged, um, people might
+20:52
+change teams. Um, there's new projects that come up. Um, you have to able to
+20:58
+deal with uh, new employees being on boarded. Uh so for that our solution is
+21:03
+to use implicit social networks. So this is an example of how it would
+21:09
+work for let's say user A who is part of projects of a G assign on a given
+21:15
+project here. So in order to to do this facade is
+21:23
+going to internally expand is going to get the list of everybody else who's assigned on the same project at that
+21:29
+given time. So here we have B, C and D who are assigned to project XYZ. And I
+21:36
+think at this point you guessed it. Um the project feature for user A is going to be the bag of words that's correspond
+21:43
+that corresponds to the user ids of B, C and D. So so user A the project feature for
+21:50
+user A will simply be B, C and D. Just a set as previously.
+21:58
+So if we generalize this a little bit um in the system in the facade system any
+22:03
+user is featurized by a set of sets of other user ids uh it's a bit of a mouthful but it's just sets uh all the
+22:10
+way down um and we have one set per attribute type so sets for team sets for
+22:17
+project sets for department etc. And this is how it would look like uh in
+22:24
+in the reference implementation. Um it's a complex explanation in some ways but it's a very simple implementation and a
+22:31
+simple way to use it. Um so so here it's even simpler than the resource. uh you
+22:38
+have the name of the uh of the complex attribute the for example the project attribute here and and and then you have
+22:44
+the value and that's the only thing you have to specify obviously the principle and the time stamp the validity time
+22:50
+stamp for this um description of the user
+22:55
+and facad will take care of the rest for you. FSL will compute um those sets those weighted sets in practice and um
+23:04
+compute the subsequent uh dense embeddings. So here's a here's a quick example of
+23:11
+how that would work. This is a very simple example. Again, we just have three features that represent the user.
+23:16
+We have a job title, they have a team uh set, and we have a project set.
+23:22
+So we embed each of these. Uh the top one is is easy. is just a categorical
+23:27
+feature. The bottom two are embedded using the same method that you saw previously.
+23:34
+Uh and then we feed those embeddings to a to an intermediary model, a submodel, a sub network. Uh and that gives us that
+23:41
+constructs the user embedding. So you can see here uh based on this picture, if you generalize a bit uh the set of
+23:48
+user descriptions, you can see that we can have very fine grain very detailed descriptions of users. really it's it's
+23:56
+quite um um it's quite a flexible system and you can put a lot of features in
+24:02
+there if you wanted to. So here are the key takeaways for our
+24:09
+featurization of users and resources. So first um the first thing to notice is that the featurization methods are
+24:16
+universal. They are meant to work easily uh across resource types and user types
+24:22
+and in some ways like company structures as well. Um they are robust to
+24:28
+distribution shift because the set of user ids in a corporate environment does not change that fast. Essentially
+24:37
+um they naturally handle res new resources and new users without you
+24:42
+needing to retrain the underlying TensorFlow models. Um
+24:48
+essentially you have offloaded the problem of computing um the problem of
+24:54
+updating the model to a problem of computing fresh uh um features for users
+25:01
+and resources. And finally and importantly because we want to do this at scale those
+25:07
+featurizations are extremely fast and therefore extremely efficient to implement.
+25:17
+All right. So, at this point, I've only described pointwise scoring, but in
+25:23
+reality, as security practitioners, you need more than that. You need scores that pertain to entities across time, to
+25:31
+users across time. So,
+25:36
+this is what we have currently. So let's say our user is accessing all these different resources, a presentation, um
+25:44
+some multi multimedia, a document, a website, etc. And what we have now is a
+25:51
+system that gives you single access scores for each of these accesses. Um
+25:57
+so that's good. You can already answer questions like what is the most anomalous resource um for this partic
+26:04
+resource access for this given user or what is the most anomalous resource access globally across all users. These
+26:10
+are interesting and important questions. Um but in practice we also need to
+26:17
+answer the question of for this particular user and this particular activity set that represents maybe like
+26:23
+one day of actions u what would be the score? what would be the anomaly score
+26:29
+of all these axises um considered together.
+26:35
+Um okay so um I'm going to go through a few attempts at uh designing a reasonable
+26:43
+way to aggregate the scores and then we're going to see the issues here. So the first thing we might think of is
+26:49
+well let's just average the scores. We have all the scores um we just sum them
+26:54
+and we divide by the number of accesses. So that's going to be very problematic
+26:59
+uh because that would allow an attacker to hide their malicious actions, their
+27:07
+malicious accesses by performing a large volume of good accesses or lowcoring
+27:12
+accesses. Uh okay, so average out. Okay. Well, let's not divide and let's
+27:20
+just sum the scores together. Um, in that case, we're going to have another
+27:25
+bias, which is that users that perform more actions will tend to be more anomalous. Okay, that's also out of the
+27:32
+window. Well, uh, there's not that many aggregation operations we can have
+27:38
+mathematically on a set of numbers. So, the other one is basically the maximum.
+27:43
+Um, the problem with the maximum is that obviously it ignores all but one axis.
+27:50
+So uh this is also quite suboptimal but not as bad in some ways as the previous
+27:56
+two. So instead this is what we do. There's
+28:03
+actually multiple ways of combining scores together and embeddings together
+28:08
+but this is what uh this is one way to do it. Uh it's a two-step process. In the first step we cluster similarly
+28:16
+anomalous accesses together. I'm going to go into a little bit more details of what that means. And the second step, we
+28:23
+look at each cluster and we give each cluster one score which will be basically the maximum score within that
+28:29
+access cluster. And then we sum all the maximum scores together. So this is the rational here. We cluster
+28:36
+to eliminate redundant and repetitive anomalies. So in many many cases um
+28:42
+accesses are correlated and um and and we want to in some ways like decorrelate
+28:47
+uh the the accesses. We're going to use the embeddings that we've already calculated for the
+28:53
+resources to uh compute those similarities between resource accesses.
+29:02
+Um we use the sum operator so that we get we we get higher scores for um
+29:09
+activity sets that have more diversity in their anomalousness.
+29:15
+And finally we also use maximum the maximum operator within a cluster to
+29:21
+prevent attackers from decreasing their scores.
+29:29
+So here's an example of how this would work. Again, we have the same user. We have the same activity.
+29:35
+So I'm going to represent the space of embeddings as a 2D flat representation
+29:40
+here for pictorial purposes. Uh so the first thing we do is we here I'm just
+29:46
+going to represent the embeddings that we've computed for each of these documents into the same space.
+29:52
+So you get that for free in the facade system in the facade framework like embeddings are the first step before
+29:58
+calculating the um or the second to last step I would say before calculating the scores. Um all right great. So you can
+30:06
+already see that some resources for example the presentation and the document lie together closing space. So
+30:13
+that means that essentially from the model's perspective these things are quite similar. They represent quite a
+30:18
+similar type of activity from the user. Similarly for the internal uh web
+30:24
+resource and and the video. So we're going to apply a generic clustering algorithm on these and we're
+30:31
+going to get three clusters. Here the clusters are wellformed.
+30:36
+And so these three clusters represent essentially the type of activity of the user um but with dduplication. So look
+30:45
+at looking at the high level you forget you can forget all of the times like the user has the user basically has
+30:51
+exhibited these three types of actions these three types of activities in their in their uh scoring period.
+31:00
+So to compute the overall score you're going to take the maximum score in each
+31:05
+cluster and sum it together. So for example, for cluster one, the max score is the access to the PowerPoint
+31:12
+document and that's 23 here. And you're going to repeat that for all clusters.
+31:18
+So in doing so, you can um you can be pretty sure that an
+31:23
+attacker cannot decrease their score, but also you remove redundant potentially redundant malicious
+31:29
+activity. All right. So
+31:37
+the most important part of any work uh that deals with security in some ways is
+31:42
+evaluation. So to evaluate that we are using um uh a
+31:52
+red team so um volunteers essentially who would uh who would perform who would
+31:59
+simulate insider attacks. And before I get into that, I want to tell you a little bit more about the scenarios that
+32:05
+we have. So if you look at the facade paper that's on archive, there are more details there. Um but I just going to
+32:13
+give you a sense of the type of playbooks and scenarios that we we've included into um into that evaluation.
+32:19
+So the first scenario is the we call it the media sharing sharing platform scenario where an attacker seeks uh
+32:27
+information about the inner workings of the platform. Um obviously in this case
+32:32
+YouTube uh this information could include like corporate fin corporate financial data uh the earnings about
+32:39
+individual creators or the ranking algorithms that are being used for example.
+32:46
+Um so the another red team scenario is what we call the the hardware product
+32:52
+scenario. In this case the attackers seek information about the company's next generation of devices. Let's say so
+32:58
+the next Pixel phone. Um so that in that that involves um obtaining planning
+33:06
+documents, design documents, timeline, pictures, schematics etc.
+33:11
+And the third scenario is um an attacker going after uh the AI work that's being
+33:17
+done at Google. So basically the attackers are seeking information on the next generation of AI. So that's
+33:24
+unpublished papers, uh model weights, code, etc.
+33:31
+Um all right so here's the operational setup uh in for those attacks we have 15
+33:37
+participants who are all full-time employees with interest in cyber security. Um
+33:44
+so most of them were software engineers and all of them were familiar with internal tools and information storage
+33:50
+practices and systems. Um so we asked volunteers we asked these
+33:57
+volunteers to try to access sensitive information outside of their normal area of work. Uh and that really is meant to
+34:06
+mimic real world insider thread scenarios. Um participants were instructed instructed to choose and
+34:12
+emulate a profile from one of those playbooks that we've provided them.
+34:18
+Uh, one thing that I forgot to mention is that those playbooks are um
+34:24
+relatively vague um in what to do. Really, we wanted to give participants
+34:29
+the opportunity to um uh in some sense in some sense go wild and um uh perform
+34:38
+all the actions that they could think of. And I would say that there were various
+34:45
+levels of success for the participants. Some participants were uh very successful or more successful than
+34:51
+others, let's say, but also some scenarios, some playbooks were a lot harder or a lot easier to to execute.
+35:02
+All right, so here are the evaluation results. Um, so as Ellie mentioned, we have about
+35:10
+180,000 full-time employees. Um, and for this particular evaluation,
+35:16
+we chose a triaging budget. So, let's say you have analysts and you're going to give your analysts a certain amount
+35:22
+of work per day. And here we're just triaging at the top 10 user, the top 10 users per day.
+35:29
+And the main evaluation here, the main evaluation results is that we detect four out of the 15 attackers. Um, this
+35:36
+is quite a hard evaluation. So, four might not seem like much. However, it's I also do want to mention that the
+35:43
+precision here is what we're optimizing for. Um, so if you were to triage more
+35:49
+than 10 users, you would obviously get uh more of the attackers. Uh, but we're really focusing on uh the very low false
+35:56
+positive rate. There are significantly more details and more evaluation numbers in the archive
+36:02
+paper that's available online. Um, one thing I want to give to you before
+36:09
+uh we end this talk is a reference is a yeah reference to the reference implementation uh that's now live on
+36:15
+GitHub. Um, so this is a reference implementation. Um, I want to be very
+36:21
+clear about this. Um and facade is really meant to work on large scale data sets and you would have to do your own
+36:29
+featurization work essentially even though facade provides facilities uh as we as we previously saw. Um we do not
+36:38
+believe that using facade on a small scale data set is necessarily uh
+36:43
+appropriate but it might work nonetheless. So here are the key takeaways for our
+36:49
+talk. Um, insider threats are low incidence, high impact attacks. Um, they
+36:56
+do require deep contextual analysis and understanding for detection and
+37:02
+explanation as well. Uh, we presented facade which is a high precision contextual anomaly detection system and
+37:10
+facade works both for single accesses and for scoring entire sets, entire time
+37:16
+windows of activities. Finally, um I hope I could give you a
+37:22
+clear sense that facade is adaptable to many systems and use cases because of uh
+37:27
+how general the u the user and uh resource representations are. Um and
+37:33
+we're also providing a reference open source model and featurizer code.
+37:39
+Um and with this this is our last slide. Uh thank you very much for your attention. Um, here we have the QR code
+37:47
+again for the slides and the code again is available uh on GitHub.
+37:52
+We're happy to take any questions you might have in the second room um after this talk. Thank you.

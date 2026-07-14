@@ -1,0 +1,753 @@
+0:00
+All right. So, what I'd recommend for people in the back is to just move a little bit ahead so that um you can you
+0:07
+can hear the whole thing properly. Apologies for the hold up. We'll move on with the next session. Up next, we have
+0:14
+Vladimir who is a senior security researcher at Microsoft. He's done he's
+0:20
+he's done some amazing research with the quotesis framework. He's also identified some bugs in the Windows driver of the
+0:27
+Sonic Wall tool. His topic for today is from dare to discovery. How OSENT and
+0:33
+modern recon recon techniques uncovered a global VPN infrastructure.
+0:40
+This presentation has a complete attack chain that showcases some advanced
+0:45
+recognition techniques and some live demos. Here we'll run some some practical methodologies that can help us
+0:52
+do our OSEN skin help us improve our O ocean skills and put emphasis on the
+0:59
+intelligent intelligence gathering process that can help you even advance even proceed with other attacks. So
+1:06
+please bring it up for Vladimir. Thank you.
+1:12
+Hope you can hear me. Yeah. Yeah. Okay. Um thank you for
+1:18
+joining me today. Uh today I'm going to talk about research I did last year from there to discovery how wasing and modern
+1:24
+recon techniques uncover a global VPN infrastructure uh critical
+1:30
+a bit louder. Okay. Yeah, I'll try that. Uh so uh let's dig in. Um it all began
+1:36
+one night while I played uh Deep Rock Galactic with my friends. And uh basically it's a game where dwarves
+1:43
+roaming the uh the cosmos. uh mining for minerals and killing bugs. And I played
+1:50
+with two friends, Nikki and Phillip. This is Phillip. And uh basically, Philip had some issues, uh some
+1:56
+connectivity issues, some lags. And uh I asked him what's going on. And basically
+2:01
+he said he installed new VPN uh that one. And ExpressVPN, maybe you heard about it. And then we entered this chat
+2:09
+about why should one use like VPN, right? Security, privacy, stuff like that. And so I didn't believe him much
+2:15
+about that. I said not sure this is worth your while. And uh basically he dared me to um prove prove him wrong
+2:23
+right to prove that something is not good there. And so basically there I started started to looking at uh started
+2:30
+looking at um ExpressVPN drivers and different files. And one of the first
+2:36
+things I found was the top driver uh which is top adapter which implements uh
+2:42
+for Windows uh basically virtual network card which will basically get information drop it and set it to the
+2:48
+tunnel to other endpoint of the VPN for instance for the server and uh basically
+2:54
+I started reverse engineering it and open the driver and found this uh nice piece of code which initialized the
+3:00
+miniport driver characteristics object which has a lot of callbacks.
+3:06
+And then the initialization happens with the and this register miniport driver. And so uh this object has a lot of
+3:13
+callbacks that are usually used for different uh actions in the driver.
+3:18
+Sending messages, receiving messages and stuff like that. One of them one was uh
+3:24
+that actually look at was very interesting for me was the mini port send that buffer list which is a method
+3:29
+that sends information, right? And so uh I dig into it and basically the flow is
+3:35
+pretty strival. First we have the validation for the adapter that is ready to uh communicate. Then we have uh
+3:43
+retrieval of the first driver uh sorry of the first uh buffer and then uh
+3:48
+basically we will uh transmit this uh buffer in a loop for all the link list
+3:55
+of the buffers. And uh this is the top adapter transmit
+4:00
+function. Uh basically what it does is uh getting a net buffer structure and allocates it data length plus 24
+4:08
+additional bytes. Uh then it gets the actual pointer from this net buff uh
+4:13
+structure and copy the memory from this uh netbuff object into the newly
+4:19
+allocated data. I'll try another mic. Okay. Is it
+4:25
+better? Oops. Yeah. Cool. Cool. Yeah. Yeah. Let's do it.
+4:31
+And so uh this is the prefix of the function and before the end is disallocate memory right before this
+4:36
+one. And this is how it looks. We can see the RS6 plus 18 extra and then
+4:41
+another it's worse. It's worse. Yeah.
+4:50
+Yeah. Cool. Let's do it. Right. Uh okay. So uh I hope they don't
+4:56
+cancel each other. Uh yeah. waves stuff. Okay. So,
+5:02
+let me hold like that. And so, this is the the prefix. The idea is that we allocate a buffer and then we add 18
+5:09
+bytes for offset and then we add 18 bytes for size. And so, obviously, if we will give a big enough value, we'll have
+5:15
+integer overflow. And so, uh this is bad, but it's not really bad. Let's talk
+5:21
+about what we can do with that. And so, here we allocated the memory. Then we have the NDS get data buffer which is
+5:27
+the pointer for the buffer that's been copied. And then we actually do do the memory move which is the copy of the
+5:34
+data on the newly allocated memory. Right? And so the idea is that we will allocate 17 bytes then write it with a
+5:40
+lot of data. Uh and this is while kernel overflow. Now generally speaking there
+5:46
+are some exploitation while kernel copy overflows. Uh but they are hard. Why they are hard? because uh there are tons
+5:54
+of mitigations in the kernel to prevent this and like modern uh HBCI uh demap
+6:03
+stuff like that uh even p uh page hand u page fold handler uh uh device guard
+6:10
+stuff like that will make it very hard. Now uh the the the issue is that this
+6:16
+will be hard even for uh simple overwrite for wild care overflow which
+6:21
+is basically we will overwrite a lot of memory it's even harder and so uh in
+6:27
+this case I just left it on the side and went few days um without thinking about
+6:32
+it and then uh I started looking at protonVPN source code uh not source code
+6:38
+uh but uh on the driver again and find the same bug right and so like I've already seen that and at this point I
+6:45
+asked myself uh do we have like an one-off issue or is it like a systematic issue something that is more bigger than
+6:51
+two drivers and obviously also this is the answer right cuz uh if we can search for it we can find a lot of leads and so
+6:58
+in this case I just decided to create yarao rules uh to search for the problematic uh allocation of memory uh
+7:06
+and this is uh this is the part we want to search for this is the assembly of it and we can see uh that it's using the
+7:14
+tag uh the pool tag here noted in yellow and I just has created a y rule to
+7:20
+search for that for 16 uh 64 uh bits and 32 um and then I searched for it in the
+7:28
+in verse total and found uh 50 matches. Now um the cool stuff is that there are
+7:36
+a lot of drivers with the same issue. And so at this stage at this point I asked myself or told myself that it's
+7:43
+probably something that is widely used by a lot of drivers something to do with VPNs and uh yeah uh and so like next
+7:51
+question was chat GBD like what is the most popular VPN and obviously OpenVPN
+7:56
+uh is the answer and so OpenVPN is is really huge right it's used by tons of
+8:02
+different uh VPNs by ExpressVPN nVPN cyber ghost uh proton tonvpn whatnot.
+8:09
+And beside all of that, it's uh it's a big big uh repo in GitHub with a lot of
+8:14
+subreos inside of it. We have the OpenVPN diamond. We have the easy RSA which is their implementation for RSA
+8:21
+also the GUI um top Windows 6 OpenVPN free Linux which is the OpenVPN
+8:27
+implementation for Linux. And um basically at this stage I asked
+8:32
+myself okay uh so we found this bug in a number of drivers Windows drivers let's find some uh uh repo that relevant to
+8:40
+that and obviously I started looking at top windows 6 and uh basically after some search uh found this uh nice method
+8:47
+which does exactly that and this is the the issue we've seen with the assembly part because it allocates uh the packet
+8:53
+length uh from the buffer and then adds to it the additional error size with this macro and So this is the bug,
+9:00
+right? This is the source of the of the evil that we found in OpenVPN. Uh and now after we found the reason to look at
+9:07
+the OpenVPN, let's take a deep uh dive inside VPN. Uh we'll find some cool stuff there, I promise. And okay, uh
+9:14
+first one of the most interesting uh repos of OpenVPN. Obviously, it's the OpenVPN diamond, which is the process
+9:20
+that will execute all the VPNing. Then we have the OpenVPN GUI which is uh
+9:26
+basically the GUI part that allows us to use OpenVPN on Windows and we have the
+9:31
+top window 6 that we already seen and uh for current session this is uh the the
+9:37
+repos that are relevant and interesting for us. They have a lot more solutions and a lot more stuff to uh to provide.
+9:44
+So if you like to check them out the look at their GitHub page.
+9:49
+Now um the client server it were pretty straightforward. we have the client that will be connected to the server um
+9:55
+obviously SSL MTLS even if needed and the the classical handshake and stuff
+10:02
+will flow uh on both ways. Now on the single uh machine level on
+10:08
+the client level we'll have the kernel space logic that will uh create the
+10:13
+virtual uh nick through which we will send data that will be uh robbed and sell sent through the through actual
+10:20
+physical nicks and then in the user mode we have the the don that runs openvpn
+10:25
+and actually ences the caves messages and does all the vpning
+10:31
+and so openvpn in addition to being a big uh open source it's actually a
+10:36
+standard for um for protocol of communication between uh server and
+10:41
+client and the the structure of it it's pretty straightforward it can be over TCP or UDP and first we'll have the
+10:49
+packet length 16 bits then we have the key ID the op code which is the like the the the thing we want to do uh and then
+10:57
+we have the payload uh which pretty straightforward this is an image of an
+11:02
+handshake for openvpn protocol Um now another very interesting part
+11:08
+about open openVPN is that it's supported on almost every big or small
+11:13
+um open uh operation system and different archetic tools. you basically
+11:18
+can open random run uh router and find an openVPN binary there, right? And so
+11:24
+uh it works on Windows, Linux, Mac OS, uh iOS, Android, whatnot. And so the
+11:30
+question is how they achieve that. It's pretty pretty standard. They have a lot of includes with different macros and a
+11:37
+lot of implementations for specific system which allows them to be like dynamical and very uh very fast and very
+11:44
+uh efficient on the specific operating system. um uh will they they using they be using uh
+11:51
+a lot of macros and then uh with different flows or different even
+11:56
+functions and even different includes to do that. Um and so this is like the
+12:02
+macro logic of OpenVPN. Now uh let's uh take a look inside uh other cool
+12:08
+interesting stuff of OpenVPN. One of which is the OpenVPN uh plugins. Now uh
+12:14
+OpenVPN have plugins to allow uh specific uh or uh additional credential
+12:19
+validation or audition of the information or even uh creating ETW
+12:25
+events on specific logic that we want to do all that can be implemented with uh plugins right and so the idea is that we
+12:31
+have this DLL that can that exports some functions and can be called with for instance OpenVPN plug-in open v1 which
+12:38
+is the initialization function in this example they are setting um credentials
+12:43
+and then then we have the funk v1 which which will basically do the logic that
+12:49
+it needs to be done and here we will validate for credentials. So down the line of of plugins in open ven they are
+12:57
+cool that allow a lot of um a lot of stuff a lot of validation auditioning
+13:02
+stuff like that. Um now let's talk about the actual uh architecture of the uh OpenVPN service
+13:10
+on Windows system. And so we have the OpenVPN server which is the system level running service uh that has a an open
+13:18
+name pipe called OpenVPN/service and a objects like sorry process will
+13:24
+connect to it and uh send information to this name pipe. how this will uh will look on the OpenVN server side. Uh
+13:32
+creating name pipe instance and then creating to handle it and
+13:37
+um uh we will uh validate uh stuff and basically create the security the
+13:43
+relevant security descriptor for it. Um then we will wait for connection. After connection achieved uh the OpenVPN ser
+13:50
+will wait for uh for get startup data which is basically um the way that other
+13:56
+process communicate with OpenVPN ser they will send uh uh string that uh
+14:02
+explains where they want to run the new uh OpenVPN process the actual demon that
+14:07
+will do the the VPNing OpenVPN server just managing those and uh a lot of
+14:13
+other instances of OpenVPN can be created and So the startup data is the
+14:19
+directory the configuration and the log file that should be executed right and so this is an example for uh
+14:26
+initializing uh execution of openVPN programmatically and after after this uh
+14:32
+startup data will be uh passed and validated and uh and uh check that it's
+14:38
+okay uh the open VPN server will impersonate the connected uh the connected client
+14:44
+and then it will validate that this client is the uh OpenVPN uh group uh of
+14:49
+users and then we'll proceed to uh basically uh create another name pipe uh
+14:55
+which it will uh pass to the execution of the OpenVPN process, right? And so uh
+15:02
+uh then it will write run this OpenVPN as the user that he has uh impersonated.
+15:08
+And so this is how it looks on on Windows. We have the OpenVPN server that through uh OpenVPN service uh got
+15:16
+startup data and initialized and executed OpenVPN process. And then we
+15:21
+have another name pipe. For instance, here is service 1 2 3 4 through which OpenVPN will communicate with OpenVPN
+15:28
+server. And so the travel question is why do we need this another uh name pipe or why are so many name pipes? And the
+15:35
+answer is that for instance if we have a weak client that connects to OpenVPN uh
+15:40
+service and it want to change some DNS configuration maybe at some routes uh
+15:45
+you need to be able to do that for that and this is a wick user for that it will send specific messages to the OpenVPN
+15:52
+service and the service will do it on its behalf right and so uh this is how
+15:58
+it actually looks like through the same uh pipe to the inner pipe we will get some uh data and then we'll will uh
+16:04
+convert it to messages based on the type they have passed. Now there are some logic that can be achieved with that.
+16:11
+The client can uh send address or route message or the next configuration
+16:17
+message and then the server will send back acknowledge message for that. So how it will look like uh the openVPN
+16:25
+will send a route message for instance for open servers. the service will actually execute the logic for that add
+16:32
+another route and then send an act message back to OpenVPN to uh signal that it has finished the logic. Now uh
+16:39
+if we want to take a look uh on the broader uh side of Windows, we also have
+16:44
+the OpenVPN GUI which will basically send the relevant data through the OpenVPN service to OpenVPN uh service uh
+16:52
+that will initialize the the demon for the user. And now in the let's call it like in the
+16:58
+network level this is the this is the full architecture of the of the communication we have the server with
+17:04
+the plugin inside the open VPN pen demon and then uh information will uh pass through uh through the plug-in the
+17:11
+plug-in can audit it can log at it and stuff like that and now um now we can
+17:17
+talk about uh first school discovery uh that found here it's relevant to the potatoes class of vulnerabilities in
+17:23
+Windows and Um basically potatoes vulnerabilities are
+17:29
+vulnerabilities that allow um by exploiting some uh misconfiguration some
+17:36
+issues in Windows achieve uh privilege escalation and for instance we have the sweet potato which waits ford uh queries
+17:44
+on the network. It will answer the answer the the address for server which
+17:50
+will point to it to the attacker. Then the legitimate client will actually ask
+17:55
+for WPD that file which is the file that defines proxy on Windows and then um the
+18:01
+malicious uh attacker will answer a bad uh WPD file that points again to its
+18:07
+controlled proxy and in this case uh the Windows client will start uh sending uh
+18:13
+through that proxy different queries and then the malicious proxy can uh require NLM authentication execute NLM authent
+18:21
+authentication and do relay or track or whatever they like to right and so uh
+18:27
+this is pretty much what will happen here um I'll show you a vulnerability and then how we can exploit to to get
+18:34
+local privilege escalation so this is the logic in the uh service of openVPN that handles uh messages that received
+18:42
+from the open VPN demo uh the logic is pretty simple first we'll have the
+18:48
+amount of bytes we want to uh read uh the pn and bypassing then we'll handle a
+18:53
+message. In the handle message we will allocate a strct on the stack and then
+18:59
+uh basically we'll write onto this um this allocated strct the amount of data
+19:05
+that we read from the pipe right and so uh here we can see on the left upper
+19:10
+part the bytes the amount of bytes we want to uh read. Then we have we can see that message is a union of uh strcts but
+19:18
+basically it will be just the longest of them on the stack. And then we have the read bypassing that will read the same
+19:23
+amount of bytes onto the message uh strct. And so this is stack overflow
+19:28
+because if we can uh write more data than this uh message, we will overflow it. For instance, if you have the
+19:35
+message heater here with type side and message ID and then we have the address message or even the DNS config message
+19:41
+which is bigger. If we send more data than it contains, it will overflow it.
+19:46
+And if we'll do it, we'll have we'll get first fail stack cookies check failure which indicates that we have stack
+19:53
+overflow but uh we had a a cookie issue right which is good and hard. So let's
+19:59
+think about what we can do with the canary. Uh this is the message the handle uh this is the function that
+20:05
+handles the messages and this is its prefix and here we can
+20:10
+see the security cookie usage. Now uh basically uh a security cookie defined
+20:17
+here to be a value uh and then what will happen is that we'll store it store it on the stack again and in the end of the
+20:23
+function we'll validate it value and see that it haven't been changed. Now the actual interesting question is the where
+20:29
+it's being set and so we have this security net cookie function and it is this is the the logic that happens there
+20:35
+and basically first run will check if the security cookie value is constant that defined for first run and then we
+20:42
+do a lot of source with different uh information from the operating system um
+20:47
+such as uh time as a file performance count and stuff like that and the down line here is that it will be very very
+20:54
+hard to guess this value and uh the only Hey, the only possible way to bypass
+20:59
+that would be if we had uh rig primitive on the memory of this process, but we don't have it. And so the underline here
+21:06
+is that it will crash. If we will overflow, we'll basically crash uh crush the process. Now, uh let's talk a little
+21:13
+bit about some issues that associated with name pipes. First we have the the
+21:19
+classical name pipe instance race condition which means that if a client connects to a server through a name pipe
+21:26
+if somebody create the same name pipe with the same name uh before the server uh the client will connect to it. Now um
+21:34
+another issue is the superflow pipe connectivity issue which basically says that the client don't really know who
+21:39
+he's connecting to and uh and so uh the the the attacker that created the name
+21:46
+pipe can do uh for instance malicious imperson impersonization of the client.
+21:52
+Now let's uh let's sum it up in the all of this together into a vulnerability in
+21:57
+the local privilege escalation vulnerability and uh basically what we will do we create a malicious DL and
+22:04
+then we will uh load this malicious DL in OpenVPN demon and through the inner
+22:09
+name pipe we will uh crush the openVPN service and then we the the the OpenVPN
+22:15
+demon will create uh the moist DL in the OpenVPN will create same name pipe and export it to uh other users and then uh
+22:24
+next user that will connect it will connect not to original open service but to to uh our malicious um malicious
+22:31
+plug-in right and so uh the DL main basically will extract the command line argument and the duplicate the handle
+22:39
+that was passed there and through that handle will send a malicious packet that
+22:45
+will basically kill kill the open service which is just long enough data
+22:50
+that will overflow the stack can ap it will create uh the openVPN service
+22:57
+namepipe and wait for connection. If a connection occured it will uh basically
+23:02
+uh impersonate uh first it will get the startup data because this is the protocol then it will impersonate the
+23:08
+connected client. If the connected client is strong enough, it will execute uh on its behalf for instance a
+23:14
+malicious exe malicious uh application called driver communicator. And so uh
+23:20
+this is uh this is the the demo. Uh on the right we have uh w user that
+23:27
+executes the logic and uh on the right we have the the client that connects.
+23:33
+Now on the right side uh here we had an uh uh exploit that actually sends
+23:39
+malicious that loads a malicious plug-in and kills uh the OpenVPN service and then runs with the name pipe and waits
+23:46
+for connection. Then on the left side here uh client connected to uh through this uh uh to this unknown because well
+23:55
+it's the same name of the openVPN service name. Then here we can see that
+24:01
+uh we have uh very like strong level uh process for instance system level in
+24:06
+this case and uh yeah take me a while to get there. Uh but yeah
+24:12
+cool. Uh now um this was cool because we got uh local privilege escalation. Uh
+24:18
+but the question is can we do it remotely right? And so uh uh the
+24:23
+question is how do we use uh name pipes remotely? And the answer is pretty simple. uh windows have different
+24:29
+mechanisms for uh sharing resources. In this case, name pipes are IPC's uh name
+24:35
+resources. And basically the idea is that there are some protocols for that SMB and SMB2. And we will uh to use a
+24:42
+specific uh resource for specific endpoint. We will use uh an endpoint
+24:48
+server and then the path to the share and the path to the resource. Now we can
+24:53
+do that for instance with net use uh and we can actually then see the IPC's process which is good which means that
+24:59
+we could potentially connect to remote endpoint and use its name pipe remotely uh and so how would we an attempt like
+25:07
+that would look like uh first we'll uh see the tree uh connect request for the IPC on specific endpoint and um then
+25:14
+we'll also can see this was uh the request was declined because it's not that simple and um the the thing is that
+25:22
+there are some windows definitions uh some uh set of rules that allow and uh
+25:28
+disallow connection to nine pipes. For instance, we have the network access n pipes that can be accessed anomously. By
+25:34
+default, there are none such as that that could be accessed an un anonymously. And um uh another thing
+25:41
+that we have is that uh we restrict uh anonymous access to net pipe and this
+25:48
+enabled by default. And so um the thing is that it means that it's very hard for
+25:53
+us to do it to do it without uh basically without credentials. Uh but don't worry we can we can get those and
+26:01
+um basically uh we should do that with reconnaissance. We can wait on the
+26:07
+network and sniff for different hashes and then break them and get the credentials. uh and then this is not
+26:14
+something new everybody uses such as APD28 and then uh and other processes
+26:20
+exploitation by mimicads or even uh malicious plugins for different uh web
+26:26
+browsers that doing exactly that. Um basically NLM is um netlan manager sort
+26:33
+of protocols that allow us to connect securely and uh this is how it will look
+26:38
+like. First we'll have the NLM SSB negotiate a request um with the
+26:44
+challenge uh then the the server will send the challenge then uh the client
+26:50
+will send back the end proof str and in the end uh we'll have the full hash in
+26:56
+the packet and uh we can capture that with tons of different tools and I used here uh the
+27:04
+responder in Cali and basically we can see that it captured the username, the domain, the server challenge and the
+27:11
+extra hash payload uh that actually hashes the the the password and the other question would be how how can we
+27:18
+crack that right and basically there are tons of open sources there and like the
+27:25
+most two promise promised things that I found was hashad and John the reaper because they're widely used and very
+27:30
+good and I proceeded with hashcad because it's very good with GPUs and first I try started with my own
+27:37
+laptop my gaming laptop that has uh um rocks uh that have RTX 3070 with almost
+27:44
+6,000 CUDA cores and uh basically uh uh
+27:49
+6,000 CUDA cores, four net NLM v2 hashes will allow me to break
+27:55
+something like uh almost uh 2800 million
+28:00
+hashes per second, which is pretty fast. And for for starters, it's pretty good if you have very short password, right?
+28:06
+If you have one char password, it will do it momentarily. But uh if we have a long password, it will take something
+28:12
+like few years and we don't really have time for that. Those are uh indeed uh uh
+28:18
+rookie numbers. And so um other thing I thought about was maybe we can build a
+28:23
+cool hardware to crack it and we can do that but it will take a lot more money and a lot more time because to actually
+28:30
+get a lot of GT uh GeForce GTX it take it takes a lot of time and a lot of patience.
+28:36
+And so uh from here I decided uh to find other solution. Basically I thought
+28:43
+about how can I use uh cloud platforms for that. And basically there is this
+28:48
+cool uh platform called vast AI which is um basically allows you to rent machines
+28:54
+with specific uh GPUs on time for time. It's and it's very very uh easy to use.
+29:01
+uh you got a docker images that can run on this machines and it's pretty cheap, right? For instance, here we can uh rent
+29:09
+um a machine with 18 RTX 4090 for uh $85
+29:14
+an hour, which is which is pretty cheap. And now let's uh let's um let's uh let's
+29:21
+calculate quick math as they say uh the amount of CUDA cores and how much more
+29:26
+such machine will give me in terms of tracking uh per hour, right? And so if
+29:31
+my uh old uh laptop has almost 6,000 CUDA cores, the RTX U 4090 have almost
+29:38
+two and a half times more and the 18 times have almost 50 times more. And so the question is like will the
+29:45
+improvement be 50 times more and obviously not because we have tons of uh different bottlenecks.
+29:51
+But uh in the end I uh proceeded with the big lad uh the machine with a lot of RTXs and basically installed and
+29:57
+executed the cracking uh of a long password and it took me less than 3
+30:03
+minutes to crack a nine shar password which is pretty fast and yeah it's hell
+30:08
+yeah for sure. Um and then but now we have basically all the thing that we
+30:13
+need to create actual RCA right because we can um uh we can uh firstly we used
+30:20
+uh awesome uh leads to find basic issue and then we keep digging into openVPN
+30:26
+and found another issue and uh then we understood that we need SMB enumeration and uh hash cracking to get credentials
+30:34
+and in the end we cracked those hashes with cloud cracking. All of this together allow us to uh actually get an
+30:40
+RC vector. And the idea is that first we'll uh look on the network, wait for
+30:46
+hashes, then recap them and track them, and then we'll use them uh with net use to actually be able to access other uh
+30:54
+other PC um uh other PC IPCs. And then
+30:59
+what we'll have uh in our exploit is actually connection to the remote uh
+31:04
+endpoint uh name p namepipe of the openVPN service that we try to attack.
+31:10
+After that we will pass to it malicious configuration and log on attacker controlled uh share uh as uh as showed
+31:19
+here. And so in the configuration of OpenVPN, we'll have the directive to load a malicious plug-in which is again
+31:25
+located on the malicious uh malicious share uh controlled by the attacker.
+31:31
+And so uh basically first attempt it didn't work because we need to allow anonymous access to the share and uh
+31:38
+allow everyone to connect to it. And after it uh after this configurations on the attacker controlled share we got uh
+31:45
+we got actually it working. First we have the uh request for tree for share. Then we have the uh request for the
+31:52
+configuration and in the end we have the request for the malicious plugin that execute the logic. And this is the the
+31:59
+example of the demo that will first execute on the attacker controlled um uh
+32:05
+attack control share machine will execute the uh exploit which will uh connect to the remote endpoint and
+32:12
+through the name pipe will load a malicious uh uh malicious plug-in from attacker controlled share and um this is
+32:21
+pretty cool because this allows me to actually remote code execute on on the uh remote endpoint in this specific
+32:27
+example, it just dump a lot of files on the desktop, which was pretty cool again. Now, um
+32:34
+uh the and now the action uh the question is can we like mount those uh those two logics together? Can we
+32:41
+execute the remote code execution and then the local provisional? And the answer is yes. We just need to mount the
+32:47
+LP logic onto the motions plug-in that we execute uh remotely. And in this case
+32:53
+uh after the motions LP executed uh we will execute the reclaim uh the file
+32:59
+that called reclaim the warren kilos of arbor and um for after executing this we
+33:05
+have an RCNLP vector and the question is what can we do from here and u some uh
+33:12
+tribal attempts some stuff that APDs like love to do is uh bring your
+33:18
+vulnerable driver and then uh again rule be pretty easy in this in this stage because we have already a PE. We can
+33:25
+actually use the SC manager and create savers uh service with uh our malicious uh driver. For instance, we could use
+33:32
+this one which which has uh read write primitives into kernel memory which uh
+33:38
+make us very very strong. And another technique we could use is living of the
+33:44
+land uh which is again used widely by APs. maybe find some install uh MSI and
+33:50
+mandle with it. And uh the classical approach could be be even uh exploiting
+33:56
+an one day or even new zero day in Windows and Windows machines uh in the
+34:03
+in the driver kernel. Uh this is exactly what has been executed in this research
+34:08
+and I took it as well. Basically the idea is to exploit and vulnerability and apps which will man which will change
+34:16
+the previous mode and allow us to have uh arbitrary rewrite into kernel memory
+34:21
+and um other question will be now what okay so we have remote code execution
+34:27
+then we have LPA then we have even readwrite uh kernel um uh kernel uh
+34:33
+primitives now APDS would love that because uh basically uh when you have executed some malicious logic on
+34:40
+endpoint you have a lot of anti-malware and anti- virus antivirus u application
+34:47
+that will hunt for you and what we would like to do and general would like to kill those and bypass them and so
+34:54
+usually those come uh in the form of ppl which is a protected process light which was uh invented somewhere in uh uh
+35:02
+windows 8 if I'm not mistaken which allows us to uh protect uh processes the
+35:08
+idea is that we will have process that the that is digitally signed and they
+35:13
+have an ar hierarchy of different uh ppls that are digitally signed and the
+35:19
+rule is that the higher the process it can mandle with lower processes but lower processes can actually communicate
+35:25
+with those processes and us like the regular processes even if the system can't actually affect the ppls right and
+35:34
+so what we'd like to do is uh abuse those rewrite primitives to maybe unpl
+35:41
+uh let's use uh windbg basically there is this strct called PS protection which indicates the uh ppl
+35:48
+protection level of an system of an process and we can use for instance uh
+35:54
+process directive to see the als protected and uh and it's um a protected
+36:02
+sign and win system which is pretty high up the level which means not much of different uh process just can uh
+36:09
+communicate with them and affect it. Now uh if we'll try to kill a process which
+36:14
+is a ppl uh we will fail even if we are system because again we are not a ppl. So if we have windbg uh we could could
+36:22
+do it with actually overwriting the memory right we can find the memory override it and then uh basically we'll
+36:28
+crush the the process in this case because if we will overwrite the field of winning it's it's very uh very high
+36:37
+and important process and it will basically crash the system uh and now
+36:42
+this will be our uh full chain we'll use the drce to gain uh code execution with
+36:48
+a plug-in then the same plug-in we will uh execute the local provision escalation logic the PC and then uh with
+36:55
+that it will wait uh and abuse the app id uh flow to get arbitrary kernel
+37:02
+rewrite and in the end it will with those abilities override the ppl
+37:07
+protection of a specific uh of specifically win in uh for us to be able
+37:12
+to crush it right and so this is the demo for that again this is a remote uh
+37:17
+remotely uh execute the exploit that will uh connect to the uh remote endpoint uh in
+37:25
+on the IPC on the OpenVPN namepipe service. Uh execute a plug-in. The
+37:30
+plug-in will wait for connection. Uh and here we can see the log that
+37:36
+means the uh stage one and stage two login of the plug-in were successful.
+37:42
+And then we'll have uh an and user just executes the open VPN guru which runs on
+37:47
+highly elevated privileges and uh it will send the startup data to
+37:53
+already our exploit and then we'll have stage three and stage four which allows us to actually override winning
+38:00
+protection and this gives us a full chain and um the question is uh as I
+38:06
+said why an attacker would like would love to do this well basically they have tons of stuff they would like to bypass
+38:13
+security uh of oss uh antiviruses uh
+38:18
+stealth attacks maybe they want to hide something root kits and so this this could be a pretty cool uh vector for
+38:25
+attacker and basically the recon and the oint tools stack I used here was vers total
+38:32
+yara rules showdown and zoom I haven't talked about it in length but basically those help me to find how much open is
+38:39
+used and popular which pretty much and um and here we have the summary of the
+38:45
+session. Basically the take the takeaways here is that first one back can uh can be a pretty big deal. Uh in
+38:52
+this case the plug-in mechanism was uh implemented not on the best uh side but and allowed us to do a lot of damage. Uh
+39:00
+and another thing is that uh currently we don't don't really need to create
+39:06
+heavy hardware system with a lot of uh GPUs locally. we can just rent some
+39:12
+cloud uh from some cloud provider and uh yeah uh it's it's basically easier uh
+39:19
+probably uh less more cheaper and available for everybody.
+39:25
+And the the third thing is that uh security researchers will probably use all in the recon tools uh a lot because
+39:32
+uh well we know that that makes our life easier and this is real uh real uh romance between the two and uh this is
+39:41
+it uh thank you for joining me today and I think we are finished any questions.
+

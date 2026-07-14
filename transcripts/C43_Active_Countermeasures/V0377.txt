@@ -1,0 +1,1251 @@
+0:00
+Well, here we go. Hello everyone and welcome. I'm glad you could join us today and happy Friday. Uh this I'm
+0:08
+joined here today with Fawn and we also have Herman on Discord which is HK on
+0:16
+Discord. Uh we also have Megan in the background. She's kind of steering the ship here. And we're all part of the
+0:22
+active countermeasures team. So we're glad you could join us here today. This is episode five of Command and Convo,
+0:30
+the C2 webcast. And today we're going to talk about how tunneling can be used to
+0:37
+mask a command and control channel. And and the reason being is is for a method
+0:46
+of avoiding detection by defensive security tools. Uh and Fawn has put
+0:52
+together a a great uh presentation on that. Uh we are doing all of our chat
+0:58
+and Q&A and Discord. Uh we do want this to be an interactive webcast which
+1:03
+includes all of you watching this right now. Uh so we welcome your questions and
+1:09
+comments in Discord. We are in the Threat Hunter community Discord. If you're not already a member of that uh
+1:15
+in Zoom on the resources section, you'll find a link that goes to the threat hunter discord. uh we welcome you to
+1:23
+join there and uh pose all of your uh comments and questions. Uh we are not
+1:28
+using Zoom for chat or Q&A. Uh so please don't uh post any messages there because
+1:34
+um I'm not really monitoring that and I don't want to miss your questions. Um I will be monitoring Discord throughout
+1:40
+the webcast. I'll try to bring up as many of those as I can live during this presentation. and and Von, I just uh I
+1:50
+want to thank you for putting together this uh presentation and sharing your great work with all of us. Uh it's
+1:56
+definitely appreciated and uh and I I do want to say that I I hope you never go to the dark side because uh if you do,
+2:03
+we're all in trouble. So So with all that being said, Fawn, uh
+2:10
+take it away, brother, and let's uh let's get on with this. Thank you. Thanks, brother.
+2:15
+Thank you. Cool. So, you guys can see my screen.
+2:21
+Yes. Cool. I can. All right. So, yes, welcome everyone.
+2:26
+Welcome to the fifth episode. Um, and yeah, big pleasure to have you
+2:33
+all here on a Friday and excited to share this chat. Uh, this was definitely
+2:39
+the one where I felt like I actually learned the most myself when I prepared
+2:44
+it. just really, you know, whenever you need to teach something or explain it to
+2:49
+somebody else, you you go deeper and ask more foundational questions that you
+2:55
+wouldn't if you were just kind of like reading it or studying it. So, this was really cool for me and yeah, I I find
+3:01
+the mechanics and everything behind tunneling very very cool. So, let's jump into it. Um, as usual, I
+3:09
+like to just start off with a little overview of what we're going to be chatting about today. Uh just so we have a kind of map of the terrain. By the
+3:16
+way, is my mic my sound okay? Kind of talking away from it. Yes, it is for me. Yeah.
+3:22
+Cool. Thanks. Uh so we'll talk about what pivoting is just so we're all on the same page and then related to that
+3:29
+we'll talk about tunneling um you know as a way to pivot. Uh then we'll talk
+3:35
+about today's scenario. As per usual this will be uh taken from a previous malware of the day article.
+3:43
+We'll jump into a quick live demo and then we'll reconvene to just uh like
+3:49
+distill the insights and a little take-h home message. Okay. So, what is pivoting? Now, before
+3:56
+we discuss what pivoting is, I want to just quickly touch base on a more foundational related concept. Uh lateral
+4:04
+movement. Lateral movement is really simple to understand because all it really means
+4:09
+is an attacker is able to move from one host to another host on a network. Okay,
+4:14
+so just to so we kind of like visually gro this uh here's a little land. There are three hosts here is a attacker and
+4:22
+the attacker is up to no good. They are able to fish. They'll send a fishing email to that one host. uh the person
+4:30
+opens it unfortunately you know remote code execution creates a beacon and they
+4:36
+now have a C2 connection um but they're not satisfied with that they want to compromise the other hosts on that
+4:42
+network now through a variety of different techniques I mean this can get really deep um but for example token
+4:49
+impersonation pass the hash pass the ticket or R&B SMB hijacking um they are
+4:55
+now potentially able to also compromise the other host hosts right so simple
+5:01
+enough lateral movement the ability to go from one host to the other
+5:07
+now let's think of this exact same scenario that I just described um but let's now take this same network and
+5:14
+we're going to add another segment to it um and I'm also going to tell you that
+5:20
+these top uh the top segment those are workstations and they are able to egress
+5:26
+and in the bottom we have file servers and these are internal only. When I say
+5:32
+internal only, I mean they're not allowed to create connections outbound and nothing external is allowed to
+5:38
+create an inbound connection to them obviously, right? It's really for people on the internal network, maybe some
+5:45
+users here, you know, they're using thin clients, they don't have a lot of storage. So, a lot of the important data
+5:50
+is stored on this. So, it's also, you know, anyone is able to access it. It's centralized, right?
+5:59
+So, just as before, um, sorry, I'm I'm just going to open this can, but it's not too noisy.
+6:09
+Thank you. So, let's say once again the attacker is able to fish and same as before, they're
+6:17
+able to compromise that workstation, but they're not really as interested in
+6:23
+this specific scenario in the other workstations. um or in addition to the
+6:29
+other workstations we could say perhaps they're also really interested in these file servers obviously right you want to
+6:35
+go where the data usually is but now that they have access to this
+6:41
+compromised workstation imagine it is itself able to connect to the file servers so this now means
+6:48
+there's a path for the attacker to get to the file server
+6:54
+there's a path it is now reachable to it, right? Um so it can now potentially
+7:00
+compromise the file server. I just want to be very clear about that. Um when we talk about pivoting,
+7:08
+it's very clear to understand is pivoting gives us the means or the ability or the attacker the means or the
+7:14
+ability to reach a system it cannot usually reach. But it doesn't mean uh
+7:20
+implicitly that it's able to compromise that host. That's an additional step.
+7:25
+That is lateral movement again, right? Pivoting is solving the network problem.
+7:30
+It's how do I get to a host I cannot usually get to. Whereas lateral movement solves the authentication or
+7:38
+vulnerability problem. It's how do I go from being able to just contact this
+7:43
+system or scan it um to actually compromise it. Right?
+7:50
+So again just to kind of like distill lateral movement moving from one compromised host to another within a
+7:56
+target network. Whereas pivoting what we mean is how we can use a compromised
+8:01
+system as an intermediary jump box to access other systems or networks that cannot be reached directly. And in this
+8:09
+case obviously the first workstation that the attacker compromised that is the jump box. because it compromised
+8:16
+that system, it was able to get to the file server which it wouldn't otherwise
+8:21
+be able to do. Cool. So, how are threat actors able to
+8:26
+pivot? Well, kind of two of the main ways really are port forwarding and tunneling. Um, now these uh they are
+8:36
+closely related but distinct concepts. They're often sometimes confused a
+8:41
+little bit. Um today we're really going to be talking about tunneling but at one
+8:46
+point I am going to show the foundational technical difference between the two of them and then I think
+8:53
+you'll easily be able to understand what port forwarding is as well.
+8:59
+So tunneling let's forget about everything I just said. Let's just kind of bring it back
+9:05
+to first principles and let's just say that
+9:11
+the attacker desires to create a SSH connection um from this local machine to
+9:16
+itself. At the same time, the firewall is not going to allow that. The firewall
+9:21
+is not going to allow this local machine to egress SSH connection out of this
+9:26
+network. So, it's blocked. So, no go, right? At the same time, let's assume
+9:32
+that this firewall has a rule which is it does allow this local host to create a HTTPS outbound connection to external
+9:40
+hosts. That's usually the case, right? It needs to connect to a variety of unknown web servers.
+9:48
+So, it does allow that. Now, if this isn't just a what you can
+9:54
+maybe just think of as an ordinary HTTPS connection, but this is a special HTTPS
+9:59
+connection made by um a tunneling application, uh it's possible to send
+10:06
+the SSH inside of the HTTPS.
+10:12
+So now there is effectively a SSH connection, right? what it what the attacker desired. Um, but all the
+10:19
+firewall is going to see is going to be the tunneling layer. So all the firewall sees is an HTTPS connection. It's
+10:26
+completely unaware uh that the SSH connection is actually even taking place. So it's being allowed. Uh and I
+10:33
+also want to mention I'm giving a very high point high level overview. I'm glossing over a lot of specifics. How is
+10:40
+this happening? I got you. We're going to get into all that. I kind of just want to paint a big picture and then we
+10:46
+can kind of zoom into the specifics a bit more each time.
+10:51
+But wait a minute, what does this have to do with pivoting? I'm talking about smuggling protocols that aren't allowed
+10:58
+in other protocols. I just said pivoting is about reaching other hosts. How are these concepts related?
+11:06
+Now, let's just think about the model I just spoke about about SSH and HTTPS, but instead let's add another host to
+11:12
+this model. And just for the sake of simplicity, I'll call this A, B, and C.
+11:19
+And now let's say that A wants to connect to C or it wants at least a reverse connection from C to itself,
+11:26
+right? It wants to establish a connection between the two of them. But the firewall is not going to allow that.
+11:33
+But the firewall will allow A to connect to B. I guess more accurately, I should have said will allow B to create a
+11:39
+reverse connection to A. But I think you guys get me here. Now, hopefully this setup sounds
+11:46
+familiar, right? Obviously sounds a lot like what I just discussed about that internal file server and stuff like
+11:51
+that. But we're going to dig in a bit deeper now.
+11:56
+So A is able to create a reverse connection from B to itself. Now obviously when I say that it means there
+12:03
+is or this is post exploitation, right? A already has the ability to create a
+12:08
+reverse call uh to itself or somehow maybe fish create a remote code
+12:14
+execution whatever but it has ability to create this connection right
+12:20
+but this isn't just any ordinary connection this connection was made by a tunneling application
+12:26
+um and now I want to say here this is kind of the part uh where I where I learned much more kind of like nuance of
+12:33
+tunneling um and I'm by no means an expert So if anyone during anything I I'm explaining want to add more would
+12:39
+like to add more detail um in in the discord please feel free to do so. Um
+12:44
+but there are different applications and they kind of like fundamentally work different. Um so the one we're
+12:51
+discussing today so the one we're interested in is Legolo NG. Um and it is kind of in popularity in some sense
+12:58
+supplanted sock proxy um because it's much simpler to work with. why they say
+13:04
+it's VPN like um and the reason is it creates a a ton interface. What does
+13:10
+that mean? We'll chat about that. Oh, we'll chat about it right now actually.
+13:18
+So now that there is this tunnel, right? Remember A created a reverse connection from B to A but this connection is
+13:25
+mediated by tunneling application specifically log and G. Um, and now the
+13:30
+attacker can access all the interfaces on B. Remember, there are interfaces on B that would usually be hidden from it
+13:38
+like the other local interfaces that it's a part of that B is a part of. Um,
+13:44
+but now and I'll share a link to a um a John Hammond video. Uh, he does about a
+13:49
+20 video 20 minute little demo on Legol although there are plenty of them on
+13:54
+YouTube. But it's actually cool to see because right now if you're on A, if you're the attacker, you can like run
+14:01
+like IPA or IP config depending on your operating system and you will just see all the interfaces available to be on
+14:09
+your system. So if there is another host on a interface here, you could just ping
+14:15
+it right now. It's as if you're plugged in right there. That's why it's VPN VPN like right endpoint to end point.
+14:24
+So like I said now in this case let's say B has an interface to reach C and uh
+14:30
+therefore A also has now an ability to reach C.
+14:35
+What I'm describing here is of course the pivot right it's now able to access the system it usually couldn't access
+14:41
+because it's created a tunnel between itself and another system that has access to that system.
+14:48
+So the attacker now has access to C. But remember, as I said before, just because
+14:53
+it reaches C doesn't mean like a red carpet is going to be rolled out like
+14:59
+welcome, please come this way, sir. We have a table ready for you. You know, it still has to find a way to compromise,
+15:06
+has to perform lateral movements, right? Um, but if it does, it can now create a reverse connection from C to itself. Um,
+15:15
+and I'll just quickly touch on this, but the way it's going to actually do this is first by creating a a listener on B.
+15:21
+The tunnel is going to allow it to create a listener on B. The actual implant when it's executed,
+15:28
+it's going to call back to B, right? Not to A. Um, but B will know, the tunneling software will know once it gets that
+15:34
+connection, then to forward it to A. Again, for more detail on the actual offensive tunneling part, um, I'll refer
+15:41
+you to the John Hammond video. Um but how does this work? I just want
+15:46
+us to zoom in one extra layer. I think this is very interesting and cool.
+15:52
+So let's just think about uh individual packets.
+16:03
+So we said it's a reverse connection, right? We're talking now about the C2 connection. Reverse connection from C to
+16:09
+A via B. So let's just consider a single packet here. starts at C and we're just
+16:14
+going to focus on the network transport and application layers for now. Now, obviously in C um in uh layer three in
+16:21
+the network layer, it's going to say source IP C destination IPB and the
+16:27
+transport layer, it's going to have, you know, whatever the protocol is, TCP, UDP, and source and destination ports.
+16:34
+Um, and then an application, it's going to have the application data. What's the application data? Well, whatever the C2
+16:39
+wants to send. Is it a check-in, a get request? Is it exfiltrating data, you
+16:44
+know, quote unquote C2 stuff, right, goes there.
+16:50
+Now, like I said, it's going to be sent to B. And now the big question is what's actually going to happen now, right? Cuz
+16:57
+it has to smuggle it past the firewall. Um, so maybe the first thing that comes to mind for us is why don't we can just
+17:04
+change L3 and L4, right? If we change L3 to 2A from B and maybe change up the
+17:11
+source and destination ports that you know good to go. Is that what tunneling is? Um and the answer is no. That's not
+17:18
+what tunneling is. But what I just described is actually what port forwarding is. Okay. So what tunneling
+17:25
+is instead is it's a little bit more involved. Um and the first step is it's going to create a brand new packet.
+17:34
+So this brand new packet once again let's look at layer three. Layer three obviously now to A from B something the
+17:40
+firewall is going to allow once again the protocol whatever that is usually for tunnels they're uh you know TLS
+17:48
+um and then source and destination ports and again the application data. What's
+17:53
+the application data and the tunneling packet? This is the interesting part. The next step is it's just going to
+18:01
+encrypt the entire original packet. So that's no longer a packet, right?
+18:07
+That's just encrypted blob of data. And it's just going to take that encrypted blob of data and that now gets placed in
+18:13
+layer 7. That is now the application data of the new packet.
+18:19
+That's that's the tunnel, guys. And the new packet wrapped around the old packet
+18:24
+is the tunnel really. Um, and then that's being sent off to A. And obviously it's allowed to go past the
+18:30
+firewall because to A from B, right? An allowed connection.
+18:36
+Hey F. Yes. So, so in that scenario, could B then uh
+18:41
+be considered somewhat of an internal proxy server? Yes, absolutely. Um so proxy is just um
+18:51
+it's just a more general concept and I also want to say is we can use proxy both as a noun as and as a verb. So it's
+18:59
+to proxy something but the internal system is a proxy. So a proxy just means
+19:06
+you know when a connection is being proxied that there is a a middleman or an intermediary host right it's not
+19:12
+going directly to the intended host. Um now obviously in this case it's internal
+19:18
+like you mentioned um and then we've covered before I believe like redirectors and those will also be
+19:24
+proxies right um and it would actually be probably very
+19:30
+probably very probable highly probable that a connection like I'm showing here would have a redirector so in that case
+19:36
+it's double proxied if you like you know there's the internal one that allows the tunneling and then there's the outside
+19:42
+one that is essentially creating one step one degree of separation between the C2 server uh and the target network.
+19:50
+But yeah, great question, Keith. It's um you know, ju just think of proxy being like a relay basically, you know.
+19:59
+Awesome. Thank you. Cool.
+20:05
+So, just a quick review. Um think this is useful knowledge for all of us to kind of carry forward into our
+20:11
+security careers just to kind of understand this
+20:17
+difference between port forwarding and tunneling. Now port forwarding is also sometimes called a dump pipe versus
+20:23
+tunneling a smart pipe. Port forwarding is just grabbing the packet strip you know changing things and throwing it.
+20:29
+Whereas tunneling is obviously doing much more. It can hide the protocol kind of all that.
+20:35
+Another way we can think about it is port forwarding is redirection. Tunneling is encapsulation.
+20:41
+Placing a new packet around the old one. Encapsulation. And again, port forwarding just rewrites
+20:47
+L3 and L4 headers. Tunneling. We're going to take the original packet. We're going to create a new packet. We're
+20:53
+going to encrypt the old packet. We're going to place it in L7 of the new packet and send that off. Cool.
+21:02
+Yeah. So that's kind of like all the background we need to understand today's scenario.
+21:08
+Um, and I believe Herman will be sharing this in the Discord. Uh, this is the article it's taken from. It's April 11,
+21:15
+2024. And this is actually the first ever article I did for Malware of the
+21:21
+Day. I just published my 19th one. Um, it was interesting revisiting this. Um,
+21:28
+it's kind of special in a way, but there's also kind of like I guess you can't help but cringe a little bit
+21:34
+because you're like, "Oh my god." Um, what a simpleton I was back then all the
+21:39
+way back in April of 2024. No, now I am so evolved. No, I was just kidding.
+21:45
+Not at all. No, that's definitely not a It was just more that when I read it, I
+21:51
+was like, "Wow, I would do a better job of it now." But I guess that's kind of like just stating the obvious, right?
+21:57
+Yeah. Uh so let's set the stage, friends. Um and I want to mention that a lot of this
+22:02
+is obviously going to be familiar now. Uh we're just adding a bit of specifics, right? But you now there if you followed
+22:10
+and you understood what I just said, you gro the underlying pattern.
+22:17
+Um so we once again have internal network. And I know this is the same diagram I showed before, so I don't want
+22:22
+to confuse you. Um, there's a big difference now is yes, on the top we
+22:28
+still have the internal network. That's the same, but remember on the bottom I said it's internal early file servers.
+22:34
+Now it's kind of the opposite cuz now we have DMZ, which is known as a demilitarized zone. Um, so what this
+22:42
+essentially is is if a company has some specific types of hosts, for example,
+22:49
+web servers, mail servers, FTP servers, things that they wanted to open up to the public. And when I say open up to
+22:56
+the public, of course, I don't mean those systems can connect outbound. The workstations can do that, too. I mean
+23:02
+outside systems can connect inbound. That's not something you usually want to
+23:07
+just allow, right? Um, but if it's a web server, if you are hosting your own website that's going to be served to
+23:15
+random IPs, you need to do that. Uh, right. And I think the the kind of
+23:20
+general idea be behind the DMZ is uh that's such a high risk activity, you
+23:26
+know, opening it up that we need to keep those hosts separate on their own little
+23:31
+subnet. Um, so in this case, the DMZ
+23:42
+So in this case now the attacker is once again interested in the workstation. That's kind of like the goal where they
+23:47
+want to uh end up on. Uh web servers tend to not be that interesting because
+23:53
+they just usually contain the website which you could just scrape in any case, right? It's nothing really of value
+24:00
+there. Um, so you know, I always kind of just say,
+24:07
+okay, we quickly fish that host and now we're on there. But of course, like to to fish a a a random workstation, that's
+24:14
+not like a given, right? It's there's a lot of things that can go wrong. So, it's not that, yeah, attackers just fish
+24:22
+and that's how they get on. I mean, it is obviously a very successful method still. Um but you can't they can't
+24:28
+necessarily rely on that that that's going to give them what they need right um so in this scenario now we're going
+24:34
+to explore alternative way uh for the attacker to get to the workstation
+24:41
+another way um so just to kind of reiterate that segment is exp for the
+24:46
+explicit purpose to be allowed public access right and now let's say once
+24:52
+again this um attacker can uh you know reach the web server Let's say it scanned it. It used Nikto or some leaked
+25:00
+tool like that. Um and it discovered it actually had an unpatched vulnerability, right? The um whoever was supposed to
+25:07
+upgrade it after the latest CVES came out slept on it. Um and there's a way now to uh perform remote code execution.
+25:16
+Uh so the attacker does just that. Uh so they compromise the web hosts and they now create a connection back to
+25:23
+themselves. So, this is a a C2 connection, right?
+25:28
+And I'm now going to put the IPs. I'm going to add them. And these are the IPs from the actual malware of the day article. Right?
+25:36
+Now that they have this connection, this C2 connection, um, they're also able to install a LOD agent. And by the way, I'm
+25:44
+just using C2 connection as an example prerequisite. Maybe they were able to brute force the
+25:51
+uh, SSH, right? It doesn't have to be C2. It's just has an ability now to do
+25:57
+something on it. Uh so let's say they're able to install the Lolo NG agent. So
+26:02
+you can see I put this little icon here. That's just to denote there's now Legolo NG agent on this web server.
+26:11
+So now the first thing that happens is it's going to create a new tunnled connection from this web server back to
+26:16
+itself. Um, and I want to be very clear here because this kind of like uh conf
+26:22
+tripped me up a bit too. Um, where first off, just so we all understand, this is
+26:28
+end to end encrypted and Legolo is doing all of that for you. In fact, um, it'll
+26:34
+even like contact if you don't give it a certificate, it'll go to let's encrypt and just h get a a searchbot uh
+26:42
+certificate for you. It does all that, right? Um, but I do want to be very clear here that
+26:49
+you see how I'm drawing the yellow line and the red line separately. These are two different connections. It didn't now
+26:55
+somehow retroactively start encrypting or tunneling that original connection.
+27:00
+That original connection is just a means for it to start the tunneling
+27:05
+connection. There's something completely different. So, it's not inside the tunnel in and of
+27:11
+itself. But as I showed in my other diagram, now that it has a tunnel to the web server,
+27:19
+it is able to reach other interfaces um that the web server can reach.
+27:25
+So let's say for the sake of arguments, it's able to reach this 200.0/24.
+27:32
+And since that it has access to it, it can now for example run a scan. And when it runs a scan, what does it learn?
+27:39
+Well, it learns there are these three hosts on that subnet.
+27:44
+And let's say once again, you know, it can use end mapap or whatever to discover that there is remote co there's
+27:50
+a vulnerability on 130. There's some little gap, some way for it to get its
+27:55
+foot in the door. And because of that, it can now execute another C2 implant back to
+28:02
+itself. So, sorry I kind of jumped quickly there, but just note that this
+28:08
+connection will now obviously go here, here, now be routed back here to the web
+28:14
+server. And at this point, now this connection is going to go inside of this tunnel. Go
+28:21
+back back all the way to the C2 server.
+28:28
+So, we now have the C2 connection from the target to the C2 server and it's via the web server. Um, something
+28:35
+interesting, maybe some of you picked up on it, but let's also just appreciate
+28:40
+here for a moment that actually what happened here. Um, it wasn't even the case that this can't eress, right? If
+28:48
+this was able to fish that, it could have just directly sent a C2 connection back to it. Um, and in fact, it could
+28:55
+have done so. Now that it that was a strategic decision to route it back through the tunnel which could be done
+29:01
+for a variety of reasons. Um but it's not always the case that the pivot is
+29:07
+because this machine couldn't eress. It's just a case really that that's the
+29:12
+path that was presented to it. The ability to create the connection was through a pivot not because 130 couldn't
+29:21
+eress at all. So just trying to inject a little bit more nuance in the way we think about it that we don't kind of
+29:27
+like get caught up in these rules that this machine can't eress therefore we need to pivot. Sometimes it's just like
+29:35
+you know the the way the dice fall basically.
+29:41
+So here are two connections and obviously the red one is the Legolola one and in this case this was the IP
+29:46
+being used and then um we had mutual TLS here for the SL one which obviously here
+29:52
+is kind of quote unquote naked but by the time it reaches the Legolo NG agent what's it going to do it's going to take
+29:58
+that packet encrypt it place it in L7 of a new packet new packet TLS destination
+30:04
+port 11601 sends it off cool so I'm going to open Discord. Um
+30:12
+I'm I'm having a look in this. Yes, brother.
+30:18
+I do have a couple questions if you want to take those. Sure. Uh the first one is from Samson. He's
+30:25
+asking or I say he, but it could be he or she. Sorry about that. But it says uh
+30:31
+does the original connection stay up or is it killed once the tunnel is created?
+30:38
+Either either or. There's no there's no rule there that will be you know a maybe
+30:45
+they want to have a redundant connection in case the new one they created they lose that or maybe they feel that
+30:51
+additional opse risk not worth it um you know but there's no rule there.
+30:58
+Cool. Thank you. And another one is coming from an anonymous Zoom user uh
+31:03
+who's asking a question. Well, it the question includes the word pivoting which is a very general term. So, it can
+31:10
+be used in many different cases depending on the context. However, it's asking what is the difference between
+31:15
+lateral movement and pivoting. Um, so I feel I feel like I kind of
+31:23
+covered that a little bit adorum in the start. Um, so if you don't mind, I would
+31:30
+uh um encourage you to just rewatch the start of this video.
+31:37
+So, but I'll just quickly touch on it. Lateral movement means actually going from one host to another. That can be on the same subnet. It can be on a
+31:43
+different subnet. But the ability to compromise a new host, a different host on which you currently are, that is the
+31:48
+lateral movement. Pivot is the ability to use a compromise an already
+31:54
+compromised host to reach another host you would not otherwise have been able
+32:00
+to reach. So the one has to do with networking. Pivot has to do with networking has the ability to get
+32:06
+somewhere. Lateral movement has to do with that's host that's endpoint that's
+32:11
+getting on a new system. Right? But again, I think uh I encourage you to go
+32:16
+watch that again just to kind of uh look at some of the diagrams that I provided. Hopefully that will make it clearer. Uh
+32:23
+if this didn't work for you, thank you Van. Actually, that was a great answer. I I would like to mention
+32:29
+again very quickly u uh please don't use Zoom for uh chat or Q&A. Uh we're using
+32:35
+Discord and you can find the link to our Discord channel in the resources uh portion of Zoom. Thank you. Thanks, Von.
+32:41
+Go ahead. Most welcome. Thanks, Linux girl, and goodbye. Um, so
+32:49
+just kind of like a quick little trivia. So, please feel free to answer in Discord. Um, but as a kind of preamble
+32:55
+to what we're going to be looking at now. So, this is the setup I just shared with all of you. Um, now let's just
+33:01
+rename. I'm not going to use the IPS just so it's easier for you to answer. I want you guys to answer A, B, or C. Um,
+33:07
+and now if we place the tap right there,
+33:13
+tap spanport duplicating packets
+33:18
+and we looked at the connection. What's going to be the source host? Uh, what is the destination host? And what is the
+33:25
+type of traffic? So, let's get to the first one. What what is the source host? So, you can answer A, B, or C.
+33:38
+Yeah, everyone's nailing it. Thanks, guys. B is correct. I guess destination
+33:44
+is going to be pretty easy then, but you guys want to do a victory lap in any
+33:49
+case. Yeah, you all nailed it. Hey, that is
+33:56
+the truth. Um, and then finally, what's the type of traffic that's going to be
+34:02
+seen? Ah, sorry. I I spoiled it, but I
+34:07
+don't think anyone would have got that wrong. So, yeah, great job everyone.
+34:12
+Um either this is very elementary or my slides are working. So, excellent job.
+34:21
+Okay, I'm going to go away from uh Discord. Yeah, Banjo maybe. Uh I'm going
+34:28
+to go away from Discord just otherwise I get distracted. But Keith, keep mediating for me, please, brother. And
+34:34
+then uh we'll jump into a very quick live demo. And don't let the word quick throw you off. It's quick because it's
+34:41
+so easy to detect really. So in this case, quick is a good thing.
+34:47
+Question if you're open for that. Yes, absolutely. Okay. Ross on Discord is asking, "As a
+34:53
+defender, is there a method for detecting VPN tunnels, particularly VPN
+34:58
+tunnels that are not your company's standard VPN?" Yeah, I mean that's kind of what we're
+35:04
+going to get to now. Um, in a sense, you know, but I would say
+35:11
+in general, you need to be fingerprinting VPN connections and then understanding
+35:17
+when a type of tunneling software is being used that's not authorized for use, right? Uh, obviously they're going
+35:25
+to have different signatures. Um the cool thing about attackers using
+35:30
+legitimate software like legitimate means is they're
+35:35
+that in that case it's very um signaturable which I know isn't really a
+35:40
+word right but apt for signature detection um because they're trying to
+35:46
+hide in plain sight. They're trying to pretend like nothing fishy is going on here. Um something I actually thought
+35:52
+about um is if an attacker is actually able to create a VPN tunnel of tunnel of
+35:58
+a VPN that is being allowed on the network. Um and I don't have an answer for that. Um if someone else does then u
+36:07
+please let me know but that will be like really I you know there's other behavioral patterns that might uh reveal
+36:14
+itself over time. Um, but that's getting into extremely squirrely territory there
+36:20
+really. But yeah, great question. And also hopefully, like I said, you know,
+36:25
+we're obviously going to quote unquote hunt a VPN connection now. So there are a few more insights I think I'll be able
+36:31
+to add here. And one more quick one and then we'll we'll move on for now. But uh Z3
+36:38
+B1T3 is asking is there a way to detect the attack? And that uh the answer is yes.
+36:46
+And actually the fun will be getting to that shortly. So thank you guys. Mhm. Cuckoo.
+36:52
+There's another question, but thanks Herman. I see you took care of it. Appreciate your great work, buddy. Uh so
+36:59
+yeah, let's get to the actual demo. So the first thing, yeah, I'm going to
+37:05
+go to Rita and then um this is obviously the exact same packet that is provided
+37:12
+at the uh with a malware of the day. Um so first off, I really encourage you if
+37:18
+you followed last week's webcast to just run the entire simulation yourself. If you created the setup I shared and you
+37:25
+follow that John Hammond video, um I also want to say the video is like
+37:32
+probably two years old. So I also always just want to say guys if you're going to use any tool, always refer I know we
+37:39
+like videos because it's kind of like fun and interactive, but always refer to the repo as well because uh certain
+37:45
+commands might have changed and stuff, right? Um so use both. Um, but if you
+37:51
+did last week's webcast and you look at that video, um, and you're able, this
+37:56
+time you're going to need two victim hosts because you're going to need the jump box and the ultimate victim box, right? B and C. Um, maybe you can, uh,
+38:05
+are able to spin up two different VPNs. Um, if you can do that, then first of I
+38:10
+encourage you, especially to do this one, because I think you're going to uh get a deeper level of insight into kind
+38:17
+of what goes into setting it up and how it works. Um, but if you're not able to do that, at the very least, I encourage
+38:23
+you go get the Z-log files um, from the link that Herman shared um, and just kind of like look at it yourself.
+38:30
+Um, but in any case, here we have, you can see we have a number of different connections. Um all of these are uh
+38:37
+domain rights FQDNS. And the thing is um when we use retail AC hunter for our
+38:44
+demos, we're not whitelisting known good domains um because we kind of want to
+38:49
+show you the raw and unfiltered and you know we can't assume everyone has got the
+38:55
+same white list as us. So you know we want to be able to ensure you can see the same thing as us. Um so don't let
+39:03
+the fact that we see a whole bunch of other domains first kind of throw you off. Um the thing is about how software
+39:10
+like retail works and and AC hunter is um in in the beginning it needs
+39:16
+relatively more handholding and work because you will need to go look at
+39:21
+those domains and then whitelist them. Um but just think about it this way once they're done you're not going to see
+39:28
+them again. And for example, in this case, we do have this one IP.
+39:33
+Just a very quick little check, right? Um, if you just uh go over here, we can
+39:40
+see this is NTP. So, I just Googled that IP and NTP. And you can see here a
+39:46
+number of reputable sources are claiming that this does belong to Canonical. Now, I wouldn't just quickly do a Google
+39:51
+search and just like, cool, thanks Chad GBT. I or Gemini, I know you never lie,
+39:57
+so I trust you. But pretty good sign. Spend a bit more time, do a bit more due diligence, and then you can be like,
+40:04
+okay, canonicalu makes sense. I'll save this this one,
+40:09
+too. Um, but all in all, that means we basically get to down to this one. And now, this is kind of the one that should
+40:16
+maybe stand out to us, right? Um, once again, it's to an IP and not an FQDN.
+40:23
+That's I I I I I think there is actually a MITER technique specifically for that. So
+40:31
+in general that is something that should catch your attention. Um right um but at
+40:36
+the same time if I see this FQDN and I also see um it's SSL it's a HTTPS
+40:43
+connection um it's using a random port that I'm just going to pretend like I've
+40:49
+never heard of this port. A lot of that is kind of like weird for me already.
+40:55
+Further, why did um why did Retita decide to categorize this as high? The
+41:01
+beacon score is zero. Why is the beacon score zero? Well, look over here. One
+41:06
+connection. It's obviously not going to be able to well it it's it's de facto
+41:12
+not a beacon when it's only one long persistent connection, right? Beaconing stop starting stop starting the whole
+41:18
+time. Um and the other thing is in this specific uh case 24 hours is the entire
+41:27
+duration of the trace file. Um meaning that this connection lasted as long as
+41:33
+the trace file. Now you know you're probably not always going to be looking at a 24-hour trace
+41:39
+file, but you might be looking at 24 hours worth of logs and it might have started before that. But once a
+41:45
+connection starts getting at 24 or longer, it's once again something that
+41:51
+you at least want to h take a second look at. Right?
+41:56
+So that being said, let's jump into AC Hunter 7 and see what else we could
+42:01
+potentially learn. Uh so I have this exact same data set
+42:06
+now here open in AC Hunter 7. And you can see maybe a lot of these are familiar to you already. We kind of saw
+42:13
+them just now. Um, and the first thing I want to point out is that now with ACI Hunter 7, one
+42:20
+of the cool benefits, especially when you're dealing with a large data set, um, is let's say for instance, we're
+42:26
+doing a quote unquote hypothesisdriven threat hunt, um, and we don't just want to look at all potential threats. We are
+42:33
+actually specifically on the lookout for long persistent connections, right? That's what we're deciding to be on the
+42:40
+hunt for. Uh the cool thing about AC7 is right here we can choose the different thread types and filter on that. Um as I
+42:47
+can choose long connections and now it's only showing me the long connections. Uh another cool little thing that has
+42:54
+been added is here is a hint. Uh and I do just want to kind of briefly mention
+42:59
+that please remember a hint is just that it's just a hint. It's just information that you can use in a basket of a lot of
+43:07
+other information to help drive you towards a decision. This is not saying
+43:13
+this thing is good or this thing is bad. Right? There are very few things in network threat hunting that will give
+43:19
+you something with any definitive answer. Again, it helps inform your overall investigation.
+43:26
+But here you can see now we have these four and these are known hosts. Uh, so I
+43:31
+can click on this actually. What does it say? Well, it's telling me what is pocket, you know, and that it's a common
+43:37
+website. This is helpful. Again, remember maybe they're using um Google Drive API for
+43:44
+their C2 communication. You're going to see known host, right? Doesn't mean it's good or bad. Helps give you some
+43:51
+information. But you're going to see now when I get down to the bottom one that it says the
+43:57
+ASN many bad hosts. Now this network block is a source of a lot of network
+44:02
+probes and attacks. You might think, oh, you know, is this some kind of like bulletproof uh provider? Um, and the
+44:10
+answer is that the ASN is Digital Ocean, right? So, we don't want to like
+44:16
+badmouth uh smear Digital Ocean. It's obviously a great company and a highly
+44:21
+reputable company, but thread actors like using Digital Ocean because um it
+44:26
+works for them, right? So again the hint is just giving you some kind of indication in that sense.
+44:33
+So now I'm going to just double click on it to learn a little bit more. Um and you can see uh mostly the same
+44:41
+information we already got in in Rita. Uh you know a single connection we get
+44:46
+the the data sent and receive. Uh one extra piece of information actually is the description. Um and this is if any
+44:54
+of you are familiar with uh conlog in um
+45:00
+Zeke right we're taking a lot of most of this information from Zeke um it's just
+45:05
+describing the nature of the connection and S1 u please correct me if I'm wrong Herman but it essentially means that in
+45:12
+this trace file we saw the connection start so we saw the three-way handshake
+45:18
+but we never saw it close we never saw the four-way tear down the finax. Right?
+45:25
+So all this tells me is that the trace file started a connection started but
+45:31
+when the traceful ended that connection had never ended. So when
+45:36
+I say here 24 hours that does it you know it could be 36 hours by now that
+45:43
+just means it was 24 hours the moment the trace ended right.
+45:48
+Yeah. So I thought that's kind of like cool and interesting. Uh, one more thing I would add to this and this is just
+45:53
+kind of like uh, you know, some uh, basic basic osent maggyvering. Uh,
+46:00
+something I would definitely do in this situation if I saw a port 1160 which
+46:06
+obviously stands out as a little bit of unusual port and just go to Google and we know it's TCP and we can uh, Google
+46:13
+TCP port 1160.
+46:18
+And you can see here this first heat we get is this incredibly reliable and informative resource called active
+46:25
+counter measures malware of the day. That should always be your primary and only resource. Obviously just kidding.
+46:32
+Um but if we scroll down we can see a lot of mentioning a lot of reference to
+46:38
+something called Legolo NG. Now again I wouldn't just kind of scroll over the results. I would look at some reputable
+46:45
+sources um and you know make sure I'm pretty confident that there's a
+46:51
+connection here but maybe now we can operate under this assumption that this connection is made
+46:57
+by Legolo NG. Um I do want to mention obviously guys we cannot identify
+47:02
+something based purely on the basis of a port right we would need some actual
+47:08
+endpoint data to be able to know actually what the process is right what
+47:14
+the actual application is um for two reasons number one anything can choose
+47:20
+the port 11601 right just because lolo is known to use that or that's the default port for legato doesn't mean
+47:26
+that's a rule Anything can use 11601. That's a choice. Um, and the other thing
+47:32
+that you have to keep in mind too is 11601 is the default port for Legolo, but you know, probably a somewhat more
+47:41
+sophisticated attacker would have changed the default port, right? Um, and
+47:46
+here I too got hung up a little bit in the beginning uh because I thought no attacker would ever use any default
+47:53
+values ever. They're all geniuses. IQ 160 plus. Um but the fact is like every
+47:59
+time you see data on this you know whether it's um you know the the HTTP
+48:05
+signatures or um the default port or the name of the DLL with cobalt strike
+48:14
+always somewhere between like 40 to 60% of attackers don't bother changing default values. Right? So, it's not 99%.
+48:22
+But cool, if you're going to catch more or less half of them based or be able in this situation to identify based on the
+48:29
+port number, easy win, right? Money on the table. Um, but perhaps you don't
+48:34
+know what Legolo NG is. You read now 1160. Then obviously I'm I'm sorry I'm getting perhaps like too simplistic
+48:41
+here. You just Google that. I see a GitHub here. I go on it. I read it's a
+48:46
+tunneling pivoting tool. Okay. Now I speak to other people at the company. Is
+48:52
+there any reason why this specific open-source tunneling pivoting tool is being used right now? Um and if the
+48:59
+answer is no, right, then this is the moment where um things start getting
+49:05
+serious, I would say. Cool.
+49:10
+So that's about it for the kind of simulated threat hunt for today. Um so
+49:15
+once again kind of very short and simple but I think in this case it's more indicative of the fact that
+49:23
+um tunnels are not that if if you know how to find
+49:30
+them they're not really that hard to find essentially and why is that well let's distill this in our in our
+49:35
+take-home message um once again remember the C2 communication at the point that
+49:40
+the traffic is egressing is wrapped it's encapsulated encrypted in the L7 of another packet.
+49:48
+It's being tunnneled, so it's invisible to us. But this actually presents for us both a
+49:53
+challenge and an opportunity. Um, and the challenge in this case is that the actual malicious communication is
+50:00
+hidden. So if there was anything we uh would have been able to signature, if there was any kind of behavioral
+50:06
+analysis we could have done, maybe we could have uh, you know, snuffed out the the beaconing pattern. Uh maybe we could
+50:13
+have used like lease frequency analysis against the JAR 3 hash or something like
+50:19
+that. All that is gone. We don't have any abil ability to detect it by using
+50:25
+the same kind of like modus operandi that we typically use for other C2 communication. Um but the opportunity is
+50:33
+that tunnels as far as I know and please somebody correct me if I'm wrong and please share the information. Uh I've
+50:40
+never seen a beaconing tunnel. Right? So tunnels are always persistent. They're
+50:45
+always long connections. And and keep this in mind even if the C2 is beaconing
+50:51
+the beaconing is happening inside of a tunnel which is persistent which is what
+50:56
+the trace file is going to see. So it doesn't matter. It will be a persistent connection. Um, and the cool thing about
+51:02
+AC Hunter and Rita, of course, as hopefully a lot of you know by now, is it's it's really good at finding these
+51:08
+long connections. Uh, the way I I kind of frame it to myself is uh long connections in inevitably rise to the
+51:15
+top, right? Sooner or later, they're going to come high enough so that you're going to take notice. Um, the other
+51:21
+thing is that you might think that well especially crafty thread actor, they'll just disconnect after 5 hours and
+51:28
+recreate the tunnel. Um but the thing is AC as obviously knows this and what we're looking at there is not a unbroken
+51:36
+connection. We're looking at cumulative duration. So if somebody will stop that connection and restart it that'll just
+51:43
+be added to the same connection. Right?
+51:50
+Um then something I want to point out which our uh insight our good friend HK
+51:56
+Herman shared yesterday is um in general we'll have this tendency that if multiple hosts are
+52:04
+compromised and they're all being tunnneled um what this basically does is
+52:09
+think about it if you have five hosts compromised and they're all speaking to the C2 server there mean that means now
+52:14
+there are five connections being egressed right to this same server.
+52:21
+But typically, if they're being tunnneled, this is going to collapse to a single uh tunneling agent that's going
+52:27
+to go outbound. Not always. These aren't hard rules. What I'm describing now is a tendency, right? Um, and this is an
+52:34
+opportunity for us too. And why might you think? Well, the main reason is, of course, we do prevalence, right? Now,
+52:42
+prevalence is just lease frequency analysis, right? It just looks at how many hosts in total on this network,
+52:48
+we're speaking to the target host. Now, I would say probably on a DMZ, as in
+52:55
+this specific case, way less relevant. You probably aren't going to have a lot of hosts on there. Um but in another
+53:00
+case where this may maybe was a subnet with workstations and there were a thousand workstations
+53:06
+if the the the fact that they're using tunneling is collapsing the outbound connections to one and that means it's
+53:13
+going to rank very high in terms of prevalence and when I say high will be very few instances right that's
+53:19
+the red flag the less there are communicating to that host the more suspicious we should be of it
+53:26
+so I just wanted to share that uh because I thought that was a very uh insightful um an insightful insight very
+53:35
+good penetrating insight from Herman uh which I also just wanted to share with everyone here
+53:42
+uh one final thing that I want to leave us with it's just something to kind of uh keep in the back of your mind uh is I
+53:49
+think this little scenario in many ways is also just a good reminder to remain vigilant at all egress points and what
+53:56
+do I mean here Well, if we only looked for potential malicious communication at
+54:02
+that egress, if we were like, these are the things we care about, we
+54:08
+don't care about these, nobody's going to compromise them, whatever. We're not we're going to like not even pay much
+54:13
+attention at that point. But if we did that, if we just put all our focus here, uh we would have missed
+54:20
+today's compromise, right? Because remember this communication that happened from the C2 server it never
+54:25
+went it never e west it's east west and usually we're not looking at east west
+54:30
+traffic at all I mean maybe you are but mostly people aren't looking at east west communication right um so in that
+54:37
+case you would have missed it so just remember that if tunnels are involved
+54:44
+hosts might exit the local network at a point where you're not expecting that to
+54:50
+happen right just kind like a good little reminder.
+54:55
+Um, and so quickly save the dates. These are our next three episodes. Uh, we'll
+55:00
+obviously going to break for Christmas and then we'll come back next month. We're going to do Velociraptor as C2.
+55:06
+And the 20th of February, we'll do Google Workspace API. That's a fairly new one. Actually, all of these are new.
+55:14
+Um, text record abuse. I don't know if anyone saw that's the one I published yesterday. I just like the more recent
+55:20
+work that I've been doing. I find it more interesting. So, um, you know, now that we've kind of covered a lot of the
+55:25
+foundations, I feel like it's time to get into some of the more juicier stuff together. Right. Cool. So, those are the
+55:33
+next ones. Thank you everyone and happy holidays source. I hope you're
+55:39
+Thank you, Fan. Experiences are unforgettable. Yes. Yeah. Well, let's hope so, right? I
+55:45
+mean because the holidays are quickly upon us. So, but unforgettable is one of those words that can mean a lot of things, right?
+55:53
+Well, yes. Yeah. Very true. Yeah. It could be good. Yeah. Yeah. Yeah. And thank you for I
+56:00
+think that was great. Uh and I and I especially appreciate how uh you keep reinforcing that when it comes to threat
+56:08
+hunting is is to not rely on one data point to make a final decision whether
+56:14
+something is good or bad. Uh because at least in my opinion I that's that's
+56:20
+exactly like the methods that I follow. Um, like when I when I'm threat hunting
+56:26
+connections or looking at data, um, I don't I'm not necessarily looking for that one thing that reinforces to me
+56:33
+that it's good. I'm looking for that one thing that reinforces that it's
+56:39
+malicious. And there's a big difference there. Um, and it and it's kind of like what you were talking about is is
+56:45
+looking at the port. You know, you can look at just the port number and say, "Oh, because it's that number, it's
+56:51
+evil." or because it's that number, it's good. You have to look at every single data
+56:57
+point that's available to you. Uh and instead of looking at it from a perspective of, oh, I want to I just
+57:04
+want something to tell me it's good. Uh it should really be the opposite. You should look at everything from a
+57:10
+perspective as I'm I'm looking for that one thing that tells me that this is not okay. Do you follow what I'm saying?
+57:18
+Yeah, absolutely, brother. And you know, obviously I totally agree. You know, the way I think of a threat hunter is really
+57:23
+as a detective. And I guess when you're a detective, there might be like a smoking gun. You know, somebody writes a
+57:30
+confessional note. I did it with her DNA on it and their address, but probably
+57:35
+that's like the exception, right? So, what I ob, you know, usually think about it is, um, we're building a case by like
+57:44
+layering different points of evidence. And a lot of times it's like uh when we encounter something we might not even
+57:49
+consider it evidence. It's just something that you know creates some level of curiosity
+57:55
+and it's like I want to go down a little bit further and find out more. Um you know often times it's kind of like
+58:01
+punctuated equilibrium right sometimes there is something you're going to find that's going to be like whoa. Okay. For
+58:08
+example, in yesterday's malware of the day, um I showed that suddenly there were like uh I think 2 and a half
+58:16
+thousand text records requests in one hour from a single host to an unknown
+58:22
+DNS host. That's one of those things where like oo okay hard to think of a legitimate case
+58:30
+like that. But that's the exception, not the rule, you know. So yes, I I totally resonate with what you're saying. you
+58:36
+know, we're looking at a host of different things. Obviously, in our kind of threat hunting system and a lot of
+58:42
+what we teach here is more network focused, but I really want to bring uh
+58:47
+more endpoint discussion uh in into the fray. Not at all because first of I just
+58:54
+want to say it's not like there's a competition between network threat hunting and endpoint threat hunting.
+58:59
+Who's the best? It's literally that they're two tools to solve the same problem. the best is using both 100%.
+59:08
+Um, so you know that's why I said as well we can say it's logo because 11601
+59:14
+but what if we had actually that sysmon log which gave us the hash which we can
+59:20
+then go oh this actually is definitely log nng right um that gives us a more
+59:28
+definity. Yeah. Um yeah so all to say I know I'm kind of rambling a little bit but just
+59:34
+agreeing with you in a large part, you know, assembling little pictures,
+59:40
+building a case, you know. Yeah. And another another good example of that is is something that you
+59:45
+mentioned earlier in this webcast is uh talking about using Google APIs uh uh
+59:50
+maliciously, right? Well, if you're in the mindset of threat hunting data and
+59:56
+you're just looking for something that tells you it's okay, you may look at that and say, "Oh, it's Google. It's
+1:00:02
+fine." Yeah. But yet, okay, you may think that, right? But, but yet when you look at the
+1:00:08
+behavior of the connections and you see something like beaconing behavior or,
+1:00:14
+you know, port usage, you know, whatever the case may be, you you look deeper into that and say, okay, well, I think
+1:00:21
+it's okay. It's going to Google, but yet why is it beaconing? you know, why is
+1:00:26
+this why is this behavior different than than every other legitimate application that
+1:00:32
+uses a Google API, you know? So, totally. Well, you're you're you're doing a good job of articulating the
+1:00:38
+basic difference between signaturing Google good versus behavioral. Yeah.
+1:00:44
+Weird connection timing. um not to contradict you because your point is valid but that specific case actually
+1:00:51
+the GC2 the the reason I'm including it is that is a case where I would say you
+1:00:58
+could not have come to the conclusion that this is malicious based on the network evidence alone it's and and I
+1:01:05
+want to show that too I don't want us to be here and like all stareyed like oh network and everything can be found at
+1:01:12
+the network absolutely not we need to be aware that there are certain cases where
+1:01:17
+you will need um where again in that case it was I would say almost required
+1:01:23
+that you be able to look at the endpoint to know something weird some something highly probably malicious going on now
+1:01:30
+the network still gave us like you know pause to consider but there was no quote
+1:01:36
+unquote hard evidence available on the network you know so that's like one of the core meta lessons of that one which
+1:01:42
+I think is important you know for us acknowledge as well. Yeah. And I totally agree with that, you
+1:01:48
+know, cuz you're right. You may not always see it directly uh, you know, in the behavior. I mean, that's why, you
+1:01:53
+know, digging deeper is is always a good thing to do. I mean, and a good example of that is is GCAT, right? GCAT, which
+1:02:00
+used uh Gmail as as a C2 server. Um, that was actually very hard to detect
+1:02:07
+because it it looked similar to normal Gmail traffic, right? So
+1:02:13
+yeah, I mean it's I I know we're both kind of kind of rambling on here, but
+1:02:19
+yeah, maybe I can also just Oh, I'm going to pivot slightly.
+1:02:24
+Yeah. Um I I see there's a general discussion happening now uh with Herman related to
+1:02:31
+I don't want to say confusion, but a healthy good debate about um yeah, but
+1:02:36
+isn't it actually more risky to have more outbound connections? Um so I want to say having less having one tunnneled
+1:02:45
+or having let's say five direct neither is inherently less or more um suspicious
+1:02:53
+right obviously if you have five connections that's five connections that are able that one would be able to
+1:02:59
+detect. So that carries an additional risk in its own way. Um, I think
+1:03:05
+Herman's point was really good and that it was insightful in a counterintuitive
+1:03:10
+manner because you would assume less connections better from the attacker's point of view. But when we
+1:03:18
+have software that automatically performs least frequency analysis, that gives us another way to detect it.
+1:03:24
+Right? So it's almost like covering different bases. So we have a way to detect very few connections and then
+1:03:31
+there's obviously a way to also um connect a lot of connections. So I I I
+1:03:36
+think that would be a more helpful useful way to think about it then one is
+1:03:42
+inherently more suspicious than the other one. Right. They just provide different means of being detected.
+1:03:47
+Yep. Yeah. And I and I would have to say that like using like a frequency analysis or prevalence uh that is really
+1:03:54
+a secondary indicator uh you know when you're looking at things. So myself I
+1:04:00
+would say having more connections is actually more of a risk of being caught
+1:04:06
+you know because it depends really you know it's true
+1:04:11
+you you can't necessarily make a statement like that in isolation. there are too many other data points that need
+1:04:17
+to be taken in context but certainly I would say in the majority of cases you're correct right I would just be
+1:04:24
+reluctant to make a uh you know an always true statement uh you know
+1:04:29
+related to that same here same here it's just like you can't say everything is safe from
+1:04:35
+Microsoft you know the same thing I mean you know context nothing is safe from Microsoft that is a
+1:04:40
+blanket statement you can't yeah exactly Awesome. [Music]
+1:04:45
+Hey, we we've actually went beyond being over here. So, uh, right. Doesn't look like uh we have any
+1:04:52
+outstanding questions. Uh, however, I do appreciate the discussion going on the Discord. Uh,
+1:04:58
+yeah. Uh, I I know I've said this before, but you, you know, we love talking about
+1:05:03
+this and we love doing this like this webcast and uh we love sharing any information
+1:05:08
+that that we have and the things we learn. So, uh, hopefully you all have enjoyed this as well and you get some
+1:05:14
+value out of this and, uh, hopefully you've learned some things as well and, uh, uh, we can all get stronger in this
+1:05:21
+arms race, uh, cuz that's what it is. Uh, obviously these attackers are are continually evolving and and coming up
+1:05:29
+with new methods. So, uh, uh, definitely when we see those things, we want to broadcast them out as well. That way, we
+1:05:36
+can defend against these kind of attacks. So, uh, thank you for the great presentation, Fawn. Thank you all for
+1:05:42
+joining us today. Uh, I think sorry, one thing I'm sorry to interrupt.
+1:05:47
+I'm I'm just really sorry to everyone. I said I would post the last slides and I and I totally slipped on it. Um, I see
+1:05:55
+some people were asking about it. I will post last the last slides and these slides within the next 30 minutes. Okay.
+1:06:04
+Uh, I'm committed. Awesome. Thank you, Von. Appreciate that. Yeah.
+1:06:10
+Cool. Hey, thank you everyone. Thank you for being here. Happy Friday and happy hunting
+1:06:15
+and happy holidays. Holiday and Holland days.
+1:06:21
+Holland days. It's cuz it's dad joke Friday today, bro. Yeah, I think that qualifies as a dad joke.
+1:06:27
+Thank you again, Ferman. Thanks y'all. Bye-bye. Bye.
+

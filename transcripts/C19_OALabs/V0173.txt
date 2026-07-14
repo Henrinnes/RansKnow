@@ -1,0 +1,1117 @@
+0:00
+Okay, so before we talk about access
+0:02
+tokens, we have to do a quick refresher
+0:05
+of the access control model on Windows.
+0:07
+Now, red teamers have made entire
+0:10
+careers out of the rabbit hole that this
+0:12
+is. And obviously in our quick little
+0:14
+tutorial here, we're not going to be
+0:16
+able to cover everything. I'm going to
+0:18
+simplify a lot of concepts as I go
+0:20
+through here. But hopefully by the end,
+0:21
+you'll have a general concept of how
+0:24
+this sort of stuff works under the hood,
+0:26
+but more importantly, when you see it in
+0:28
+code, you'll understand the references
+0:30
+and you'll understand what's actually
+0:31
+happening under the hood when these
+0:33
+specific APIs are called. Okay, so
+0:35
+access control model, there are three
+0:38
+main components. There's the access
+0:40
+token, which we're going to dive deeper
+0:41
+into in just a minute. Now, the formal
+0:43
+definition of the access token is a
+0:45
+volatile repository for security
+0:48
+settings associated with the loon
+0:50
+session blah blah blah blah blah blah.
+0:52
+Now, that's kind of a mouthful. For now,
+0:54
+what we're going to think of this as is
+0:56
+just a piece of data that stores the
+0:59
+user and group SIDs associated with the
+1:02
+user who spawned the process and also a
+1:05
+set of privileges that can be enabled or
+1:08
+disabled for that process. That's just
+1:10
+the general concept of an access token.
+1:12
+We're just going to put that aside for
+1:13
+right now. The second part of the access
+1:15
+control model is the securable object.
+1:17
+Pretty much everything in Windows is a
+1:19
+securable object. I mean, basically
+1:21
+process, file, registry key, token,
+1:25
+everything is a securable object. So
+1:27
+really, it's just any object in Windows.
+1:30
+And the securable part is the
+1:32
+discretionary access control list or DAL
+1:35
+as you've probably heard it called
+1:36
+before. What this is is a list of user
+1:39
+and group SIDs that can access the
+1:41
+object and what their access is. So it's
+1:44
+basically an access control list for the
+1:46
+object. So you got your access token,
+1:48
+your securable object. And the third
+1:51
+part is the intention of the process or
+1:53
+the command. And by this we just mean
+1:55
+what do you want to do when you access
+1:57
+the object? You want to read it, write
+1:59
+it, query, create a new process, etc.
+2:02
+These are all intentions or intents that
+2:04
+you can have when you access an object.
+2:06
+So you can see at this high level it's
+2:08
+pretty straightforward. You basically
+2:10
+just have who I am and what my
+2:12
+permissions are. You have the object I
+2:15
+want to access and what's being allowed
+2:17
+to access it and how those things are
+2:18
+being allowed to access it. And then you
+2:20
+have the action that you want to take on
+2:22
+the object. Right? So you got your three
+2:24
+main components here. Now you might say,
+2:26
+well that's all well and good, but how
+2:28
+does it actually work in practice? So
+2:29
+what I want to do is I want to walk you
+Example
+2:31
+through a simple example here where you
+2:33
+have two processes process A and process
+2:36
+B. Both of them have a DACAL and both of
+2:38
+them have an access token. Right? So any
+2:40
+process is going to have discretionary
+2:42
+access list and it's also going to have
+2:44
+an access token. I'm going to talk more
+2:46
+about the access token and how it gets
+2:48
+the access token in just a minute, but
+2:50
+for right now just know that every
+2:51
+process has an access token. Okay. So
+2:54
+let's say process A wants to query the
+2:58
+name of process B, right? So we have
+3:00
+this nice API here. Query full process
+3:03
+image name. That means given a process
+3:06
+PID, tell me the name of the executable
+3:09
+on disk that spawned that process.
+3:11
+Right? So that's the action we want to
+3:13
+take. Before we can take that action, we
+3:16
+need to open a handle to the process.
+3:18
+And this is where you ask for permission
+3:20
+and you state your intention. So in this
+3:23
+case we have process query limited
+3:25
+information. So that's the permission
+3:26
+that we would like to access process B
+3:28
+with. So let's walk through the steps
+3:30
+step by step how the access model works.
+3:34
+So first up we have the token of process
+3:37
+A and that tells you who spawned process
+3:40
+A, what groups they belong to and the
+3:42
+special privileges associated with the
+3:44
+token. Then you have the discretionary
+3:46
+access list of process B which tells you
+3:50
+who can access the process and what
+3:52
+access they have. Then we have the
+3:54
+intent. So you want to access it with
+3:57
+query limited information. So given
+3:59
+those three components, the access model
+4:02
+first checks the SIDS of the access
+4:04
+token of process A against the DALE in
+4:07
+process B. There's a SID fuar in process
+4:10
+A and it checks on the access list of
+4:13
+process B. what is this SID allowed to
+4:16
+do? And process B tells us, well, we
+4:18
+have process full access for that SID.
+4:21
+Once they know what the permissions are
+4:22
+for that SID, they check the attempt
+4:24
+against the allowed access. In this
+4:26
+case, it checks out. You have process
+4:28
+full access. So, query limited
+4:30
+information is no problem. And this is
+4:32
+allowed to go through, right? So, this
+4:34
+is just a simple example where they're
+4:36
+just relying on the SIDS for uh access.
+4:39
+They're not accessing any special
+4:40
+privileges yet, but it's illustrative of
+4:43
+the simple under the hood process that's
+4:45
+happening every time you try and open a
+4:47
+handle to a process and you state the
+4:49
+intent that you want or the access that
+4:51
+you want for that handle. Now, let's
+4:54
+take a look at a special privilege which
+4:55
+we just saw in the malware that we
+4:57
+reversed. What about if the process A
+5:00
+has SE debug privileges? How does that
+5:02
+work? Well, SC debug privileges are a
+5:05
+special privilege that your access token
+5:07
+can have, which is basically like god
+5:10
+mode on the system. Groovy. And in
+5:13
+practice, this allows you to skip the
+5:16
+dackle check on a process. So, if you
+5:19
+have SCBug privileges, it's kind of like
+5:22
+a shortcut where you don't actually need
+5:24
+to check the dackle. Now, under the
+5:25
+hood, it's a little bit more complex
+5:27
+than that, but without getting into a
+5:29
+couple hours long explainer about how
+5:30
+all that works, the best model to have
+5:32
+in your mind is just that if you have SC
+5:34
+debug privileges, you basically have
+5:36
+process all access to any process on the
+5:39
+host with the exception of a few special
+5:41
+cases, which we're not going to get into
+5:42
+like ppl and stuff like that. So, we're
+5:44
+not going to get into that. But for the
+5:46
+most part, if you have SCBug, you have
+5:48
+process all access to the other
+5:49
+processes on the host. So, how would
+5:51
+that look here? We check the access
+5:54
+token. You have SC debug privilege
+5:56
+enabled. Then there we go. You can
+5:58
+access process B no problem. There's no
+6:00
+DALE check. So that's kind of the model
+6:02
+of what you want to keep in mind when
+6:03
+you see SC debug privilege. If you see
+6:05
+that in malware, that's a very powerful
+6:07
+privilege and it's definitely going to
+6:08
+be doing something weird between a bunch
+6:10
+of processes. Okay. So let's dive into
+Access Token Overview
+6:13
+the access token a little bit deeper. I
+6:15
+want to give you a brief overview of how
+6:16
+this works because it's important if
+6:18
+you're doing any sort of live or dynamic
+6:20
+analysis of processes. This can trip you
+6:23
+up if you don't understand how it works
+6:24
+under the hood. So, here's Microsoft's
+6:28
+uh very complex diagram of how the local
+6:31
+security authority works. I'm going to
+6:33
+go with this clean diagram that I stole
+6:36
+from an elastic post. I'll link the blog
+6:39
+post below. I encourage you to read.
+6:41
+It's very good and it's basically just
+6:42
+going to go over what I talk about here
+6:44
+today. So, you have something called the
+6:46
+local security authority and that's the
+6:47
+mechanism that checks your password and
+6:49
+your username when you log in. And for
+6:51
+this tutorial, I'm just going to
+6:53
+blackbox that. Okay, so you just have to
+6:55
+think of that as a mechanism that's
+6:56
+checking your username and password.
+6:59
+That is very complex. How the else works
+7:01
+is again a couple hours long tutorial. I
+7:04
+don't even know half of how how it
+7:06
+works. Um I only know the basics and I
+7:08
+certainly don't want to relay bad
+7:09
+information to you. So for the purpose
+7:11
+of this, it's a black box that just does
+7:12
+the authentication. So when you go to
+7:15
+sign in, you send your username and
+7:17
+password to the LSA and it spits out a
+7:20
+session with a loon session and an
+7:23
+access token. So the way this works is
+7:25
+Microsoft has some confusing names for
+7:28
+things. You basically have a session
+7:31
+which you can think of sort of like a
+7:33
+terminal session and this is what's
+7:35
+going to encompass your entire access on
+7:37
+the host. So that's your session. You
+7:40
+also have a loon session and a loon
+7:43
+session is basically the way to identify
+7:46
+you on the host. So it has information
+7:49
+like your SID, how you logged on, what
+7:51
+type of log on it is, interactive
+7:53
+network, etc., etc., right? You also
+7:56
+have an access token which is generated
+7:58
+by the LSA and the access token
+8:00
+references the loon session. So they're
+8:02
+two separate things. There's the loon
+8:04
+session which tells the host who's
+8:06
+accessing it, how they're accessing it,
+8:09
+and who they are. And you have the
+8:10
+access token assigned to the user which
+8:13
+has a list of SIDs, group SIDs, the user
+8:16
+SID, special permissions, that sort of
+8:19
+stuff. And it also has a reference to
+8:21
+the Loon session. So every access token
+8:23
+has a reference to the Loon session that
+8:26
+was generated along with it. Okay, so
+8:28
+let's complicate this a little bit more
+8:30
+and assume that our user is an
+8:32
+administrator. How does this work? Well,
+8:35
+ever since UAC was introduced, Microsoft
+8:37
+has had to work around the fact that the
+8:40
+same user can run both a standard and an
+8:43
+elevated session. And the way they do
+8:46
+this is they use something called a
+8:47
+split token. And that's kind of a
+8:49
+misnomer because really what you have
+8:51
+are two different access tokens
+8:53
+completely. Um, but they call it a split
+8:55
+token. And the way it works is the
+8:59
+standard access token actually links to
+9:02
+the elevated access token. So if you're
+9:04
+operating in a standard session and you
+9:07
+want to run a command elevated, so you
+9:10
+call into UIC to authenticate, the
+9:12
+authentication process will check your
+9:14
+standard access token and from there it
+9:17
+can link to the elevated access token
+9:19
+and the spawn process will actually have
+9:22
+a copy of the elevated token, not the
+9:24
+standard access token. We're going to
+9:26
+talk in a minute about how the tokens
+9:28
+are propagated to processes that you
+9:30
+spawn, but for now, just know that the
+9:32
+elevated tokens are copied into any
+9:34
+elevated process that you spawn and the
+9:37
+standard token is propagated into any
+9:39
+standard processes that you spawn. So,
+9:41
+one extra gotcha before we move on from
+9:43
+this, Microsoft calls this a split
+9:45
+token. And in the documentation, you'll
+9:47
+find references to the fact that both
+9:50
+the elevated and the standard access
+9:52
+token link back to the same Loon
+9:54
+session. In practice, this actually
+9:56
+isn't really the case. In practice, when
+9:59
+uh user who has administrative
+10:01
+privileges logs on through the LSA,
+10:04
+they're actually given two identical
+10:07
+loon sessions. The sessions are
+10:10
+identical in all ways except the session
+10:12
+ID is different. So, you're going to
+10:14
+have two different session IDs for the
+10:16
+same user. And each one is going to have
+10:19
+one token associated with it. one will
+10:22
+have the standard token and one will
+10:23
+have the elevated token. So, I'm going
+10:25
+to show you guys that in a minute. And
+10:27
+the only confusing part is if you're
+10:28
+reading documentation, often you'll hear
+10:30
+things referred to as split tokens
+10:32
+assigned to the login session, as if the
+10:35
+login session is singular. But in
+10:37
+practice, it is actually two separate
+10:39
+loon sessions with two separate loon
+10:41
+ids. Just a bit of confusion there. It
+10:44
+could throw you for a loop. So, let's
+10:45
+talk about how the access tokens are
+10:47
+used when the user spawns a process. So,
+10:50
+of course, these access tokens that are
+10:52
+generated by the LSA are assigned to the
+10:54
+user themselves, right? But of course,
+Access Tokens in Processes
+10:56
+the user is going to be spawning
+10:57
+processes. And as I mentioned, for each
+10:59
+process that's spawned, the access token
+11:02
+of the user is copied into the process.
+11:05
+This is the mechanic that allows you to
+11:07
+query an access token for a process and
+11:10
+not just for a user. So, inside of each
+11:12
+process is an access token which
+11:15
+references the loon session of the user
+11:17
+who spawned the process. So in this
+11:19
+case, if the user launches explorer.exe,
+11:21
+which is the standard shell, which is
+11:23
+usually launched when you log in, the
+11:24
+access token of the user is then copied
+11:27
+into explorer.exe. Now, if the user
+11:29
+launches an elevated command, so for
+11:31
+example, let's say they rightclick on
+11:33
+cmd.exe and launch as administrator,
+11:36
+then UAC will kick in, they'll
+11:38
+authenticate the user, and they will
+11:40
+copy the elevated access token into that
+11:42
+elevated process. And of course that
+11:45
+token will reference back to the loon
+11:47
+session that was associated with it
+11:49
+during the initial loon. So up till now
+11:51
+we've done a brief overview of the
+11:53
+access control model under windows. The
+11:55
+three components that are required. So
+11:57
+the access token, the dackle and the
+11:59
+intention of the action that you're
+12:01
+trying to take. We've also covered how
+12:03
+access tokens are generated and how
+12:05
+they're linked to loon session and
+12:06
+propagated to processes that are spawned
+12:08
+by the user. There's just one last thing
+12:10
+that we need to cover off and that is
+12:12
+how these special permissions like SCD
+12:15
+debug privilege are actually used in the
+12:17
+token. So there's a difference between
+12:19
+having that permission and having the
+12:21
+permission enabled. So let's take a look
+12:23
+at our example here and assume that this
+12:26
+user does have SCBug privileges. So when
+12:29
+they spawn cmd.exe exe has an elevated
+12:32
+process and their elevated access token
+12:34
+was copied into the process. It would
+12:37
+have the privilege SCBUG privilege, but
+12:39
+that privilege would be disabled, which
+12:41
+means it can't be used in the process
+12:43
+yet. If they want to use it, they need
+12:46
+to actually enable that privilege.
+12:48
+That's where you would see an API call
+12:50
+like adjust token privileges. If they
+12:52
+adjust the token's SC debug privilege
+12:56
+and enable it, then they can go ahead
+12:58
+and use that during the intent for any
+13:01
+actions that they're taking on an
+13:02
+object. So once the API is called,
+13:04
+they've adjusted the privilege, then
+13:07
+it'll show up as enabled and any open
+13:10
+process calls that are made after the uh
+13:12
+token is adjusted will have the SC debug
+13:15
+privilege enabled. So they'll skip the
+13:16
+DALE check. So as you're reverse
+13:18
+engineering malware and also if you're
+13:20
+looking at API traces from sandboxes,
+13:22
+just keep that in mind that it's not
+13:24
+enough to actually have the SCB bug
+13:26
+privilege. The process needs to be
+13:28
+spawned as elevated and bypass UAC
+13:31
+somehow and they have to enable the SC
+13:35
+debug privilege before it can be used.
+13:37
+So those are the two hurdles that
+13:38
+malware developers need to jump over in
+13:41
+order to get this god mode style access
+13:44
+on the host. Now, I want to wrap up here
+13:46
+with a quick demo, but before I do the
+13:48
+demo, I just want to mention once more
+13:50
+that what I've presented here is a
+13:53
+high-level view of how this stuff works.
+13:55
+In fact, under the hood, it is extremely
+13:58
+complex. There are many situations that
+14:00
+can be taken advantage of. I haven't
+14:02
+talked about token impersonation for
+14:04
+threads or how that can be abused or how
+14:07
+you can use the dackle to strip
+14:08
+privileges from a process that you
+14:10
+spawn, preventing privilege access. It's
+14:13
+an endless rabbit hole. Like I said,
+14:15
+there there are people who have made
+14:16
+their entire career out of finding
+14:17
+little nuances in this system that they
+14:20
+can exploit. So, we've just touched the
+14:22
+surface here, but the point of this was
+14:24
+just to give you a quick overview so
+14:26
+that when you see this in code, you can
+14:27
+keep in your mind what's actually
+14:29
+happening under the hood. And also, I've
+14:32
+linked below many different excellent
+14:34
+resources that you guys can go and dig
+14:36
+in deeper if you want to learn how this
+14:38
+stuff works. So, I've linked that below.
+14:39
+I encourage you to go check that out.
+14:41
+Now, let's hop over to our uh VM here
+14:44
+and we'll do a quick little demo and
+14:46
+I'll show you how all this works. So,
+Demo
+14:47
+I'm going to use the CIS internals tool
+14:49
+loon sessions to list all the loon
+14:52
+sessions and I'm going to show you those
+14:53
+two sessions that were created when my
+14:55
+user admin was logged into the host. So,
+14:58
+I'm going to also do a -p to list all
+15:00
+the processes associated with each
+15:02
+session. Make this a bit bigger so you
+15:04
+guys can see. Okay, there we go. So if
+15:06
+we look at our sessions here, you can
+15:08
+see this is my username admin on my VM
+15:11
+RDLAB 10. You can see I have an
+15:13
+interactive log on. My session is one.
+15:16
+So remember I said there's a session
+15:18
+sort of like a terminal session which
+15:20
+groups all of your activity together.
+15:22
+This is my user SID right here, my LO on
+15:26
+time, this LO on server, and you can see
+15:28
+here are all the processes that are
+15:30
+running under this LO on session. Now, I
+15:33
+want to show you if I scroll up just a
+15:35
+little bit more. Look at that. There's
+15:37
+another Loon on session under my same
+15:39
+username. It's interactive session one,
+15:43
+my SID. Everything looks pretty much
+15:46
+exactly the same. And you'll notice
+15:48
+there's a lot fewer processes running
+15:49
+under here. Only cmd.exe and loon
+15:53
+sessions.exe, which is of course this
+15:55
+administrative command prompt that I'm
+15:57
+running right here. So that's the two LO
+16:00
+on sessions that are created because I'm
+16:01
+an administrator. This one is obviously
+16:04
+the elevated one and this is the one
+16:07
+that is associated with my standard
+16:08
+token. Now I'm just going to minimize
+16:10
+this and I want to take this one step
+16:11
+further and use this nice tool called
+16:13
+token viewer. And you can see here me
+16:16
+make it bigger so you can see and I'm
+16:18
+also going to sort by name here so it's
+16:20
+easier to find these things. So you can
+16:22
+see here there are two command processes
+16:24
+spawned by my user here. The first one
+16:26
+here is medium integrity and the second
+16:29
+one here is high integrity. So this is
+16:32
+the two command shells that I have open
+16:34
+here just the regular one standard one
+16:36
+here and the elevated one that I just
+16:38
+used to run the loon processes command.
+16:41
+So if we right click on let's say the
+16:43
+elevated one here and we open our token
+16:46
+you can now see the token for that
+16:48
+process. You can see the user token ID
+16:51
+and the authentication ID. It's a little
+16:53
+bit misleading here, but that is the ID
+16:56
+of the Loon process associated with this
+17:00
+token. So, if we go back to our Loon
+17:03
+processes here, I'll line them up side
+17:06
+by side so it's easier to see. There we
+17:08
+go. So, our standard session here, so
+17:10
+the one with all the processes in it is
+17:15
+538C1. So, let's take a look at the
+17:18
+nonelevated command. I'll open that
+17:20
+token. So that
+17:22
+is
+17:24
+538C1, right? So the authentication ID
+17:27
+matches the LO on session. And for my
+17:30
+elevated LO on session or the one that I
+17:31
+thought was elevated because it has less
+17:33
+processes and has the command.exe here.
+17:36
+So this one is 53. And if we come over
+17:39
+here, this is the elevated process,
+17:42
+right? So this is the in high integrity
+17:45
+level cmd.exe. And you can see here we
+17:48
+have
+17:49
+53897, right? So the authentication ID
+17:52
+matches back to the LO on session. Now
+17:54
+it's kind of fun to explore with the
+17:56
+token viewer to see what tokens are
+17:58
+associated with what process. Just kind
+18:00
+of an interesting thing to explore on
+18:02
+your own host, see what's going on. What
+18:04
+I'd like to do though is I have a quick
+18:06
+example here, a small piece of code that
+18:09
+I wrote to demonstrate turning on a
+18:13
+privilege that exists in a token. So
+18:15
+here you can see we have enable shutdown
+18:18
+privilege. Shutdown privilege is, as you
+18:20
+might imagine, the privilege that allows
+18:22
+you to shut down the host. So my token
+18:24
+is going to have that privilege, but
+18:26
+it's just not enabled by default. And so
+18:29
+what I'm going to do is I'm going to use
+18:31
+the same code that we saw in our malware
+18:34
+here. I'm going to open a handle to our
+18:36
+current process with privileges of token
+18:38
+adjust and token query. Then I'm going
+18:40
+to look up the privilege LUID for SE
+18:44
+shutdown name and I'm going to then
+18:47
+enable that privilege and I'm going to
+18:50
+adjust the privileges of my current
+18:52
+token. Right now what I've done is I've
+18:54
+set this up with some get chars here to
+18:57
+actually halt the process before the
+19:00
+privilege is changed. So what I can do
+19:02
+is I can run this. I'll attach to the
+19:05
+process with the token viewer. I'll show
+19:07
+you the privilege of SCE shutdown is
+19:10
+disabled and then I'll enable it with
+19:12
+our code here and then I'll show you
+19:13
+that it's uh enabled in the token viewer
+19:16
+just as a demonstration of how these
+19:18
+things are changed in code and how those
+19:19
+changes are represented in the host. So
+19:22
+let's just run this here from the
+19:23
+command line. All right, so it hasn't uh
+19:26
+enabled SC shutdown privilege yet. I
+19:28
+have to press enter to do that. So let's
+19:30
+take advantage of this. We'll go back to
+19:31
+our token viewer here. Let's close these
+19:33
+up. If you hit apply filter, it
+19:35
+refreshes the uh process list. So that's
+19:38
+just kind of helpful. And then let's
+19:40
+look for our uh program here which is
+19:42
+named token spy. There we go. Token spy.
+19:45
+Let's open our token here. We'll go to
+19:48
+the
+19:49
+privileges. And you can see that SC
+19:51
+shutdown privilege is disabled. So I
+19:54
+don't have too many privileges in this
+19:56
+standard token, but the ones that I do
+19:58
+have, most of them are disabled. So
+20:00
+let's just close this up. And now I
+20:03
+press enter to enable
+20:06
+it. All right. So it should be enabled.
+20:09
+Let's come back here. Take a look at the
+20:12
+token. Take a look at the privileges.
+20:14
+And you can see now it's enabled. So
+20:17
+that's just a simple example of enabling
+20:19
+a simple privilege in an access token
+20:21
+and how the changes are reflected on the
+20:23
+host. So hopefully this is a good
+20:25
+overview for you guys. And now when you
+20:27
+see uh token privileges being adjusted
+20:29
+in code, you'll understand how that
+20:31
+impacts the system. So again, I
+20:33
+encourage you to try some of this stuff
+20:35
+out on your own host. And if you're
+20:36
+interested in this kind of stuff,
+20:37
+definitely read through the linked
+20:39
+material I have below on access tokens.
+20:41
+Again, I've just barely touched the
+20:43
+surface in this tutorial. All right,
+20:45
+with that, I'll see you in the next
+20:46
+tutorial. Bye for now.
+

@@ -1,0 +1,1203 @@
+0:18
+Welcome to our talk. Catch me if you
+0:20
+can. Hunting misconfigurations before
+0:23
+they break pro.
+0:25
+Um
+0:26
+Oh,
+0:28
+so first something about myself. I'm
+0:30
+product area lead for reliability by
+0:33
+design and I work for the global
+0:35
+engineering and reliability department
+0:37
+of ING. And I'm here with my lead
+0:40
+engineer JD.
+0:42
+Hi everyone. Myself JD and I work with
+0:45
+Marshall in building the confirmity
+0:47
+board solution uh to make the ING
+0:49
+systems reliable.
+0:52
+Yeah, thanks JD. So first a small
+0:55
+disclaimer, we don't want to get sued,
+0:57
+right? So uh the agenda first we'll talk
+1:01
+about the why why we need guard rails
+1:05
+and then we'll talk about the problem
+1:06
+with firefighting and then we'll just
+1:09
+discuss ING's target and vision and the
+1:12
+design for a scalable solution the
+1:15
+closed control loop and last but not
+1:17
+least our lessons learned and
+1:20
+challenges. Uh but JD will start with a
+1:23
+couple of examples.
+1:25
+Yeah sure. Um thank you Marshall. So
+1:28
+we'll start with one of the incidents
+1:30
+which caused the internet rumble uh in
+1:32
+2017 that was with AWS. So one of the
+1:35
+engineers deleted uh the more servers
+1:39
+instead of you know couple of servers.
+1:41
+So that was a wrong command one command
+1:43
+one engineer but complete internet
+1:45
+rumbled. it took off the systems in the
+1:48
+S3 uh pool and it created a lot of uh uh
+1:51
+issues and it also created a lot of uh
+1:53
+instance uh because uh it couldn't serve
+1:57
+the uh service request uh and also one
+2:00
+of the other reasons was uh clients had
+2:03
+a hard-coded uh configurations in their
+2:06
+file and they didn't had a resilience
+2:08
+pattern to switch to a second region if
+2:11
+something happens. Yeah. So two
+2:13
+problems. So one is like engineer
+2:15
+deleting the servers and uh second is
+2:18
+about clients do not have the
+2:20
+configuration to switch to a a second uh
+2:24
+region and um how could a policy helped
+2:27
+here. So maybe if you'd have had a
+2:30
+policy as code in place uh which
+2:32
+prevents the uh engineer doing the
+2:35
+disruptive commands or maybe if you
+2:37
+would have had a uh uh policy which
+2:41
+could have you know informed the
+2:43
+customers to have a a resilience
+2:45
+patterns to be followed. For an example,
+2:47
+in case if uh config file do not have a
+2:50
+uh dual or additional configuration
+2:53
+files to switch to second region in case
+2:56
+of uh any failures that would have
+2:58
+prevented this incident
+3:02
+and second case is about GitLab Gitlab
+3:05
+data uh loss again not sure it's the
+3:08
+same engineer but the engineer issued
+3:09
+the RM minus RF instead of secondary
+3:13
+database he issued the command in the
+3:15
+production database.
+3:16
+And uh that led to 6 hours of uh data
+3:19
+loss. Yeah, it's not about the human
+3:21
+error but we feel that there is no
+3:24
+guardrails to uh to warn the engineer or
+3:28
+maybe there is no guardrails or maybe
+3:30
+there is no uh commands to check if the
+3:33
+backups are working or not. Right? So
+3:35
+but in this case there were backups but
+3:38
+they weren't tested. Yeah, they were it
+3:40
+was not recoverable. that that's why you
+3:42
+know GitLab couldn't uh
+3:44
+uh recover the primary database
+3:48
+and could a policy be helped here of
+3:50
+course yes if you'd have had a uh
+3:52
+additional guardrails which could have
+3:54
+prevented engineer issuing the uh
+3:56
+disruptive command or maybe if had a uh
+3:59
+a drift detection to check periodically
+4:02
+whether the backups taken are good in or
+4:04
+in a good state or not. If we would have
+4:06
+had such policies in place, we would
+4:08
+have at least prevented these in
+4:10
+incidents.
+4:12
+Marshall, you want to talk about
+4:13
+shifting left?
+4:14
+Yeah. So, we need to shift from
+4:17
+firefighting to prevention, right? So,
+4:20
+uh firefighting leads to frustration,
+4:22
+steals time from uh building business
+4:25
+value. And it's not only about
+4:28
+preventing incidents. It's about
+4:30
+reducing the MTR or mitigating risk with
+4:33
+a progressive release strategy for
+4:36
+example. And yeah, INZ target is an
+4:42
+availability of 99.9
+4:45
+that's 40 minutes downtime
+4:48
+every month. So that's uh not much I can
+4:51
+tell you. Uh and yeah, we want to stay
+4:54
+within our service level objectives and
+4:56
+and within our impact tolerance levels
+5:00
+and even though we have several layers
+5:02
+of defense and known works and anti
+5:05
+patterns still slip through. Uh so
+5:09
+therefore we introduced guard rails
+5:11
+several guard rails. We have the well
+5:13
+architected review which is an interview
+5:16
+between reliability experts and system
+5:18
+experts to find improvements and strong
+5:21
+points and to share knowledge among all
+5:25
+the entities and the teams and we have
+5:28
+our conformity bots and that's what we
+5:30
+are going to talk about today. So
+5:32
+automated checks on usage of resilience
+5:35
+patterns on high availability etc. And
+5:39
+we have a static code scanning scanning
+5:42
+our repositories at the code for known
+5:46
+bugs and anti patterns.
+5:50
+Um yeah and simplified uh a guard rail
+5:54
+uh if you go off track bumps you in the
+5:57
+right direction and you just continue
+5:59
+your journey as nothing happened right
+6:02
+so that's a guard rail and yeahing
+6:07
+uh scale matters you know skill matters
+6:10
+it it makes things trickier complexer it
+6:14
+it introduces also for governance quite
+6:17
+some challenges
+6:19
+so So something about ING. So we have
+6:22
+about 20 entities, countries, 20 CIOS,
+6:26
+over 15,000 engineers, 12,000 active
+6:30
+committers,
+6:32
+50 programming languages. Wished it was
+6:34
+less, but uh a lot of programming
+6:37
+languages, over 100 million lines of
+6:40
+code, and 1 million pipeline runs every
+6:43
+month. So uh number of repos 30,000
+6:48
+active repos and 400,000
+6:52
+policy checks per month our policy
+6:55
+checks quite proud on of that by the way
+6:59
+and uh 17,000 changes each month uh I
+7:04
+believe back to you. Uh
+7:06
+yeah sure thank you Marshall. So looking
+7:08
+at scale of ING infrastructure space and
+7:12
+the application space we need to have a
+7:13
+stronger vision backing uh the delivery
+7:16
+of the applications right so to keep the
+7:18
+systems up and running uh and our ING
+7:20
+vision is clear yeah so we wanted to
+7:22
+have the uh reliability as baked in not
+7:26
+you know boltered on top of it so we
+7:27
+wanted to keep the uh uh resilience by
+7:30
+design and reliability by design
+7:32
+starting from the design phase yeah not
+7:34
+only from the design phase but also
+7:36
+during code also also implementing code
+7:38
+deploying the code into production also
+7:40
+the drift detection from the production
+7:42
+environments. Yeah. And we uh treat all
+7:47
+the changes every changes in each stages
+7:49
+as signals and each signals are being
+7:51
+monitored continuously. If there are any
+7:53
+uh drifts or in case of any changes or
+7:55
+misconfigurations we use the close
+7:57
+control loop. We'll talk about closed
+7:58
+control loop in a while. But we use the
+8:00
+CCL close control loop to deduct to
+8:03
+dedect the misconfigurations or the
+8:04
+drifts and uh uh inform uh take the
+8:07
+informed decision accordingly.
+8:10
+And uh just to double click on the
+8:13
+policy as code, we learn uh you would
+8:15
+have seen from previous examples the
+8:17
+Swiss cheese model, right? So whatever
+8:19
+learnings we take from each uh stages or
+8:22
+each uh uh levels, we convert them as uh
+8:26
+code policy as code. So for an example
+8:29
+converting a best practices as policy as
+8:31
+code converting the lessons what we
+8:33
+learned from incidents we convert them
+8:34
+as a policy as code. So these policy
+8:37
+when we when we roll out these policy as
+8:38
+code or policies or guardrails in in CCL
+8:41
+it really helps us you know detecting
+8:43
+the problems earlier
+8:46
+and uh with that we introduce a
+8:47
+framework what we use at ING is called
+8:49
+close control loop. So think of it like
+8:52
+uh cruise control in a car right? So
+8:54
+when we have a cruise control when we
+8:56
+are driving in a highway when we set a
+8:58
+cruise control turned on you set a
+8:59
+desired point so desired state let's say
+9:02
+like we want to drive at 100 km/h yeah
+9:05
+and you set the uh desired state and the
+9:08
+sensors monitors the speedometer
+9:10
+whenever there is uphill when the car
+9:12
+slows down or whenever there is a
+9:14
+downhill when the car you know fastens
+9:16
+speed the sensors would detect the
+9:18
+speedometer and sends the signals to the
+9:20
+controller and controller decides
+9:22
+whether the car needs to be slowed or
+9:24
+accelerated and controller sends back
+9:26
+the signals through actuators. In a car
+9:28
+we have throttle system and throttle
+9:30
+systems take the decision if it's car is
+9:32
+going too slow it will increase the
+9:34
+speed. If it's going too fast it will
+9:36
+just you know break the systems and it
+9:37
+will again put back the speed into the
+9:40
+speedometer and this loop continues.
+9:42
+Yeah. So that is the analogy I wanted to
+9:43
+highlight and with within we have
+9:47
+policies and thresholds which defines
+9:49
+the desired state. We just define the uh
+9:52
+good state of uh these systems and we
+9:55
+have monitoring system like I mentioned
+9:57
+we have sensors which monitors decode
+9:59
+CI/CD environments also the runtime
+10:01
+environments. Yeah. And uh we have a uh
+10:05
+policy engine which will monitor uh the
+10:07
+uh data which is coming from sensors and
+10:09
+controller decides. We use open policy
+10:12
+agent which will take the data from the
+10:14
+uh sensors and it will evaluate against
+10:16
+the policies what we write in which is
+10:18
+basically a policy code and then sends
+10:20
+the uh decision to the activators. The
+10:22
+activators either it will fix the code
+10:25
+or raise a pull request to the back to
+10:27
+the developer or it will block the
+10:29
+deployment. Yeah. And don't get panicked
+10:31
+when we talk about blocking. We'll talk
+10:33
+about that in a minute. And um we also
+10:35
+have evidence platforming uh for uh
+10:38
+evidence platform to capture the results
+10:40
+which are coming from the policy engine
+10:41
+and take uh uh uh uh details from it for
+10:45
+learning purpose.
+10:47
+So with that I just would like to pass
+10:50
+here for uh 20 seconds and uh as you see
+10:54
+in the screen it's a big uh diagram but
+10:57
+it is complex than this one the closed
+10:59
+control loop system implementing them in
+11:01
+a uh in a scale ing is really a big one
+11:05
+but let's start with sensors. Yeah. So
+11:07
+like I said we have sensors in every
+11:09
+stages. Yeah. We have sensors in CI/CD
+11:12
+pipelines. We have sensors coming from
+11:14
+the platforms. uh and we also have uh a
+11:18
+messaging Kafka. So whenever the sensor
+11:20
+detects something, it sends the messages
+11:24
+to the Kafka human bus. That's what we
+11:26
+have. And uh we have a controller here.
+11:29
+And uh in the controller, we have a a
+11:31
+policy engine which gathers the data
+11:33
+from the sensors and does the policy
+11:36
+validation against the uh uh policies we
+11:39
+write here. So basically metadata files
+11:42
+uh which will say like whether it's a
+11:44
+global policy or a local policy what
+11:46
+kind of an action it should take whether
+11:48
+it has to allow a pipeline or a block a
+11:50
+pipeline or or raise a pull request. So
+11:53
+these results will be sent to the
+11:55
+activators and we have an activator
+11:58
+which applies the uh results which are
+12:00
+coming from controller. So basically it
+12:02
+will issue an auto remediation process
+12:05
+or it will allow or deploy a pipeline if
+12:07
+if action is needed in the pipeline or
+12:10
+it will create a pull request back to
+12:12
+the developer. Yeah. And u auto
+12:15
+remediation we use lot of scripts like
+12:17
+uh infrastructure as code or anible
+12:19
+scripts to to to to make corrections in
+12:22
+the platforms and uh we have uh most of
+12:25
+our deployments happens through the
+12:26
+CI/CD pipelines. Yeah. So um and the
+12:30
+decision is logged and put back to the
+12:34
+uh developers for the auditing and
+12:36
+learning purposes.
+12:38
+Uh that is from the drift detection part
+12:40
+and this is again a small flow diagram
+12:43
+how it works in pipelines itself. Yeah.
+12:45
+So in the pipelines is the same process.
+12:47
+It's the same sensors and same
+12:48
+activators and uh it's just about policy
+12:53
+engine. We have a OPA which test the
+12:55
+policy validation and u here we allow uh
+12:59
+uh the uh deployments to progress in
+13:02
+case if if it meets meets all the
+13:05
+requirements all the standards all the
+13:07
+uh you know best practices in case if it
+13:09
+doesn't then we stop the pipeline and
+13:11
+put back uh the PR to the developer here
+13:16
+and we use a verdict store so verdict
+13:18
+store is basically to capture all those
+13:20
+results all those learnings and we again
+13:23
+uh do the iterative process of
+13:25
+redefining uh the policies uh so that we
+13:29
+can keep that loop going on
+13:32
+and some of the samples I would like to
+13:34
+highlight. So uh we do write the policy
+13:36
+ascore in using rego and rego within a
+13:40
+policy will have multiple rules and in
+13:43
+case as you could see so in this example
+13:46
+we are looking for uh our policy will
+13:49
+look for uh deployment we should have at
+13:51
+least uh two replicas for high
+13:54
+availability and also it should have u
+13:58
+uh uh two connection strings for high
+14:00
+availability for serving the uh database
+14:03
+request. In case if a deploy your
+14:05
+deployment file has single entries, if
+14:08
+it do not meet the standards, if you do
+14:09
+not meet the best practices as per the
+14:11
+resilience uh patterns, then it would
+14:13
+throw an error like shown in the
+14:15
+example. And this is something is a good
+14:17
+example where u it meets the policy.
+14:20
+Yeah, it has three replicas uh two
+14:23
+regions. It deploys in two regions and
+14:25
+it also has the uh database connection
+14:27
+strings. So this is a very uh uh good
+14:30
+example. I would like to highlight it
+14:32
+here.
+14:34
+And talking about the implementation
+14:36
+itself right so as you see there are a
+14:37
+lot of stakeholders involved here we are
+14:39
+talking about CI/CD we are talking about
+14:40
+platforms we're talking about uh uh uh
+14:44
+the implementation plans itself right so
+14:47
+it requires lot of uh cultural thing so
+14:50
+so we have formed a governance board and
+14:52
+governance board have people coming from
+14:55
+different u uh teams and they
+14:59
+uh overlook the process here so whenever
+15:01
+an S sur comes up with the policies to
+15:03
+improvise the systems uh reliability he
+15:06
+have to propose it to the uh governance
+15:08
+board and governance board uh you know
+15:10
+assess the uh policies and the impact
+15:14
+and in case if they approve it then that
+15:16
+goes to the uh deployment state and in
+15:19
+the deployment state like I said we
+15:21
+don't block the pipelines right away we
+15:23
+just start with the audit mode or
+15:25
+information mode yeah we provide the
+15:28
+information uh to the developer and uh
+15:30
+we keep that uh uh cycle open for like
+15:32
+you know for an example 3 months. Yeah.
+15:34
+So the developer has about uh 3 months
+15:36
+of time to improvise the code and uh in
+15:39
+case if he don't change the code even
+15:41
+after 3 months then we will promote uh
+15:43
+the uh refinement or we promote the
+15:46
+enforcement level to warning mode and we
+15:49
+again give a a period of window and
+15:51
+after that uh if you don't change this
+15:53
+at all then we go to the blocking mode.
+15:56
+Yeah. And uh every policy we implement
+15:59
+in deployment state it goes through
+16:00
+again a uh a review. Uh so we closely
+16:04
+monitor uh the impact what these
+16:05
+policies are creating and in case if uh
+16:08
+there are any issues or in case if there
+16:10
+are any for example uh developers might
+16:12
+complain about hey my pipeline is taking
+16:14
+a lot of time. Yeah. Or you you're uh
+16:17
+inducing lot of additional checks which
+16:18
+is causing performance issues. Right. So
+16:20
+we take those kind of a feedback from
+16:21
+the developers as well and we redefine
+16:24
+uh the policies based on uh uh on the
+16:27
+feedback we collect and uh after the uh
+16:30
+process in case if you wanted to retire
+16:33
+you can retire the policies but we log
+16:34
+them in the uh system for auditing
+16:37
+purpose. Again example socks uh but not
+16:40
+every policies would be retrained uh
+16:42
+retained right so HA checks or
+16:45
+reliability checks should be keep on
+16:47
+going uh irrespective of the uh
+16:50
+retirement period and we are very much
+16:52
+aware that there is no one fit solution
+16:54
+for all and uh looking at the scale of
+16:57
+applications we have uh it's it's nearly
+16:59
+impossible to have one fit solution for
+17:02
+all. So we have a room for various or
+17:04
+exception process. Uh but again these
+17:06
+exception process are have to be
+17:08
+approved by the board and uh this
+17:11
+doesn't come with a permanent uh
+17:14
+exception right so it's a temporary in
+17:16
+nature we we review them time to time we
+17:18
+take decision accordingly and there is
+17:21
+also a break the glass uh process which
+17:25
+will allow uh to skip these kind of a
+17:27
+process in case of any major instance
+17:30
+scenarios.
+17:32
+And um how are we scaling the guardrails
+17:35
+at ING? Uh we set the ambitious targets.
+17:38
+So and we start with the uh global
+17:41
+standard. So we standardize the global
+17:43
+requirements. So you take we take the
+17:45
+platform minimum requirements. Examples
+17:48
+uh any container for high a high uh uh
+17:54
+critical application should have two
+17:55
+deployments at least. Yeah. So these
+17:57
+kind of requirements and best practices
+17:59
+we take and we we have it standardized
+18:02
+and we have local adoptions as well
+18:04
+because Germany for an example will have
+18:06
+the local compliance requirements.
+18:08
+Netherlands is different than Germany,
+18:10
+right? So they have a flexibility to
+18:12
+adjust these policies and we have a
+18:14
+governance framework which will overlook
+18:16
+all these process end to end and uh we
+18:20
+have a ambitious target to achieve that
+18:22
+is 500 plus policies and u our guardrail
+18:25
+rules achieved by 2026 living for it
+18:28
+that we are on track and what's a
+18:31
+takeaway for you um I would say uh turn
+18:36
+experience into code yeah so so if you
+18:38
+have a best practices or if you have
+18:40
+uh learnings from postmmarts convert
+18:42
+them into a code policy as code and then
+18:45
+just don't look at the CI also look at
+18:47
+the uh runtime en environment and don't
+18:51
+think guardrails as a blocking mode
+18:53
+right so it the guardrails are like you
+18:55
+have seen in the car example right so
+18:57
+it's to correct ourselves it's correct
+18:59
+it is it is here to help the uh
+19:01
+engineers to you know do the right
+19:03
+things and not only the engineers but
+19:05
+it's also to keep uh the systems under
+19:08
+monitoring right so we don't deviate ate
+19:10
+too much or system don't deviate uh too
+19:12
+much. So think guardrails as a guide not
+19:16
+as stopper and close the loop. Uh so
+19:19
+starting from the beginning you have
+19:20
+seen four stages in the life cycle
+19:22
+process. So use that uh loop uh and try
+19:25
+to complete the loop and uh scale smart
+19:28
+with the help of governance board and
+19:31
+look don't let just look at the code but
+19:34
+also look at the environment. So shift
+19:36
+everywhere.
+19:37
+So with that I'll give it back to
+19:39
+Marshall to share I share only half of
+19:41
+the story right. So real pain is not
+19:43
+about implementing a solution but we
+19:45
+also learned lot from the field. So
+19:47
+Marshall you want to work us?
+19:49
+Yeah thank you JD. So yes we had quite
+19:53
+some challenges you could say. So I want
+19:56
+to give that back to you. Our lessons
+19:58
+learned. So first of all it start with
+20:01
+awareness right culture. Uh so uh you
+20:05
+have to create a single source of truth
+20:06
+for your best practices. In the past
+20:09
+documentation, architecture, blueprints
+20:12
+scattered around in the organization. Uh
+20:14
+you have to have a single source of
+20:16
+truth for your let's say reliability
+20:19
+principles and patterns. Be easy to find
+20:22
+in the developer portal for your
+20:24
+engineers. Establish a core team that
+20:27
+can create a community of practice,
+20:30
+training, etc. and drive reliability
+20:34
+forward with gamification. Because in my
+20:37
+experience, in my experience, uh if a
+20:42
+good engineer wants to uh he will find
+20:46
+the loophole, uh unaware uh uh engineer
+20:51
+will try and bypass your guard rails.
+20:56
+And yes, reliability isn't our target.
+20:58
+It should be our default.
+21:01
+So awareness start there create a single
+21:04
+source of truth. Uh so you have clarity
+21:08
+about your best practices and yeah
+21:10
+pipelines. So we are in the pipeline
+21:13
+maybe one of the crucial processes for
+21:16
+our engineers. Uh if you become a
+21:19
+bottleneck or performance and JD uh we
+21:22
+can tell stories that teams called us
+21:25
+and ah the pipelines take two seconds
+21:28
+longer. Yeah, two seconds, right? And
+21:30
+that's a problem.
+21:32
+So, be careful. And yeah, we we learned
+21:36
+that we with this verdict store, you
+21:39
+maybe you saw that in the design that we
+21:41
+try to do most of our policy validation
+21:45
+asynchronous out of the pipeline. We
+21:48
+only read the verdict. The policy
+21:50
+process, the controller already took
+21:52
+place outside of the pipeline. It's not
+21:56
+always possible. Aim for asynchronous
+21:59
+policy validation and yeah shift left h
+22:04
+so move as soon as in the build pipeline
+22:08
+in dev test etc. So you boost the
+22:13
+confidence of of your uh engineers and
+22:17
+maybe you know there's research out
+22:19
+there if you solve a bur in dev test uh
+22:22
+pre-pro that's 14 times cheaper than
+22:26
+solving a bur after implementation in
+22:29
+pro. Uh so we run our checks as early as
+22:33
+possible
+22:34
+uh in the software development life
+22:36
+cycle. Yeah. And maybe you know security
+22:40
+event monitoring and other tools that
+22:43
+they sometimes overwhelm you with false
+22:47
+positives. Uh so you ignore them. False
+22:50
+positives is a issue and I'll explain a
+22:54
+couple of the challenges that we have.
+22:57
+So I just said we want to do the check
+22:59
+as early as possible. So in dev test but
+23:02
+sometimes in dev test I don't use
+23:04
+reliability patterns or best practices
+23:08
+and in the code how do I recognize if
+23:11
+the code is used in production or only
+23:14
+meant for production uh sorry test we
+23:18
+don't have a standard structure for repo
+23:22
+so I find code for dev test and
+23:25
+production this is where AI by the way
+23:28
+comes in we were just discussing and JD
+23:31
+and me that we didn't put any AI in our
+23:34
+slides. That's a big mistake for this uh
+23:37
+but you saw auto fix auto remediation
+23:40
+right so we are working on AI for auto
+23:44
+fix we are working on AI to analyze uh
+23:48
+uh and to uh uh increase the precision
+23:53
+uh of our policies and last but not
+23:55
+least I said it has to be as early as
+23:58
+possible of course I want GitHub
+24:01
+co-pilot and in GitHub copilot I want a
+24:04
+code quality agent telling the engineer
+24:07
+while he's coding what's the best
+24:10
+practice right so but false positives uh
+24:14
+if you have too many that's a big
+24:16
+challenge and yeah will I still don't
+24:21
+have immutable environments there are
+24:24
+still exceptions out there uh I still
+24:27
+have teams that use maybe anible scripts
+24:30
+but not the standard pipeline
+24:33
+So yeah, we need drift detection only
+24:37
+policy validation in the pipeline is not
+24:40
+enough. I need sensors on the
+24:43
+environments, the platforms, the
+24:45
+services uh to detect this drift
+24:48
+detection.
+24:49
+So the pipeline is not enough. Yeah. And
+24:53
+I saw JD smiling before about blocking.
+24:57
+We had big discussions about this uh in
+25:00
+the past. We said our team squads are
+25:03
+autonomous. Now we say we have guided
+25:06
+autonomy. Right? So
+25:10
+big discussion. Should we block? Yes or
+25:13
+no? Do a phased roll out. You first
+25:17
+informed then you do three months audit
+25:20
+mode and yes then you block. But we had
+25:24
+big discussions and you could say it's
+25:27
+still a little bit controversial bug big
+25:30
+word but yes we will block your pipeline
+25:35
+and
+25:36
+there is a overlap with security uh a
+25:40
+the availability from the CIA rating
+25:43
+that is security right so we closely
+25:46
+align with CISO and sometimes
+25:49
+reliability
+25:51
+collides with security. Yeah, an example
+25:54
+is that we want progressive roll outs. I
+25:57
+want you to wait with your roll out
+25:59
+between the availability zones between
+26:02
+the data centers. Maybe wait 4 hours or
+26:04
+24 hours. Sometimes that means that the
+26:08
+teams have access for 4 hours to high
+26:11
+privileged account. Maybe CISO is not
+26:14
+that happy about it. So
+26:18
+ensure and uh there was a good slide
+26:20
+about the governance process. You have
+26:22
+to have an approval board, governance
+26:25
+board and you have to involve CISO
+26:28
+closely uh for those uh policies.
+26:33
+I think that's it.
+26:36
+quite some time left, but I hope you
+26:39
+enjoyed it and uh
+26:41
+if you have any questions outside of
+26:44
+this event, please contact us. But uh I
+26:48
+think we have time for questions if
+26:50
+there are any questions.
+

@@ -1,0 +1,819 @@
+0:00
+Well guys, it was only a matter of time. Fake Claudebot VS Code extension
+0:05
+installs Screen Connect RAT, a remote access tool. If you haven't heard of this Claudebot thing that the AI world
+0:12
+of the internet has been screaming and shouting about all the rage this past weekend, it's supposed to be a personal
+0:18
+AI assistant. An AI that just does things, get stuff done. Now, they've
+0:24
+actually uh renamed this to be Moltbot because I think Anthropic wanted them to change the name. I've actually been live
+0:30
+streaming some of the Claudebot security implications and setup. So, if you're interested, that's always on YouTube,
+0:36
+Twitch, LinkedIn, Twitter, kind of trying to stream and multiream everywhere. There are a lot of really
+0:42
+interesting things to talk about with Claudebot or Maltbot because, well, you've got the AI side of the house for
+0:48
+a prompt injection. While this thing could very well have access to your emails, your calendar, your whole life,
+0:53
+and your digital footprint, and that could mean, oh, hackers get in however they get in. Maybe there's an exposed
+0:59
+attack surface if you put this thing out on the internet. I see a lot of people running around like a chicken with their head cut off on that front and I think
+1:04
+really that's kind of overblown by default. It's just listening on the local host like loop back interface and the control UI and gateway should have
+1:11
+some off token that's randomly generated that should mitigate some of that unwanted access. But anyway, another interesting angle is hackers, thread
+1:18
+actors and cyber criminals riding on the hype, taking advantage of the virality and impersonating it to get malware on
+1:25
+an endpoint. So, this blog, by the way, I'm sorry, is from Aikido uh and Charlie Ericson. And these are some cool folks,
+1:31
+right? I think they just got unicorn status. So, big congrats. But I wanted to walk through this because they were
+1:36
+tracking a new Visual Studio Code extension called the Claudebot agent.
+1:42
+Now, this extension is not real. It is illegitimate. The real Claudebot team has never actually published an official
+1:48
+VS Code extension. This is malware, a remote access Trojan. I'm going back and
+1:54
+forth on some parts of the article because I am still seeing the extension
+1:59
+visible and they discuss how this is presented in the Visual Studio marketplace. They include the link so we
+2:06
+can go right to it for the Claudebot Agent AI coding assistant and this is how the page looks when I first went to
+2:12
+it. Kind of strange, kind of sketchy. There's no real overview details. The
+2:18
+GitHub directory that it references is not real even after the name changed. like once they changed Claudebot to
+2:24
+maltbot, there still isn't some Claudebot- agent or Maltbot- agent
+2:29
+repository. And this was just recently released. So much so that I think we're
+2:34
+going to end up seeing um a little bit of Delta in that it is actively being updated. You might have seen my page
+2:42
+refresh. Now, this is much more flashy and fancy. It's got a little icon. It's
+2:47
+got a big boisterous emojifilled overview. Literally just before I
+2:52
+started recording it started to change and I feel like we're going to be wrestling with like some real-time changes. So right now the extension
+2:58
+looks a lot more compelling. Obviously a little bit more thorough and filled out read me and description here. A lot more
+3:04
+potential poll requests. A lot more potential open issues. The thing is this is now pointing at the actual Cloudbot
+3:11
+repository and it's pulling the info for that repo. Granted, this is just all
+3:16
+faked and it's pointed to this repository for the Visual Code extension sort of metadata here, but they try and
+3:23
+walk you through it and they tell you, "Oh, all this stuff to actually use this extension when it's malware." Let's dive
+3:30
+in. I'm inside of a Windows virtual machine and I've got Visual Studio Code downloaded and available for us. And I
+3:35
+want to tell you, I'm trying going to be working off of the old rendition of this Claudebot agent AI coding assistant.
+3:42
+Again, all fake. There is no VS Code extension. Cloudbot is not supposed to be an AI coding assistant. It's a
+3:48
+personal assistant. But what I've done is actually tried to download the VSIX or the actual extension metadata, not
+3:55
+install it into my Visual Studio Code because that's how the malware will detonate. Right? That's invoking and
+4:01
+actually falling for this scam. So, I'm going to go ahead and download the VSix. Actually, we should probably be more
+4:06
+clear to download a specific version of the VSSIX. So, there's the 1.0 and
+4:11
+there's the 3.0. Let me get the old 1.0 explicitly just so that's not as confusing. I actually want to remove the
+4:17
+folders and then let's just use the actual version numbers here. Okay, looks like the size there is a difference already. So, let's fall down the rabbit
+4:23
+hole for the original extension. And what I'm going to do is actually rename this into a zip file extension because a
+4:31
+VSIX is really still just like a bundled up archive. We can do the very same creating a copy for extension 3.zip. And
+4:39
+then we can go ahead and extract these. Let me extract all just to this directory and do the very same with the
+4:45
+other. So now that we have those uh created, I actually want to open that entire folder in my text editor. I like
+4:53
+to use Sublime Text. So let's just get the extension 1.0 and then take a look at how this is made. You can see a lot
+5:00
+of the manifest data which gives you just the raw blob info, display name,
+5:05
+description, some of the tags, and then like the icon and things, how these were referenced and displayed. The actual
+5:11
+information here in the extension directory is where things get a little bit more interesting. Oh, quick heads
+5:16
+up. In this video, we're going to do a smidge of reverse engineering against a compiled binary actually written in
+5:22
+Rust. It's doing some really cool like DL hijacking, DL sideloading stuff. So, we'll crack it open in IDA Pro and
+5:28
+that's going to be a ton of fun. But the way we're able to do that is all thanks to the sponsor of this video. So, please
+5:33
+let me take a few moments to tell you about Hexrays. Reverse engineering is hard. State-of-the-art binary code
+5:40
+analysis tools like IDA make it a little less painful and a lot more powerful.
+5:46
+IDA enables you to disassemble, decompile, and debug any application you're up against. It helps you dig into
+5:53
+how software works under the hood, whether it's malware, firmware, proprietary software, or anything. And
+5:59
+the Hexrays decompiler is available on 11 different platforms between x86, x64,
+6:07
+ARM, Power PC, MIPS, and more. These analysis tools help you cut up code,
+6:12
+unpack and deobuscate threats, investigate exploits, cheats and game hacks, binary bugs, and vulnerabilities.
+6:19
+And IDA version 9 takes things even further with faster saves with smaller
+6:24
+IDB databases, expanded processor support for Tririccore, Riskv, and
+6:30
+RH850, and smarter decompilers across ARM 64, Power PC, Rust, Swift, and
+6:37
+Golang. You'll get clearer C++ exception handling, STL structure recognition,
+6:42
+Flirt signature improvements, and even a dedicated microode viewer to peak into the decompiler's internals. With a brand
+6:49
+new plug-in manager, HCLI, the open-source Python API, headless processing with IDA LIB, and seamless
+6:57
+team collaboration features, IDA gives you the latest innovations to stay ahead of modern threats. IDA doesn't just
+7:04
+decompile, it gives you interactive control to dive into binaries, annotate,
+7:09
+patch, and script your own workflows. And thanks to our channel partner, Hexrays, we have a special promotion
+7:16
+just for our channel. You can use code Hammond 50 for 50% off any ID Pro
+7:21
+product or code Hammond 30 for 30% off any IDA Pro online training. Offer
+7:27
+expires 1 year after this video release date with more details below in the video description. Make reverse
+7:33
+engineering easy with the ultimate analysis tools from Hexrays. Disassemble, decompile, and debug with
+7:41
+IDA. You can get started with my link below in the video description. jh.live/hex-rays.
+7:48
+Huge thanks to hexrays for sponsoring this video. The actual information here in the
+7:54
+extension directory is where things get a little bit more interesting. Now VS Code, Visual Studio Code is an Electron
+8:00
+app. So a lot of the extensions are Electron and therefore like Node or JavaScript, NodeJS running on a actual
+8:08
+endpoint, not in the web browser. So we can get a good feel for what all of this is and what it says. Name, display name,
+8:14
+description, version, again, publisher, and the main being the/extension.js
+8:19
+file. But the activation events as to how this actually invokes when it runs
+8:24
+inside of your Visual Studio Code editor. Like if you were to create a new file and start programming, do whatever
+8:31
+you're doing in your text editor, right? Once VS Code finishes starting up, it
+8:36
+will fire and trigger this code. You can see all the categories here. You can see all the commands to kind of look like,
+8:42
+oh, some actual AI assistant, but it's not that. In fact, I don't think any of
+8:47
+the code really is functional here. But we can dig into it and see for sure. We know on startup finish when VS Code
+8:54
+runs, it will kickstart extension.js. So let's go look at what extension.js
+9:00
+is. Taking a look here, you can see this syntax pulling in all the libraries,
+9:05
+modules, and packages and things that we need to work with our Claudebot agent where you can see a couple variables or
+9:11
+constants are now defined. And some interesting ones. Let me turn word rap on here. A config URL is at a weird
+9:19
+site. Claudebot.get to maybe supposed to be like the number
+9:24
+two to get into a PC.config.json
+9:29
+and an initialization directory in your Windows temp path or your environment
+9:35
+variable for the temporary directory and light. [laughter] Ah, okay. We got a couple other
+9:42
+functions defined here. We have a lot of other functions defined here. We could kind of ignore a lot of those and just
+9:47
+get down to the very end where we actually see this thing fire. Okay, so beyond everything being scoped into a
+9:54
+function, the thing that actually ends up executing here could be our activate function and deactivate when it's done.
+10:00
+But activate means that's where we realistically start. And this function, yeah, here we go. The extension
+10:07
+activation section will first run init core based off of the context. So that's the function we'll go to next. And that
+10:14
+just brings us back to the top. It'll immediately run fetch config and run h.
+10:20
+That's in a try and catch statement. If it fails, it does nothing. So the exception were to be raised and the no
+10:26
+code continues. But down here, obviously below that in the fetch config and run function, we use the HTTP library module
+10:34
+and package to get and actually request this config URL. Then what it does is it
+10:40
+reads through all of the data, chunks up the response, and then parses it as JSON. Once it has a response, and if the
+10:48
+config value that it ends up uncovering out is enabled, it will then run another function download and run config.exe and
+10:55
+config.dll. If that fails, because this is in another try and catch statement, nothing happens. So if it can't read or
+11:02
+parse through or work with anything within this code block, nothing will happen. But if the HTTP request does get
+11:10
+an error with an sort of on handling here, then it will run a fallback download function. So let me get us back
+11:17
+up to speed with the iicaido blog and see where we're mapping. They are tracking the very same malicious code.
+11:23
+Package.json sets up the immediate trigger. Activate does this. In it core,
+11:29
+we can see download and run kick off. And they start to dig into this. They
+11:35
+look at the actual config.json that's being hosted at that weird claot.get
+11:41
+intopc.site. Now, at the time of recording, this was live and I can go ahead and actually
+11:47
+download it and look at it just as well. Here's the response. If I were to go ahead and refresh this page, it's still
+11:54
+going to be the exact same thing. That has not changed across version 1.0 or
+11:59
+3.0 0 of the different extensions, but we don't know what the later version of the extension is doing quite yet. Maybe
+12:04
+this isn't part of their new attacker techniques. We'll find out. But actually, do you see what this says
+12:12
+here? JSON blob, right, with these file names of what looks like maybe uh VS
+12:21
+Code, right? Code.exe, the actual application for Visual Studio Code. Maybe a couple weird DLS that could be
+12:27
+pertinent. V8 of course sounds like it's probably handling a lot of node electron stuff, but note the actual like key
+12:35
+value pairing setup of this JSON blob. Enabled is a key that is a boolean value
+12:41
+true, but then everything else exists in these files. But the code isn't
+12:47
+referencing a files key. They just parse the data like the JSON response, check
+12:53
+if the config.enabled enabled boolean flag is true and then try to download and run what it's trying to access as
+12:59
+other keys or other properties.exe and DLL, but those aren't in the JSON
+13:05
+blob. Like if we tried to recreate this, let me open up just like another page
+13:11
+where we could get basically just this capability. We don't need the on error. I want to see if we can just try to have
+13:17
+it get a config URL and get the JSON response and then see what the actual
+13:23
+values are or what it thinks it's getting for config.exe config.dll. We
+13:28
+could just like display those out and see if they even exist cuz I don't think
+13:34
+that they will like this syntax is wrong. Let me try to bring this into an
+13:40
+environment where we have node. I know realistically I should be working in like remnux or reverse engineering malware Linux distribution but I just
+13:46
+wanted Linux super quick. So I had ki let me just run node.js and then paste in this blob. Let me see if I hit enter
+13:54
+on this. It's returning what the object is kind
+13:59
+of telling us for okay the HTTP call. But down below you can see the undefined and undefined. It's not actually getting
+14:06
+the values for the .exe or the DLL that it thinks this JSON blob is supposed to
+14:11
+have here. So the code looks like it's supposed to have all these fallbacks, but this is inside of a try catch block
+14:18
+inside of another nested try catch block that nothing happens each time this were to fail. And if download and run down
+14:25
+below were to actually work with undefined values being passed in, I'm
+14:31
+pretty sure it ends up trying to stage what are these arguments in files to actually use and then download them
+14:38
+inside of this for loop here. But because it has a now URL variable filled
+14:43
+with an undefined value, it can't call these functions and this will cause an error. And I think this will just kind
+14:51
+of break and die because it's not actually going to hit the on error from
+14:57
+the HTTP request because the HTTP request did succeed. So I need your help
+15:02
+with this actually. Can you let me know like am I missing something? Am I not reading that correctly? Reading through
+15:09
+this, it looks like this would fail in the way that it stands right now. It is not referencing a URL. So, I'm kind of
+15:17
+curious and part of me just wants to see um if I run this version 1.0 actually
+15:24
+through the intended path, would it even infect the machine? It would still be cool to figure out what this malware
+15:31
+will do or would do or is supposed to do or maybe what version 3.0.0 is going to end up doing. And there's more code that
+15:38
+we could read through here and we could go take a look at what they're seeing in the rest of the blog post. They note the
+15:44
+same way we had these files. The file names that are just listed here in this
+15:49
+JSON config look like a Trojanized Electron app maybe impersonating VS
+15:55
+Code. The file names fit. These are standard Chromium dependencies, but they ran the hashes through virus total. And
+16:02
+these things look like connectwise screen connect. If you aren't familiar with screen connect, originally called I
+16:08
+think connectwise control. This is remote access for usual good intentions
+16:14
+and legitimate purposes of support like oh troubleshooting. Hey remote into someone's computer help them fix some
+16:20
+problem whatever that it does. The thing is this is one of the most widely abused remote access capability that thread
+16:27
+actors hackers and cyber criminals use because it is trusted legitimate and like an official thirdparty solution.
+16:33
+Screen Connect tends to be like the number one remote monitoring and management or RMM solution that gets
+16:39
+used and abused. That's not to be mean. That's not to be a bully to my friends over at ConnectWise. That's just the lay
+16:45
+of the land. That's just the state of the landscape. But I got a little bit confused because they are digging into
+16:52
+this and seeing how okay it these look like screen connect and they would end up doing actual legitimate genuine
+16:59
+screen connect things but connecting to a rogue server like some hacker endpoint
+17:05
+random actual location and port that is the standard screen connect relay port and it is screen connect software but
+17:12
+been weaponized to point to and go straight to the thread actors instance so that they have control over your
+17:17
+machine. They were able to extract this from the config. They see the usual port key value, the stuff that screen connect
+17:23
+comes with. But I started to kind of get wondering how did they get these files?
+17:29
+Am I misunderstanding? There is no URL specifically here. They're just listing the file names and they don't reference
+17:36
+okay the URL that they pull these from. Like if we get back to that URL, look at
+17:41
+the config.json here. Hopefully it's still live good. Uh, as I'm recording this, as things get changing, there is
+17:48
+no like slashcode.exe. There is no slash dwight.dll
+17:55
+hosted on this location. If we start to look through the rest of this, we could find no reference to code.exe or our
+18:03
+dwight.dll or any of the others. So, I'm not super positive where those came from. And
+18:09
+considering that this download and error for this call would die, I think I don't
+18:15
+see an actual URL that's filled in this way for this execution path other than
+18:20
+this somehow hitting the run fallback download function if there were not a
+18:26
+successful request to the config URL. So if the run fallback download function were to run, let's go look at what that
+18:32
+does. Take a look. Now they're actually passing oh okay specific values with a
+18:39
+DL subdirectory here with lightshot.exe and lightsot.dll
+18:45
+they download and run these and we can see if these exist. Let me go to this location. They seem to hang when uh
+18:54
+requested by Brave some way somehow. So let's go download these quite literally.
+19:00
+We can get to my desktop and let's use curl.exe on that with the output
+19:07
+beinghot.exe. Will that pull down? Okay, look. Looks like that's downloading good. That one's
+19:13
+a little beefy. And let's get DLL for the dynamic link library that
+19:20
+they seem to be referencing. Also, that was super speedy. So, let me
+19:25
+go take a look at my desktop. Now, we have Lightshot and Lightshot. DL.
+19:31
+However, Lightshot.dll is 11 bytes. Um,
+19:36
+let me open that in Sublime Text here. Drag that in. [laughter]
+19:43
+Okay, so that one is not real in the fallback chain apparently. And the light
+19:48
+one has a Visual Code extension, but I'm going to tell you, I'm pretty sure this straight up genuinely actually is Visual
+19:55
+Studio Code because it has the digital signatures from real legit Microsoft.
+20:02
+So, we've got some of the puzzle pieces here. Not particularly seeing the screen connect component quite yet, but from
+20:09
+what it was trying to download for the fallback DL full legit VS Code and then
+20:16
+a notreal dummy DL text file that have been passed into this. So that seemed to
+20:23
+fail again. If we're looking at this download and run capability, it is now properly passing those arguments,
+20:29
+writing these files and if they are an executable in the initialization directory where they're putting in the
+20:35
+temp directory lights.exe and they'll try and execute it. But that doesn't seem to do anything meaningful when this
+20:42
+path runs other than straight up call Visual Studio Code. I'm going to do it. I'm going to run it. It doesn't have
+20:48
+those rest of the DLS. [laughter] Now, if I were to keep scrolling down in this version 1.0 extension source code,
+20:57
+there is nothing particularly interesting other than what look like fake rappers or harnesses to get the AI
+21:06
+capabilities built in like oh your open AI key, your key and then to be able to
+21:11
+do the requests back and forth. Whether or not that actually works, I don't know. It doesn't matter because that's
+21:17
+not malicious and not what we kind of care about. But this happens for each of these uh and the get provider and then
+21:23
+the chat view provider was how we could actually see some of the communication within the extension itself. But the
+21:31
+extension activation was what ran the malicious functions that didn't seem to
+21:37
+do anything meaningful. And then these fake shenanigans to look like wow uh
+21:43
+impersonated VS Code extension. If we were to keep looking through the rest of
+21:48
+the version one extension code here, we see another directory. This is all just
+21:54
+JSON copilot theme stuff that doesn't look important. But there is another folder called scripts with a run.bat
+22:03
+which looks interesting. Little shady batch script Windows command prompt
+22:08
+scripting here. Add echo off for the boiler plate to not show what is being ran on the command line. set local and
+22:14
+end local to work with some local variables. And then we set the temporary directory with a lightshot subdirectory
+22:20
+again. And then we have a new URL darkgpt private.com/d111.
+22:27
+And if the directory does not exist, it would make the directory and then use these PowerShell commands to stage the
+22:33
+TLS HTTP2 sorry HTTPS handler capability to download from that URL.
+22:40
+Lightshot.exe. Lightshot.exe. exe and the DLS. Okay, so now we have a new
+22:46
+thread to go down, right? What is this D11 thing trying to access that URL?
+22:53
+It is a 404. Uh, if we were to get to the lightshot.exe that we know is then
+23:00
+appended at the end of it, that gives us no response either. How about DLL?
+23:08
+Also no response. What's on the root of this page?
+23:13
+Login Evelyn panel. What is this? Let me view
+23:19
+the source here. Get a little bit more insight as to what's going on. A lot of cascading stylesheets, a lot of CSS. The
+23:26
+Evelyn PNG is presumably that is this a thing? Is like is this
+23:31
+some malware actual panel that I should like be familiar with and I'm not? There is JavaScript that they include here.
+23:37
+This looks a little bit more interesting. Hang on. Let me get uh syntax
+23:43
+highlighting inside of uh Sublime Text. Let's look at like the JavaScript here.
+23:48
+Overlay system dark mode functionality toggling dark mode, but real-time
+23:53
+connections update without a page reload is trying to get from connections.php PHP and then update connections table
+24:01
+with seemingly what looks like specific filters for crypto or operating system,
+24:08
+PayPal, RAM, GPU. So, a panel like a a a threat actor cyber crime panel to use as
+24:17
+another potential rat. This is not screen connect though obviously, but look at how they're trying to pull
+24:22
+different potential crypto wallets here. If these were to be things that are like rendered
+24:28
+and work with as you were logged in, just kind of at least given us clues without having a username and password
+24:33
+to log into this thing. Not that we would. Okay, you hear me? You hear me, algorithm YouTube gods? But it's clearly
+24:40
+something that would be able to yeah, download and even work with a cookie converter. So, I'm assuming this is some
+24:46
+sort of kit, some offthe-shelf panel uh capability, but it was supposedly maybe
+24:53
+supposed to be hosting these lightsot.exe and light.dll.
+24:59
+And hey, sorry not to add even more to the mix here, but while I was editing this video, this is John from the
+25:05
+future. Sorry. Uh, I had the thought finally to actually Google what the heck Evelyn panel might be, and it's
+25:13
+apparently an Evelyn info stealer. And I saw a couple recent writeups on it. Uh, Trend Micro had this actually January
+25:20
+19th, so like a week ago. From extension to infection, an in-depth analysis of
+25:26
+the Evelyn Steeler campaign targeting software developers, uh, which actually
+25:31
+has some really, really neat kind of takeaways that parallel a lot of what
+25:36
+we've been discussing here. The Evelyn info stealer campaign has threat actors, hackers, and cyber criminals weaponizing
+25:43
+and leveraging Visual Studio Code extensions. Malware is designed to excfiltrate sensitive information
+25:49
+including developer credentials and cryptocurrency related data just like we saw in the JavaScript. This trend micro
+25:56
+article references some other previous work and research from Koi Koi security. So I'll take a look at that one just as
+26:02
+well. But if we take a quick look through here, do you see any similarities? A light.exe
+26:08
+and a light.dll put to life. Now, we have different Shaw 256 hashes, but this seems to be using
+26:16
+actual legitimate Lightshot software, which could then end up triggering via
+26:22
+DLL hijacking or DLL side loading. And a lot of the at least naming of this stuff
+26:29
+sounds similar, but the real Evelyn info stealer sounds a lot smarter and a lot
+26:36
+better in air quotes than what we have been digging into currently. like this has a whole lot more anti- sandbox
+26:43
+techniques, a little bit more hardcore spooky scary spooky wooky stuff, but we never saw an actual genuine like Evelyn
+26:50
+info stealer. We just think we're seeing screen connect potentially. This is the Koi security one from uh December 8th.
+26:57
+And I like how this covers it in kind of a again similar style somewhat campaigns
+27:04
+that are like AI powered coding assistants. Hm, of course, Visual Studio Code
+27:11
+extensions once again. Codo AI, I guess, was that original kind of reference. And
+27:16
+I don't know if this is being adapted. I don't know if some scriptkitty vibe code malware hacker is trying to bundle in
+27:24
+parts and pieces of this potential attack chain. Maybe just leveraging parts and pieces of the name using
+27:31
+lightsot.exe, lightot.dll. But we're not seeing the real lightsot
+27:36
+application in this case. I don't know if this somehow got in the mix of what they thought they were trying to build
+27:42
+out that did not end up being functional. Anyway, I just thought it was neat and interesting to have a little bit more insight on what the heck
+27:48
+that Evelyn panel was and the whole Evelyn thing and a lot more references of malicious Visual Studio extensions,
+27:55
+Lightshot being thrown around, and of course some AI assistant coding extension extravaganza. Back to the
+28:02
+video. Sorry. Either way, this run.batch batch script is included in the scripts
+28:07
+folder, but I don't know as much as maybe I should have for Visual Studio Code extensions, but there was nothing
+28:14
+to actually use or invoke this run.bat in the code or any scripts directory.
+28:21
+Does enable scripts is that what happens or something that doesn't make sense to me. Can someone again I I got to ask for
+28:26
+help. Chat, YouTube comments, let me know. I don't see how that could be called or if it is automatically. Okay.
+28:33
+dl/code.exe on cloudbot into PC site does not
+28:39
+trigger but dwite.dll does.
+28:45
+So that is how we saw and we could get the dwight.dll. Okay, I'm tracking that. Looks like ffmpeg.dll
+28:52
+also exists here. I don't know if that is in fact uh ffmpeg or not. How about
+28:59
+these others? ICU DTL.dll. Do those all exist? No. How about the V8
+29:07
+context snapshot? That looks like it exists. So, it is hosting and serving
+29:12
+some of these, but not all of them, but not the code.exe that we're tracking. Yeah, the others seem to be here, too.
+29:19
+Whether or not they are or not what they claim to be, I'm not positive. I reached out to Charlie Charlie Ericson, the
+29:25
+author of this and the researcher that was kind of covering this thing. And I I was trying to ask him, "Hey, where is the code.exe or DW writedll?" And he
+29:33
+helped me find the dwight. DLL, but uh it seems that code.exe like should have
+29:40
+been hosted on the claudebot. Into PCs site and it was probably just removed
+29:46
+just because we do know that this campaign is like actively changing and
+29:51
+updating uh right now. Okay, we have the IOC's here and they give us some hashes at the very least. So we could try and
+29:57
+go find these on uh virus total. We can get the weaponized screen connect installer. Like if I look back on virus
+30:03
+total for that obviously it's screen connect. So that is going to have
+30:08
+results hits details and we could download it but it's it's screen
+30:13
+connect. So let me download this and let's get the rustbased loader
+30:19
+dwight.dll. Let me bring those into the virtual machine here. And let's extract each of
+30:25
+those so we can play with them. This is supposed to be code.exe. Correct. But it
+30:32
+is actually an MSI installer. I'm a little weirded out by this. If it is
+30:38
+genuinely supposed to be code.exe based off of like the config.json, if it had
+30:44
+this name, if it had this name and if it were to run as.exe, exe it will fail. It
+30:51
+is an MSI installer and that is screen connect now triggering and uh getting
+30:59
+them access to my virtual machine. So, we're not going to let that happen. We'll say no. But dwight dl.zip is a
+31:06
+real genuine DL this time and not just the text for dummy DL, right? DWR.dll.
+31:13
+And thanks to the sponsor of this video, big shout out Hexrays. Thank you so much for your support. We can go try and open
+31:20
+up the dwight DLL here in IDA. Ooh,
+31:26
+okay. The blog covers dr.dll as the rustbased loader. And that one might be
+31:33
+neat for us to play with because it's Rust compiled binary. So we can do some of that sweet reverse engineering in
+31:39
+IDA. And they cover this noting that's for some DL hijacking using some DL
+31:44
+export function dwight create factory the one that is triggered by screen
+31:51
+connect. So if this DL with this file name were to be present in the directory
+31:57
+that screen connect loads from it would import and run and execute this code for
+32:02
+the dwight create factory function. So, inside of IDA, we see a couple sort of
+32:08
+uh DL imports that it's going to be using for regular Win32 API calls. Uh what we're going to be brought to first
+32:15
+in the control flow graph being the DL entry point, probably just a hander as to how this was attached or if it was
+32:21
+loaded in some other specific way. Um, we don't need to fall down the rabbit hole here, but we could then see a
+32:28
+couple of the other functions that might clue us into the fact that these are probably going to be doing a lot of the
+32:33
+initial load things for a DLL. So, let's instead look through these other functions. And while a lot of these do
+32:40
+not actually have a symbol that's carried with them, we could rename them. If we did a lot more reverse engineering, we certainly could. But
+32:46
+ultimately we'll know this export this function that this DL provides which is
+32:52
+supposed to be used for the DL hijacking is where the badness kicks in. Dwight
+32:58
+create factory and that calls two functions here. Our little sub routine we could drill down into this and that
+33:05
+does some cutesy stuff. We can see that it's using some of the function calls to get the current process the open process
+33:11
+token to know what access we might have. When we look through the logic a little
+33:16
+bit more, we could see a lot of plain text strings which are pretty
+33:22
+interesting in here like zoom update.msi. Hm. And then maybe a temp temp run as
+33:30
+potential string. If we trace this a little bit further, we could keep looking for other things that might
+33:36
+stick out to us like a potential user agent and even a URL to get to Dropbox.
+33:43
+It looks like okay, that ties that together. And we could get kind of clicking around or we could just uh F5
+33:49
+and try to have this thing decompile. Uh I'm okay with it using some parts and pieces that it can or can't. But this at
+33:56
+least gives us a little bit of a cheat code to not have to drag ourselves through assembly. If we wanted to fall down the rabbit hole for a lot of these
+34:03
+different sub routines, we certainly could. But thankfully, we could probably get a good gist here is that it's
+34:09
+looking for this Zoomupdate.msi file with a user agent to go to this
+34:15
+Dropbox URL. And we can get the full string here. You'll note though that
+34:20
+includes the Zoom update. Sounds like it is actually retrieving. Yep. With
+34:26
+internet open a internet open URL, create a file, reading it, and then
+34:32
+writing it to disk and then actually spawning. Okay, with the token information here that's pulled from that
+34:37
+potential temporary user to open MSI Exec and actually trigger the MSI
+34:43
+installation of the quote unquote Zoomupdate MSI. But I'm sure you're
+34:48
+tracking and you might have already probably seen it inside of the blog post. Let me go to that Dropbox URL.
+34:55
+That is the raw path for the Zoom update. Bringing this down to our desktop. So, putting the puzzle pieces
+35:02
+together, I think our Zoom update.msi is once again screen connect installer
+35:10
+and this is what would trigger it. Requires user account control, but this
+35:15
+is what would match the code.exe if we're to have that downloaded from what
+35:21
+we saw in virus total. I'm still not super positive where code.exe, exe
+35:26
+specifically the name comes in and screen connect running requires MSI and
+35:33
+user account control so the DW write.dll might not be pertinent to that but I am
+35:39
+curious is it actually VS code that is the one that would sideloadad that
+35:45
+because from what we saw in our light.exe exe. That was just legitimate
+35:52
+genuine Electron bundle of VS Code, right? I'm really all over the place on
+35:57
+this. I apologize. I do want to see though if it is Screen Connect or VS
+36:05
+Code that would load the Dwight DLL. So, let me open up Process Monitor and then
+36:11
+let's look for our process name being code.exe.
+36:18
+So now that I'm capturing, let me open up Visual Studio Code. We should look
+36:24
+for load image uh operations. That will give us all the
+36:30
+DLS. Yeah, that loads dr.dll. So if it is in the same directory as
+36:37
+code.exe, it will check there first before system 32 presumably. Maybe
+36:43
+screen connect does it just as well. So what I feel like we do is compromise
+36:49
+oursel [laughter] run the malware in the virtual machine. Yeah, let's go ahead and actually let
+36:57
+this thing happen so that we could see while screen connect is running. Yeah, it's running. So they must be very very
+37:04
+happy that they just got a new potential victim. I hope you're watching threat actors and cyber criminals. And that
+37:10
+will install as a service. So, let me get to screen connect and stop the
+37:15
+service. And what I want to do now is get back to our process monitor. Let's
+37:20
+not look for code.exe, but let's look for something that
+37:26
+contains screen connect. Let's add that. Hit apply. Hit okay. We
+37:32
+can be listening. And now I should be able to start screen connect.
+37:40
+And let me look if it would try to have dwight DL. I don't see one immediately,
+37:48
+but let's search for dright.dll. Ah, and there is one. There is a hit.
+37:53
+So, I mean, it very very well end up loading that if it were in the same directory that it executed out of, but
+37:59
+there were a lot of these moving parts and pieces that I don't know if it actually even did or could have. So, let
+38:05
+me run it back to an old snapshot before I compromise myself. [laughter]
+38:11
+And we are still not done because now I'm curious what the 3.0 version of the
+38:18
+extension has changed, if anything. I kind of hope not because this video is already super duper long. Let's go see
+38:26
+if there are any real changes to this rendition. We can open in Sublime Text
+38:33
+and we might be able to just kind of cruise through it off the cuff, but we should probably use a good like
+38:38
+comparison utility. Let me open the folder up just to be able to see it manually for a quick second. No more
+38:45
+run.bat and no more scripts directory. Change log looks pretty bogus. The
+38:50
+package.json is still on startup finished and extension.js
+38:56
+is what is executed here. So, we're looking back into that. OpenAI provider,
+39:01
+anthropic provider, Google provider. I am making broadstroke assessments and judgment that there is not going to be
+39:08
+malicious code in there just based off of what we've already looked at. Dark AI chat view provider now has dark AI
+39:15
+capability. What the heck?
+39:20
+It's like a full-blown HTML file embedded in. What did you guys do? [laughter]
+39:28
+What did you put in this? Where is the malware now? It's called dark AI
+39:33
+extension in it. Core doesn't exist anymore. That will error.
+39:40
+Is this thing still broken? They no longer pull a config whatsoever. Config.
+39:47
+Config prefix. Never used or referenced. They took the
+39:53
+malware out of the malware. Yeah, I don't know if I'm missing anything.
+40:00
+again. Let me know chat if Sorry, not live streaming right now. Let me search for
+40:06
+like all HTTP references. None of those are extremely external.
+40:14
+There's an HTTP refer in something to point to a different GitHub repository.
+40:20
+But dark AI VS Code also not real. Version 3.0 sucks. Yeah. So even version
+40:29
+1.0 would have been broken. We never would have seen a lightshot.exe
+40:36
+or a screen connect.exe and I don't think it would have made any changes to our code.exe.
+40:43
+That's never mentioned in the actual syntax of the source code of the extension. So, let's install and do it
+40:53
+and just see what goes down.
+40:58
+Like, we're not going to see Screen Connect installed. We're not going to see a light shot. We're not going to see
+41:04
+the service created for Screen Connect. We never saw MSI Exec run. We never saw
+41:10
+a run.bat trigger. So, even if I were to now update this thing to 3.0, you know,
+41:17
+while there doesn't seem like there are malicious components and parts and pieces into it, we can restart again.
+41:24
+But I think both version 1.0.0
+41:29
+and 3.0.0 didn't actually accomplish anything.
+41:37
+While there were a lot of potentially cool moving parts, I don't think it actually even triggers. All right, that
+41:44
+is the end of the video, my friends. Goodness gracious. You know, I feel like when I start recording, I'm trying to be
+41:50
+like cool and tactical with the sweet hook and intro, and we get all the context, and we set the stage, and then
+41:56
+when we go do it, when we dive in, when we open up the computer screen, crack it open, look at the malware in virtual
+42:02
+machines, and we got a lot of moving parts and pieces. By the end of it, my brain's kind of mush. And I got to be
+42:09
+honest, maybe I'm wrong in a couple of these spots. I really genuinely do want your opinion. Uh the puzzle pieces that
+42:16
+we laid out, do they all add up? Do they make sense? Or was am I wrong? Let me know. Genuinely, the snippet on the
+42:23
+rustbased loader, like the DLL, DL side loading, DL hijacking technique was neat
+42:28
+and cool. And that's really what I think is really the part that shines, I hope, in this video. And I'm glad we got to
+42:34
+crack the thing open with IDA Pro. Again, big shout out. Hexray sponsored this video. So, thank you so much for
+42:40
+watching. I hope you enjoyed this wild roller coaster for all of the whisbang new fangled AI stuff in our AI world
+42:47
+with Claudebot, all the security implications on that and then how hackers, threat actors and cyber criminals might be taking advantage of
+42:54
+stuff like this with yeah sure prompt injection, the exposed attack surface and all these different angles but even
+43:00
+just impersonating it in malware and then if the malware is vibe coded itself
+43:06
+and doesn't work. [laughter]
+

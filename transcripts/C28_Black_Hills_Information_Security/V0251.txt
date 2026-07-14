@@ -1,0 +1,1407 @@
+0:00
+Hello everybody. Welcome to today's Black Hills information security webcast. My name is Jason Blanchard and I'm here with Caitlyn and Alyssa and
+0:07
+they're going to talk today about active directory act damn it attack path in action. Uh so if
+0:15
+you don't know how these webcasts uh come about is we reach out to all of our testers all the people who work in the
+0:20
+CPT the sock all of our technical team and we say what would you like to share with the community? And a lot of times
+0:26
+they take like, hey, we we're thinking about adding this to the class. We want to have or have additional material or
+0:31
+something like that. So Caitlyn and Alyssa work together in our continuous pentesting team. They think about how to
+0:38
+attack organizations all day every day and they are fantastic at it. I hear
+0:43
+they talk about side quests from time to time where they like find a thing like let's go ahead and dig into that thing.
+0:48
+And so it's cool to see how their minds work. It's cool to see how their research comes together and
+0:56
+I think they're incredibly delightful and witty and awesome people. Uh so hopefully during this webcast today,
+1:02
+this brings you joy, teaches you something you never uh knew before and you can now secure your organization in
+1:07
+a way that you did not think you needed to because generally that's what happens. You watch these and go damn it.
+1:13
+Uh and so hopefully you have one of those moments today where you can go and fix that. Uh and with that, Kaitlin,
+1:19
+Alyssa, good luck. I'll be back at the end for Q&A and uh for other things. Have fun.
+1:28
+Okay, cool. All right, so the thing about screen sharing is that I can't see Caitlyn and
+1:34
+I am um very dependent. So I don't I can't see your face for reassurance. So
+1:40
+today, as Jason said, we're going to talk about an active directory attack path in action. The reason why we're
+1:45
+doing this webcast is because we want to show some of the common issues that we
+1:51
+see on different test types and demonstrate how seemingly insignificant misconfigurations can really snowball
+1:57
+into critical issues in your environment.
+2:05
+Okay, so before we get started, just as a quick introductory to us, here are some fun facts about Caitlyn and I. I
+2:13
+much more enjoy sharing fun facts about Caitlyn than myself. But um we are each
+2:19
+anti-sock or continuous penetration testing team testers here at BHS. We
+2:25
+also are both anti-cipy instructors. So we teach an assumed compromise class that we talked a little bit about in
+2:30
+pre-show. Um Caitlyn and I specialize in assumed compromise testing over at on the anti-sock team. And Caitlyn also
+2:38
+specializes in cloud testing as well.
+2:45
+um a brief overview of some of the stuff that we are going to talk about today.
+2:52
+So, we're going to start off with network access without credentials. Um and then we're going to walk through the
+2:57
+process of discovering what resources, systems, services are accessible to us.
+3:02
+Um we're going to identify a vulnerable service and exploit that service.
+3:11
+um to gain domain credentials. Once we have domain credentials, we're going to
+3:16
+demonstrate how to uh we're going to enumerate the domain and we are going to
+3:22
+look for a path for privilege escalation and then we'll talk about some defensive
+3:27
+considerations that uh can help remediate these sorts of issues if you do see them in your
+3:33
+environment.
+3:39
+Cool. So um initial discovery. So once again we are on a system in the network.
+3:45
+We don't have any credentials. Um so one of the first things that we'll do I mean depending on what kind of test you're on
+3:51
+maybe the customer gives you a list of systems in scope. Either way you want to determine which systems are live um and
+3:58
+what services are accessible. Um so we perform like a port scan to do something like that to to get um an idea
+4:04
+of what services are available to you. For web services we can use tools like
+4:12
+go witness or eyewitness. These are screenshot tools um and they do things
+4:17
+like fingerprint the infrastructure of the underlying of the web service. It's a good way to
+4:24
+get a visual overview of the web services that are available because let's say you have a ton of web services
+4:31
+in your port scan results. You don't have time to manually navigate to each one and try to prioritize. So that's
+4:37
+where tools like go witness and eyewitness um become really useful.
+4:44
+to give an idea of what that would look like. Um, here's an example of a screenshot
+4:50
+taken using Go Witness. Um, so Go Witness and Iwitness can each intake
+4:57
+either a list of files, a single target or scan results from your port scanner,
+5:03
+your vulnerability scan results. So this is a screenshot of taken by Go Witness.
+5:09
+In our target environment, we found a Jenkins instance. If um for those who are not super familiar with Jenkins,
+5:15
+it's uh an automation server used for CI/CD and oftent times it's a valuable
+5:20
+target for attackers because um in order to carry out some of the
+5:28
+in order to function the way that it needs to um it requires access to interesting things
+5:36
+in the environment. So sometimes there will be credentials stored in Jenkins. Um and
+5:43
+if the system is not hardened, it is accessible to someone you can obtain
+5:51
+you can obtain these secrets and access the sensitive information. Um so based
+5:56
+on this screenshot we can see that it looks like Jenkins is not protected by authentication. The reason why I say
+6:02
+that is because you could see um the builds the build history in jobs.
+6:09
+Um so we see that there's a Jenkins service on 10.0.0.0
+6:16
+um or 8080. So once we've identified a ser a service of interest, we would
+6:23
+um investigate that service. To investigate this particular service, we could use a tool like Jenkins M Hunter.
+6:31
+This is a tool that was written by Kent. Um, and it has two main scripts. The first
+6:39
+script checks for authentication. Um, which we did see that there wasn't it didn't enforce authentication, but if
+6:45
+you didn't know, you could feed this tool a list of ser uh Jenkins servers as
+6:50
+well, and then it will check each one. So, as you can see right here, I'm not sure if you can see my cursor. Um, but
+6:56
+as you can see right here, there we can. Cool. Um, authentication is not required.
+7:02
+Next, you can use the Jenkins M hunter script which will enumerate different
+7:08
+jobs in build history and look for sensitive information. So, you would do that by passing that whatever Jenkins
+7:14
+instance you want to target and similarly you could pass a list of hosts as well.
+7:20
+We have Okay. Okay. So once we do that we see that in the build image weekly
+7:26
+job which just for funsies we saw right here
+7:32
+um we found diff in different build history we found different environment
+7:38
+variables. So these three environment variables in the center are Jenkins
+7:43
+specific and for the purpose of this webcast we're not going to focus on Jenkins. We want domain access. So
+7:51
+active directory domain access. So we see two users here. We have this active directory user and we see this
+7:56
+credential winter 2025. And then we have this other account here.
+8:02
+So we have we have enumerated services that are
+8:08
+available to us in the environment. We've used go witness or similar tool to
+8:14
+identify um a web service to poke at. We found an unprotected web service that gave us credentials. And now we are
+8:21
+going to try to determine if these credentials are valid on the active directory domain. And so in our port
+8:28
+scan results, not only did we find a web service, but we also saw that this IP address
+8:34
+192.168.2.4 um is running Keraros um has LDAP and LDAPs ports open. So we
+8:41
+are assuming that that is the domain controller in this environment. So we're going to test our credentials against
+8:46
+that domain controller, that artifactory user in the winter 2025 um using net
+8:52
+exec. Net exec is um a tool used to
+8:57
+exploit network different network services and it's often used in for different post exploitation activities
+9:02
+as well. So we tried to authenticate with this artifactory user and we were unable to
+9:09
+authenticate. we got this lo on failure.
+9:15
+Um so although we did we weren't able to authenticate we could try to test for
+9:21
+either similar passwords or try to to reuse to test for password reuse by spraying this password across um a list
+9:29
+of users. In this case we don't have a list of users because we do not have domain
+9:34
+credentials. Um so one way we can obtain a list of users is through uh recon that
+9:39
+can be done externally. We can look for emails and try to identify um username
+9:44
+conventions. Once we have identified the username convention, let's say it's first dot or
+9:51
+first last or first do first name.ast name. We identify the email pattern and
+9:57
+then we want to create a list of potential usernames. So to there are various ways that we could
+10:04
+do that. Um one way is to use for for our example we used um a repo called
+10:11
+statistically likely usernames I believe. Cool. So statistically likely
+10:17
+usernames is a repo that has a bunch of common like first name last name combinations and then it also has a
+10:23
+bunch of different common patterns. So we'll it has those lists set up for you. the first last um or first out last etc.
+10:31
+So we use the list that corresponds to our naming convention and then we are
+10:38
+going to attempt to identify valid usernames.
+10:44
+So to do that we can use like a guess and check method. So essentially we're just going we're just going to iterate through our list and to we're going to
+10:51
+use a tool called curbroot to do that. Um, keroot uses or tries to authenticate
+10:57
+over Kerros. Um, for the for username enumeration, it uses POS. So, we don't
+11:03
+run the risk of locking out accounts during this username enumeration phase.
+11:09
+So, we have our list of users. We stored that in this potential.txt file. We're going to run curbroot the user enim
+11:16
+module. We're going to pass the domain which I failed to mention we did we were
+11:22
+able to determine here. So once we authenticated to uh tried to authenticate using that artifactory user
+11:27
+we we found the domain we could have also seen that in other using other methods of discovery but
+11:35
+we passed the domain the active directory domain and then we passed the DCIP address that we discovered
+11:40
+previously. Um so this is what it looks like with our running our username enumeration
+11:48
+and we found a few valid usernames. We're going to use these valid usernames
+11:54
+and perform a password spray using that winter 2025 password. And so we are also going to use kerroot
+12:00
+to password spray. We're going to specify the password spray module. We're going to pass the domain. We're going to
+12:06
+pass the DC IP address and then the list of users that we discovered from our username enumeration and that password.
+12:15
+And as you can see here, we found three users with valid um with that use winter 2025 as their uh
+12:23
+bang as their password. So now we've gone from network access to
+12:29
+at least what three sets of domain credentials.
+12:35
+So now that we have our domain credentials, we're going to move on to enumerating the domain. So we we have a
+12:42
+foothold in the domain with these credentials for these users that we found. Um but we want to um identify
+12:49
+ways that we can move laterally or escalator privileges within the domain.
+12:54
+Um so the one of the most useful tools for doing this is Blood Hound. So, Blood
+13:01
+Hound um is a tool that you collect data from uh Active Directory and you put it
+13:08
+into a Neo4j database and Blood Hound displays all of the relationships
+13:14
+between the objects in Active Directory. So, things like users, computers, um it
+13:20
+it will enumerate uh Active Directory certificate services. um and it puts everything into a graphical format so
+13:28
+it's really easy to identify these um these chains of attack paths. Um so
+13:36
+whereas if you just are looking at the standpoint from a single user it's kind of hard to see okay how do I get from
+13:43
+this user to you know domain admin or to a different privileged account or to a
+13:49
+different machine. Um, and Blood Hound allows you to do that because you can
+13:54
+look at it visually and it also allows you to uh select this is the user whose
+14:01
+credentials I have and this is where I want to be. Are there any paths from my point A to my point B?
+14:08
+So to collect our information uh from the domain, uh we're going to talk about
+14:14
+four different ways to collect this information. um they're all pretty much
+14:19
+going to collect the same information. Some of them grab a little bit more than the other ones. Um but regardless of
+14:26
+which way you're able to execute it, it's going to be uh useful for you. So
+14:32
+um the first one that we're going to talk about in the next slide
+14:39
+is Net Exec. Um, so NetX actually has a builtin uh blood hound collection module
+14:46
+uh in the LDAP protocol section. Um, so this is really simple. You're going to
+14:52
+do your net exec. You're going to say we're going to use the LD protocol. You're going to provide it the IP
+14:58
+address of your domain controller and then we're going to provide those domain credentials that we just found. um we're
+15:05
+going to provide the blood hound flag and then we're going to say that we want to collect all of the information. Um so
+15:12
+there are different uh types of information that can be collected by Blood Hound and um or by these different
+15:21
+collectors. Um and some of it the collection is more stealthy than others.
+15:26
+So sometimes you might not want to collect everything. Um sometimes you might just want to collect like a subset
+15:32
+that isn't as loud. um like if you're if you're trying to do a more uh stealthy enumeration.
+15:39
+So then the next um tool that we could use to collect this is uh bloodhound.py.
+15:46
+Uh so bloodhound.py is based on the um the official Blood Hound collector, but
+15:52
+it's um it's built in Python instead. Um and this can be useful because you can run this from a Linux machine. So if you
+16:00
+have um let's say like a a Linux implant or if you have uh your proxying um
+16:08
+traffic into the network from a Linux machine um or maybe you can install
+16:14
+Python on a machine in the network. Um this is a this is a useful tool that you can use for that. Um so in this case
+16:21
+we're just going to run bloodhound.py and we're going to provide our username and password. We're going to provide our
+16:26
+domain, that DOAZ lab. Um, one thing that we didn't put in that example
+16:33
+command at the top is that NS flag. That's the name server. Um, and then tax
+16:38
+C is that collection method similar to how we did with net exec. And in this case, we're selecting to collect all of
+16:44
+the information that we can. So if you look at the uh the output there you can see it's connecting to the DC1 the LDAP
+16:52
+server and it's enumerating all the all enumerating all of that information the domain the computers the users the
+16:59
+groups and so on and so forth. So the next way of collecting this
+17:05
+information um is using Sharpound. So Sharound is the official um Blood Hound
+17:12
+data collector. So this is this is the tool like from Spectre Ops. Um and it
+17:18
+can be ran uh from a from a Windows machine. It's a uh it's a C it's built in C. Um and this
+17:27
+can be really uh useful if you have access to a domain joined workstation.
+17:34
+Um but maybe you don't actually have like you don't know the plain text credentials. um because if you run this
+17:40
+from a domain joined workstation um it will actually run in the context of the currently logged on user. So you don't
+17:47
+have to provide that username and password. You can just execute sharpound and then um same thing in this case the
+17:54
+taxi is the collectors you want to use. Um so all you have to do is run sharpound and we're going to specify we
+18:00
+want to collect all of the information and it'll automatically run in the context of the the user that's
+18:06
+authenticated on that machine. And then the last one that we're going
+18:12
+to talk about, um this is one of my favorite ones. So, um this is actually going to be
+18:18
+utilizing um a legitimate tool um that is um published by CIS internals and uh
+18:27
+the tool is called active directory explorer and it can be downloaded or ran
+18:32
+directly from uh the CIS internals website. So uh like live.sis sisjournals.com
+18:39
+and it um whenever you download it, you can see on on the right side, this is
+18:44
+what the the guey looks like and you can uh connect to um a domain. So there are
+18:54
+multiple ways to connect. You can either provide like this is the domain controller I want to connect to and
+18:59
+these are the credentials I want to use or similar to how whenever we we showed
+19:04
+sharpound in the previous one if you are running this on a domain joined machine
+19:09
+um you don't have to provide that information uh you can just select that
+19:15
+you want to collect or you want to connect and it will automatically connect to the domain um that the
+19:22
+workstation is associated with and use the credentials um for the currently logged in user. Um
+19:28
+so this is another way that's really useful if you have access to a workstation but you don't know the credentials. And the way that we collect
+19:36
+the information here is Active Directory Explorer has the ability to take a
+19:42
+snapshot of the entire database. So that's what you can see in this screenshot on the right here. Uh step
+19:48
+one right there is that little floppy disc um button. So that's what you click on to say that we want to take a
+19:54
+snapshot. And then um step two is the the dialogue that pops up that asks you
+20:01
+like where you want to save it um and what you want it to be called. You can also throttle um the utilization down
+20:08
+here at the bottom. So see how it's 100% uh right now. And um this will make the
+20:15
+um enumeration slower which is good because it's um not creating as much
+20:21
+traffic like in a short period of time. Uh but it also of course will take
+20:26
+longer so you have to wait longer for it. So then once we collect that data from
+20:32
+ad explorer um there's a tool called adexplorer snapshot.py PI and this tool
+20:40
+converts uh snapshots from AD explorer into a format that is ingestable by
+20:46
+Blood Hound. Um, so whenever you use ad explorer snapshot, it's going to take
+20:53
+that DAT file that you collected and it's going to convert it um either into
+20:59
+Blood Hound ingestable JSON files um or the default behavior now um is it's
+21:07
+going to export this in a export the uh the data in a log file um that we can
+21:13
+then pass to Bofhound. which we're showing in that uh next
+21:19
+slide. And whenever we pass that log hound that log file to bof hound um we're going to
+21:26
+provide that as the input. You can see that TAC I uh switch there. And then you got the TAC O output dur. And then in
+21:33
+that output directory, it's going to um it's going to parse all of the
+21:39
+information in that log file and then it's going to output those um Blood Hound ingestible JSON files into uh that
+21:47
+output directory that you specify. So um this is also um the the bofhound method
+21:55
+as opposed to uh blood or ad snap ad expplorer snapshot.py also has the
+22:02
+option to directly convert that information from the dat file to the
+22:08
+JSON files. Um, but in recent engagements I've had issues with this method where um there's a lot of like uh
+22:16
+SIDS that don't get resolved and um using the Bofhound method. I haven't
+22:21
+been running into that um that problem. Um so this is um this is a a cool
+22:28
+alternative way of converting those files and an alternative way of of collecting things using um a tool that
+22:36
+is is typically seen as a a benign administrator tool.
+22:42
+So then once we collect those files um we're going to import them into Blood
+22:47
+Hound. So, um, the actual like setup of the
+22:53
+Blood Hound, uh, the guey and the Neo4j database and all that is outside of the the scope of what we're going to talk
+22:59
+about here. Um, so we're just going to say that like we've already got that set up here. So then whenever we uh we open
+23:07
+up our guey, we can just take those JSON files that we um that we have from
+23:12
+whichever collection method we used. Um we can drop them into Blood Hound and
+23:18
+it's going to it's going to build the that graphical um
+23:24
+database with all of those relationships inside of it. So if you look on the
+23:29
+right side here, um you can see we have that little tab selected called cipher.
+23:35
+Um so cipher queries are what are used to uh query the backend database. And
+23:43
+there are several cipher queries that are built in to uh Blood Hound that are
+23:49
+are really useful. Um and so you can see a snippet of some of them here. So some
+23:55
+of these are just listing like oh I want the domain admins or um I want to um
+24:01
+know who has DC sync privileges things like that. Um there are also some cipher
+24:06
+queries that are built in that will show you um that will show you attack paths too. So in
+24:15
+this next slide here you can see an example of uh what one of
+24:21
+those queries would look like. Um so uh v Lewis that's one of those users that
+24:27
+we identified the credentials for earlier. So within Blood Hound you can
+24:32
+mark a user as owned or um a machine account as owned. Um so those queries
+24:39
+will use those objects that you have owned to determine what other things you
+24:44
+can reach. So in this case you can see that we uh we owned V. Lewis based on that little skull uh marker down in the
+24:52
+corner. And uh we used a query here that is showing the um outbound control that
+25:00
+VL Lewis has over other objects. So in this case um the result that we
+25:06
+got is that V Lewis has generic right and generic all permissions over this
+25:12
+workstation 5 machine. Um so
+25:18
+the these rights having these rights over a machine account they enable um
+25:24
+several different options for um attack paths. Um but we're going to talk about
+25:29
+one attack path today and that is um
+25:34
+resourcebased constraint delegation. So
+25:40
+we currently, if you go to the next slide, Alyssa, we don't currently have a local account for workstation 5. Um, and
+25:49
+actually like in our our specific case, we don't we don't have sessions on any workstations. Um, so because our
+25:57
+compromised user has write permissions to this workstation, we can potentially
+26:02
+perform resource-based constraint delegation. So a really really oversimplified
+26:10
+uh explanation of this technique is you have um two services and any service can
+26:21
+request a service ticket that is scoped to itself for any user. So if we have
+26:26
+service one and service two, service one can say hey um
+26:32
+this domain admin they authenticated to me and uh I want a service ticket for
+26:38
+them that's scoped to me. So you have service one is doing that.
+26:45
+So now you can have a second service. We'll call it service 2. And that service can say, "Hey, this other
+26:51
+service um I'm going to allow them to um
+26:56
+delegate for me." So they can request tickets on behalf of other users that
+27:02
+are scoped to me. So we have a first service that can request service tickets for itself. And then we have a second
+27:07
+service that is allowing the first service to request tickets to access it.
+27:14
+So the way that that second service is going to say like hey this first service
+27:20
+um is allowed to do this is by setting a an attribute in the active directory
+27:27
+object that is called MSDS allowed to act on behalf of other identity. Uh it's
+27:33
+a really short easy to remember attribute. Um so by adding that that
+27:39
+first uh the account with that first service to that attribute um that tells
+27:45
+the um the KDC that that first service is allowed to do this for the second
+27:50
+service. So because we have those write permissions on workstation 5, we can potentially
+27:58
+perform this against workstation 5 because we can write to that property on
+28:05
+workstation 5 and we can add a computer account that we control to that
+28:11
+property. So we can add our computer account that we control and and make
+28:17
+that service to say all right I I trust BHIS's computer account uh to to grab
+28:25
+these tickets for me. But the key here is we have to we have to have an account
+28:32
+that that second service uh can that we can de use to delegate to that second
+28:37
+service. So one of the ways um that we can do this is we can see if we can just
+28:44
+create a computer account. So if we go to the next slide
+28:51
+um we are querying the domain for um the
+28:57
+machine account quota and uh by default the um authenticated users group in
+29:05
+active directory has the rights to add workstations to the domain and by
+29:12
+default the number of workstations that the users can add to the domain is 10.
+29:19
+Um, so in this case we are using net exec and we are we're checking to see
+29:24
+what that number is set to in this environment. So net exec we're using that LDAP uh protocol again providing
+29:32
+the DCIP our username password and then we're using that MAQ module that machine account quota and looking in the
+29:38
+screenshot you can see that the machine account quota for this domain is set to that default value of 10.
+29:47
+So we know that we can create a computer account. So this next slide, this is uh
+29:55
+this is the most complex slide we got going on here. Uh but this is showing the steps that we're going to take um in
+30:02
+this exploitation. So if you look in the middle where we've got our cute little uh start here guy, uh the first step
+30:10
+that we're going to do is we're going to create that computer account using our domain credentials. So in our case,
+30:16
+we're calling um our computer account snow machine. So then step two, if you look above the
+30:23
+domain controller over there, um now we're going to use our account that has write privileges to workstation 5 to add
+30:31
+snow machine to workstation workstation 5's MSDS allowed to act on behalf of
+30:38
+other identity attribute. Then once we do that, snow machine is
+30:44
+going to do um those two ticket requests that we talked about before. So first
+30:50
+it's going to request a service ticket um that impersonates do admin that is
+30:56
+scoped to itself and then after that it is going to use the S4U to proxy
+31:05
+protocol to request a service ticket for do admin that is scoped to workstation 5
+31:13
+which it is now allowed to do because we set up that delegation property. on
+31:19
+workstation 5. Uh so if you look down below the domain controller, um there's
+31:25
+that step six there. So this is that step where the the KDC is going to check
+31:30
+and it's going to see like all right, snow machine is requesting this ticket. Um do they have the ability to do that?
+31:38
+Are they in that MSDS allowed to act on behalf of other identity um attribute
+31:43
+for workstation 5? And since we added that value in there, it is. So, we get our service ticket and then we're over
+31:51
+here on snow machine. We got that service ticket and now we can use it to authenticate um on workstation 5 on
+31:59
+behalf of the user that we chose. So, in this case, we chose um the do admin user.
+32:07
+How crazy does it drive you that that's on the next doesn't Oh, it's Oh, it drives me absolutely
+32:13
+insane. Yeah. The the word rapping. Yeah. Yes.
+32:21
+Um I am uh for everyone's uh information, I am the one who is in charge of formatting our slides. Um so
+32:28
+you know that is is driving me absolutely insane. I usually do the screen sharing. Okay.
+32:35
+Uhhuh. Uhhuh. Uhhuh. Also, just so everybody knows, um
+32:42
+Alyssa's really taking one for the team here because my Zoom crashed earlier and she is sharing the slides on her single
+32:49
+screen that she has. So, she does not get to see me and she does not get to see um any presenters notes or anything.
+32:56
+Um so, she's y'all Yeah, give her some applause. She's doing great.
+33:02
+So, anyway, and back to the show. Um, so now
+33:08
+we're going to walk through like practically how we're going to carry this out. So the first step we're going
+33:14
+to create that snow machine computer object. Um, so we're going to use an
+33:20
+impact module called add computer.py. Impact is a Python toolkit and um we
+33:28
+typically use it for post exploitation activities and it it can be used to
+33:33
+abuse different um network protocols. So in this case we're going to use the um
+33:39
+adder.py and we're going to specify the computer name as snow machine. We're going to
+33:46
+specify the password we want to use. We're going to specify the domain controller IP address and then um our
+33:54
+domain credentials um which in this case is that V Lewis account. So you can see
+33:59
+that little boxed in bit in there, we successfully created that snow machine account um on the domain. So this next
+34:09
+thing that we're showing this find delegation.py um this is going to look in the domain
+34:15
+to find any delegations in the domain. So if you look at the results here, the only delegation that was found in the
+34:21
+domain is the domain controller and it has unconstrained delegation which is
+34:26
+expected for a domain controller. Um but that's the only one that exists in this environment.
+34:33
+So our next step is we're going to change that. So now we're going to use
+34:40
+um this rbcd.py PI, which is also um an MP packet, and we're going to use that
+34:47
+to add our snow machine to that MSDS allowed to act on behalf of other
+34:53
+identity attribute for workstation 5. And we're going to do that using that V.
+34:58
+Lewis account because VLU has write privileges on workstation 5. So, uh
+35:05
+we're doing RBCD.py. We're giving our domain credentials for that user with the um write privileges. We're saying
+35:14
+we're going we want to be able to delegate from our machine which is snow machine and we want to delegate to u the
+35:21
+target machine which is workstation 5 that WSO5 in our case and then the DCIP.
+35:27
+So we ran our rbcd.py PI command and then you can see that box in the middle. Um, snow well snow machine can now
+35:35
+impersonate users on workstation 5 via S4U to proxy and um, it shows you the
+35:43
+accounts allowed to be hacked on over that whole you know long string thing
+35:48
+and uh, snow machines uh, SID is now in that property. So now if we do that same
+35:54
+find delegation.py PI uh that we ran a second ago. We see another delegation
+35:59
+exists um for snow machine. We got that resourcebased constrain delegation um to
+36:06
+workstation 5. So next
+36:13
+this is uh this isn't a step in the exploitation chain. Um this is just like
+36:19
+a a demonstration showing you um another way to query that uh MSD is allowed to
+36:26
+act on behalf of other identity uh property and show you what it contains. Um so we did get AD computer and we
+36:32
+grabbed that property from workstation 5 and then if you look at the bottom you can see that whenever we expand that
+36:39
+property um that access has snow machine um allowed in it.
+36:50
+So now we're going to select our target account. So this is going to be that account that we are requesting those
+36:56
+service tickets for. So these service tickets can um impersonate this account. Um so
+37:03
+the the you know top end prime target here domain admins. We're going to take a look at these guys and we're going to
+37:09
+target one of them. So one thing to consider and also this is um this is within blood
+37:16
+hound this graph. So this is whenever you select that that first query that um
+37:22
+was in the screenshot previously the uh showing the domain admins one this is
+37:27
+what is shown by that. So we've got all these options for some domain
+37:32
+administrators that we could choose from. But another thing to consider on the next slide um is that we need to
+37:39
+avoid choosing anybody who is a protected user. Um so there is a
+37:46
+property um that can be set on an object that is called this account is sensitive
+37:52
+and cannot be delegated. Um so if either that flag is set on an account or if the
+38:00
+account is in the protected users group um you cannot um
+38:06
+you can't uh abuse this delegation. So whenever you add a user to the protected
+38:11
+users group it automatically sets that this account is sensitive and cannot be delegated flagged.
+38:18
+So in this case, if you look at the bottom, you can see Ivory Gold has uh
+38:23
+that little diamond uh showing that it's it's a highv value account. And that was one of our domain administrator options
+38:28
+in the previous slide. Uh so we know that we're we're not going to be picking ivory to target.
+38:37
+So in the next slide, we're going to um show getting that service ticket for
+38:43
+workstation 5. Uh so you can see that in our screenshot here the user that we
+38:49
+chose to impersonate was do admin. So the this is also um another impact
+38:57
+module that we're going to be using uh get st get service ticket. Um we're specifying the service principle name
+39:03
+that uh we want to get that uh service ticket for. So in this case,
+39:09
+we're specifying a um a built-in service on that uh target
+39:16
+workstation. Um so the the CIFS service on workstation 5 and then we're
+39:22
+specifying uh that TAC impersonate. So this is the user that we want that ticket to to be for and then we're
+39:30
+giving those usual like our DCIP and then we're providing that computer that
+39:35
+has those delegation privileges. So if you look in the screenshot here, you can you can see those steps that we
+39:42
+talked about. So we're impersonating do admin and that requesting S4U to self
+39:47
+that's um requesting service for user to self. Um that is the request from snow
+39:56
+machine saying hey I want a ticket for do admin for myself. And then that next
+40:01
+request that S4U to proxy that is the request from snow machine saying hey I
+40:07
+want to get a service ticket for do admin for the workstation 5 service that
+40:13
+I'm allowed to delegate to. And then at the bottom we can see that we got a
+40:18
+ticket for do admin for cifs on workstation 5. And that is in a
+40:24
+credential cache file.
+40:31
+So on the next slide, this is an example of what would happen
+40:36
+if we attempted to do this same attack but trying to impersonate a user that is
+40:44
+in the protected users group or a user who has that um this account cannot be
+40:50
+delegated property. Um, so we tried to impersonate Amanda Nichols, which is one
+40:55
+of those protected users. And you can see our big error that's boxed in there
+41:00
+that um we we can't do the delegation.
+41:09
+So now we're going to show that this ex escalation was successful. So, we're going to take that um that cc cache file
+41:17
+that we got from the previous step and we're going to uh save that file to the
+41:24
+um Keraros uh credential cache variable. And then we're going to use Wii Exec and
+41:32
+we're going to drop into a semi-interactive shell with Wii Exec.
+41:37
+And in the w my exec command you can see the tac k option that is saying that we
+41:44
+want to use keraros authentication and then the no pass option means that we
+41:49
+don't want to use a password to authenticate. Um so whenever you provide that tac k it's going to pull from that
+41:56
+krb 5ccc name u variable. So it's going to use that cc cache file
+42:03
+that we put in there. And then at target is um you know where you where you're
+42:08
+trying to authenticate to. So in this case it's our workstation 5. So after we
+42:13
+um successfully establish that shell you can see that we ran who am I and we are
+42:20
+the dozadmin user. So we're that domain user do admin. And then if we run host name we
+42:27
+can see that we are on workstation 5. Um and then um we use this net command
+42:35
+and we can we can enumerate the local administrators group on this computer.
+42:40
+So we successfully have the ability to authenticate to workstation 5 in the
+42:48
+context of the domain doadmin user
+42:53
+who is a domain admin. So one thing that you can do with these
+43:00
+privileges that we now have is we can dump the local secrets on that machine. So we're
+43:06
+going to use net exec for this the net exec SMB uh protocol and we're going to
+43:12
+specify our target which is that workstation 5 which in our screenshot it doesn't show but that 2.5 IP address is
+43:20
+the IP address for workstation 5. And then again we're going to specify that we want to use that uh Keraros cache for
+43:26
+authentication. And then we want to dump the SAM database and we want to grab LSA
+43:31
+secrets. So if you look in our output here, we
+43:36
+got all kinds of juicy stuff um from dumping those secrets. So if you look at
+43:43
+the top, we got um we dumped the SAM table from this machine. So those four
+43:50
+accounts up there, DO lab builder, guest, default account, those are all local accounts on this machine. Now
+43:58
+something interesting whenever we look at this is that do lab builder that uh
+44:04
+built-in administrator account on this machine has the same username
+44:11
+as one of the domain admins that we saw earlier.
+44:18
+So there's a possibility here that maybe
+44:23
+maybe those accounts are connected maybe. So we're going to try something based on
+44:30
+that hunch. We're going to grab that NT hash from dolab builder that we just
+44:37
+grabbed with that local secrets dump. And then if we go two more slides,
+44:43
+we're going to attempt to authenticate to the dolab builder domain account
+44:49
+using that hash. And we can see that that domain account
+44:55
+uses the same credentials as that local account. So we've got some credential
+45:00
+reuse going on here. And we can use that credential to um
+45:06
+we are um dumping uh the nds.d I did. So, this is all of the hashes for all of
+45:14
+the domain users in the domain that we're able to dump with this.
+45:21
+So, at this point, um I this is uh this is pretty much game over.
+45:32
+Is that my Q? That's your Q. That's your Q. You know, sometimes I'm not that good at
+45:37
+uh picking up cues. All right. Okay. So to summarize our attack path here, um we
+45:44
+started out as with access to the network. For example, we were on a Linux
+45:50
+system. We did not have any cred credentials. Um we performed some enumeration of accessible services and
+45:57
+found a an unprotected Jenkins service. Um in this example, it's Jenkins, right?
+46:04
+But something that we see frequently on network tests are internal services that
+46:09
+are not hardened. So we see missing authentication a lot. Um, so it's not
+46:15
+the the purpose I guess that I'm trying to emphasize here is that we're not we don't need to focus on a Jenkins
+46:20
+specific issue, but that it's um an unprotected web service found on the internal network that gave us
+46:28
+credentials and we reused the password obtained from one of those accounts in a
+46:35
+password spray attack and obtained a um access to a domain user. So there are a
+46:41
+couple issues here, right? like weak password policy um and and password reuse and and whatnot. Um once we
+46:49
+obtained domain credentials, we performed domain enumeration and analysis and identified an attack path
+46:57
+uh where we found an object that we can control which was that workstation and
+47:03
+then we saw that the default setting was set on this domain. So machine account quota was not zero and therefore we
+47:09
+could create a computer object. With that computer object we were able to
+47:15
+abuse RBCD and set um delegation from our computer object to that Windows
+47:21
+workstation. Um and so that means we were able to request service tickets that were valid
+47:27
+for that Windows workstation as anyone. And so we chose to impersonate a domain
+47:33
+administrator. Once we gained access to that Windows workstation, we dumped the secrets on
+47:40
+that workstation and found the local RID 500 dolab builder account. And because
+47:47
+those usernames were similar or because this username is the same username as the domain admin user, we also tried to
+47:55
+pass the hash um and test for password reuse on that account. Um, password
+48:01
+reuse is is a common thing that we see and it's these are this is really just
+48:07
+to demonstrate how all of these little things default settings um misconfigurations or little uh web
+48:14
+services that aren't hardened. There were only two builds uh two jobs in that vacant Jenin Jen server.
+48:22
+So it might not look like a high high value system uh but that little that
+48:29
+little information that we got from that Jacen server went a long way.
+48:34
+Okay. So defensive considerations things um you know I talked about some of some of the issues here but internal for
+48:41
+internal web services make sure that they require authentication um ensure that only users that require access to
+48:47
+that service have access to that service. Keep software up to date. So in this particular situation, we didn't
+48:53
+necessarily abuse vulnerable and outdated software, but that is also a theme that we see frequently. Um,
+49:00
+practice or principle of lease privilege. So set the machine account quoted to zero. Not every user, not
+49:07
+every domain user should be able to add a workstation or create a computer object for your active directory domain.
+49:14
+Um, only allow users to access resources that they are that are necessary. Um and
+49:20
+then ensure that access is removed as users leave or roles change.
+49:26
+Resourcebased constraint delegation ensure that administrators and other sensitive accounts are added to the protected users groups or have and have
+49:33
+the um account as sensitive cannot be delegated configuration. password policies um require that passwords are
+49:41
+15 characters at least um and disallow common commonly used guessable passwords
+49:48
+like season year, organization name, welcome to organization, things like
+49:53
+that. Um and then regularly audit and rotate your passwords.
+50:04
+I was I wasn't expecting Caitlyn to change the slide because that's usually what happens.
+50:10
+Okay, so earlier I mentioned that Caitlyn and I are both anti-cipy instructors. We teach this assumed
+50:15
+compromise class. Um we cover assumed compromise testing methodology and detections. And the flip side of that,
+50:21
+if you are worried that you see these misconfigurations in your environment, um you could also take Jordan and Kent's
+50:28
+class, which is an active directory security hardening course.
+50:33
+Um, each of those courses are taught at Mile High Hackinfest. So, I guess shameless plug here. Um, so I have a
+50:38
+link to that in the slides. Mile High Hackinfest, come see us at Denver. Um, assumed compromise. Uh, our our class is
+50:44
+linked here, just on the anticip um site. And then so does Jordan and Ken's class. All of the tools that we
+50:52
+used are are linked in the slides as well. And then this link has additional resources. So, it goes to um a publicly
+51:00
+accessible GitHub repo that has links to all sorts of stuff like um event IDs to detect certain activities um additional
+51:06
+webcasts or blogs or and whatnot that are related to um some of the topics
+51:11
+that we talked about or other topics. They are not all just our blogs. They are just things that we found useful that are also included. Um and uh it is
+51:20
+okay to side to side quest.
+51:26
+it okay to side quest. It is not okay to make the side quest the main quest. Somebody even some someone would even say it's recommended to take side
+51:32
+quests. It but but we should also accomplish the main quest.
+51:38
+You know, a side quest now is a main quest later. That does tend to be the case. Fun fact,
+51:46
+Caitlyn went on a side quest and we changed the slides like at like 2 minutes before we dialed into this uh
+51:52
+webinar here today. And you know, it's be it's better for it. But
+51:58
+does anyone have any questions? Oh, good job, guys. You did it.
+52:03
+Hey, everybody. Uh before questions, if you haven't checked in yet for Hackit, please go ahead and do so. Also, there's
+52:09
+going to be a free CTF today. Uh Zach will be here in a second. He'll explain the free CTF. So, if you're like, "Hey,
+52:15
+what if we take some of the stuff we just learned and we can do a free CTF and then there's like a prize by doing
+52:20
+the free CTF." Uh, so we'll go ahead and do that. and Caitlyn and Alyssa, great job. Like before we move on, great job.
+52:26
+Well done. Thank you so much. Good job, guys. Um the feedback I was seeing in the Discord chat and stuff was fantastic.
+52:33
+So, we'll take a look at the questions here. Deb, would you uh I just wanted to comment that Ryan
+52:40
+said it's a slide quest. That's why Jason hates them.
+52:47
+Uh questions. Yeah. If we missed your question, go ahead and plop it in the Discord and we will ask these lovely
+52:52
+ladies. And Zach, could you please introduce the CTF to
+52:59
+everyone where they can find the resources and then uh we'll start with the Q&A.
+53:05
+Yeah, absolutely. So, I'll put a link for uh the CTF in the slide resources
+53:10
+channel out on Discord. Uh but you can just go to blackhillsinfosc.com/weekly-ctf.
+53:15
+It'll take you right to that page there. Uh, and there's a Monday form there that you'll need to fill out. Um, and then
+53:20
+I'll have like some questions and, um, Caitlyn and Alyssa put together the CTF
+53:26
+for this week. So, good luck y'all. Um, we will be picking winners next Monday
+53:31
+on the Black Hills Infosc um, Monday talking about the news. Uh, so stay
+53:37
+tuned if you uh, participate and we'll be giving away a um, one uh, full on
+53:43
+demand subscription. So, uh you'll get access to the entire anti-ciphon on demand catalog and then we'll also be
+53:50
+giving away uh one class of your choice from anti-cipyhon training. So, good luck to you.
+53:55
+Where's the link at? Uh I put the link in the Zoom. Uh so, it's also on Discord, but I put it in
+54:01
+Zoom too in Zoom chat. Uh if you go to the Zoom chat, too, you'll see that we're giving away the new uh infosc
+54:07
+survival guide, orange book incident response edition. orange
+54:13
+banana. So, all right, Alyssa and Caitlyn, let's
+54:19
+do some Q&A and then if you are interested in doing business with Black Hills information security uh when this
+54:26
+webcast is over, Brian Strand is here and we'll talk about what it's like to be a continuous pentesting client of
+54:31
+ours where we spend a long time continuously doing a pentest on your
+54:37
+workstation. Okay. So, first question. If MAC is set to zero and protected
+54:44
+users is enforced on all privileged accounts, what alternative path could an attacker take to achieve the same
+54:50
+outcome? Will you say that second part one more time? If MAC is set to zero and
+54:59
+protected users is enforced on all privileged accounts, what alternative paths could an attacker take to achieve
+55:06
+the same outcome? Um, so one attack path that um or
+55:12
+actually two attack paths that we um considered doing uh one we considered
+55:18
+doing and one is just another attack path for this webcast. Um one is um that
+55:26
+you with that write access that we showed um previously with that v Lewis
+55:31
+account uh you can actually write directly to the workstation's um MSDS
+55:37
+key credential link uh attribute which is to to put things really simply that
+55:44
+is where alternative credentials are stored. So if you use something like Windows Hello, um you would have
+55:50
+credentials stored in there. Um so you can
+55:55
+use that to be able to gain um the ability to authenticate to that machine
+56:03
+using a credential that you write to their key credential link attribute.
+56:09
+That was a little that was a little detailed, but I I don't hopefully that helps.
+56:14
+Okay. Uh this question is content like this and your previous presentations
+56:19
+representative of what your assumed compromised course is like?
+56:27
+Yes. That's not a Jason question. That was a real Look, I was just waiting for Alyssa
+56:34
+to answer. I was trying to trying to give her the We were trying to see who was going to answer. That's what was happening. Um
+56:40
+All right. I'm I'm assuming Caitlyn roll today, I guess. But um we do cover
+56:47
+uh a lot of the topics that we cover in our webcast also in the class. And the webcast we will cover so for every
+56:54
+attack that we um demonstrate we'll show how to detect and how to remediate the
+56:59
+issue as well or talk about considerations on how to remediate the issue. Does that answer that question?
+57:06
+Sure. Cool. If you can't answer it then no one can answer it. All right. So, we're going to do a
+57:12
+little wrap up um just so that we can finish on time uh and then we'll do some
+57:17
+extended time for Q&A. But Deb, what what do you have? Oh, I just had a question, but we can you can wrap up. Okay. All right. So, I always like to do
+57:24
+a final wrap up and then then we do extended time. So, Alyssa and to the
+57:31
+loud keyboard there. Oh, I'm so sorry. I'm so sorry. I'm trying to answer questions over here.
+57:38
+Jeez, you are an insanely fast typer. It is. Wow.
+57:43
+Clicky. Clicky. It's more satisfying that way. I agree.
+57:52
+All right, Alyssa, if you could sum up everything that you talked about today in one final thought, what would it be? And then Caitlyn will do the same
+57:59
+thought. Um it would be
+58:05
+sometimes the simple things that we think are insignificant are lead to things that are critical issues.
+58:14
+Okay, Caitlyn, if you could sum up everything you talked about today and one final thought that's different than Alyssa's thought, what would it be?
+58:23
+You know, I I feel like this is where, you know, Chris was saying earlier that he needed to jump on the two instructor
+58:29
+train. I think this is one of the one of the downsides of the two instructor uh train is that whenever you both get
+58:35
+asked the same question, the first person gets to do the real answer and then the second person has to come up
+58:40
+with something else. Um so um the takeaway for me um I don't
+58:50
+know I don't know if this is necessarily a takeaway um but it is something along
+58:56
+the lines of like persistence. Um, so we showed one like very specific attack
+59:01
+path. Um, there are so many other attack paths that are are just like very
+59:08
+similar like little little chained things put together. Um, so
+59:14
+even if like you know these specific techniques that we showed here don't work, um, keep keep looking for other
+59:21
+other chains, other links that connect to each other. Um it might not like in
+59:26
+this you know in this uh in this webcast we showed that one complete successful
+59:32
+chain but you know sometimes you start here and you start doing a chain and then it it doesn't pan out and then you
+59:38
+start trying a different one and that doesn't pan out or you try this one and then it forks and you try this fork and
+59:43
+that one doesn't work and but eventually you know you'll you'll get there. You'll you'll find something. You just got to
+59:50
+you know side quests. Side quests are my they're my thing. I think they're my jam.
+59:56
+All right, thank you so much for joining us today. Uh, if you can stick around for a Q&A, cool. If you want to learn what it's like to do business with Black
+1:00:02
+Hills information security, also stick around for that, too. All right.
+1:00:09
+All right, we are in post show banter. Uh, Caitlyn and Alyssa, thank you so much. Uh, for the people who um have
+1:00:16
+like to the eight, yes, you can type all you want to. I'm so sorry. I'm so sorry. To the
+1:00:23
+hundred people who got the survival guide from today, thank you for trusting a link to the Spearfish general store.
+1:00:29
+Thank you for placing your first order where you have to give up your user. No, your your you got to give your uh
+1:00:34
+address. And so we know that that takes trust and we appreciate the hundred of you that have done that so far. If the
+1:00:39
+rest of you would like to do it, uh you can go here. If you get a 404 error, it means we cannot ship to your country.
+1:00:45
+So, we're going to put in the how to get it for free uh right there to download.
+1:00:51
+We don't have like you don't have to give us your email address. You don't have to do a payw wall. We don't have to do that sucks. We don't want it to do
+1:00:59
+that to you. Uh the only reason you have to give us your information for the physical copy is because uh it has to
+1:01:06
+get to you somehow. All right, Brian. So, one of the things that Caitlyn was talking about as we were wrapping up and
+1:01:12
+we'll see if we can answer some more questions here, but I want to get Brian in here u about continuous pentesting
+1:01:17
+our anti-lock service like right there's the sock and then there's an anti- sock which just attacks you all the time
+1:01:24
+instead of defends you all the time. Kaitlin mentioned on the way like as we were ending the webcast that you know
+1:01:31
+you chain all these things together you keep finding keep finding and chain them all together these side quest
+1:01:36
+do you think and this is kind of a loaded question right I'm leading the witness do you think having the ability
+1:01:44
+to pentest for an extended a very long time is what gives us the ability to be
+1:01:49
+able to do those types of attacks where we can chain things for a long period of time and then once we learn those from
+1:01:56
+one client, we can apply them to our, you know, other clients to see if they work there, too. Do you think that's an
+1:02:01
+advantage for clients who want our CPT service? So, I'll I'll answer that one. So, I
+1:02:08
+will say this particular attack path I have used on internal traditional
+1:02:13
+internal network penetration tests and I've seen other testers use. Um, but when it comes to
+1:02:20
+side quests, I do think that that is one of my favorite parts about being on this team is that you have the time to dive
+1:02:27
+into the side quests. Um, and I do think that that that brings a lot of value to
+1:02:34
+the customer. It also allows us to let's say we do something and we turn in a
+1:02:40
+report about something and a customer has this insight that we do not have and it's like oh well if you looked at this
+1:02:45
+that would have been a really big really big issue that one of those the small things that lead to big things. Uh we
+1:02:52
+have time to go back and forth and work on those things. Caitlyn spends a lot of
+1:02:57
+time on the side quests for Aunt Tessock. Okay. Um,
+1:03:04
+yeah. So, Brian, if somebody wanted our side quest capabilities, what's the
+1:03:09
+first step for them? Um, I there's a lot of first steps you can take. There's a lot of all roads
+1:03:15
+lead to Rome. Um, I would say, so I mean, you can reach out to consulting at black hillsinfosc.com. You can do the
+1:03:22
+contact us form. You could message me directly on Discord. Um, there are there
+1:03:28
+are there there are and which ones am I missing, Jason? I think there's there's probably a few more in there. You can
+1:03:33
+reach out to Jason and Deb. Um, there's a lot of things that you can do to reach out to us. Um, we try to
+1:03:39
+make it as easy as possible. Um, and we we don't dump you into a marketing email campaign that follows up
+1:03:46
+with you every three days. I see Deb just sighed deeply like Yeah.
+1:03:51
+Yeah. Um, yeah. So I would say that you know the contact us on the website, reaching out to us directly on Discord,
+1:03:57
+emailing consulting blackillsinfosc.com. All of those are probably really good answers and you can even call uh we have
+1:04:04
+we have a phone too that goes to Logan Bender. You can bother him. Mhm. So once someone like what's the on
+1:04:12
+boarding process look like for CPT? So maybe Caitlyn Alysa, I'm not sure if you know what the on boarding process looks
+1:04:18
+like, but let's say someone says, "All right, let's do it. Let's get 12 months.
+1:04:25
+What's first? An ROE call. Yeah. Okay. That was going to be my
+1:04:31
+guess. And what does ROE stand for for someone who like rules of engagement? Just like any pen
+1:04:37
+test, you get on a call, make sure everybody's on the same page. What are your expectations? What are your what are your no- no areas? What are your
+1:04:43
+yes, go there? Those are the absolutely what I want to focus on. What's your market vertical most concerned about? What are all those different places that
+1:04:49
+you want us to focus on? Ignore. um you're concerned about what's keeping you up at night. Um just making sure
+1:04:55
+that you know what would make you happy at the end of the day, at the end of the year, what would make you happy with the engagement type stuff. So do like what
+1:05:02
+is the level of maturity for a CPT client? Like is this you because I'm sure people are like, well, I don't
+1:05:09
+think I'm ready for that. And maybe but what would you say the level of maturity is for a CPT client?
+1:05:17
+I will I'll give my viewpoint on this. Um, and I'd like to actually hear Alyssa and Caitlyn's perspective on it. Um, I
+1:05:24
+would say if somebody came to us and they've never had a pen test before and they were like, I want to do CPT, I'd probably be like, calm down. Um, if they
+1:05:32
+have, if they're the only person at a, you know, a 2,000 person company that does it and security, might be a little
+1:05:38
+hard to keep up to date on some things like that and just to keep on track of of of stuff. Um, but yeah, I would say,
+1:05:45
+um, it's kind of a crawl, walk, run approach. And I think I think the the
+1:05:50
+CPT stuff is very much so like the the the walk to run to sprint type type
+1:05:56
+clients, but I'd love to get Caitlyn and Alyssa's perspective on that or what they're seeing from the current clients that we have.
+1:06:02
+Yeah, I would I would say that most of the RCPD clients are on the on the more mature side of um organizations. Um, and
+1:06:12
+especially because a lot of times, um, less mature
+1:06:18
+organizations will have more of those like lowhanging fruit, those things that don't really take a lot of time to
+1:06:24
+exploit, those things that are, you know, you can you can pick up in a in a 3day, 4 day, 5day test. Um whereas the
+1:06:32
+more mature customers, those are the ones that that need the extra time to to
+1:06:38
+be able to provide more impact because they've already taken care of their lowhanging fruit.
+1:06:43
+Um so I mean a a less a less mature organization could definitely benefit
+1:06:48
+from CPT. Um but it I think you it would it would be
+1:06:55
+a lot a fire hose probably if you if you have a lot of security issues. It would be a lot to to fix and keep track of,
+1:07:02
+right? Yeah, I would. Yeah. Cool. Yeah. It's kind of like you get a free plane ticket. Like you you get value out of
+1:07:09
+the CPT, but if you're not if if you if you have a lot of low hanging fruit, we're going to find it, but it's kind of like bringing
+1:07:15
+B kind of like bringing a nuclear bomb to a knife fight sometimes. Like we'll get it, but a lot of technical things
+1:07:21
+that we can do on like an internal, external, get the ball rolling, then some compromise, and then bringing the big guns down the road, too. Well, and
+1:07:29
+like if at the at the beginning of your your long-term CPT contract, we find a
+1:07:34
+whole mess of things that need to be fixed, it will be difficult for you to focus on the things further down in that
+1:07:41
+long-term contract because you're you're still trying to fix these things that were all discovered at the beginning.
+1:07:47
+Yeah. Okay. So, let's say someone's listening to this right now and they're like, "Oh, I am not ready for CPT." Uh, what would
+1:07:55
+their step be like? if they're they work in they're operate they work in security
+1:08:01
+for their organization and they're trying to figure out how do I get Black Hills to be our pen testing service
+1:08:08
+if they're not ready to do CPT don't waste our time and leave us uh yeah like I would say um we do a lot
+1:08:15
+of we do a lot of things even like we have companies that have come to us and they don't they've never had a pentest before and they don't necessarily have
+1:08:21
+the budget for a pentest and so they'll do like an atomic controls assessment right just to kind of get our our foot
+1:08:27
+in the door to get the ball rolling and that's a cheaper that's a cheaper assessment. Um it's based off what our
+1:08:32
+pentesters think are important. Um and then just kind of getting the ball rolling even with just an external, you know, starting with something like that.
+1:08:39
+Um I've seen so many customers that upper management is so willing to do
+1:08:44
+unwilling unwilling to do like a full pen test. Um, but they've gotten us to
+1:08:50
+start off with just doing like an external something that's very very like entry level when it comes to pen testing
+1:08:58
+and all of a sudden they get some results and they get some perspective and it kind of starts opening the eyes
+1:09:03
+of some upper management and then next thing you know in the next five six years they're doing full-blown stuff. I think kind of going back to like what
+1:09:09
+Alyssa with and Caitlyn were talking about with uh with like you know the smaller stuff just just because you want
+1:09:16
+a CPT or the antiock or you want like a full-blown red team doesn't mean you you
+1:09:22
+you you should have that right now. Maybe you know get the buyin from management early with some smaller level engagements through us and things like
+1:09:28
+that and then get the ball rolling down the road and get get some get some get some acceptance of pent testing um and
+1:09:34
+then go from there. Let it grow. Brian, are you you know I never know how to answer this question. You can always
+1:09:40
+tell me like uh what is the price of the CPT for a
+1:09:45
+year? It's $160,000 for the year. So that doesn't depend on how big the
+1:09:50
+organization is. We don't like change price based on how I'm I mean unfortunately I'm I'm the
+1:09:56
+greedy capitalist in the group and in my family and I've tried to convince Corey to do it otherwise and Corey's like I
+1:10:02
+don't really see a reason to. So, no, it's 100 I think it's $160,000 for the whole year. I think we have some
+1:10:07
+organizations that are like they have multiple different divisions like so
+1:10:12
+they're like a conglomerate and they have like 10 different business units underneath them or they have like
+1:10:18
+multiple business units based off like regions. Mhm. Trying to explain that without saying
+1:10:23
+too much. And they need each an individual business unit. It kind of stands alone on itself, but it's all
+1:10:28
+underneath the umbrella of a bigger company. And they need each and every one of them need have individual teams.
+1:10:34
+Those can start to be broken out, but even those we start to kind of work with a bigger organization to basically be
+1:10:39
+like, okay, you don't need 160 each one. Maybe we'll have some modifiers and things like that. Okay. So, we do
+1:10:45
+probably suck at capitalism. Yeah, a little bit. Despite my best efforts,
+1:10:51
+Kaitlin Alyssa, uh, what's been one of your favorite things you've gotten a chance to do in the CPT? and then we'll
+1:10:57
+look to see if there's any, you know, lingering questions here that you guys haven't answered. But like Caitlin
+1:11:02
+first, what's been one of your favorite things to do for a client in the CPT that like you get giddy, I guess, brings
+1:11:09
+you joy? I asked Michael Allen. It's the postcard for him. He loves the postcard. So,
+1:11:16
+that's so good. So good. Um I I um I get excited more about like the
+1:11:24
+the specific um customer requests. So the the things that are not necessarily
+1:11:31
+um the the things that we would do for every customer, but the things that are like, hey, this is this is specifically
+1:11:37
+what we're concerned about or this is specifically like the kind of attacker that we think um is going to be going
+1:11:43
+for our organization or maybe this is specifically the kind of attacker that has already targeted our organization.
+1:11:49
+Um and I I think that that's fun. I think that it's fun to um to look into
+1:11:56
+like the specific uh TTPs of you know whatever their concern is and try to uh
+1:12:02
+emulate that. Cool. Alyssa, anything brings you joy?
+1:12:10
+It's like my favorite thing is when you are using
+1:12:15
+a certain technique and it's fruitful and it works and whether that's across like different customers or in a
+1:12:20
+specific environment and then and then you go into the environment again and they're like can you test this and then
+1:12:25
+you can't do it. Um, and then like figuring out, but you can't like immediately into it why it doesn't work
+1:12:31
+and like working with customers to see how different environments are set up and like why does this thing that typically works not work?
+1:12:42
+Yeah, collaboration. Yeah. All right, Brian. Uh, any final thoughts for why someone should hire
+1:12:48
+Black Hills to, you know, either get them started in testing their security or continuously testing their security?
+1:12:54
+I would say I'm gonna I'm gonna I'm gonna answer the I'm not going to answer that. Um what I'm what I'm gonna say is
+1:13:01
+um Tom, Logan, and myself uh we don't work off commission. And I
+1:13:09
+think a lot of the times, and I've talked with Tom and Logan about this a lot, the favorite part of our job is
+1:13:15
+getting on calls with customers. Um and that and that's not closing deals, that's not pitching products, that's not
+1:13:21
+pitching services. It's literally just getting on the call and just talking to people about where they're at. And I think I'm not trying to say like, "Hey,
+1:13:27
+call us up and tell us about your problems. You, you know, um if you don't if you're not looking to buy or anything like that ever, but I think for a lot of
+1:13:33
+people like if you just in, you know, we've talked to a lot of companies. I think we do over 2,000 sales calls in a
+1:13:40
+year and those are just all inbound. Those are people that want to talk to us. We get a good idea of what we've heard that works really well and what
+1:13:46
+doesn't work really well. So, even if you're not looking for a pen test right now, maybe you're thinking about doing one next year, maybe you already got
+1:13:52
+your your one picked out for this year, just get on a call and talk with us. Whether it's your sock, whether it's
+1:13:58
+you're thinking about CPT and you know, your your years off um down the road, it doesn't hurt. It doesn't hurt us. It
+1:14:04
+doesn't it doesn't upset us. We don't track metrics in terms of like we get beaten if we we fall below a certain
+1:14:11
+percentage of win dollars. We don't care. So, don't ever feel afraid to just reach out and set up a call and talk
+1:14:18
+with us. Um, it is literally the f our favorite part of our job is to get on calls with customers and just BS with
+1:14:24
+them about what they're dealing with, what they're going through, what they would like to see, what they wouldn't, what's been bothering them. Um, and
+1:14:30
+sometimes we have some weird kooky solutions that we've heard from other customers that we can pass on even in
+1:14:35
+the middle of a quote unquote sales call. So, that would be my number one thing of advice. um is even if you're
+1:14:41
+not looking, be willing to get on a call and just talk with us cuz we do not hard sell. We do not work off commission. We
+1:14:46
+just we just enjoy talking with people. Yeah. Thanks, Brian. All right.
+1:14:52
+Yes. Director of kindness and generosity. Yeah. Uh what would you like to say to the community as we sign off for today?
+1:14:58
+Uh the same thing I say every time is just thank you for spending your time with us. There's so much noise out there and um I know I don't like to say that
+1:15:05
+we're noise, but we just really appreciate that you show up and um and trust us. Trust us with your time. So,
+1:15:10
+we love you guys and we'll see you next week. All right, that's it, Ryan. Let's kill it with fire. Kill it, Ryan. Kill it
+1:15:18
+with fire, Ryan. Ryan. Heights.
+

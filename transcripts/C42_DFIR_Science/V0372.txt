@@ -1,0 +1,706 @@
+0:00
+welcome back everyone today we're
+0:01
+talking about password cracking and
+0:03
+we're going to try to use a kind of a
+0:05
+special way to create a word list for
+0:07
+password cracking for password cracking
+0:09
+i'm going to use hashcat but for the
+0:11
+creation of the special word list i'm
+0:14
+going to use a memory dump from a
+0:17
+suspect system i noticed that whenever
+0:19
+people get these memory dumps either in
+0:22
+ctfs or even in law enforcement they
+0:24
+don't tend to
+0:26
+use the memory dumps to their maximum
+0:28
+potential so if you've ever done memory
+0:30
+dump analysis before if you've seen a
+0:32
+video on this channel before we talked
+0:34
+about volatility and using volatility to
+0:36
+parse out memory but there's a lot of
+0:38
+other ways that you can use the data
+0:41
+that's available in memory and one of
+0:43
+those is potentially to create a word
+Why use memory for wordlists?
+0:45
+list why would we want to use memory to
+0:47
+create a word list well let's just think
+0:49
+about what is in random access memory in
+0:52
+a system anything that the user loads
+0:54
+anything that the user types including
+0:57
+passwords websites urls like things like
+1:00
+that credit card numbers all of those
+1:02
+types of things if the user has
+1:05
+interacted with that data or interacted
+1:07
+with those strings
+1:09
+then they might be available in memory
+1:11
+as long as the user did it within the
+1:12
+last session so for example if i turn on
+1:15
+my computer and then to log into my
+1:17
+computer i type my password then i get
+1:20
+into windows or linux or whatever it is
+1:23
+now that password that i've typed in is
+1:25
+available in memory at least for a
+1:27
+limited period of time because it had to
+1:29
+go into memory so that way the computer
+1:31
+could check that the password was
+1:33
+correct now anything else i type or
+1:35
+anywhere else i go in that session will
+1:38
+also be resident in memory until
+1:40
+basically until i shut my system down
+1:42
+again okay so we can take advantage of
+1:44
+this because the user is typing their
+1:47
+passwords basically all day long logging
+1:49
+into websites you know getting user
+1:52
+names things like that and we can use
+1:54
+that information to try to
+1:57
+basically build word lists or username
+1:59
+lists and kind of target our our attacks
+2:02
+against the user's data
+2:04
+using those word lists okay so one way
+What you need to begin
+2:07
+to do that is for example i have this
+2:09
+memory dump it's uncompressed
+2:12
+if you have the compressed version makes
+2:13
+you make sure you decompress it first i
+2:16
+have a decompressed memory image of a
+2:18
+linux system now for the same system
+2:21
+i've already dumped the user's password
+2:25
+hash from the hard drive now if you
+2:28
+don't have access to the hard drive
+2:29
+because maybe it's encrypted or
+2:30
+something like that you might be able to
+2:33
+get the user's password hash also from
+2:36
+ram i just dumped this password password
+2:38
+hash directly from the disk so if i do
+2:41
+cat
+2:42
+text we have the username and then
+2:44
+basically the password hash so we have
+2:46
+our hash that we want to crack
+2:48
+and we have a memory dump in linux and
+Dump strings from memory with strings
+2:52
+i'm using linux here we can use a tool
+2:54
+called strings
+2:56
+and strings is fairly powerful basically
+2:59
+it does exactly what it says it will go
+3:01
+through and look for anything that looks
+3:03
+like words or or phrases okay so it will
+3:06
+search through all of the data and then
+3:08
+pull out anything that it can identify
+3:10
+as a string and you can configure
+3:14
+how it identifies a string or what it
+3:15
+considers a string by looking into the
+3:18
+strings configuration i'm just going to
+3:20
+accept the string's default here but i
+3:23
+would be configuring strings based on
+3:25
+what i know about the user so if they
+3:26
+speak a specific language i would try to
+3:28
+pull out different types of strings
+3:30
+based on that language for english
+3:33
+strings works fairly well just just by
+3:35
+default and i don't have any special
+3:37
+considerations here so i'm just going to
+3:39
+use the default so just the tool strings
+3:42
+if we type h we can see the help menu
+3:44
+for that you can see that there's lots
+3:46
+of different options including things
+3:47
+like white space
+3:49
+how many characters how many bytes you
+3:51
+want to match things like that
+3:54
+so we can run
+3:56
+strings
+3:57
+and then
+3:58
+just give it the decompressed memory
+4:01
+image and i'm just going to run head
+4:04
+so you can see what kind of stuff comes
+4:05
+out so
+4:06
+e-m-i-l is the first string that it
+4:08
+finds and that is the file header for
+4:10
+the lime memory image type okay so
+4:13
+that's actually a file header but it's
+4:15
+still detecting it as a string and it's
+4:16
+going to pull that out and then we found
+4:18
+the string false
+4:19
+bios disk aired mode
+4:22
+mo something not found not a boot disk
+4:24
+so notice we also pulled out 3 4 ca 4
+4:28
+and this is just some possibly random
+4:30
+data that we have in here we can do xxd
+4:33
+e001 lime and then also pipe that
+4:36
+through head to see kind of what's going
+4:37
+on you notice that we have emil for the
+4:40
+header and then
+4:42
+the rest of that data must have been
+4:44
+further down than just the first 10
+4:46
+lines all right so strings literally
+4:48
+does what it says it tries to pull out
+4:50
+any strings that it finds and it can try
+4:52
+to find phrases that are connected
+4:54
+together
+4:55
+like not a bios disk for example is it
+4:58
+perfect no you're never going to get
+4:59
+perfect strings out of it unless it's a
+5:02
+very
+5:03
+well formatted file but
+5:05
+it really does the job so strings is a
+5:07
+great tool to have and to know about now
+Count the total number of password candidates from memory
+5:09
+what i'm going to do is run strings
+5:12
+and then e001
+5:15
+line my memory image and i'm going to
+5:17
+count the number of strings that we get
+5:19
+out
+5:20
+all right so we got a result of it looks
+5:23
+like 36 million that is a lot of strings
+5:27
+a lot of password options but you know
+5:31
+it's way less than trying to brute force
+5:33
+right so brute force is going to try a
+5:35
+lot more options than that probably
+5:36
+before you get anything and the chance
+5:38
+that one of these is the actual user's
+5:40
+password is relatively high okay so we
+5:44
+can run through this predefined word
+5:46
+list
+5:46
+very quickly and we might be able to get
+Optimize by removing duplicates
+5:49
+something out but we can actually do
+5:50
+better than this i just dumped all of
+5:52
+the different strings and then counted
+5:54
+how many they were so instead of just
+5:56
+dumping all of the strings i'm going to
+5:58
+do strings easier01
+6:02
+just like last time except i'm going to
+6:04
+use the linux command sort
+6:07
+and then i'm going to pipe that to
+6:09
+unique
+6:11
+you in iq
+6:12
+okay so then what we have is get all of
+6:15
+the strings out of the memory image and
+6:18
+then any string you get sort them
+6:21
+basically alphabetically
+6:22
+and then get the only the unique values
+6:26
+out of that we have to use sort and
+6:28
+unique together if we want to get just
+6:30
+the unique values now what should happen
+6:32
+is any duplicates that we had in this
+6:35
+number up here we should remove those
+6:37
+duplicates now what that will do is
+6:39
+greatly
+6:40
+should greatly reduce our word list so
+6:43
+if we have a greatly reduced word list
+6:45
+with no duplicates then all of a sudden
+6:47
+you can run through that really quickly
+6:49
+and still the chance of having the
+6:51
+user's password in there is very
+6:53
+very high so i'm going to save that out
+6:56
+type that out to wordlist.txt
+7:02
+okay that process takes quite a bit
+7:04
+longer so it has to dump basically all
+7:06
+the strings but and then get the entire
+7:07
+list before it can be sorted and then
+7:09
+sent to unique so um i'm gonna clip that
+7:11
+out but it did take you know about a
+7:14
+minute and a half two minutes
+7:16
+for this memory done
+7:18
+all right next is
+7:20
+to
+7:21
+see how many lines we now have in the
+7:24
+word list that we got and hopefully it's
+7:26
+less than 36 million we got about 12
+7:28
+million right so we got a pretty good
+7:30
+reduction
+7:32
+in the number of uh possibilities this
+7:35
+is the possible passwords we have so we
+Optimize by removing obviously wrong strings
+7:37
+got a bunch of different characters here
+7:38
+now we could definitely optimize this so
+7:40
+for example this is probably a tab tab
+7:43
+tab tab so all of this was detected as a
+7:45
+string but there's a lot of tabs in
+7:47
+there so if we remove things like tabs
+7:49
+if we don't expect tabs to be in
+7:51
+passwords then we could definitely
+7:52
+optimize this a little bit more like all
+7:54
+of these would be gone so then in tail
+7:56
+we got things just like a bunch of z's
+7:58
+and stuff like that which you know could
+7:59
+be valid passwords but that's the kind
+8:01
+of word list we have now
+8:04
+the hope
+8:05
+is that inside this memory dump we
+8:07
+actually did have strings that the user
+8:09
+had typed like their passwords
+8:11
+and then we have that in the word list
+8:14
+now and one of those 12 million options
+Use the wordlist with hashcat
+8:16
+so now all we have to do is actually
+8:18
+boot up hashcat and give it the
+8:21
+password password list at least so i
+8:24
+have uh hashcat an opt
+8:27
+hash cap and then we need to do dash h
+8:29
+so i have a hash from a linux user so i
+8:31
+know i need to search for grep sha
+8:35
+512
+8:37
+and then we should find for example the
+8:40
+unix
+8:41
+512
+8:42
+and that's shot 512 crypt and then
+8:47
+the option that we need is 1800 so this
+8:49
+is the type of hash that i want to crack
+8:51
+with hash cat you have to give it the
+8:53
+type of hash that you want to crack so
+8:55
+now i have slash opt hashcat hashcat and
+8:59
+then i need to give it dash m 1800 so
+9:01
+that's that type of hash that we're
+9:03
+looking to crack dash a zero basically
+9:07
+normal cracking mode
+9:08
+and then i'm going to give it the
+9:11
+hash.txt file the dump of the hash that
+9:14
+i got from the hard drive
+9:16
+text
+9:17
+and then the word list that i'm going to
+9:20
+use that we created from the memory
+9:21
+image okay now
+9:23
+why would we actually do it this way
+9:25
+instead of using something like rock u
+9:27
+word list that's already been created
+9:29
+i know for a fact that people
+9:31
+uh attempted to crack this hash with the
+9:34
+roku word list and they they just
+9:37
+couldn't get it like it there was
+9:38
+nothing in rocky
+9:40
+now maybe if they were doing some sort
+9:42
+of transforms it might have worked but
+9:44
+let's take a look at what our word list
+9:46
+gets us
+9:50
+so
+9:50
+passwords number of passwords were um
+9:54
+the dictionary was basically loaded
+9:55
+properly
+9:56
+um whenever you're running this make
+9:58
+sure that
+9:59
+hopefully you at least have a
+10:01
+a gpu even if it's not optimized like
+10:04
+mine's not optimized but at least it's
+10:06
+using the dpu it can detect it
+10:08
+so you can see
+10:10
+it might be a little bit small but my
+10:12
+gpu is at 100 basically cranking through
+10:15
+those
+10:16
+you definitely want that whenever you're
+10:18
+cracking passwords instead of your cpu
+10:20
+um
+10:21
+going crazy right now i have very low
+10:23
+cpu load the gpu is fully used again
+10:26
+this gpu is not for password cracking
+10:29
+but it can still
+10:30
+do the job and we're now done so here's
+10:33
+our hash value plus the password
+10:36
+uh cracked 1800
+10:38
+uh it took one minute and 30 seconds
+Why so fast?
+10:40
+with a
+10:42
+laptop gpu from vin video like not
+10:45
+optimized at all just that's it the
+10:48
+reason that this is so fast isn't
+10:50
+because of the hardware it's absolutely
+10:53
+that fast because we had a word list
+10:55
+that was focused on the individual user
+10:58
+that we were looking for right so it was
+11:00
+from their ram dump the user typed that
+11:03
+password we were able to get that out of
+11:05
+the memory dump and then build our word
+11:07
+list from that and then crack very
+11:09
+quickly because of that that's the first
+Password cracking general procedure
+11:11
+thing i would be doing especially if i
+11:12
+have ram going through and getting all
+11:15
+the strings and using that as a user and
+11:18
+a password list for whatever different
+11:21
+attacks i was trying again if you have
+11:22
+something like the roku list which is
+11:24
+kind of the standard the de facto
+11:26
+standard for password cracking you would
+11:28
+not have gotten this password
+11:30
+quickly i think i had the first person
+11:32
+get the password after like three days
+11:34
+maybe and i think they were using a
+11:36
+really beefed up system to brute force
+11:38
+it
+11:40
+but if you have a ram dump
+11:42
+then um generate your password uh word
+11:46
+lists from that ram dump it will help
+11:48
+you immensely most of the time right so
+Conclusions
+11:51
+that's all i wanted to show is that
+11:53
+password cracking if you have a ram dump
+11:55
+it's very easy to make a word list from
+11:57
+that again using strings you can
+11:59
+customize how many words are extracted
+12:03
+remove things like tabs if you want to
+12:05
+optimize
+12:06
+but just for using some default linux
+12:09
+commands building our word list and then
+12:11
+using hashcat we were able to crack the
+12:13
+password in one minute so it's
+12:14
+definitely worth time to build those
+12:16
+lists yourself and customize them to
+12:17
+your specific problem so i hope that was
+12:20
+useful
+12:21
+i know a lot of investigators are
+12:23
+starting at least to get ram dumps and
+12:25
+this is one of the reason why ram dumps
+12:27
+are so so useful so always try to get a
+12:31
+ram dump if you can and build word lists
+12:33
+from them don't just only use tools like
+12:35
+volatility to parse everything out also
+12:38
+just use kind of more basic systems to
+12:40
+build up word lists that you might be
+12:42
+interested in okay so i hope that was
+12:43
+helpful thank you very much
+12:56
+you

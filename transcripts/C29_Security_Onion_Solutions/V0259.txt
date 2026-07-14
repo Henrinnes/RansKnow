@@ -1,0 +1,1193 @@
+0:06
+thank you the the other part of that
+0:13
+story it's a little bit embarrassing but you know they so many people during the first part of the day talked about my
+0:21
+work it was really like over the top so during the lunch break they quick uh
+0:27
+made a new logo they they had the logos on the video screens for the whole time and instead of the Sans threat hunting
+0:34
+uh Summit I forgot what it was th threat hunting and incident response Summit they renamed it officially to the Sans
+0:40
+threat hunting and David J biano Summit so yeah I've never had an event actually
+0:48
+named after me before I hope never to have one again the dad joke Summit yes Doug is
+0:57
+very very happy about my dad jokes and so I actually had one ready for you Doug all right you ready look at him all
+1:04
+right we all know the drama right like we all know that six was afraid of seven
+1:12
+because because 789 but the question is not we have established the facts of the case ladies
+1:20
+and gentlemen of the jury but the motivation he heard that he had to eat
+1:25
+three squared meals a day so [Applause]
+1:33
+yeah yeah you guys take that much better than my kids
+1:39
+did anyway I really want to thank Doug and Phil the whole security onion team
+1:45
+for organizing this and and for inviting me to speak I didn't actually apply to this conference I actually applied to
+1:52
+speak at besides but uh I guess yeah so
+1:58
+I really thank you with the exception of whoever handed me all these losing tickets this
+2:04
+morning right all
+2:11
+right let there be slides all right anyway I that was a
+2:18
+that was a really good introduction I'm sorry there will be no pyramid of pain content today nor tomorrow at at my talk
+2:25
+at bides um we can we can have pyramid talk over sodas or beers or whatever
+2:32
+anytime I'm always down to talk about the pyramid um it turns out I guess we're still a little bit ahead of
+2:38
+schedule so I have all the time in the world I'm going to like in the grand tradition of um your favorite internet
+2:44
+recipe sites I'm going to start by telling you my entire life story I was born as a young baby
+2:51
+and really went downhill from there no for real um I want to talk
+2:58
+today about some work that I and my team uh at Splunk have been putting out first
+3:05
+of all though this is a talk about threat hunting how many threat hunters in the
+3:12
+room okay quite a quite a lot um who in
+3:17
+in this room is using some kind of threat hunting framework in their in
+3:24
+their work anybody the squirrel thread hunting framework or toah he
+3:30
+anything like that okay I'm not seeing any individual hands so okay good we're
+3:36
+going to talk about thread hunting Frameworks today this is either going to be epic or what's the opposite of Epic
+3:44
+also epic but in the other
+3:50
+way so I want to talk to you today about something that my team just published called the peak threat hunting framework
+3:58
+um before I get into that I mean this slide technically is a little
+4:04
+bit about myself but like you can see I'm terrible introducing myself and I really don't like it so let me just talk
+4:11
+about my team I work as a security researcher on the surge research team at
+4:19
+Splunk anybody familiar with surge yeah a few people okay our job
+4:25
+basically is to do cyber security research for the big benefit of the community we don't really focus on
+4:34
+product so we use Splunk products but we are not like researching Splunk products
+4:40
+or Splunk anything really like tomorrow for example I'm talking about another
+4:46
+research project that I did um that of course uses Splunk in the background and
+4:51
+you'll probably see some Splunk screenshots but it's not about Splunk that's the best part of my job is I get
+4:57
+to research whatever I want
+5:02
+so one of the things that I wanted to do when I came to Splunk was I wanted to advance some of the work that i' had
+5:09
+already done in threat hunting and so uh out of that work was uh came the peak
+5:15
+threat hunting framework I should say right up front it's not only my work it's the work of myself and my team uh
+5:23
+especially the co-creator Dr Ryan fedman and um we also have another substantial
+5:29
+contributor her name is Sydney morone so thanks to those especially but tons of
+5:35
+people have helped us get it published reviewed things giving us feedback and ideas so uh I don't want to say that I'm
+5:44
+the the creator of peak but it was a real team effort and but I I did lead
+5:51
+that project and I was so fortunate to be able to do that what is a threat
+5:56
+hunting framework like okay you sit sit down to do some threat hunting what do you do
+6:03
+you get started do you just like start typing some Splunk commands or searches
+6:10
+in elastic or you know security onion searches whatever probably not I mean
+6:17
+maybe that might not be the best way to start but sure a threat hunting
+6:22
+framework is kind of a think of it as a a a mental model like the Pyramid of pain is is a
+6:29
+mental model right but a framework is actually a little bit more than that because it has to help you understand
+6:37
+and think about a lot of different things for example hey what kind of
+6:43
+things are there what kind of hunts are there that I could even do like different techniques or different types
+6:49
+of uh hunt processes and if there are multiple ones that might apply how do I
+6:55
+figure out which ones are the most useful or the best suited for the thing
+7:01
+that I'm trying to find in my network right now
+7:06
+um once I'm done what should I expect the results to look like like what am I
+7:13
+going to produce like what are my deliverables my outputs and how do I
+7:18
+figure out not only if that hunt was a success but how do I figure
+7:24
+out not just the individual hunt but if my hunting program is being a
+7:32
+success the answer it turns out to all of these things comes down to one question why am
+7:42
+I even hunting in the first place not just why am I hunting for whatever this thing is but what is the point of threat
+7:49
+hunting what is I'm G to ask you what is the point of threat hunting who has an answer I find a threat to find a threat
+7:58
+okay to find someone something that's active in our Network anything else
+8:06
+yes to find the threats that my detections missed that is someone who has listened to my definition uh yes
+8:13
+what else
+8:18
+anything to to prove the detection use case these are all good
+8:25
+reasons but they may not be the best way the best way to think about it when I
+8:31
+started threat hunting I don't even remember exactly when it was but you
+8:37
+know 2010ish or something um how it started was we
+8:43
+wanted to find incidents that was the goal of threat hunting I will tell you right up front
+8:50
+that my thoughts on this have changed substantially multiple times but that is
+8:58
+still probably probably the most popular thing that people say like the most
+9:03
+common thing people say about why they hunt they hunt to find more security incidents okay that works problem with
+9:12
+that though is that if you're relying on humans to find your security incidents it's it's not
+9:19
+scalable it is very difficult to say well we're going to have a human
+9:25
+review all these logs on a regular basis to find incidents you might find it because you hunted it this week but next
+9:31
+week unless you're hunting it again it's probably not going to be found right and we are very
+9:38
+expensive compared to Computing so it's also inefficient um when I started talking
+9:47
+more publicly about threat hunting in about 2015 uh you some of you may remember I
+9:52
+used to work for a threat hunting vendor called squirrel and we put out what basically was the first threat hunting
+9:59
+framework that I'm aware of uh we called it we didn't call it a framework back then we called it the squirrel threat
+10:05
+hunting cycle and there was all things that went with it but one of the key messages was that you shouldn't be
+10:12
+hunting just to find incidents you should actually be hunting to improve your automated detection so
+10:20
+that you don't have to find you know spend expensive human time finding those incidents
+10:25
+again like it was researching development almost for new automated
+10:32
+detection mechanisms and at the time I thought
+10:38
+yeah this makes a lot of sense this is great I don't consciously sit around
+10:44
+thinking I'll never improve upon this but you know I didn't really think that there was anything more to it but when I
+10:52
+came to Splunk and and I started honestly I I started noticing that we
+10:58
+don't Market our ourselves as a threat hunting platform even though we're really good at it sorry that's as close as I'll come to marketing or sales uh
+11:05
+but I I wanted to do the same thing we did at squirrel which was we put out
+11:10
+totally vendor and product agnostic technical threat hunting how-tos and
+11:18
+tutorials um just to improve the general level of threat hunting in the in the
+11:23
+cyber security community in the industry and I wanted to do that again and I kind of sat
+11:29
+down and I said well what would I do different like if I
+11:35
+were just now creating a new framework or a new message around threat hunting
+11:41
+what would I do different I tried as far as I possible to go back to First
+11:46
+principles and what I realized was over the years between 305 or so when I
+11:53
+published the squirrel stuff and late last year when I started this I had
+11:59
+actually learned a lot about threat hunting and I don't only mean how to do
+12:05
+threat hunting like the technical pieces of how it works I mean of how it is
+12:13
+applied sorry I'm messing up the camera while all my walking and so what
+12:19
+I what I started this framework off with was a new premise thread hunting is not
+12:26
+just to find incidents and it's not just to improve your automated detection threat hunting is about improving
+12:33
+everything your entire security posture for your whole Enterprise threat hunting
+12:39
+is an ideal driver of continuous Improvement across the entire security
+12:48
+organization and after I realized that kind of everything else in the framework
+12:56
+Builds on that and I won't say it just fell in in place because it was a little bit more than that
+13:02
+but definitely I think you'll see as we go through the framework almost
+13:07
+everything in the framework is aligned to driving some kind of improvement in a
+13:13
+a different part of your environment I will tell you another
+13:19
+story some of you may know that I used to work before I came to Splunk I had
+13:26
+another job yeah that's probably not big deal um at this other job they had an
+13:33
+existing threat hunting program when I got there and they their program was
+13:40
+basically they would they would hunt on topics for a week they would come with an ad hoc team
+13:47
+they would get together do threat hunting for a week and then disband and then the next week a different ad hoc
+13:52
+team would come together and do it and and better than not doing it at
+13:59
+all but there were some things that I noticed especially when I was um
+14:05
+eventually took over running that program for the last few years I was there there were some things that I
+14:10
+noticed that it was causing some issues you can't just sit down at a pile
+14:18
+of data and start hunting and deciding that you're GNA have some kind of good outcome that's not going to work there's
+14:26
+actually a little bit more to do it to do than that I call that phase where
+14:31
+you're actually working with the data and doing the analysis that's the execute phase you're executing but what
+14:38
+are you executing you need a plan you need to spend some time doing
+14:46
+research on your topic whatever you're hunting for how does it normally look in your environment in um what are the
+14:54
+associated techniques that you might also see along with it how you know what are the five different ways that this
+15:02
+tactic could be executed so that you can find these
+15:07
+things what data is available to you from that you're collecting in your
+15:12
+environment and how do you get access to it and what do you need to do to that data in order to find the thing that
+15:20
+you're trying to find so there's this whole prepare
+15:25
+phase and also yeah you do the preparation and you do the hunt
+15:31
+execution and then what just forget about it and go on to the next thing right no worries no that's not what you
+15:38
+do you have to take some action on what you found you have to document it you have
+15:47
+to communicate the results if there are incidents that you have to open you need to open them but there may be other
+15:55
+things that you need to do which we'll talk about shortly as well
+16:00
+so when I was there the one of the first things I did when I took over running
+16:07
+the hunting program is I stopped hunting week by week we actually uh at that
+16:12
+location at that that time I had a threw week cycle instead of a onewe cycle the
+16:19
+first week was prepare the second week was execute and the third week was act
+16:25
+and followup we didn't really call them that then but that's what we were doing it
+16:31
+was exactly that reason um you will see the p and a in Peak threat hunting
+16:41
+framework every kind of threat hunt that we have that aligns to this prepare
+16:47
+execute and act but um I did have to add something
+16:52
+else because I really did not want to be the guy who went out and talked about the P threat hunting framework
+17:01
+so so but it occurred to me as we were trying to think of like how could I make
+17:06
+this acronym not embarrassing that the other piece was
+17:11
+that I was missing was the knowledge because there at every phase you have some knowledge when you're preparing you
+17:18
+have knowledge about the threat actor tactics but also about your own environment the that's what you use to
+17:25
+make that hunting plan um when you're executing you're taking that knowledge
+17:30
+your knowledge of the data what if you already have existing like baselines or
+17:37
+detections uh for this similar type of stuff in your environment you're taking that knowledge and combining it to do
+17:44
+your analysis and of course when you're get into the ACT phase you are taking
+17:49
+what knowledge you gained as a threat Hunter and making sure that the rest of
+17:55
+the organization can benefit from it and that it is not lost so prepare execute and act with
+18:03
+knowledge the peak threat hunting
+18:09
+framework as part of peak we have developed detailed process diagrams and
+18:16
+descriptions that cover three different types of threat hunting and by the way I
+18:21
+see people taking pictures that's fine take please take pictures of these but um it turns out you won't need to I will
+18:28
+tell you why at the end uh We've published all this publicly though so it's it is easy to reference in fact I'm
+18:35
+not going to try to walk through every piece of this diagram if you want to know what they all mean you can look at our our uh our
+18:43
+Publications or you can buy new beer whichever the first of these is
+18:50
+hypothesis driven hunting and that is probably what most people are familiar
+18:57
+with like I spent a lot of time in 2015 making making this like the
+19:05
+standard hunt type another thing that I kind of missed was like there's other
+19:10
+other types of hunts and we ended up doing those other types of hunts all the time but I just never
+19:17
+really wrote them down so most people now think of threat hunting is all hypothesis driven which is not entirely
+19:25
+true but it still is one of the major three types so where you start off with some kind of idea about something that
+19:32
+might be going on in your network and you figure out given the data that you have and the analysis techniques that
+19:40
+you know how to do or that you're willing to learn you figure out how to find that and verify that hypothesis or
+19:48
+disprove the hypothesis maybe at the end of that though if you've success
+19:53
+successfully either proved or disproven your hypothesis you have have a mechanism that you used to detect that
+20:02
+activity whether or not it was present you don't control the threat actors you're not the boss of me
+20:09
+um so you may have then some valuable um
+20:15
+some valuable insights on how to detect this on your own network that you can
+20:20
+turn into automated
+20:27
+detections I it's probably a long shot but this is something I published a few years ago
+20:34
+and I I say published actually I tweeted about it it took me like 15 minutes or 20 minutes and then that was it for a
+20:41
+long time but now the peak threat hunting framework also includes what I
+20:47
+call the able framework as in are you able to hunt this
+20:53
+hypothesis the able framework consists of four different things look at me I'm going four different things
+21:02
+um four different things the actor the behavior the location and the evidence
+21:09
+you you these are the things that you need to Define as part of your planning and preparation so that you can ensure
+21:16
+that you have a successful hunt execution the actor is the optional part
+21:23
+there in some cases you're hunting a behavior that is well known to be
+21:28
+associated with a certain threat actor or maybe a certain kind of threat actor
+21:34
+like you know ransomware actors or activists or something like that and
+21:41
+knowing the actor or maybe the kind of actor might give you some extra Clues
+21:47
+like other Associated uh behaviors that they exhibit before or after or during the
+21:54
+type of behavior you're trying to find maybe some indicators or common tool sets that they use or something like
+22:01
+that so it's optional sometimes a lot of times it will be hunting something that
+22:06
+just applies so broadly to all the actors that it doesn't really matter but if you
+22:12
+have more context about specific actors or types of actors note that down
+22:18
+because you're going to need it for your planning now the be enable Happ the B enable yeah the b in the able framework
+22:27
+uh stands for behavior and that is what is are you what are you hunting for what
+22:32
+are the thread actors doing that you need to find and it could be oh I'm gonna do I'm
+22:41
+looking for DNS exfiltration via tunneling something like that that's the
+22:49
+behavior and there may be even more specific versions of that that you can
+22:55
+note like uh via tun tunneling using DNS text records for example or tunneling
+23:03
+encoding everything into the domain names the location is where on your
+23:10
+network you need to collect evidence in order to find this thing or the other
+23:17
+way of saying it is where on your network If This Were happening would it probably be happening it could be simple
+23:23
+could be like perimeter versus internal or it could be more targeted like this would probably
+23:31
+only show up on our internet facing mail
+23:36
+servers and this will help you figure out where you need to collect data from
+23:41
+even like for example maybe you've determined that you're probably going to need um you know host logs like uh
+23:50
+Windows process logs but don't collect them from your whole network if you only need them on
+23:57
+those internet interet facing what I say mail servers internet facing mail
+24:03
+servers and the E is the evidence the evidence is a combination of what data
+24:09
+do I collect that could possibly show me this this type of uh behavior and what
+24:17
+does it look like in that data if the behavior is
+24:23
+occurring this this is where you might in your planning you might try to see
+24:28
+what other organizations that have detections or maybe have published hunts what kind of data they look at in order
+24:35
+to look at those uh you might even sometimes stage some of this activity in like a test lab to observe the artifacts
+24:44
+in the in the logs so between the actor Behavior
+24:50
+location and evidence you can take your hypothesis and slowly break it down into
+24:58
+pieces so that you have everything that you need in order to combine all those
+25:03
+things into making a plan and you will see like Abel is right around here
+25:09
+scoping the hunt and and kind of overlaps with the plan as well because sometimes as you are creating able you
+25:17
+naturally at the end of it are like well dang it I have a plan now I didn't realize that I got that far but it
+25:25
+happens so that's hypo hesis driven hunting the two others that we defined
+25:34
+are kind of new to to this framework um to my knowledge I won't say that
+25:40
+nobody's ever done these types before but to my knowledge they've never been written down as a cohesive thing is like
+25:46
+here's the three types of threat hunts um the second one is Baseline
+25:52
+hunting I think Dave Kennedy I think mentioned this earlier today find out
+25:57
+what's normal on your network and then look for the deviations from normal that
+26:02
+might indicate malicious or at least suspicious activity and that is entirely
+26:08
+what we're doing with Baseline hunting Baseline hunting you're going to take
+26:14
+probably your who remembers their High School statistics
+26:19
+class well I'm sorry for all of you uh that don't because it's basically
+26:26
+descriptive statistics for your environment like you would do a
+26:31
+baseline hunt and well you could do it anytime but you would most commonly do
+26:36
+it when you were onboarding a new data source like your data Engineers just
+26:41
+brought you a new pile of logs first thing before you can really go do any kind of threat hunting in there is you
+26:48
+have to be familiar with that data source so a great way to do that is to just go through the baselining process
+26:54
+find out what's in there and what the the common values are
+27:00
+or the ranges of values um you might do things like Computing the the Min and
+27:06
+the Max and the median or there's all kinds of stuff or just creating a a list
+27:13
+of all the things that all the fields that are in there and all the com most common values you'll see them that is
+27:21
+what we call the data dictionary it has a little bit more a little bit different definition than you might have learned
+27:27
+in softw engineering class but it's similar type of thing in this log Source what are all the fields or at
+27:34
+least what are all the fields that are most relevant to security and what are the common values or uh ranges of values
+27:42
+or whatever and then once you have that you can look through that same data again to
+27:48
+find the things that are most out of whack with the
+27:55
+commonalities because maybe those things that are most out of whack are something that you should look
+28:00
+into they could be Mis misconfigurations but they could also be something more
+28:10
+Sinister the third type is what we call model assisted
+28:15
+threat hunting and this is where another one of those things where like my team
+28:23
+has been had been doing this in that previous employer we just didn't have a name for it think of model assisted
+28:31
+threat hunting or as we like to call it math it is like data science applied to
+28:39
+incident detection that is where you might bring in some I don't know clustering
+28:46
+algorithms or visualizations to help you understand the distribution of data you
+28:52
+might bring in some classifiers from machine learning or or some uh some kind
+28:59
+of like outlier detection algorithms all kinds of like data sciency
+29:05
+stuff dare I say you might employ some
+29:13
+[Music]
+29:19
+AI is it okay if I told my boss you said that he said take my money so yeah um so
+29:27
+these are the three types hypothesis driven which I think every you know most people familiar with thread hunting have
+29:33
+already known but also Baseline and and model assisted hunting which people have
+29:40
+been doing but we haven't really talked about them as legitimate modes of threat
+29:47
+hunting so we put all these three things together and these are the the basic
+29:53
+three types that Peak um Peak defines
+29:58
+but that's not all so I told you some ways to do some threat hunts great I
+30:05
+could have stopped there I guess but over the years I've had a lot of people
+30:11
+ask me a lot of questions because like basically the squirrel thread hunting cycle did stop there like okay we had a
+30:19
+hypothesis we proved it we disproved it
+30:25
+whatever so with Peak I tried to answer some of those additional questions that
+30:32
+people have asked me and incorporate them into the framework and the first thing
+30:37
+is okay we have a hunt what are the outputs of a hunt or the key
+30:43
+deliverables that probably almost every hunt should
+30:50
+have I I initially came up with four
+30:55
+although newer versions of peak uh actually have a fifth one in here
+31:01
+um those are yeah security incidents everyone knows hunting produces security
+31:08
+incidents sometimes right it's terrible if you measure the success about threat
+31:13
+hunting about according to the number of incidents that you have but we'll talk about that later but it does produce
+31:19
+incidents so that's a key output you may not always have it but if you you know
+31:25
+you're likely to have them on any of your given threat hunts the other thing is hunt
+31:32
+documentation like when you do a threat hunt it is not really good if you just
+31:40
+forget everything you did and how you did it you really need to spend some time
+31:47
+talking about like and writing down this was the process I
+31:53
+used this was the data I consumed this these were the analytic techniques that
+32:00
+I used these maybe even these were the analytic techniques I tried using but I couldn't or these were the data sources
+32:08
+that I wanted to get but I couldn't because there are many times
+32:15
+when you're going to want to hunt for the same thing again in the
+32:20
+future maybe just to make sure that you know technology drift hasn't made your
+32:25
+automated detection uh go off Target um maybe maybe because
+32:31
+you you weren't able to get a fully automated detection the first time and you wanted to come back and try again or
+32:37
+even maybe uh you're looking not for that same thing but something similar to it and you want to adapt what you
+32:43
+already did so you need to have a good hunt documentation it could be as simple
+32:49
+as a Wiki page I've seen people do it in like ticketing systems like jira or something like that it doesn't really
+32:55
+matter how you do it as long long as what you know you capture what you did how you did it and
+33:03
+hopefully even some of the missteps that you made so you won't have to spend time on those again next
+33:09
+time the third of the big major pieces is of course detections automated
+33:15
+detections like now you figured out how to hunt for something let's try to turn those into automation so you don't have
+33:22
+to hunt for it again every time just to see if there's you know new occurrences of that uh behavior and I I have a whole
+33:30
+other section actually on that so we're going to skip that a little bit the fourth here is the is the communications
+33:36
+piece the briefings and reports to your stakeholders let them know what you have been doing it it does not do you very
+33:44
+much good and it certainly doesn't do your organization very much good if you cannot com let anybody else know what
+33:51
+you found and I don't just mean hey talk to your report it to your manager or
+33:56
+your sock director or your detection engineering team I mean like you hunted on the email servers let's bring the
+34:03
+email team in and let them know what you found or didn't find right uh you're doing Windows hunts
+34:11
+let's bring the system administration team for Windows in and maybe maybe they
+34:18
+will say no thanks maybe they will be much more interested in our experience uh we found
+34:26
+that there was a big interest from people about threat hunting because like threat hunting is
+34:31
+kind of sexy it's a little bit mysterious if you don't do it on a regular basis so yeah they're interested
+34:38
+in in the process but they're also interested in what you found on their systems that they're responsible for uh
+34:44
+so definitely briefings reports email updates whatever to get the word out
+34:51
+about your findings and the the fifth one that I would say um is is ideas for future
+35:00
+hunts like there's a lot of times when I've gone through a threat hunt and
+35:05
+there's a rabbit hole I really want to go down but if I do that I won't be able
+35:11
+to accomplish my actual Mission so write those down they become part of your
+35:18
+slush pile of future hunt ideas a good Hunter will never run out of things to
+35:23
+hunt for because they probably have a big slush
+35:30
+pile now I said I was going to talk a little bit about detections automated
+35:37
+detections another thing that I've learned over the years since I started the squirrel hunting cycle is that
+35:45
+there's automated detections and then there's automated detections we go through this whole
+35:51
+process of threat hunting and I've already said we don't want to have to hunt everything every time over and over
+35:57
+again because it's inefficient but sometimes we can't just be like I found
+36:05
+a new way to make a 100% reliable alert right so I kind of break down the
+36:11
+detections into four big buckets and they're ordered from the bottom up
+36:17
+according to how much human effort they need to review the outputs or to review
+36:25
+the the potential I can't say alerts because they're not all alerts the bottom two actually don't alert at all
+36:31
+the top two alert the bottom one here is uh number
+36:36
+four is a report a lot of times we'll hunt
+36:42
+something and we'll be like in the right ballpark but it's not good enough that we could just feel confident sending it
+36:48
+off to the sock we have a list of candidate incident or candidate events that might
+36:55
+indicate that whatever ever we hunted for was happening
+37:00
+but lots and lots of like false positives or benign true positives and
+37:06
+so it still needs a human analyst to read each one in the report and make a judgment for
+37:13
+each which is very still pretty expensive less expensive than doing the hunt over again it's uh you know from
+37:20
+scratch but still pretty expensive so you might schedule this to run every day
+37:26
+week month however whatever is appropriate and then you have to figure out a way to make
+37:31
+sure somebody read it and and took action on it if necessary like we I
+37:38
+think almost all of us in this room probably agree that if you if you emailed it out to the entire sock it
+37:45
+will never get read because everybody will probably think everyone else is reading it
+37:51
+right so you might need to put in a ticket or or something to make sure that
+37:57
+it gets assigned to someone and they can Mark yes I did this um if you do it
+38:02
+right it won't take them too long especially after they've gone through this report a few times and they're a
+38:07
+little bit familiar with it but it still does take some processing load uh and I mean mental processing
+38:15
+load not computer processing the next level up is probably
+38:21
+dashboards or visualizations it's not individual event level it's rollup
+38:26
+statistics or maybe Graphics that could help you easily identify where something
+38:33
+went wrong like we who who has uh dashboards on the wall on their sock in
+38:40
+a big video display yeah it's kind of like that again somebody has to look at it
+38:47
+you have to make sure somebody's looking at it on a regular basis but it takes a little bit less cognitive load than than
+38:55
+the individual events in their report hopefully when we come to the top two
+39:03
+levels that's where things start to really get interesting level
+39:08
+two is something that I just I I just made the name of of it's an I call it
+39:13
+analytics in code that is I need to do usually a little bit of like
+39:21
+computation that I can't do in whatever my my detection platform or my sim
+39:27
+is so I need maybe bring it out bring the data out um do it in Python maybe in
+39:35
+a jupyter notebook or something a lot of times if you're doing thread hunting in a Jupiter notebook you can just uh take
+39:41
+a version of that and and clean out all the things that didn't work and and say now I have a analytics
+39:49
+and code notebook and then export the code and you have to have some way to make it run but ideally
+39:57
+the output of your analytics will be something that's alert quality that you could then insert an alert into the
+40:03
+queue and the sock analyst could process it along with everything else at that point the sock analyst
+40:11
+doesn't have that much more mental load than any other alert um it may be a
+40:16
+little bit more work from the engineering side to make sure you have a platform that you can run this code and
+40:23
+run it reliably on the schedule but still and then of course right at the tippy
+40:29
+top uh signatures and rules depending on your exact uh Sim or other detection
+40:36
+platform some can take only kind of basic signatures and rules some can take
+40:43
+um more complicated comp computational things so whether an alert is a
+40:50
+signature or analytics and code kind of depends on your tool set but but again at right at the top
+40:58
+you just you you put it in your IDs or you put it in your sim and it just works
+41:04
+forever you don't have to schedule it you don't have to manage it that much at least no more than you do all
+41:11
+your other rules so this is I call this the hierarchy of detection outputs and it is
+41:19
+a total coincidence that it is also a pyramid it just turns out that for
+41:26
+whatever reason these these these PowerPoint and and slides vendors they
+41:31
+just don't do well on new visualizations for
+41:37
+hierarchies so the the hierarchy of detection outputs is a piece in Peak that helps
+41:45
+you now that you've completed your hunt you're in the ACT phase how do I turn this into automated detection it can
+41:52
+give you some guidance about what the most appropriate type of detection might
+41:58
+be based on your how reliable your outputs or your findings will
+42:05
+be another big piece is remember I said how do you know if you've if everything's been working right how do
+42:13
+you know success not even just success for a hunt because you usually know
+42:18
+success for an individual hunt yes I figured out how I would have found something it wasn't present but that's
+42:24
+okay or it was present and we found it but this more than anything else ties
+42:33
+back to that idea of threat hunting should be about continuous Improvement
+42:40
+elsewhere I have had so many people over the years ask me how do you create
+42:48
+effective metrics over threat hunting and at first I was very puzzled
+42:53
+by this too but a few years ago ago I went to I I can't remember if it was the
+42:59
+Sans CTI Summit or maybe the first CTI Summit but I saw a
+43:05
+presentation um where there was just like one magic slide it was about metrics and I didn't
+43:11
+really expect to be interested I'll be honest but the magic slide was you have
+43:17
+two choices with metrics you could measure how much work you did or you could measure how
+43:23
+effective your work was when I realized that like years ago I
+43:29
+was like I started to see how I could answer that question for threat
+43:34
+hunting if our goal is continuous Improvement across the entire organization then our metrics have to
+43:41
+reflect that so in you know those threat Hunters here how many of you have have
+43:47
+metrics that say how many incidents you opened from your hunts yeah I see some hands I'm very
+43:54
+sorry for you um because I happen to think that's a bad way at least it's bad if you're if
+44:00
+that's the only thing you're doing because you don't like I said you don't control the threat
+44:05
+actors you might have a great way of finding their activity but they didn't do that activity in your window so you
+44:13
+know don't get you shouldn't be penalized for that so what I came up with was a set of five metrics I I think
+44:20
+of these as the core and I kind of expect other you know every organization will have additional ones that they will
+44:26
+add but these are the probably the big five that most organizations probably want to
+44:33
+track the first one is the number of new detections that you created as a result
+44:40
+of your hunting or the number of existing create uh detections that you updated to make them better
+44:49
+somehow right there that shows continuous Improvement in your automated
+44:54
+detection so track that and report it on whatever schedule monthly quarterly whatever the
+45:03
+second is it is incidents opened but there's a
+45:09
+big I don't know a a big twist here not just incidents opened while you were
+45:15
+hunting when you were hunting even if you don't find anything that's fine you created those detections or you updated
+45:22
+those detections mark down which detections were a result of your threat hunts when
+45:28
+you later open incidents as a result of alerts or reports or whatever that you
+45:33
+created those count toward your metric of incidents opened because those are
+45:40
+incidents that you never would have found if you had not created those automated detections from your threat
+45:48
+hunting so it's totally legit to claim them and in fact if you don't claim them
+45:56
+you're only getting the worst part of that detection
+46:02
+picture the next two are kind of similar uh so maybe we'll do them at the at the
+46:07
+same time the the visibility gaps that you noticed like this is data that I
+46:15
+wanted but it wasn't available to me or it was corrupted or it wasn't parsed
+46:20
+correctly in the Sim so I couldn't use it or I had to do all this extra work to it to make it use
+46:27
+and and also vulnerabilities and misconfigurations as threat Hunters we are often poking into things that no one
+46:34
+has poked into in a while and whenever you poke into new
+46:39
+things you're going to things are going to poke back basically um you know you're going to find things were wrong
+46:46
+that nobody knew were wrong so record those and in part of the stakeholder
+46:54
+Communications report them to their
+46:59
+owners we can't control whether they actually fix
+47:05
+them but we can at least we can at least report on how many we notified their
+47:11
+owners of we found seven v um vulnerabilities or we found three uh
+47:20
+visibility gaps last month and reported them if you can you can can keep track
+47:26
+of which ones were actually actioned it's not a metric for your team so much
+47:31
+but it does show you like maybe give you some feedback on which kinds of things that the organization might care about
+47:39
+more and the final thing it sounds weird but you know it might even be the least
+47:44
+important is the number of different techniques that you hunted
+47:50
+for not just the number even but sometimes like you you you may apply
+47:58
+another model like you might apply the miter attack framework even though it's
+48:04
+not my favorite way I think Dave Kennedy also mentioned this like 100% miter attack coverage is dumb and
+48:12
+stupid because there's literally things in there that is not meant to be detected like use of
+48:18
+encryption right but maybe think of things like
+48:25
+what happen happens if you were to apply it to the um the Cyber kill chain how
+48:31
+many techniques did I hunt in each phase last quarter or last year or maybe you have
+48:37
+your own favorite life cycle model or I did say I wasn't going to
+48:43
+talk about the Pyramid of pain but maybe like where on the pyramid are all your
+48:49
+hunting things hopefully they're at the top but not all not all the time and if
+48:54
+they're not then you would like to probably know about that so you could correct it
+48:59
+so I expect that organizations will have their own metrics that they might add to
+49:07
+these but these are kind of like the core set that I recommend most organizations start with because
+49:14
+together these show not just your work
+49:20
+but your the effect of your work across a lot of different parts of the organization this is how you tell the
+49:27
+story of how the hunt team is providing value and cre helping the organization
+49:34
+increase their security
+49:39
+posture some of you may have heard this because I just kind of stole it from my previous work it was my work in the
+49:46
+first place but because I think the other key piece
+49:52
+is now you know we we've seen all the things that we should produce and the
+49:58
+types of hunting and the metrics and whatever so are we really even a framework though
+50:05
+if we don't have a maturity model I mean it's like bro do you even
+50:11
+maturity um so I actually created this as part of
+50:17
+the squirrel um threat hunting cycle stuff in 2015 but it's I think it's
+50:23
+still reasonably accurate a threat hunting maturity model is a way of diagnosing where your entire
+50:32
+threat hunting program is on this model and it's a road map to where you
+50:39
+might improve it really it looks if you read
+50:45
+it closely it looks like it it takes into account the data and the analytic
+50:51
+techniques that your team is capable of producing or capable of using in thread hunting um and it does but but both of
+50:59
+those have significant like people skill aspects or people expertise aspects to
+51:06
+them so it actually I think of it as as a combined one number measurement of the
+51:13
+expertise of your people as well as the amount of data that you have available
+51:19
+to you and the types of of analytic techniques that you're able to bring to
+51:24
+bear it starts off with and and this has been extensively documented over the
+51:30
+years so I don't necessarily have to go in detail for each but it starts off with you know all CMM uh they start with
+51:38
+zero you're not doing it at all that's fine uh hmm1 is what we call minimal
+51:44
+hunting this is basically indicator search a lot of people don't believe
+51:49
+indicator search is threat hunting but I always have believed that it is just not
+51:54
+very good threat hunting because my original definition was searching for
+52:00
+you know manual or machine assisted ways of searching for incidents that your automated detections might have missed
+52:07
+and one way that you would do that is to say well we now have some new information about a malicious domain or
+52:13
+something I'm going to search to see if we have ever seen that technically fits the threat hunting definition not super
+52:20
+sophisticated but it is hmm1 threat hunting hmm2 is kind of we
+52:27
+call it procedural it's basically I am I have enough data and enough skills in my
+52:32
+team that I am capable of replicating threat hunting that other people have
+52:38
+published I might have to adapt it a little to the exact data that I have because maybe it's a little different uh
+52:44
+or my environment is a little bit different but I'm basically able to take threat hunts that other people do um I
+52:51
+consider that the minimal accepted threat hunting level level for most
+52:57
+organizations like I would encourage most organizations to go up to
+53:02
+hmm3 the main difference is they are then able to create their own new thread
+53:08
+hunts and then at hmm 4 leading you not only are creating your
+53:15
+new threat hunts but you're also your emphasis on the ACT phase you are uh
+53:21
+creating automated detections for most most of your
+53:27
+hunts um and probably if I were making this up you know now I would say you're
+53:33
+probably also doing those other things that we talked about in the metrics and
+53:39
+Reporting uh gaps and and doing those things but basically that is you are
+53:45
+extra successful in the ACT phase if you are at hm4 the highest
+53:53
+level now check out our brand new ebook yeah so
+53:59
+earlier this this week actually we published the peak threat hunting
+54:05
+framework as a PDF a free pdf download uh from the Splunk website you will have
+54:10
+to give them your email address I'm sorry about that um we have been publishing it since April uh peace meal
+54:18
+in our blogs so if you do not wish to get your give them your email address you can
+54:25
+look at our Peak threat hunting blogs but I highly recommend the ebook because
+54:31
+even since we started publishing in April until this week when we published the ebook um I've made some some
+54:38
+corrections and updates things that I left out nothing terribly large but uh
+54:46
+you know significant also their Graphics look way better than mine so I definitely recommend the ebook
+54:53
+and there's a bonus section that is has not been published in the blogs about how to take the peak thread hunting
+55:00
+framework and apply it to either a new program that you're building from scratch or maybe an existing one that
+55:07
+you may already be using some other model or maybe no model and how to begin
+55:12
+to integrate um Peak into your existing hunt operations so
+55:18
+ebook super proud of my team for getting this out we actually chose the
+55:24
+publication so that we could say that security onion conference was the first
+55:29
+time I'm not lying that security onion conference was the first premiere of this book so this is the first time
+55:35
+anyone's everever seen this QR code outside of Splunk I think so uh I encourage you all to check it
+55:43
+out and with that I guess I have a few minutes for
+55:49
+questions if there are any no okay well oh yeah good
+56:07
+question so yes
+56:14
+Jason Jason's Jason's having a little bit of fun because uh actually I was scheduled to present this
+56:21
+presentation in um in I forgot now when it was June or July um at Splunk big
+56:30
+internal uh Splunk big customer conference.com 23 in Vegas but uh as he
+56:38
+as he knows I actually tore my achilles tendon and I wasn't able to walk for like six months so I had to cancel a
+56:45
+number of speaking engagements including this one so this is the first time I've actually been able to give this
+56:51
+presentation in in its entirety to anyone and so I'm super happy to be able
+56:57
+to finally give this presentation so but it was not a street
+57:03
+fight that's just my cover story because I can't really tell you how it happened
+57:09
+or I'd have to kill
+57:15
+you yes
+57:23
+you h question was the
+57:31
+question was how much does it cost to use Peak
+57:40
+because it costs I guess to use the pyramid no
+57:47
+yeah now you know what in all seriousness I have had a lot of people come up to me over the years and be like
+57:54
+I would like to used the pyramid in um my my textbook that I'm writing or my
+58:00
+lectures for my class or it even got um at one point I think this is a professional highlight of my career
+58:07
+maybe it got put into a Janes intelligence Journal um and there's you
+58:12
+know lots of people that are using it and and they want permission and sometimes they also that their
+58:19
+Publishers want to know is there a fee it's like no there will never be a fee
+58:24
+for the Youth of of the Pyramid of pain and
+58:29
+similarly um you know I I fight against I didn't have to fight Splunk too hard
+58:35
+they get it but I fight against having to you know license my work so Peak is
+58:40
+out there we explicitly created it as vendor neutral and Tool agnostic because
+58:47
+we wanted people to be able to use it and not just like oh it's a threat hunting framework for Splunk users but
+58:53
+I'm not a Splunk user so I guess I'm out no I want it to be used as widely as
+58:58
+possible so you want to cite it please do just you know cite it correctly this
+59:05
+is you know David Bianco Ryan fedman whatever s just say it's by spunk or by
+59:11
+Surge and and it'll be fine because we want we encourage people to to adopt
+59:17
+Peak we encourage people to write about Peak um I just had a article come out
+59:22
+today in security magazine about Peak thread hunting so yeah we we want to get
+59:28
+it out there because my my sincere hope is I did this because I wanted to help
+59:33
+people understand how to do threat hunting better and how it can be you
+59:39
+know a good threat hunting program could actually impact the security of your organization in a Poss in a in a
+59:47
+potentially very positive way and so yeah it's out there please use it if you
+59:53
+don't like it let me know because I'm really I'm really curious uh if you do
+59:59
+use it I would love to hear from you if you don't use it what's wrong with you
+1:00:04
+no just but seriously no please feel free to use it reference it in your work
+1:00:10
+adopted in your organizations there's no fee like it's not licensed we just put
+1:00:15
+it out there
+1:00:21
+yes where does the QR code oh do well don't know the actual
+1:00:27
+URL but it you'll know because it says like splunk.com something something Peak
+1:00:32
+threat hunting framework. HTML or something yeah there's totally no malware in
+1:00:38
+it I don't know what you're imputing sir what you're implying
+1:00:45
+but all right other questions serious question okay let's
+1:00:53
+see
+1:01:21
+yeah okay let me see if I can say that again so the question is looking at the
+1:01:28
+hierarchy going between dashboards and visualizations and analytics and
+1:01:35
+code is there like a relationship between those
+1:01:41
+two where you might say oh this visualization or this dashboard I this
+1:01:46
+would be a good way be a good candidate for me to convert it to analytics and code is that accurate yeah
+1:01:55
+I actually think and if you read the peak framework document you'll see that
+1:02:01
+we talk about when you are at three and four
+1:02:07
+like reports and dashboards ideally you would at some point try
+1:02:13
+again because you want to climb a little bit farther up at least until analytics
+1:02:19
+in code because you want to get to alerts because your dock knows how to
+1:02:25
+deal with alerts I hope you want to fit it into the
+1:02:32
+existing workflow that said sometimes you can't always get there so you might be stuck
+1:02:39
+at dashboards and visualizations for a little while I'm not really aware yet of
+1:02:45
+any particular like indicators in a dashboard or visualization that might
+1:02:50
+make it a better like oh if you see this it's more likely to be able to be turned into analytics or
+1:02:57
+signatures um I I think of it more
+1:03:02
+like if I use this dashboard a lot especially if it becomes valuable to me
+1:03:09
+in some way like more than my other reports or dashboards maybe that means it's more of a
+1:03:17
+candidate maybe you'll do a rehunt you will start from where you you know take
+1:03:22
+that hunt documentation that I was talking about and redo your hunt but this time
+1:03:29
+um maybe bring in a different set of team members to give some different
+1:03:34
+perspectives or try to find some some different analytic techniques that you didn't try before and see if you can
+1:03:42
+move up the pyramid there I actually said it um sorry up the hierarchy uh a
+1:03:48
+little bit uh because that's that's my whole when I die my epit is going to be
+1:03:55
+like a pyramid-shaped headstone and and be like he he went down the pyramid I
+1:04:00
+don't know all the way all my P all my models are pyramids um so you try to try
+1:04:07
+to move up the P the the hierarchy I spent so long talking about
+1:04:14
+moving up the pyramid I'm just not capable of saying anything else so
+1:04:21
+yes that doesn't work what
+1:04:28
+cat what cyber security threat do I think poses the greatest risk to our nation's democracy I am totally
+1:04:36
+unqualified to answer this question I mean I have some opinions but
+1:04:42
+those are probably bar opinions or or something uh but I do think that you
+1:04:48
+know cyber security is National Security
+1:04:53
+I I totally buy into that and I know that you know people defending democracy
+1:05:01
+literally defending democracy use the Pyramid of pain I'm hoping that they
+1:05:06
+will find these things useful too but yeah I am totally unqualified to to
+1:05:12
+answer that question I am terribly sorry did I see another
+1:05:19
+question okay um I'll be here um after for a little while and also you can
+1:05:25
+catch me at bsides if you think of questions overnight I'm I'm speaking again tomorrow on a different topic so I
+1:05:31
+hope to see all of you there otherwise thank you very
+1:05:40
+much
+

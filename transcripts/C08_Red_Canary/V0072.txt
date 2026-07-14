@@ -1,0 +1,579 @@
+0:06
+Welcome everybody to SecOps weekly. This is the new name that we've given this show.
+0:12
+So SecOps Weekly is the the weekly information
+0:18
+security talking head news show, formerly known as Office Hours. So I will probably call it Office Hours dozen times today
+0:26
+and continue to do that for the foreseeable future, but we have named the show, SecOps Weekly because it really is more closely aligned with
+0:34
+sort of what the show is about. We come on here every week. We talk about security operations. So it's just sort of a clear, more direct name.
+0:43
+Today, I am here with my colleagues,
+0:49
+Brittany Sattler and Tyler Winchester. They are both, I believe, I should have double checked this on the threat hunting team
+0:55
+here at Red Canary. And, actually, they're going to drive this show almost entirely. So I will sit, quietly and maybe ask questions
+1:03
+occasionally. But other than that, I'm just gonna be driving the slides and, keeping an eye on the Q and A and the chat
+1:12
+to see if anybody has questions as we go through this. So if you guys wanna give yourselves,
+1:18
+more of a thorough introduction, you can go right ahead.
+1:25
+I'm Tyler. I'm staff threat hunter here at Red Canary.
+1:31
+Involved in a lot of different things here. Excited to kinda walk through a hunt process with you all and
+1:36
+see you know, know, kind of give you some insight into our process from a threat hunting perspective, but also, hopefully,
+1:42
+on a on a fairly topical and relevant, subject today. Yep. I'm also a threat hunter here at Red Canary.
+1:50
+Been here a couple of years and have kind of a background more in threat hunting and security operations.
+1:56
+They're really excited to get to talk to everybody today about a threat hunt.
+2:02
+I don't know if we wanna just jump right in. So we'll we'll take you guys through a process of one of our
+2:09
+recent hunts that we've been been working on. So I don't know, Brian, if you wanna jump to the next slide.
+2:15
+And just to kinda orient everyone, this is
+2:21
+our hunt process that we use internally. So we'll be kinda talking through this with an example of
+2:26
+the hunt we're doing, but we always kinda start off with that, taking an idea and then planning it out,
+2:32
+what we're gonna do, how we're gonna approach the hunt, you know, getting enough of the context that we need to know to be able
+2:38
+to prove or disprove that it's in an environment. And then once we have that approach outlined,
+2:45
+we'll jump right in, start searching the data and the logs we have access to,
+2:50
+doing some analysis, you know, trying to find some threats or other interesting things.
+2:55
+And then we always try and take some good insight from our hunt. So beyond just, you know,
+3:02
+threats that we might see, maybe some configurations or trends or opportunities for detection and kinda have those outcomes
+3:11
+then, you know, work with the appropriate teams to implement those. And I think that's the high level.
+3:18
+I don't know, Tyler, anything you wanna add? Just the section in the center is really important to us.
+3:24
+The continuous improvement and learning, it's really like any I mean, it's it's really like we treat it try to treat it like any
+3:30
+other cyclical process. Right? So, like, what are the outcomes that we we we'll get into a little bit? But, you know, like, throughout the process,
+3:36
+we're trying to document and then also sort of think about how we think about hunting.
+3:42
+So kind of a little little bit of process improvement in learning. And, so that's that's a good key part of a hunting program.
+3:49
+It's it's it's really not set it and forget it. It's very much a a living thing, and, you know,
+3:55
+that's how we try to approach it here as well. Just one random question for me before we move on. How often do your hunts end up in, like,
+4:01
+a hunt to detector pipeline, right, where, like, you guys perform a hunt and then on coming on the back end of that,
+4:07
+we end up developing a new detection analytic for something?
+4:13
+I think to give the consulting answer is it it depends. There's a lot of different,
+4:18
+sometimes you might we might approach a hunt with the goal of, you know, like, hey. We think this this might result in a detector.
+4:26
+And sometimes, you know, we do hunts that are more baselining and hypothesis driven where, you know,
+4:33
+maybe don't lend themselves super great towards detection logic, which is where we kinda try to focus efforts.
+4:38
+But, you know, like, there are times where we look for outcomes where, you know, even going into it, like, hey.
+4:44
+We think we have a really good analytic here. And as an outcome from that, you know, we do try to pass those off. I don't Brittany, if you have a additional context on that.
+4:52
+You know, I think you did it well. I don't know the exact number, but we do try and identify those opportunities.
+4:57
+So as Tyler mentioned, sometimes from the hunting perspective, it's not high fidelity enough
+5:03
+to turn into a detector. And sometimes you get more insight from, like, seeing across, like,
+5:09
+the broader set of more data and seeing trends or anomalies. Yeah. I mean, that's kind of the point in some ways. Right?
+5:15
+Like, you you do hunts that detectors wouldn't be able to do quite effectively. Sorry for derailing us there.
+5:20
+Let's move on to the actual content. I
+5:26
+don't know, Tyler, if you wanna take this one. Yeah. So, as I said, kind of a topical,
+5:31
+timely, idea today. This was something that was kind of you know, I'm sure for most of folks in the community,
+5:37
+it's been top of mind for good, bad, weird reasons. You know, Moltbook was was an interesting phenomenon,
+5:46
+to put it lightly. But, so the idea, you know, we we saw OpenClaw,
+5:52
+usage skyrocketing over the last week or so. And, of course, right after that, you know,
+5:57
+there's all these sick there's the very legitimate security concerns and vulnerability for the configuration and setup.
+6:04
+You know, I think I I read the other day, it was, like, the top downloaded skill was an infostealer.
+6:09
+So it got so bad that they rapidly partnered with VirusTotal for additional security.
+6:15
+But so that was kind of you know, there are a lot of ways to generate ideas. Some of it is sometimes as simple as, in this case,
+6:22
+just staying informed with what's happening in the around the world and in this space. So hold on.
+6:27
+We have a just to take one half minor step back, we got a question from Jason Thomas, and he was wondering if our threat hunting is per customer
+6:35
+or generalized across multiple customers. Generally, we try and hunt across all of our customers.
+6:42
+I mean, occasionally, depending on, you know, what's going on, we sometimes do customer specific, but we try and do hunts across all of them.
+6:50
+You know, sometimes too, it's based on integration. So sometimes we'll do cloud hunts. So if, you know,
+6:55
+they have AWS and that's what we're hunting in, we'll, you know, be specific to those customers.
+7:01
+And then one other thing before we move on. In the context of OpenClaw, in case there's folks out there who aren't familiar with what
+7:09
+this is, what exactly is a skill? Yeah.
+7:17
+So there's a whole repository of them on GitHub, and they are I'm probably gonna butcher it because I am not an
+7:22
+agentic AI speak. But the way I look at it is it's it's like a in this case,
+7:28
+it's literally a a file, from our perspective that is being you get pulled from GitHub, and it contains instructions, from in our case,
+7:36
+on kind of what you would like your agentic AI to actually be able to do.
+7:42
+Okay. So it's effectively like a module that's like, hey. This file this skill is gonna tell
+7:48
+this AI agent to, you know, go and read all my signal messages or whatever.
+7:53
+Yeah. Yeah. Yeah. It kinda extends the agent's capabilities. And I think for OpenClaw,
+7:59
+it's ClawHub is kind of the centralized location where people can, you know, share skills if they create them or or download them.
+8:05
+So it kinda just adds that functionality and is open sourced and maybe not validated as as much
+8:13
+or have as much scrutiny for when they're added, which is why we're seeing some of these, like,
+8:18
+malicious skills being, you know, used or added. Alright. So why why does any of this matter, guys?
+8:25
+Yeah. So, usually, for us, when we have an idea because there's lots of things you can hunt for, right,
+8:30
+we're considering some of these things before we really jump in and say, like, we're gonna go hunt this.
+8:36
+So particularly with Open Claw, right, we've seen it kinda grow exponentially since it's been released.
+8:44
+And a lot of the organizations we, you know, have as customers, they have different policies or different risk tolerance.
+8:51
+So sometimes they allow users to just install different applications for productivity or bring their own devices.
+8:58
+So potential that this could impact some of our customers. And then we look more at that impact piece too. Right?
+9:05
+Like, what could actually happen or how bad could this be? And, you know, with OpenClaw, it does have like,
+9:12
+relies on using system level access as well as it does have the ability to integrate with a lot of other tools or platform.
+9:19
+So, you know, like Telegram or Gmail or some of the different different pieces, and it's just known that there's some, you know,
+9:27
+different configurations for it, some of them not as secure as others. And, just seeing that some of those skills or abuse of this can
+9:35
+lead to a variety of attacks, whether that's, like, exfilting sensitive information or installing malware,
+9:42
+like infostealers, or just establishing kind of that persistent access. So that kinda helps us shape, like,
+9:49
+why this really matters and if it's something we should hunt for. So, Tyler, anything you wanna add?
+9:55
+Yeah. What the reason part of the reason we we kinda focus on these things is, you know, it's
+10:01
+one of the parts of the challenging parts of a hunt program is to kinda prioritize and especially when you have a lot of ideas.
+10:08
+You know, there's there's always, you know, you know, ideas that might be really cool,
+10:14
+and might be really novel or impactful, but the likelihood of it happening, you know, is maybe is very very minimal.
+10:21
+Right? So we we kind of use these criteria to curate,
+10:26
+for lack of a better word, you know, our our hunt ideas and kind of our catalog, so that we're able to effectively, you know,
+10:34
+prioritize hunts, ID identify, you know, where where we can have the biggest impact on our customers.
+10:40
+So if if you're looking at doing threat hunting, you know, like, it's something that you'll have to figure out is how do you how
+10:46
+do you sort of manage your idea generation, you know, and how do you because sometimes you wanna
+10:52
+maybe also also hold on to some of those likely you know, like, this isn't as likely to occur now.
+10:59
+But if you have it documented why it might not be likely and then the situation changes, you know, you still have that hypothesis and those ideas already captured.
+11:06
+So Yeah. I mean, I think big picture baseball there. I think big picture, the like,
+11:13
+what we've watched happen over the last few days and what you guys are gonna ultimately talk about here regarding OpenClaw is, like,
+11:19
+a nice little microcosm of what I think folks need to be concerned about when it comes to AI,
+11:25
+which is effectively that, like the biggest problem I think I see coming down the line is
+11:31
+gonna be it's gonna look a lot like the the problem with NPM packages. Right? It's gonna be people going out to random GitHub,
+11:38
+downloading random AI tool, MCP thing, and then shoving that into their environment without
+11:44
+really fully understanding the, you know, sort of chain of of of development custody on that
+11:50
+tool and knowing, like, necessarily all of the things that are built in, all of the people who touched it,
+11:56
+and whether they can really, like, kind of trust all of that. But let's move on
+12:02
+to what you guys actually did. Yeah. So I'll take this. So this phase is hunt planning,
+12:10
+and this is probably one of the most, in my opinion, the most,
+12:15
+important and also sometimes underutilized facet or phase of the hunt program.
+12:22
+So one of the issues we run into when we start doing hunts is, you know, we we don't necessarily know what we're gonna be looking for
+12:30
+right off the bat. We also it's very easy to jump in an EDR or the data lake
+12:37
+and just start exploring. Right? Like, threat hunting, you know, it's a curious discipline.
+12:42
+People were prone to that, but a lot of times that can lead to unfocused outcomes. So one thing we try to do ahead of time is we try to model that
+12:49
+behavior, you know, not necessarily by downloading OpenClaw and firing off, some malicious skills.
+12:57
+You know, sometimes that's if that's available and you have the infrastructure to handle something like that, that's great.
+13:03
+But sometimes you can do that with just sort of some pseudocode here that we sort of, set up. So you could see the left diagram I'm sorry.
+13:10
+The right diagram. We've got sort of an installs and executes OpenClaw. We've got an installs malicious skill,
+13:17
+and then we've got executes commands, installs malware, does evil things. And what that might look like,
+13:23
+from the actual telemetry side is represented on the, the left hand block there.
+13:28
+So we've got a lot of text, but, basically, we're looking at on section one, the you know,
+13:34
+we did some research, and we found that the the parent process, you know, for most of the time is Node.
+13:39
+Js, spotting OpenClaw, Moltbot, whatever you wanna call it. The second item that we would be interested in is, hey.
+13:46
+Where are these malicious skills actually captured? So what does it look like when somebody puts in a skill
+13:52
+or or downloads one of those and and sets it up with OpenClaw? So we've got a file mod, for the directory,
+14:00
+and then we've got the proc process execution and then the spawning interactive shell and then evil.
+14:06
+And so our third hypothesis and sort of third thing we wanted to look at is, okay. So what what specific behaviors from an evil perspective,
+14:14
+might we wanna look at? You know, given the sort of root access these things have to the system and,
+14:23
+I guess, you know, for lack of a word, limitless possibilities for mischief. It could be really tough if you go in from a hunting
+14:30
+perspective, and you're just looking at, like, all the evil. Right? So we wanna try to tailor that down a little bit more.
+14:37
+In our case, we focused on, infostealers, partly because the top downloaded skill was
+14:43
+infostealers, was an infostealer. And, also, because we see infostealers becoming a major problem, you know,
+14:48
+if you've got this set up in a development environment and it steals your API keys and sends them off to an attacker's
+14:55
+machine, that's a bad day. So that was the area we focused our third hypothesis on was
+15:00
+looking at that process execution, the installation of malicious skill, followed by, you know,
+15:05
+reading some sort of read of sensitive credentials or information, and then a NetCon with OpenClaw, Moltbot,
+15:12
+curling to an attacker site. And it's important to note that it doesn't have to be specifically the cat command, or the curl command.
+15:18
+It's more looking at the behavior that we're seeing. And so I'll I'll stop there. Brittany, if you have anything to add with that?
+15:25
+Yeah. I think just maybe calling out one of the points you kinda alluded to of
+15:31
+scoping the activity. Right? So in the planning phase, we kinda determine really what the scope is.
+15:37
+So if people have been kind of following OpenClaw in the news, there's more, I guess, potential security issues with
+15:45
+it than just the the skills. Right? Like, it'll OpenClaw as agent allows,
+15:52
+you know, execution of arbitrary commands. There's some remote code execution opportunities with it
+15:59
+if it's, you know, open to network and people access it or ability to social engineer the AI agent into doing something.
+16:07
+So, you know, at this phase, we've really kind of focused in on what is the exact behavior
+16:13
+or risk or area we wanna focus on and some of those other, you know, things so we don't go in a huge rabbit hole or, like,
+16:21
+try and, you know, look at everything at once is to scope it down in those other
+16:26
+pieces that we think might be good hunts, capture them for, like, a backlog so we could go, you know,
+16:32
+maybe after this hunt, go look at remote code execution with AI agents or things like that.
+16:38
+Alright. Before we we move on to the next section here,
+16:44
+we've got a couple generic questions that came in. One actually came from LinkedIn, which I'm not sure. I don't even know if you guys realize that you're live
+16:50
+streaming on LinkedIn right now. So that person asked if we're how we're using AI agents
+16:56
+in threat hunting, which I think is an interesting question because we are definitely using AI all over the place in, you know,
+17:03
+the Red Carry product to do all sorts of interesting things. I don't actually know how or if we're using it in their threat hunting process.
+17:12
+So, yeah, let's address that question first, and then I'll go on to this next one. Ok, Brittany, do you wanna take a stab at that?
+17:17
+Do you want me to take a stab at it? Sure. Yeah. I think we use it in a few different ways.
+17:23
+So I know there's a few on the team use, like, AI agents to kinda help in pull in intel and filter out some of
+17:29
+the things that might be good to hunt for and help kinda, like, you know, pull in the relevant context around an idea that then can be
+17:36
+evaluated by a human to just kinda make sure it makes sense. Right? We don't fully just let AI do everything.
+17:41
+And then also from kinda the next point too of we deal with a lot of different data sources and, like,
+17:50
+EDRs. So sometimes they're querying and getting data back, but we'll try and use some AI to kinda help us with crafting some
+17:58
+of those queries because I don't know about you guys, but there's a lot of query languages that are just slightly different enough that when you have to remember them
+18:06
+all, it becomes a challenge. I don't know. Tyler, do you have anything you wanted to add? Yeah. We don't really I don't think we we don't yeah.
+18:13
+I wanna emphasize we it's is still very human driven,
+18:18
+operation, and we we do use agentic AI, but mostly as, like, I guess, would say, like,
+18:25
+a supplemental resource. You know, for example, I might use it to make my hypotheses
+18:30
+better, you know, like, bounce bounce ideas around. But I don't think we have any, like, pure, like,
+18:36
+agentic workflows that are doing threat hunting. It's still very much a human driven
+18:42
+human driven process here. And then we have a rather specific question from someone who surely must be a customer,
+18:49
+wondering if we're gonna be publishing pup detections for OpenClaw. I have no idea.
+18:54
+I don't know that you guys have any idea, but do we who would that person reach out to? Like, their CSM maybe to ask?
+19:02
+Yeah. I would say their CSM. Yeah. Great. And then last last question before we move on.
+19:07
+How do you guys deal with, like, disparate like, the the differences in the log sources
+19:13
+available between different organizations when you're doing sort of a cross organizational hunt?
+19:20
+Yeah. So I'll I'll take a that that's a great question. So what I will usually do,
+19:26
+and what I what we usually find out is so, you know, different EDRs and different platforms
+19:33
+I'll use EDRs as an example. You know, might capture different registry modifications.
+19:39
+So, you know, certain EDRs might monitor these registry keys, and certain different EDRs might monitor those registry keys.
+19:45
+So it can be actually quite a challenge. So I think where it comes down to is
+19:51
+what we will try to do is what and what I will do is I will try to build sort of a data model of my data sources before
+19:58
+I hunt, and I will go do that research. And I will figure out, you know, like, hey. If I'm just gonna say,
+20:05
+I'll make up a cloud platform, Tyler Cloud. Right? If Tyler Cloud isn't logging, you know,
+20:11
+MFA creation events for whatever reason because I made my cloud I've I've coded my cloud with OpenClaw,
+20:17
+and it doesn't work. Right? Like, that's something that we wanna call out. And as part of our hunt report and a part of our planning process,
+20:24
+we wanna identify ahead of time and categorize as maybe a potential blind spot. There are other there are times where we're able to take that
+20:31
+information and maybe find a different way to kind of query or capture that behavior.
+20:38
+But a lot of times, it really comes down to knowing your data source and kind of building that data model out and planning appropriately.
+20:45
+And I would say as you go through that process in the if you're doing a hunt program internally,
+20:51
+document your data models, because you don't wanna be rebuilding them every single time you hunt.
+20:57
+So have the repository or some sort of knowledge base of what those different data models look like for your data sources.
+21:03
+Alright. We've gone wildly astray here answering questions to
+21:09
+let's get back on track. You guys had a hunt hypothesis. So what happened when you guys actually executed this this hunt?
+21:18
+Yeah. So we had a had three hypotheses based off the activity. So these are and I'll start at the bottom.
+21:25
+So remember, a good hypothesis has gotta be specific, testable, and falsifiable.
+21:31
+So one of the first things we wanted to look at, was privileged users running OpenClaw on their workstations.
+21:39
+The second thing was threat actors or TAs are installing malicious skills in OpenClaw to force it to spawn interactive shells.
+21:46
+And the third item was that threat actors are installing malicious skills and using OpenClaw to access and
+21:52
+exfiltrate sensitive credentials off the network. And we you know, each one of these hypotheses,
+22:00
+we try to make as specific as testable and and falsifiable as possible. I really think these are where what drive your the success of your hunt.
+22:08
+You could easily have, like you know, users are running, but that might be too big of a scope.
+22:14
+So we try to nail it down to privileged users. So and those hypotheses sort of do build on each other,
+22:20
+you know, starting with something a little broader, narrowing it down behavior, and then getting really specific at the at the end there.
+22:27
+So, Brittany, I'll turn it over to you for any additional comments on this one. Yeah. I think also tying it back, for some of these you know,
+22:35
+some of it's risk too. So, like, some organizations, they might not care as much of, like, OpenClaw in their environment.
+22:42
+So maybe the first hypothesis is not as, you know, as interesting of, you know,
+22:48
+the second one of it installing a malicious skill or follow on activity.
+22:54
+I guess we can talk about the next one. So, like, once we actually have these hypotheses,
+23:01
+we get to the fun part of diving in, which I think is the next slide of actually taking that,
+23:09
+running some queries to look at the data. So for that second hypothesis, right,
+23:15
+there was two kind of pieces to it. One is the installation of a skill.
+23:21
+So, you know, looking at that and based on our understanding during the research,
+23:28
+we know by default they're kind of stored in the path of open claw slash skills.
+23:33
+So, you know, diving in, kinda looking at a query around that and joining it with
+23:39
+another query to look for those interactive shells or curl or some of the other interesting commands so we can kinda
+23:45
+correlate and see, like, was there interesting commands after a skill
+23:50
+file was modified on that endpoint? There's probably a few different pivot points here.
+23:56
+Right? Like, looking at some of these, there's obviously some skills that are known to be malicious
+24:01
+or documented out there in research. So just checking for some of those, but also looking at the behavior,
+24:08
+and finding those things that are more anomalous or suspicious based on the behavior. Tyler, don't know if you had anything you wanna add here.
+24:15
+Yeah. So dealing with dealing with the data, even if you have a really specific you know, you have a really solid hypothesis, you you
+24:24
+you might get either you know, I found that I rarely ever get manageable results. I either get way too many results or I get very little
+24:31
+results that make me, you know, just sort of maybe doubt my query. But so really kinda coming into going, like,
+24:38
+back to the planning phase again, thinking of, like, different ways you wanna analyze the data before you
+24:44
+maybe get to the data. Right? So, like, in this case, you know, like, some examples might be, like,
+24:50
+you could rack and stack the skills deployed in your environment and look for the, you know, most common and least common ones.
+24:56
+You could also now that they have it integrated with VirusTotal, you know, you might be able to filter some of these out by looking for
+25:02
+only known malicious ones and then pivoting from there. And the last bullet there is it's okay to refine and iterate on these.
+25:11
+No. Nothing is perfect. Right? So, like, in fact, the hypotheses we showed, we've iterated on several times,
+25:16
+you know, based off of some of the initial surveys of data. So, you know, very rarely do you just nail it, the first time.
+25:24
+You've gotta be flexible and adaptable, and, you know, it's okay to refine and iterate on those as you begin
+25:30
+analyzing, yeah, through you begin sort of slicing through this data here.
+25:40
+I guess a a good point to call out here too as we're going through that net data.
+25:45
+From a hunting side, relying just fully on finding threats is not something we
+25:51
+consider deficient, because there's a lot of other value that comes from from threat hunting.
+25:57
+And there's also some of the things that we can't control. Right? Like, we wouldn't be able to control when a user would
+26:03
+install OpenClaw or if they install malicious skill or maybe that would happen outside the retention of our our
+26:10
+data or be something in the future. So there's still a lot of value from hunts beyond just those threats,
+26:17
+and I think we can go to the next slide and talk through some of those. Yeah. Yeah.
+26:22
+So as Brittany said, there's relying on we don't approach it that way.
+26:28
+And I think, like, in general, relying on your threat hunting program as out output is only defined evil is is kind of a it's a tough way to live.
+26:36
+So we kind of look at that look at it as as Brian alluded to earlier, you know, like, detection opportunities.
+26:42
+We kinda break it down into a couple different categories here and, you know, like, actionable recommendations.
+26:49
+So we always try to take some sort of actionable guidance away from our hunts to deliver to, you know,
+26:55
+customers for for ourselves, you know, what have you. Right? So, like, educating users on the safe use of AI,
+27:03
+blocking OpenClaw, you know, that's that's tough, but, you know, blocking installation,
+27:08
+ensuring you have AI acceptable use policies. Detection opportunities are a really big one.
+27:16
+Like, some of your hypotheses might not lend themselves as well. Like, hypotheses the first hypothesis did not does probably not lend
+27:23
+itself super great to a detection, but two and three are quite specific and are higher fidelity and are probably gonna be, you know,
+27:30
+an area you might be able to tune that for detection. And that's where you really wanna partner with, you know, whoever's managing the detections,
+27:37
+for your organization so that you could potentially turn they can tune and tailor those, to have, you know,
+27:43
+continual detection and monitoring in your environment. This the next one is one of my my favorites,
+27:48
+finding misconfigurations and hygiene issues. That's, I think, is a really also underrated part of
+27:56
+their hunting. Right? So, like, finding unusual admin activity that maybe, you know, shadow IT, or, you know,
+28:02
+finding that credentials stored in an insecure location. You know, if if you can find that from a hunting perspective and
+28:08
+communicate that to get somebody to clean that up, you know, you've reduced your attack surface.
+28:14
+And the last three are, you know, talk about lessons learned. You know? So an example might be, like,
+28:20
+hey. We we don't have visibility into this activity because there's no the law the audit policy on the system isn't
+28:26
+configured to capture it. You know, level of confidence and findings, that's really important too.
+28:33
+You know, if you're delivering this to somebody, we try to maintain, you know, like,
+28:38
+a certain degree of confidence. You know, if we're in an environment where fifty percent of the devices are unmonitored and we're doing threat hunting,
+28:43
+it's really hard to assert with a high level of confidence that, you know, you're clean from APT 68.
+28:50
+Right? So and then last, any sort of visibility gaps or blind spots. That's also really big.
+28:55
+Frontline could do a great job of exploiting those or not exploiting them, I should say, capturing those and building momentum to get those
+29:03
+visibility and blind spots addressed. Because, usually, you don't find yourself addressing those too often if
+29:09
+you if you're not actively looking for them from a hunting perspective.
+29:15
+Wow. Well timed there. I'm gonna close this out by asking you guys a question that I've been wondering this whole time.
+29:22
+It's a loaded question, so buckle up. When you, when your hunt succeeds, right,
+29:28
+and you find something quite bad, is that a moment of excitement, or is it, like, a moment of, like, oh, no.
+29:36
+Like, I was hoping that that didn't happen. Right? Because it's like, you're obviously you're developing these things with
+29:41
+the intention of finding bad stuff, but at the same time, you don't really wanna find bad stuff.
+29:50
+I think it's I think for me, it's dread. Like, it's exciting at first, but then,
+29:57
+you know, we had something recently where we found something and pulled the thread and pulled the thread a little more,
+30:04
+and it got quite interesting. And so those for me, you know,
+30:11
+I've done hunts where I've looked for really bad activity, like, pretty far up in the kill chain, you know, like, looking for, like, d hunting DC sync activity.
+30:19
+Like, yeah, if I find that, that's I don't wanna find anything with that.
+30:25
+If I find that, it's it's, yeah, it's bad time.
+30:30
+I I think for me, it's a little mixed feelings because it's you know, we don't want anything bad to be in any environments that,
+30:37
+you know, we're we're doing security for, so you don't want those things to happen. But it's also
+30:44
+good in a way because from the threat hunting side, we're trying to find those threats that go undetected.
+30:49
+Right? So if we can find them early enough, we can hopefully, like, limit the damage.
+30:55
+So it's always a little bittersweet. Right? You don't want anything bad happening in an environment, but it's nice to be able to do something to help and, like,
+31:02
+make it not be as bad by finding the thing that is malicious and taking that knowledge to make things
+31:08
+better, improve security posture. Well said. Well, we're at time. So I just wanna say thanks to both of you for coming on and
+31:15
+presenting today. Also, thanks to everybody for tuning in to our newly
+31:21
+renamed SecOps weekly. So thanks everybody for attending, and we'll see you soon.
+

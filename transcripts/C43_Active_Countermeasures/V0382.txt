@@ -1,0 +1,930 @@
+0:01
+So today's going to be kind of a fun one because what we're going to do is we're going to go through and we're going to
+0:06
+work with some firewall roles. So I gave some prep to go through and do if you wanted to be able to follow along with
+0:11
+the hands-on examples that we do here. Um so feel free to kind of run through these steps real quick if you haven't
+0:18
+already. Um I'm doing this on an iuntu. I think it's probably 24 LTS system.
+0:23
+That's pretty common. Um and it's just a server stripped down. You don't need a whole lot of software beyond what I got
+0:29
+listed here. You know, IP tables should already be installed unless you did a
+0:34
+minimal Auntu install, in which case, you know, that might be missing, but you should be in pretty good shape. And then
+0:41
+once you're done, you should see something like this. So, you should be
+0:47
+able to see a list of files that create get created in an FW firewall directory.
+0:52
+And I'll go hands-on and we'll kind of poke through these scripts and what they are in just a second. So this fireside today is going to
+1:01
+completely build on what we did last week. So I'm not going to take the time to talk about, you know, we're going to
+1:07
+create a static filtered firewall. We're going to create a stateful filter firewall. And I'm not going to bother taking the time to describe what the
+1:14
+differences between those are supposed to be because we talked about all of that last week. So if you go through
+1:20
+this week and you're kind of confused by some of it, that's okay. go back to last week's fireside Friday and that should
+1:26
+be able to fill in the blanks for you. But like I said, I'm going to do this as a hands-on walkthrough. So, what we're
+1:32
+going to do is we're going to we're going to cheat a little bit. We're going to use a single Linux system. So, normally, as I'm sure most folks know, a
+1:39
+firewall that gets installed in line, meaning it has one interface that faces towards the internal network. It has
+Server Prep (Ubuntu 24 LTS)
+1:45
+another interface that faces towards the external network, and then it controls the traffic that's allowed to pass
+1:50
+across it. We're going to cheat a little bit with that. and that we're going to use the loop back interface on our Linux
+1:56
+system. So, the traffic is going to go to and from the same system. That's
+2:01
+okay. The firewall rules we create are going to be the same as what we may use
+2:07
+if we were working with a true fullup firewall. The only real difference comes
+2:13
+in where you apply those rules. If you're using an IP tables firewall, uh
+2:19
+IP tables uses um three separate policies by default. You can create your
+2:25
+own, but there's three different policies that you can use to define rules that get implemented in a certain
+2:31
+way. So for example, there's a uh policy called the input chain. And what that
+2:37
+does is that controls traffic going to the firewall itself. There's an output
+2:43
+chain which controls what traffic is allowed to leave the firewall itself. And there's a forward chain which is
+2:50
+used to dis to interact with you guessed it traffic that's getting forwarded across that firewall. So it'll be
+2:56
+traffic that's coming in one interface and trying to go back out another. So in a real firewall we would probably be
+3:03
+doing most of these rules within the forward chain. But since we're only working with a single system, we're
+3:08
+going to be working with that input and that output chain, specifically mostly the input chain. So, we're going to be
+3:14
+controlling what traffic the firewall can send itself over the loop back
+3:20
+interface. And we're going to do this by um by um setting up three different
+3:28
+listeners. So, let me get a couple of things spread out here just to make sure
+3:33
+I've got everything going right here. All right, give me just a second.
+3:39
+I have too many screens open at the same time and kind of lost track of a few
+3:44
+things. Okay, here's that one. A cool. Let's do this. So, let's let's
+3:51
+start with the special files I had you pull down. So that should have created
+3:56
+an FW directory thought for firewall. And if we CD into that directory, what you're going to see is a bunch of
+4:03
+scripts. And each of these scripts has a different role it's going to play in the testing we're doing. So you could type
+4:11
+all this stuff out manually if you wanted to, but I just always find it a little bit easier to go through and
+4:17
+automate things with scripts as much as possible. So remember, we said we're going to set up a bunch of listening ports. So let's take a look at what
+4:23
+those are going to be. and we'll actually create those listening ports using this script called listen. So if
+4:29
+we look at the contents of it, it's using netcat or NCAT for short with this
+Checking IPTables
+4:34
+particular binary to go through and create these listening ports. Now the first thing we do is we say hey if
+4:40
+netcat is already running on the system kill it. And what that does is that avoids any conflicts like hey port 1 2 3
+4:48
+4 5 is already open and now you're trying to open it again. I don't know what to do. Well, by killing any
+4:53
+instances in netcap, that's going to take care of that. Then what we do is we're setting up two TCP listening
+5:01
+ports, port 1 2 3 4 and port 1 2 35. So all this is going to do is it's going to
+5:07
+hold open that socket 1 2 3 4 1 2 35. So that if anything tries to connect to
+5:12
+that port, that port's going to be an open port because there's an application sitting behind it, specifically ENCAP.
+5:18
+And now that'll accept any data that tries to come in through those ports. These commands here are opening up UDP 1
+5:27
+2 3 4 and 1 2 3 5. So it's going to uh so we're setting up two TCP two UD UDP
+5:35
+ports in order to go through and kind of um what this is going to do is it's going to allow us to set up um we're
+5:43
+going to look for three conditions. We want an open port and a closed port. We're going to try different scans
+5:49
+against them. And then what we're going to do is try different scans against them, but with the firewall rule in the
+5:55
+way trying to control traffic to keep it from actually getting to that port. And we're going to see what happens as part
+6:01
+of that. So that's the listen command. The one that goes with it is kill
+6:10
+listen. And if we take a look at what's in that file, all this does is this goes out and it looks at uh actually I could
+6:18
+have just done a pkill netcat on this if I wanted to, but yeah, this just goes through and it looks to see, hey, is
+6:23
+netcat running? If it is, go through and kill it. And it just echoes some information to the screen to tell you
+6:28
+what it's actually doing as it does it. Pretty straightforward. The other tool we're going to be using is the scan tool. So
+6:35
+the scan script, actually, let me clear the screen first. So the scan script I'm
+6:41
+using HP ping 3 or Hping for short to go through and create and craft my own
+6:47
+packets that I want to use as part of this probe. So what we're doing here is we're set creating three TCP packets
+6:57
+going to ports 1 2 3 4 1 2 3 5 and 1 2 3 6. We're turning the SIN flag on,
+7:04
+leaving all the others off, and we're only going to send one packet. So the idea will be when this packet hits that
+7:09
+port, what type of reaction comes back to the whole thing? Then what we're going to do is we're going to go through
+7:16
+and we're going to run uh three SC uh three scan packets again
+Exploring the FW directory
+7:23
+against each of these ports, but this time we're only going to turn on the FIN flag. So we mentioned this when we were
+7:30
+talking about IP and TCP in general. This should never happen in the real world. You'll never see a P you should
+7:37
+never see a packet which is FIN turned on by itself. What you'd see is the FIN flag and the acknowledgement flag turned
+7:44
+on. So these shouldn't exist. So different operating systems handle them slightly different ways. So we're going
+7:50
+to take a look at that. And then finally we do similar where we go through and we do a UDP port scan. Um oh one other
+7:57
+thing with the listen.
+8:03
+So the UDP ports, there's a known bug with using endcap, which is when
+8:08
+something connects to those ports and then disconnects, that port actually
+8:14
+closes. So one of the things we'll have to do with our UDP scan is scan the scan
+8:20
+those UDP ports and then we're going to have to restart ENCAT again. But that's not a big deal. We've got scripts to do
+8:25
+it, so it makes it a whole lot easier. So we've got a script to set up our listening ports. We have a script to
+8:32
+kill them if we need to. We have a script to go through and do our port scans. The rest of the um uh scripts
+8:41
+revolve around managing the firewall itself. So, for example, uh there's a FW
+8:46
+rules one and all this does is print out the firewall rules. So, if I run that, so I'm going to say period forward slash
+8:53
+because it's not a script that's in my path. It's in the current directory. And
+8:58
+I'm just going to say FW rules. And when it runs that command, notice what it comes back with. It says the default
+9:05
+policy for input is to accept traffic. And then there's
+9:11
+no rules in here to tell it to do anything interesting with the traffic.
+9:17
+So in other words, there's no rule saying let this through, let that through, or deny this or deny that. There's nothing like that. So, so the
+9:23
+policy is empty. So this pol so this policy it's talking about here this is the default at the end. So what'll
+9:30
+happen is let's say the firewall sees a packet and it's coming into the firewall itself. It's going to go to the input
+9:37
+chain and it's going to say okay let me go through all of the rules to see if
+9:43
+any of them match this packet I see. And if none of them match this packet I'm going to fall back on this default
+9:49
+policy to decide how to handle it. That's basically how to go through and read this. And this will be a little bit
+9:55
+more interesting once we actually have some rules that are uh or once we have some firewall rules built in there.
+10:01
+Okay, so that's the uh the clear one. Um we also have a couple of rules for uh or
+10:07
+couple of scripts for going in and um creating our rules. Now if we want to clear them, we have FW clear. So all FW
+10:15
+clear does actually let me show you the contents of this is it just goes in and
+10:21
+it says hey change the default policy. So actually I threw the forward chain in
+10:26
+here. I didn't really need to but change the make sure the default policy is accept is set to accept. And then this
+10:34
+says flush any existing rules that are currently in the input chain. This says
+10:39
+flush any rules that are in the output chain. And then this says, "Okay, now print what rules are there?" And there
+10:45
+should be none. So this is how if we need to get back to a non-f firewall state, we just run the FW clear. That
+10:52
+clears all the rules. Bang. We're off to the races again. And everything's in pretty good shape. All right. Now, let's
+10:57
+take a look at our scripts that are going to actually create our firewall rules. So the first one we're going to
+11:04
+take a look at is the F I think it's FW static. Yes, FW static.
+11:11
+So, here's what this one's going to do. The first thing it's going to do is it's going to set the output chain to be
+11:17
+accept, meaning the the firewall, the system itself can send any traffic it needs to and there's going to be no
+11:23
+restrictions on that. Then what I did is I said, "Hey, just in case you're
+11:28
+running this on a cloud instance and you want to be able to s
+11:34
+you keep your SSH session to this box running, let's create an exception for SSH because without that rule, if you
+11:42
+run one of these firewall scripts, it would kill your access to that server." And there's nothing worse than having a
+11:48
+remote cloud server you can't get remote access to anymore. Then what it does is
+11:53
+it goes in and it creates these two rules here. So this one says, "Hey, anything coming to the firewall itself
+12:01
+that's based on TCP in this line or UDP on this line, port 1 2 3 4, accept it."
+12:08
+So remember 1 2 3 4 and 1 2 3 5 are set up to be listening. So we're only
+12:15
+telling the firewall, let traffic go to port 1 2 3 4. The firewall is going to
+12:20
+try and reject any traffic going to port one 1235 and we're going to get to see
+12:26
+how good does it do with that. Uh what am I running? Yeah, Bill is exactly right. Abuntu 24 LTS. So that that's
+12:34
+what I'm running here. This should be fairly easy to adopt for any platform though. The these are not complicated
+12:39
+scripts by any stretch of the imagination. So I'm letting in traffic to the TCP and the UDP port 1 2 3 4 and
+12:47
+that's it. Then what I'm doing is I'm creating a rule that says, "Hey, anything that looks like a reply coming
+12:54
+back to the firewall, I want you to go through and permit that through. I want to accept that. Okay, what's our
+13:01
+criteria to figure out if it's a reply or not?" Well, this is a static filter.
+13:06
+So there's no concept of state. So the only thing I can set look for is the sin
+13:12
+flag is not turned on by itself. And if that's the case, then this is probably a
+Walking through firewall scripts
+13:17
+reply because the only time sin is turned on by itself is at the start of a session. So we'll go through and we'll
+13:23
+deal with it that way. Then what we're doing is we're saying, well, actually, we got to kind of let our replies back in for any UDP
+13:30
+traffic. And UDP, the reply port is going to be anywhere from 102424 to
+13:35
+65535. So we got to be able to let that stuff through, too. And then we go through and we say, "Okay, now our
+13:42
+default, we're going to change our default policy so that if it doesn't match any of these here, I want to go
+13:47
+through and I want to drop that traffic." And then I go through and I just print out what the rules are. So that's our FW
+13:54
+static switch or uh script. That's what that goes through and does for us. Now
+14:00
+the complement to that is um FW is it? No, I didn't call it
+14:08
+stateful. I think I Yeah, inspect cuz I'm actually going to go through and and and inspect these as they go by. So,
+14:14
+this is our stateful firewall that we're going to create. Kind of similar to the last one where we go in and we say,
+14:23
+um, flush any existing rules. That way, we're not, you know, duplicating any
+14:28
+potential rules that are in there. Then we're saying, hey, anything trying to
+14:34
+leave the system, if it's part of a, what this says is create a state
+14:41
+table and if this is a new or established session, let it through. So,
+14:49
+what's going to happen when this rule gets hit is when it this rule gets hit, the firewall is going to say, "Ah, that
+14:54
+packet that I'm trying to figure out what to do with, let me see if it matches any of my state table entries."
+15:01
+And if it's part of a previously established session, or if it's a new
+15:06
+entry that doesn't exist in the state table yet, this is okay. Go ahead and let it through. And if it's new, I'm
+15:12
+going to write a state table entry to record that this traffic was let by. Here's my rule to make sure we don't
+15:18
+lose SSH traffic going to the system. And then here are kind of our primary
+15:24
+firewall rules here. So we're going in and we're saying, hey, any TCP traffic
+15:30
+going to port 1 2 3 4. So again, this is the port we're trying to leave. We're trying to open with the firewall. Port
+15:36
+1235 is a listening port, but we're going to try and block it with the firewall. And this, similar to that
+15:42
+first entry, says go reference that state table. And if this is new or part
+15:48
+of an established session, go ahead and let it through. Then I go in and I
+15:55
+say, I'm going to let my replies through. If it's based on TCP, UDP, or
+16:00
+ICMP replies, go ahead and let it throw. Actually, now that I'm looking at it, I messed up this one a little bit because
+16:07
+with ICMP, one of the possible states that I didn't list here is related. So that
+16:15
+should say established comma space related. I've missed that part of it,
+16:21
+but for the purposes of the testing we're doing, that shouldn't cause us any problems at all. And then again, it goes
+16:26
+through and it kind of prints everything out. Cool. So that should be all of our
+16:33
+scripts. Yes, that is all of our scripts. Awesome. So, what I'm going to
+16:39
+do is in this window here, this is where I'm going to go through and I'm going to set up my listening ports. I'm going to
+16:46
+open up a second window here. And this window is going to be for running my
+16:52
+scans to see what was going on. And now I'm going to open up a third window. And
+16:58
+this one I'm going to run TCP dump so I can watch the packets as they go by. So
+17:04
+I'm going to say TCP dump space dash NN don't resolve IPs don't resolve ports
+17:10
+and then I'm going to say dash I this is the interface I want to listen on and
+17:15
+I'm going to say the loop back interface which is LO for short. Now I could say
+17:21
+capital X if I wanted a complete decode-v if I wanted more verbose details but quite honestly we don't need
+17:28
+it. This command here should be fine. So, I'm going to go ahead and Oh, and it's saying, "Hey, you don't have
+17:33
+permission to do that." So, I've got to run that with pseudo. And now that I ran it with
+17:38
+pseudo, it's saying, "Hey, I'm here and I'm listening." This is running in the background. Everything should be set to
+17:43
+go. Awesome. So, step one is done. We've gone through and we've set up our um
+17:49
+we've we've set up our our packet sniffer to see these packets as they go
+17:54
+back and forth. All right. Now, what I'm going to do is I'm going to run my scan. So,
+Troubleshooting tips
+18:01
+we're going to try running a scan without any firewall in place at all to go through and see what it comes back
+18:07
+with. So, here's the results from the TCP scan cuz I have the script set up to pause when it gets through the f, you
+18:13
+know, each portion of the scan. And notice when it tried to hit port 1 2 3 4, nothing came back. Reset act. Reset
+18:20
+act. Reset act. Oh, wait. That's right. Before I do the scan, I'm going to kill this script. Before I do the scan, I
+18:27
+actually have to set up my listening ports. I didn't do that when I was in my first window here. So to set up my listening ports,
+18:35
+I'm going to run the listen script. And when I run that, notice it came back and said, "Okay, I launched four instances
+18:43
+of NCAAT. One of them is listening on TCP port 234. One is listening on TCP
+18:51
+port 1235. I'm also opened up UDP1234 and
+18:57
+UDP1235. Notice just the way Linux decides to print things out, it only lists the TCP
+19:05
+ports as listen. Technically, the UDP ports are listening as well. It just
+19:11
+doesn't give it that nomn nomenclature because it's a non stateful
+19:16
+protocol. Okay. So, now that we have our listening ports open, now let's go back and run our scan. So again, we're
+19:23
+scanning opened and closed ports with no firewall in the way. So let's see what
+19:29
+this comes back with. So with our sin scan, anytime it hit an open port,
+19:34
+right, we said 1 2 3 4 and cat's listening and holding that open. It's returning a sin act. See, same thing
+19:41
+here. Port 235, that's the other one. We open sin act. Now port 1236, we don't
+19:48
+have a listener on. we didn't set up NCAT to listenit on that port. So when we're hitting a closed port, it gets
+19:54
+back a reset act. So that kind of tells us with a sin scan, if I get back a sin
+19:59
+act, that's an open port. If I get back a reset act, that port's closed. Pretty straightforward. All right. Now, I'm
+20:05
+going to go through and run the rest of my scan. The UDP one takes a little bit longer. Now, notice with my UDP
+20:13
+scan, I sent a um Oh, actually, I'm sorry. This is wasn't a UDP scan. This
+20:19
+is the FIN scan. So, I'm doing a FIN scan. So, my FIN scan went to an open port and I didn't get anything back. And
+20:27
+then my fin pan my my my FIN scan went to this closed port and I got back a
+20:33
+reset act. Well, nothing happened here. Am I sure? One of the reasons for running TCP in the background or TCP
+20:40
+dump in the background is I can see what are the results of the scans I'm doing. So I can see right
+20:47
+here, here's my scan going to port 1234. And notice there's no reply that comes
+20:53
+back, right? There's no reply going back to port 1237. Here I did a scan against port
+20:59
+1235. And again, nothing came back. I see nothing getting returned to port
+21:05
+1922. Here's where I sent that packet to a closed port. And notice when it went
+21:12
+to a closed port, I sent the FIN packet. But what came back to that port number
+21:17
+was a reset act. So with my FIN scan, nothing coming
+21:24
+back on uh on an open port or nothing coming back means it's an open port.
+21:29
+Reset at coming back means it's a closed port. So again, we're going through and we're
+21:34
+trying to see um we're trying to see uh what are the
+21:39
+different stimuluses, what to based on the stimulus we're sending, what's the response that comes back. So I'm going
+21:46
+to put a little white space in here so it's a little bit easier to read. And now I'm going to go back here and this time we're going to go through and we're
+21:52
+going to run our UDP scan. And with our UDP scan, this came back and we got two
+21:59
+scans that nothing came back. We have one scan where we got back a port unreachable. Okay, great. Let's go look
+22:05
+at our TCP output here. So here we can see when we were talking to port
+22:10
+UDP1234, nothing came back. UDP1235, nothing came back. So when a
+22:17
+UDP port is in an open state and I just connect to that port or I send an empty
+22:23
+packet to that port, it doesn't return anything. It doesn't know how to handle it. It doesn't know what to do with it.
+22:29
+Now here I sent a UDP packet to port 1236. That's the port we didn't open up.
+22:36
+And notice what came back. What came back was an ICMP port unreachable. So
+Wrap-up
+22:41
+the system responded when we sent a probe to a closed port saying, "Hey, that port's unreachable. There's nothing
+22:48
+listening on that port." Hopefully this is making sense for folks. So we've done our TCP scan.
+22:54
+Uh, we've done a sin scan, a FIN scan, and we've also scanned the UDP ports. We've seen the difference between when
+23:00
+the ports open and when the port's closed, and how it responds differently to each. Cool. So, now what I'm going to
+23:07
+do is I'm going to go in and I'm going to run um I'm going to So, remember I said
+23:12
+we've got a little bit of a problem in that um the UDP ports are going to close
+23:19
+themselves up. So, what I'm going to do is I'm going to run the kill kill listener command to kill all my encat
+23:26
+processes and then I'm going to go in and I'm going to rerun listen just to make sure those UDP ports are in open
+23:32
+state. So now I know for sure all my stuff is listening the way it wants to. Great. Now what we're going to do is
+23:39
+we're going to create a stat of static firewall rules. So this is our lowest end packet filtering firewall uh you
+23:47
+know based on static filtering. Although we said even an inspection a stateful inspection firewall may rely on this
+23:54
+technology to control traffic and in fact it may a stateful inspection
+24:00
+firewall a lot of the ones I've looked at will use this technology for more
+24:06
+protocols for more top for more protocols. So um you know we're talking
+24:11
+about what's what value is recorded to bite 9 in the IP header. What protocol is running on top of is it TCP, UDP,
+24:18
+ICMP, GRE, ESP, whatever. You know, it'll handle more protocols based on
+24:25
+stateful a static packet filtering than it will actually implement stateful inspection for those. So, we're talking
+24:31
+about a low-end firewalling technology, but as I explained last week, vendors still use this and it's still used quite
+24:38
+frequently. So, it's kind of good to know and kind of good to be able to figure out how to test how is your
+24:44
+firewall vendor actually implemented this stuff. Okay, so we got those ports open and listening. Great. Now, what we
+24:52
+want to do is we want to go in and we want to create our firewall rules. So, I'm going to go in and I'm going to run
+24:57
+my FW static script. And when I run that, here's the rules it went through
+25:03
+and set up. And I'm not going to run through these again, but as we said, we're opening up TCP and UDP port 1 2 3
+25:11
+4, which means that 1235, which is an open port, is blocked by the firewall,
+25:18
+and 1236, which is a closed port, is also blocked by the firewall. Great.
+25:25
+So now let's see, did we get anything new? No, we didn't. So now let's go back and run our scan again and see what
+25:32
+happens. So we're running our sin scan and it's coming back and it's saying,
+25:38
+"Oh, hey, I I got a sin act back on one from port 1 2 3 4, but I didn't see
+25:43
+anything as a response from the others." Well, if we go back to our packet sniffer, we can confirm that. Yep. So
+25:49
+remember, we wanted to open port 1 2 3 4 through our firewall and we wanted to close everything else. So this is what
+25:57
+we expect to say, right? We sent a sin packet. We got back a sin act and then
+26:04
+our tool reset that and said, "Hey, now close that port." I didn't mean it. I
+26:10
+know I tried to talk to that port, but I didn't mean it. It was a butt dial, right? It was a butt dial trying to talk
+26:17
+to that port. I didn't really intend to reset. Let's go ahead and just kill that session. So, UDP 1 2 3 4 from the
+26:24
+perspective of the scanner, we can tell this port is open. Now, port 1 2 35
+26:31
+though, that doesn't look any different from 1236, the closed port. We got
+26:37
+nothing back. So with our static filter in place, if somebody runs a sin scan
+26:42
+against us, we can successfully block those and make sure that they can't tell
+26:47
+if a port's open or not. Uh what was the TCP command we're using in the listener?
+26:53
+Cool. I will pull that back up. And in fact, I will just throw that into the Discord channel. Pretty
+27:01
+straightforward. There you go. So and again all this command is doing
+27:07
+is running TCP dump dash N don't res try and resolve IPs to host names dash
+27:14
+second end don't try and resolve port numbers to well-known names and then this says I only want to listen on the
+27:20
+loop back interface. So we have that up and running. We get some white space in
+27:26
+there. Okay. So that was our static filter. Great. Now let's go in and let's
+27:32
+run our against uh let's do our next scan which is a FIN scan. So this time when it runs it comes
+27:41
+back and says hey we got back a reset act packet here but we didn't get back another. All
+27:48
+right let's look at the trace to see what this is telling us. So we hit the known to be open port
+27:56
+and we got back a f. All right, we got nothing back in response to our FIN.
+28:01
+Then we hit the port that's open, but it's being firewalled and we got the
+28:06
+same response we did when we hit an open port. Nothing came back. Then we sent a FIN
+28:14
+packet to the port that's closed and we got back a reset act.
+28:21
+In other words, these FIN packets are actually making it through our firewall
+28:27
+rules. Remember, we get a static filter and static filters can only work with what's in the packet. So, when I say
+28:34
+only let back in replies, what I'm really saying is, hey, if sin isn't set by itself, assume it's a reply and let
+28:40
+it throw. Well, when Finn is turned on by itself, that is not a packet with sin turned on by itself. So, the firewall
+28:47
+does actually pass it through. So in this case here, we're able to probe which ports are open and which ports are
+28:53
+closed, even though we got a static filter firewall in place. So the static filter firewall works great against sin
+29:00
+scans, falls flat on its back when you're dealing with the fincan. All right, let's get a little
+29:06
+white space in there. And now we're going to go and we're going to run against UDP and see what
+29:11
+happens. And it looks like we're not getting Oh, we did get a port one port unreachable back here. So let's see what
+29:18
+we got. So port 1 2 3 4 nothing came back. 1 2 3 5 nothing came back. Right.
+29:25
+And remember both of these ports are open but one of those is being permitted through the firewall. And then when we
+29:32
+tried to hit 1 2 3 6 we got back port
+29:38
+unreachable. So we're actually seeing what's going on here. One of the So the
+29:46
+reason this stuff is getting through is remember I had to create a rule to let back in replies. Replies can be anything
+29:53
+from port 10,024 all the way up to 65535. Well, this is port 1234 through
+30:01
+1236. That's within that range. So by trying to let UDP replies back in, I'm
+30:09
+inadvertently opening up access to these service ports at the same time. Now if this if I had told the service listen on
+30:16
+port 80 okay we won't have that problem because that's below that reply port
+30:22
+range. So this is something that is an impact only when you're dealing with ports listening above,24 which
+30:29
+unfortunately there's a lot of them um that you run into this type of thing. So here our static firewall was useless in
+30:36
+being able to keep out this type of traffic. Uh, let's
+30:45
+see. Okay, just checking questions, seeing if I missed anything. Cool. All right, so that is
+30:52
+our fin scan. That's our uh fin scan. Excuse me,
+30:58
+that was our UDP scan with our static packet filtering rules. So now what we
+31:04
+want to do is we want to go in and we want to flush these static rules and we
+31:10
+want to replace them with stateful rules. Excuse me. So we uh so the first
+31:17
+thing I'm going to do is I'm going to run the FW clear script. Well, actually I'm going to try
+31:23
+and I'm going to actually be typing in the correct window for this. So, I'm going to run my FW clear script. And
+31:30
+then when I do that's going to wipe out all the firewall rules that are currently there. Then what I'm going to do is I'm going to run FW inspect. I
+31:38
+want to set up inspection rules for this. Remember we talked about this. Hey, go in and use the state table and
+31:44
+figure out if it's new or established. If so, it's okay. Remember, we went through and we kind of talked through
+31:49
+this whole thing already. I got kicked out from my RDP to my VM. Yeah. So, R
+31:57
+I think as Bill is talking through, RDP was not one of the rules that we
+32:02
+created. Unfortunately, I set up SSH. I didn't expect anybody to be running RDP.
+32:08
+So, I apologize for that. So, that's my fault. Now, the Now, the nice thing about this is we're running these
+32:14
+scripts manually. So, if you're having trouble recovering, if you can't like SSH in and then clear the firewall rules
+32:20
+that way, you can always just reboot this system. And because we ran these rules manually, they're not going to
+32:27
+come back when the system gets rebooted. So, you can go through and you can recover that way. But I I apologize for
+32:33
+that. Who was it who ran into that? Eric. I apologize for
+32:39
+that. Actually, it was Guju. Sorry. Yeah. What Chris said. Cool. So,
+32:46
+now we have stateful firewall rules in place. Now I'm going to go back here and I'm
+32:52
+going to kill my listener because remember known UDP bug. It may kill that UDP port just because something tried to
+32:59
+talk to it. So I'm going to go through. I'm going to kill all my listening and then I'm going to go in and set up new
+33:05
+ones. So here's my listening on TCP uh 1 2 3 4 1 2 3 5 and UDP 1 2 3 4 1 2 35.
+33:14
+Cool. I got some white space in here. So, let's go back and run our scan and see what happens now that we have
+33:21
+stateful inspection set up for this. We're handling our traffic in a stateful fashion. We're using state tables. Okay,
+33:28
+this time it looks like all my scans came back. Um, I got a synac back from 1
+33:34
+2 3 4 and it doesn't look like it was overly successful with the other ones. But let's go back and look at this
+33:39
+again. Oh, let's look at the decode of the packets. So here's my sin packet going to 1 2 3 4 and that got a synac
+33:48
+and return to that and then we killed it saying yeah no sorry butt dial we didn't
+33:53
+really mean to try and connect to that port but then we sent a sin packet to the other open port and the closed port
+34:00
+and nothing came back from either of those. So this is the same results we got as the static filter. So static or
+34:08
+stateful, both of them are effective against a sin scan. All right, throw a
+34:14
+little white space in here. Go back to my scanning. And now I'm going to try a TCP FIN scan and see what
+34:22
+happens. So this time it doesn't look like a whole lot's coming back. So remember with the fincan with the stat
+34:28
+with the static filter rules I was able to hit open ports that the that we were
+34:35
+trying to protect with the firewall. I was able to hit closed ports that again we were trying to protect with the
+34:40
+firewall because we're using a state table now though none of these get
+34:46
+through. Notice there's no difference in the response with an open port versus an
+34:52
+open port that's being protected by the firewall versus an actual closed port. So these FIN packets are no longer
+34:58
+making it through. So with a with our static firewall, FIN scans can blow right through it. With our stateful
+35:05
+firewall, FIN scans get controlled properly. Cool. All right, let me hit
+35:10
+enter a couple of times. And now let's try our UDP port
+35:16
+scan. So we'll go through and we'll run that where now before we saw an ICMP
+35:21
+unreachable come back. We're not seeing it here. So again, this is kind of similar to what we've been seeing
+35:27
+consistently, right? Nothing came back from 1 2 3 4,
+35:33
+which is an open port. And that happens with UDP, right? With UDP, if the port's
+35:38
+open and I connect to that port and it's not an application that's designed to exchange data back and forth like DNS or
+35:45
+something similar like that, I'll actually get nothing back. So, the fact that we got nothing back here tell is
+35:53
+was because that port was open. Now, these two don't get through because we
+35:59
+have the firewall in the way with a drop rule. And the firewall is saying, "Nope,
+36:04
+I have a rule saying you can't talk to port 1235 and 1236." We didn't have to let in all
+36:11
+upper traffic as possible replies. we're able to say, "Let our traffic go out.
+36:17
+Record it in a state table." And those traffic coming in that looks like it might possibly be a reply. Go look at
+36:24
+the state table and see if you can m find a match for that. See if you can match the the source IP, destination IP,
+36:30
+source port, destination port, and the transport. If you can match those entries against the state table, great.
+36:36
+This is a reply. Go ahead and let it through. But if all of that criteria does not match, this is not a reply to a
+36:43
+currently active session. Don't let it through. So, kind of similar to what we saw with the FIN scan, I can no longer
+36:51
+tell what ports are open and what ports are closed. So, last week when I was
+36:56
+talking about firewalling, I was talking about I like using host unreachables. Well, that's specifically like TCP and
+37:03
+ICMP. I like to use host unreachables because that kind of fools the scanning
+37:08
+tool into thinking, well, maybe that system's offline right now. The problem you run into with UDP though is that if
+37:15
+the port's open, nothing will come back. If the port's closed, an ICMP host unreachable is what's going to get
+37:21
+returned. And that's a different response. So, you may actually be better off saying return host unreachables if
+37:30
+it's a TCP packet that I'm d that I don't want to let through. But if it's a
+37:35
+UDP packet I don't want to let through, I may actually want to use a drop rule because now open ports and closed ports
+37:42
+look exactly the same. You can't tell the difference between the two of them. Cool. So, what have we learned?
+37:49
+We've learned that no firewall rules, they can get to anything. static
+37:55
+firewall rules, we get a little bit of control, but if a savvy attacker can still punch
+38:01
+through and figure out what's going on. If we have a stateful firewall, however, we get far superior traffic control and
+38:09
+we can actually do a much better job of keeping the attackers out. And if we can customize our our um how we re reject
+38:17
+these uh this traffic, we can possibly confuse them as well. you know, like I
+38:23
+said, returning t, you know, host unreachables. Anytime they try and hit a port that's actually something that's
+38:28
+getting firewalled, that may shut the remote scanner down and stop it from being able to commit uh get in after
+38:34
+that. So, that's a difference between the different firewalls. Uh let's see. And and and again, you know, I'm talking
+38:42
+about static firewalls and a lot of you might be thinking, "Oh, geez, Chris, that's old technology." You know, that's
+38:48
+back when Linux was using IP chains instead of IP tables. What was that 50 years ago? Nobody uses static firewalls
+38:55
+anymore. But the reality is modern-day firewalls still rely on that technology.
+39:03
+And as I mentioned last week, if a firewall labels itself as being a stateful inspection
+39:09
+firewall, all it needs to do to meet that criteria is inspect one application
+39:15
+or transport. That's it. And it doesn't even have to do the transport. It can just do one app, right? So they may have
+39:22
+implemented stateful inspection to properly handle FTP traffic. And if the
+39:27
+only thing it actually inspects is FTP, they can still get away with calling it a stateful inspection firewall. But that
+39:33
+doesn't mean you're going to be statefully inspecting anything that is not FTP. If you don't statefully inspect
+39:39
+the application, now you fall back on how that transport is handled. And that transport is going to be handled either
+39:45
+statically or statefully. If you don't statefully handle the
+39:52
+transport, now you fall back on static. And as I said, there are a number of commercial firewalls out there today
+39:59
+that still use an awful lot of static packet filtering to implement the firewall rules. Now, the challenge is
+40:06
+they don't tell you that, right? You know, none of us have a firewall we're using that when we create a rule, you
+40:12
+get a little popup that says this rule will be implemented with stateful inspection. this one will be ruled implemented statefully or statically.
+40:20
+No, they don't tell you that. That just kind of happens. And you know, I also mentioned a lot of fire there are
+40:26
+firewalls out on the market still today that even if you create a firewall policy of anywhere going anywhere, drop
+40:33
+it and that is the only rule you create that one rule and that's it. This still
+40:39
+traffic that can actually pass through those firewalls. So, one of the reasons why, and again, we talked about this
+40:46
+last week, you want to do this type of testing, you want to do it for yourself, especially if it's a brand you've never
+40:52
+worked with before, is to figure out how is the vendor implemented it. Send some sin scans through to the other side. Set
+40:59
+up a packet sniffer. Did they make it through? Yes or no? Okay. Now, try some PIN packets. Did those make it through?
+41:05
+Try some unsolicited ICMP error packets and see if those make it through. But that trips
+41:11
+up a lot of devices. So again, this is all about understanding what your firewall is doing. Now, if you find out
+41:18
+it's, you know, your firewall's got holes in it that you can't fix, you know, there's no way to actually block it, like let's say you figure out, and I
+41:25
+know at least one major vendor does this, they pass DNS traffic regardless of what your rule base says. If you
+41:31
+create a rule that says, "Hey, anybody going anywhere trying to communicate on with DNS, drop it. Don't let it
+41:38
+through." it's still going to pass it through because they've got a backdoor rule they use to be able to pass that
+41:43
+traffic and not let it get logged. Well, how do you know if your firewall vendor is doing that? That's easy. Hping 3,
+41:50
+hey, let's go and create some UDP53 traffic. Let's see if that actually makes it through the firewall. If so,
+41:56
+you know, the policy's not, you know, there's more going on than what shows up in the policy you get to see as a user.
+42:02
+You need to start doing some research and doing a little homework on what's actually going on. Now, if a firewall is
+42:07
+has holes blown open in it, like it's letting through UDP 53 regardless of what you say, does that mean that
+42:14
+firewall sucks? Well, maybe a little, but not entirely. In other words, now
+42:20
+that you know you don't control that port with that firewall, you can take
+42:25
+steps to mitigate that threat through some other means. You know, maybe it's a different type of firewall. maybe on
+42:31
+your router you create a static rule that it will you know well it will control it that way instead this you
+42:37
+it's when you don't know it's a problem you have no options you're just vulnerable once you know the problem is
+42:44
+there you're going to come up with options to mitigate the risk and lower it within your environment what vendor was that again
+42:51
+asking for a friend I would rather not say the name of the Israeli vendor that
+42:56
+makes this firewall that still looks like a piece of Swiss cheese if you know how to test it properly
+43:01
+And I'll just leave it at that. If you know anything about the industry, you'll know what which firewall vendor it is
+43:06
+just based on that comment. But awesome. So, that's all I've got for
+43:14
+this week. So, uh let's see. We talked about So, I uh I threw these slides into the
+43:20
+Discord channel. I know we didn't do a lot of slides in this one. I I personally I like it better when we can
+43:26
+do hands-on stuff. But what I did want to do was document everything I said. So like I explained what all those
+43:31
+different scripts do. There's a slide in here to give you that. All the different firewall checks we ran and what came
+43:37
+back. You get slides for that. So basically everything we just talked about is here. I'm just making sure I
+43:43
+didn't actually miss anything. It doesn't look like I did. Which firewall is better? Obviously, you know, we want
+43:49
+to statefully inspect as much as we possibly can. that's going to give us the best level of security. Here's an
+43:54
+extra slide. Cool. I'll always take extra slides. So, next week on Fireside
+44:00
+Friday, we're going to start talking about VPN technology. This is one I've been kind of chomping at the bit to get
+44:06
+to because this is one that we all use all the time, right? Like you're using HTTPS or you're using Quick or you're
+44:13
+using IPSec and it just kind of works. But what's actually going on? Uh there's
+44:21
+no prep necessary for this. Next week is just going to be straight lecture. Uh the week after that I'm going to start
+44:28
+pulling in some labs. So we're going to go through and kind of talk about how to break password hashes and you know what
+44:34
+is a ha what is a hash and why is it important that it's unique um and what are some labs around that to show the
+44:39
+importance of it being unique. Uh so two weeks out we'll get into doing some labs but next week we're just going to get in
+44:45
+and just talk about the technology itself. So, but with that said,
+44:52
+um, we are done. Hey, look at this. I'm giving you back a little bit more of your life than you expected to again.
+44:57
+So, I don't know if anybody else is still in the background. You know, Bill, Shelby, or whoever, if you got anything
+45:02
+else you want to toss in. Looks like many of the questions already got answered. Uh, but if we've missed
+45:08
+something, please go and post it again. We can, we got a few minutes to go over
+45:13
+questions and problems that you're running into. Um, I did note Chris, you're right. Guju
+45:20
+had mentioned that it cut off uh his RDP session into his system when he put the
+45:25
+firewall in place. That's absolutely the firewall was working. Yes, you just
+45:30
+learned that that firewall rule permitting RDP. Therefore, the we know the firewall works now. Yay. That's how
+45:38
+I learn most things is by breaking them. I was doing tech support up near Burlington, Vermont. And you don't need
+45:44
+to know much about a Vermont except it's about two and a half maybe three four hours north to south. I was in the
+45:50
+northwest corner and I was doing tech support on a firewall at a school in the southeast corner and I typed a command
+45:57
+and all of a sudden my prompt didn't come back and I knew exactly what happened. I forgot to put in an opening
+46:03
+that let my SSH session continue. I had to call and get a janitor at this school
+46:10
+on a Friday afternoon stay about 2 hours late as I toodled my butt from northern
+46:16
+Vermont to southern Vermont to reboot the stupid thing.
+46:26
+Eay, uh, will we be using Auntu 2404 LTS? I think Chris tends to use that. Um
+46:33
+yes, most of what we tend to do is going to be reasonably flexible. You um most
+46:39
+of what we'll want to do can run on most uh systems. There is a note that re 9 uh
+46:46
+Red Hat Enterprise 9 in particular has left IP tables and so they're actually
+46:54
+using oh shoot I forget it. Uh I forget the replacement uh but that binary
+47:00
+shares IPS IP rocking chairs. There we go. IP
+47:05
+rocking chairs. Yes. Uh yes, probably NF tables. Thank you, RDIS. Um so that might be the only one
+47:13
+you might want to skip on this. Most of the other uh OSS will very happily work
+47:18
+with uh with NF tables or IP tables.
+47:24
+Yep. But Red Hat's down to like thinking they're m they're Apple now. Yeah. Yeah.
+47:29
+We'll just go our own way. Yeah, it's a little frustrating, but Yep. William, uh, if you've got
+47:36
+questions, go ahead and ask them over on Discord. We'd have be happy to help you.
+47:42
+Y, but with that said, thank you everybody. Um, you know, we we take the
+47:47
+time pres to present, but you take the time to show up and, you know, again, your time has value. We really do
+47:53
+appreciate you spending your time with us. It does mean a lot. Um, for those who are interested in the junior sex
+47:59
+stuff, um, I posted slides for that just below this one along with these slides.
+48:06
+So that that's just kind of a summary of what Shelby had talked about earlier. And she also mentioned there's a new
+48:11
+junior sect channel that we're going to use to go through and organize this and make it as cool as we possibly can. So
+48:17
+if you if you have kids, if you have an interest in, you know, helping younger kids to stay safe, um would definitely
+48:24
+appreciate the help as part of the junior project. Thank you in advance. Absolutely. Yeah. Hey Chris, hope you
+48:32
+feel better. Best of luck with your back. Yes. I'll stop trying to pick up that
+48:37
+heavy cat fur stretch before.
+48:42
+Yes. Yeah. Yeah. I think Eric was right. I got to stretch before I actually try and pick up cat fur now that I'm 105
+48:49
+years old. Yeah. Hey, thanks so much everybody. It's great to see you. All right, everybody.
+48:56
+Enjoy your day. Have a great weekend. Happy Easter, everybody.

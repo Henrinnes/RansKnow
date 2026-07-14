@@ -1,0 +1,758 @@
+0:00
+If any of you have an ex any experience implementing app control policies and
+0:05
+tuning them, you know how painful this can be. Um, in theory,
+0:11
+every software installation and all of its relevant components should be signed using the same signer certificates. That
+0:19
+is rarely the case unfortunately. Um now that's also why we have some flexibility
+0:26
+in the rules that we can deploy in our policy. For example, like if we accept
+0:32
+the risk of having just a broad file path-based rule, like that's that's okay. Um but as we're trying to ideally
+0:41
+gradually increase the security of our policy, you know, we would like for things to to all be signed consistently.
+0:49
+Um again, that's just rarely the case. And so you'd have to account for that um
+0:54
+you know by employing a mix of serer rules, hashbased rules, right? Hashbased
+1:01
+rules are super secure but those policies are very burdensome to
+1:08
+maintain.
+1:15
+Thanks everyone for being here. Uh welcome to uh the first office hours of 2026. Happy new year to everyone. Uh
+02:34: Welcome to Red Canary Office Hours
+1:22
+before we get started, uh you can see on your screen here, we've got the first episode. I'd say like you know we um one
+1:27
+of the reasons incidentally we're doing this is because I think you know kind of that you know the topic of app control which we're going to get into today is
+1:33
+like probably one of the most requested topics uh from like you and the audience. Um, and I think we've just had
+1:40
+a ton of like like interaction, Q&A, and requests for more uh like insight into
+1:47
+like how we're using AI in the sock, where we found success, where we found challenges. And so like we're going to
+1:53
+spin up a little miniseries uh starting next week. Uh we'll have uh Jimmy and Raph on from our team. Uh I think you
+2:01
+know most of you have like either you know read and or heard from them live before. So want to give a quick plug to
+2:06
+that. uh these next few weeks are going to be really really awesome. Uh and this is going to be uh a strong start to uh
+2:13
+to 2026 today. So uh welcome Matt. Uh for those of you who don't know uh Matt
+2:18
+u one of one of my very favorite uh and one of the most knowledgeable people I
+2:23
+think I've had like the pleasure of uh of meeting or working with in this industry over many years. So thanks a
+2:28
+lot for being here Matt. Appreciate it. Thanks Keith. Appreciate it. Um, as I uh as I mentioned, uh, we're
+03:21: Strengthening app control in the new year
+2:35
+gonna we're going to dive right in, uh, probably like the most like audience requested topic is app control. And
+2:42
+we've talked about or talked, you know, about this directly in some ways. Uh, a few weeks ago, uh, you all might
+2:48
+remember us having like some folks from our threat hunting team on. We kind of had a really good discussion pop off
+2:54
+related to like app control and we didn't have time to see that through. Uh, and so I'd say, you know, just the
+3:00
+fact that like this topic keeps coming up, but I think there's like not a ton of clarity in terms of like what exactly
+3:06
+that means. Um, what tools, approaches, pitfalls, like strategies, uh, will
+3:13
+work. Um, so that's what we're going to spend some time on today. Um, and, uh,
+3:18
+so Matt, I kind of, you know, let you take it from here. Uh, if you want to dive right in, maybe we'll just start,
+10:55: What is app control?
+3:23
+we'll get right into it. Um, talking through like what app control is. And for those of you in the audience, by the way, like I'll be mining the chat. So,
+3:30
+um, please use the Q&A function, uh, send me a message directly or in the main chat, whatever you prefer. And, uh,
+3:37
+we'll try to take those as we go today. Sweet. Yeah. So, we're going to focus mostly on
+3:44
+Windows, uh, Windows being the most mature platform for app control offerings in my opinion, but that could
+3:50
+also just be my own bias and ignorance speaking. There are other offerings uh
+3:56
+like for Mac OS. Uh we might have some time to get into like identity uh
+4:01
+providers um and thinking about how to lock those down as well using some
+4:07
+similar methodologies that you might apply to endpoint. Uh but with that in mind um I'm going to be focusing mostly
+4:14
+on uh on the Microsoft side of the house. Um so yeah, what is app control?
+4:21
+This is what would allow you to implement a zero trust solution on your
+4:28
+endpoints. And the way that it's implemented is through various rules, right? But um the
+4:36
+most locked down method would be a default deny all where you have explicit allow rules, right? So uh prior to it
+4:45
+being called app control, it would be referred to as application allow
+4:50
+listing, application whitelisting, right? So this is just a progression of
+4:55
+the the naming just so we're all kind of speaking the the same language here. And
+5:01
+in an ideal scenario where across your environment you've baselined all of the
+5:08
+approved software you understand uh what set of software installations are
+5:14
+required for the job right then you start going through the arduous process
+5:20
+of identifying like what are the installation paths what are the signers
+5:25
+right like what is the file reputation for all of these installers and it is a very involved process. Um, and so this
+5:34
+is the ideal state again having that default deny all and to have allow rules
+5:42
+where you're explicit about what you explicitly trust. Right? There's no
+5:48
+implicit trust necessarily. Now there there can be if if you have some uh more
+5:54
+flexible rules for example rules based on um file paths um which can be very
+6:01
+easily abused if it's say in a world writable directory. Um, but as nice as
+6:09
+all of this sounds, like I'm sure many of you uh could easily understand just
+6:14
+the level of effort required to have like a strict enforcement mode across a
+6:20
+fleet of endpoints. So, where you start running into the actual reality is um
+6:28
+you know uh let's just use the scenario, right? you've got a prospective customer
+6:34
+call and you're a Zoom shop at your company, but that prospective customer,
+6:40
+they're a WebEx shop, right? Um, so you need to you need to hop on a call with
+6:46
+them, you know, today. Um, and not have to deal with going through it to get uh
+6:53
+exceptions made, right? To have to have them audit the installation of Webex. Um
+7:00
+and so one of the realities that app control solutions uh have to contend
+7:07
+with is efficient exception management. Now if we're talking about Windows
+7:12
+application control, so this is the inbox uh application allow listing um
+7:18
+technology, uh there's no real easy solution. Uh you really kind of have to build it yourself. But there are some
+7:25
+commercial solutions uh that really aim to solve that problem of exception management
+7:31
+and we can get into what some of those are later. Um but then you know uh I've
+7:38
+mentioned being explicit about what you trust. Well considering we're talking
+7:43
+about running Microsoft Windows, we're generally going to need to allow uh
+7:50
+all Microsoft signed code to execute. Um, and I mean just there's really no
+7:56
+way around it. You do have to have generally broad rules about allowing Microsoft signed code to run.
+8:04
+Um, but the the reality you then run into is
+8:10
+living off the LAN binaries, right? PowerShell being the canonical example, but there's many others that come to
+8:16
+mind. Uh, MS Build. um trying to think some of the other ones that just allow
+8:22
+arbitrary code execution that are signed by Microsoft. There's a whole host of them. We've got some links um that that
+8:29
+you can uh dive into if if you're interested in learning more about some of these bypasses, right? So, we have to
+8:34
+account for those. And then this is where the reality of an explicit allow list um comes into play with merging
+8:43
+some deny rules into that. Right? So you would have a broad Microsoft allow rule
+8:50
+with some explicit denies. Now would that block future law bins that could be
+8:56
+discovered that would allow arbitrary code execution? No, it wouldn't. And
+9:01
+adversaries, researchers are digging into those regularly. But I would say like this is not something that you
+9:07
+really should worry about too much. Um, I think it's more important that if this
+9:13
+is important to you that you just try it without worrying about what the latest
+9:20
+and greatest bypasses are because just by implementing a strong uh allow only
+9:26
+rule set, you're eliminating entire classes of attack technique. Like I'm
+9:32
+just picturing the attack matrix right now and just crossing off any number of
+9:38
+attack techniques that would have been mitigated by a strong application control policy.
+9:44
+Yeah, Matt, you know, it's like funny when we kind of think about that. I'm glad you mentioned that because I do think, you know, one thing from a
+9:50
+defender's perspective and I think, you know, we would very much see this firsthand and know it firsthand, which
+9:56
+is that like the things that we see being used successfully by adversaries
+10:01
+99.9% of the time are not, you know, novel, cutting edge, you know, new law
+10:07
+bins and these esoteric techniques. And like to your point, it's like you can just like take this huge like flack at a
+10:15
+tax surface and make it go away. It doesn't mean you don't have any risk, but it means that you know you've like
+10:22
+you've got meaningfully less and you could spend time now hopefully looking, you know, more closely at what's left.
+10:29
+But then in the same breath, you've also blocked extremely novel and esoteric
+10:35
+techniques just by having this strong policy enforced
+10:40
+such that you know uh otherwise advanced
+10:46
+custom malware is not going to be able to execute in the first place. Right. Yep. Absolutely. Awesome. All right.
+10:53
+Well, let's get into uh let's get into challenges because I know uh we've got we had some awesome questions on the way
+16:37: Why app control is so challenging
+10:58
+in and I'd say if it was like a recurring theme and we'll kind of share these in some more detail here in a minute, but like you know um hey I was
+11:06
+surprised to see I mean I think we've got like well more than half of folks here like are using app control in some
+11:12
+way which is awesome. Um, and then for the folks that didn't, I think, you know, like the probably, you know,
+11:18
+prevailing theme there in terms of why they're not is like, you know, there are it kind of runs the gamut of these
+11:24
+challenges. There was like some technical challenges, there's some cultural challenges. Uh, so yeah, like why don't you walk uh walk us through
+11:30
+this if you don't mind? And uh and I've also got a question from the audience here that I'll kind of I'll get into once we get through some of these
+11:36
+failure modes. Sure. Yeah, I'd like to focus on the last two bullets for common failures.
+11:43
+So, legacy apps and unsigned binaries. Um, if any of you have an ex any
+11:49
+experience implementing app control policies and tuning them, you know how painful this can be. Um, in theory,
+11:58
+every software installation and all of its relevant components should be signed
+12:03
+using the same signer certificate. that is rarely the case unfortunately. Um now
+12:10
+that's also why we have some flexibility in the rules that we can deploy in our
+12:17
+policy. For example like if we accept the risk of having just a broad file
+12:22
+path based rule like that's that's okay. Um, but as we're trying to ideally
+12:28
+gradually increase the security of our policy, you know, we would like for things to to all be signed consistently.
+12:36
+Um, again, that's just rarely the case. And so, you'd have to account for that um, you know, by employing a mix of
+12:45
+serer rules, hashbased rules, right? Hashbased rules are super secure but
+12:51
+those policies are very burdensome to maintain right because as soon as the software is updated then uh that
+13:00
+particular binary will no longer be able to to execute once it's updated
+13:05
+and then yeah you know uh myself and most every other person I know like
+13:11
+they're running VS Code various IDE right like how many of you here have a
+13:17
+good sense of the process and just OS footprint of your IDE, right? It's it's
+13:25
+a hot mess, right? You see cmd PowerShell processes being spawned as
+13:31
+child procs of VS Code all the time, right? Like, you know, dev's got a dev.
+13:38
+Um, so certainly it's going to be much more of a challenge if you're even going to
+13:43
+consider locking down uh dev endpoints. Um, but even in the case of, you know,
+13:50
+just regular users who like me just prefer to use VS Code as like a just
+13:56
+basic text editor, right? Um, it it gets really challenging, right? And when you
+14:02
+have highly extensible um idees like VS Code, um it it gets
+14:09
+really hard to uh maintain and allow this that that makes sense and is is
+14:14
+maintainable over time. Well, Matt, if I could jump in, we got a couple questions I wanted to to kind of
+14:20
+throw out there. Maybe a couple questions and one observation. Um, and I think, you know, we might get maybe to this observation a little bit later when
+14:27
+we kind of talk through strategies for implementation, but there was a specific question that I think kind of falls
+14:32
+maybe into this common failures bucket. Um, David was asking like how you handle things like device driver apps where
+14:39
+like, you know, you have laptops or desktops that need firmware updates, which is kind of it, you know, maybe feels like a little bit of a chicken and
+14:45
+egg problem when it comes to Yeah. app control. Yeah, that's an awesome question. One of
+14:51
+the things that I love about Windows app control, right, this is the inbox app control solution from Microsoft is that
+14:58
+you can define separate user mode policies and kernel mode policies.
+15:04
+Um, and funny enough, as I mentioned that um
+15:11
+the reality of software installations is that not everything is consistently signed. in the kernel. That's an
+15:17
+exception because over time Microsoft has increasingly enforced uh mandatory
+15:23
+signing and Microsoft co-signing of device drivers. So you do have a leg up
+15:30
+if let's say you're only interested in blocking malicious drivers or just only
+15:35
+allowing an explicit set of drivers that uh you need for your hardware. um you
+15:42
+can just not worry about the user mode piece and just worry about drivers. Microsoft also actively maintains a
+15:50
+block list of law drivers. They publish that uh through their own documentation but
+15:58
+uh many people not may not realize that you're already using Windows application
+16:04
+control. Um, so I forget which version of Windows 11 is a relatively recent
+16:10
+version. Um, they've already implemented that driver block list by default now.
+16:17
+Um, so you can opt out of it, but it's not even something that you can opt in. It's it's just turned on by default now
+16:22
+and it's implemented using uh a strong um deny policy for drivers that
+16:30
+Microsoft maintains. Awesome. Cool. Hopefully that was uh hopefully that was helpful, David. Um,
+16:36
+all right. So, let's jump ahead, Matt. Let's talk through like kind of, you know, like what we're really I think like the point of this, which is like,
+21:53: How attackers bypass weak app control
+16:42
+you know, what kind of what are adversaries doing and how does this help? And then, uh, we've got a couple more questions I want
+16:48
+to get to once we shift back into like how to implement this and and some of those defender strategies.
+16:54
+Sure. Um, so I've already mentioned law bins and we talked about law drivers.
+17:00
+Um, you know, there's there's been a growing list of those applications and drivers that can be used to execute
+17:08
+arbitrary code. Um, so I would say those directly attack app control itself. Now,
+17:17
+some of the other ones and some of the trends that we're seeing um in adversaries that we're tracking is um
+17:24
+it's not so much that they're abusing app control enforcement, but they're just abusing trust
+17:32
+in general and our general uh inability to maintain a strong application
+17:39
+inventory within our fleet. Right? So you see the prevalence of RMM like
+17:45
+remote management tools being abused day in and day out. Um you know if there's
+17:53
+not one week when there's some new legitimate RMM tool being abused by
+17:58
+adversaries um you know I I I would be really surprised. Um there's also the
+18:04
+prevalence of uh click fix or like copy and paste payloads where victims are
+18:11
+socially engineered into copying usually malicious PowerShell payloads and
+18:16
+executing those. Um and then there's more like just uh like policy specific bypasses, right?
+18:24
+Right? So let's say you compromised an endpoint and you were able to audit their policy and look for particular
+18:31
+weaknesses in it. I mentioned this already. For example, if if there's a file path rule um where a certain file
+18:40
+path is allowed to execute that is also world writable, then that's a specific policy bypass. So I consider all these
+18:48
+holistically when we're talking about abuse mechanisms. But um again, I I would just encourage everyone like don't
+18:55
+let the existence of bypasses uh dissuade you from trying to implement
+19:02
+it in your environment anyway. Yeah. you know, Matt, maybe I'll put you
+19:07
+on the like put you on the spot here for a second and like you know without going into a ton of detail just in the
+19:13
+interest of time, but like um funny like you know talking through RMM stuff and how to baseline for that and you know
+19:20
+strategies for like mitigating that type of risk was actually like largely what led to us doing this today which is
+19:25
+awesome because that's you know our thread hunting team is uh is really focused on that just from like an awareness perspective. Um, but you
+19:32
+mentioned click fix in here. So, like I don't think we've been able to go a week uh without mentioning this um for
+19:38
+several months now. It's just like all the different variants keep coming up. Um just like really specific example
+19:45
+like you know talking through this in the context of like Windows and PowerShell and I think that's where we see the most clickfix activity like
+19:53
+what's a really specific example of like you know where and how like what what's
+19:58
+the general flavor of like app control policy that would prevent clickfix for example like what do you like just very
+20:05
+high level? Yeah. So this is where PowerShell constrain language mode would
+20:11
+come into play. And so when a Windows app control user mode policy is enforced
+20:20
+then PowerShell constrain language mode is also enforced. Right? So PowerShell
+20:25
+scripts like many other file formats like we're not just talking about the portable executable file format right
+20:31
+like .exes. CIS files um DLSS right but
+20:36
+PowerShell files and many other formats can be signed um and it also limits which code can be
+20:47
+run just natively in PowerShell for example the add type commandlet cannot
+20:53
+be run in PowerShell because that's the easiest way possible to compile and
+21:00
+execute arbitrary code, right? So, if you for example needed to like if you
+21:06
+had a script that needed to call add type, you'd have to sign that script and then that that would all be accounted
+21:12
+for in your corresponding Windows app control user mode policy.
+21:18
+Awesome. That's helpful. I think yeah, I was having a hard time understanding whether it's like all or nothing, meaning like, you know, this group of
+21:24
+people can't do it at all or if we can pick out, you know, what we know are some attributes, for instance, of like
+21:29
+the clickfix payload, if you will. Um, so that yeah, that's super helpful. Love that.
+21:34
+Oh, and by the way, PowerShell constrain language mode is a serviceable feature
+21:42
+under MSRC and Microsoft. So like it's an actual security boundary. So if there are legitimate bypasses to it, Microsoft
+21:48
+takes that very seriously. Okay. Oh, very cool. That's good to know. Um, awesome. All right. So, uh, yeah.
+25:04: What good app control look like in 2026
+21:55
+So, talk us through like what is what does good look like here? And I think we're kind of getting into I think what
+22:01
+most folks want to know, which is like how do you kind of like how do you dip your toes in the water here in an environment where there's a lot of
+22:06
+sensitivity to like cost? Obviously, you know, you mentioned right out of the gate like, you know, potential to
+22:12
+disrupt just business and the things you have to show up and do every day. Like, take us through it.
+22:18
+Yeah. Um, so I would just encourage anyone who has interest in app control
+22:25
+solutions to just throw it into audit mode. Like that's totally okay. If you never place it into enforcement mode,
+22:32
+then at a minimum, uh, you have a much better sense of the applications that
+22:38
+are running in your fleet. Um, and you're able to constantly tune that
+22:44
+down, right? So, um, you can gradually build up the list of supported
+22:49
+applications for your fleet, be developing policies for those, right?
+22:55
+Starting broad, right? maybe starting with just file path rules, right? So
+23:02
+that anything within that file path can execute and then it won't be logged, right? Um so that over time you can tune
+23:10
+that down and build up your policy with more and more explicit rules. And even
+23:16
+if you don't do that, by placing app control into audit mode,
+23:21
+it's just a great supplemental um uh source of optics for what's
+23:28
+executing in your environment. For example, uh Microsoft Defender for Endpoint um has in the device events
+23:36
+table, right? like explicit telemetry for app control audit and enforcement
+23:41
+events and the corresponding signer information anytime anything executed
+23:47
+that otherwise would not have been allowed if it was in enforcement mode. So if you just want to supplement your
+23:54
+existing detection telemetry um then I recommend app control just as a
+24:00
+complimentary detection source. Um I also view app control policy development
+24:08
+um in a similar light to how we uh develop detections like with
+24:15
+detection engineering uh practices, right? It's not when you build a
+24:20
+detection, it shouldn't just be one and done like it's a it's a process of continual refinement and tuning. And
+24:28
+application is uh application control really is no different. the the the means by which you audit your
+24:35
+environment and determine what rules are in place like that. Um the specific implementation of the methodology is
+24:41
+different, but I like to kind of view it in in the similar in a similar light. Um it's just a constant process of
+24:48
+refinement and yes that does incur cost um but it also again uh eliminates
+24:55
+entire classes of attack technique um and is a just a great supplemental data source. Yeah, I love that. And I'm gonna
+25:02
+jump ahead to because I think we are starting to get into, you know, like you've already kind of hit a little bit on um I think some of these themes,
+40:03: What defenders can do about it
+25:10
+right? Just like, you know, what specific things defenders can do. Um so like some of those immediate wins, which
+25:15
+I think is what we've been talking about, just you know, in terms of monitor mode, right? Just understand what's happening in your environment.
+25:22
+And so like even if you know you've never had an opportunity to do that before, just you know dipping your toes in here
+25:28
+before you start enforcing policy like just getting a handle on what's actually happening, who's doing what, what's it
+25:34
+look like, um prevalence, things like that. Um so yeah, I take it take us through
+25:40
+this. We got about five minutes left and so like um I know you know we've already hit on some of these. maybe just kind of call out the one or two here that you
+25:47
+think you know are maybe like the most important lessons or most important things to keep in mind. And one thing
+25:53
+I'll ask is like you know um we had a question here uh related to like you
+26:00
+know controlling legitimate OS processes and monitoring those right so like Jeffrey had asked like how do I you know
+26:05
+how do I control things like and I think PowerShell and WI are great examples and monitor them for being abused. So like
+26:12
+when you talk like when you think through maybe starting with inventory right like to the point of your last
+26:18
+slide like just start by understanding what's happening if there's a million PowerShell executions happening a day
+26:25
+and that's one of a whole bunch of lens or whatever right like like what do you like where do you even start there like
+26:32
+how do you start how do you look at a million of anything and figure out like where you should even pay attention.
+26:38
+Yeah. start with a wide funnel, right? Like uh just
+26:44
+consider what is the broadest possible rule set that you could consider
+26:50
+implementing in your policy and just try that out in audit mode. Does it reduce
+26:56
+the volume? And is that an acceptable level of trust at that point considering
+27:02
+the volume? If the answer is no, then just rinse and repeat, right? like continually narrow the scope until
+27:09
+you're satisfied with that balance between maintainability of a policy uh
+27:16
+and and security, right? And ultimately trust, right? Um in an ideal world, you
+27:24
+know, we would be able to give the thumbs up like explicit trust of every single thing that runs in our
+27:30
+environments. That's not feasible in reality. And so we just have to start
+27:36
+broad and then go down to the most uh narrowly
+27:41
+uh acceptable level. Yeah. Now it's so yeah that question that Jeffrey had asked like Mike asked a
+27:48
+similar one which is like you know just would love to see and and learn of high level implementations and I think you
+27:53
+know um we're focusing here on like the you know Windows environment obviously I think these you know these principles
+27:59
+translate even if the tools you use uh are different across like Mac OS and Linux but like um these things in the
+28:06
+middle actually I think are maybe you know when you kind of think about um you know where and how like how do you at a
+28:13
+really high level like what are the specific wins that you might find early on and I think you know like just you
+28:20
+mentioned binary signing earlier and it's like that principle maybe this you know I think this applies to execution
+28:26
+too start with things that are rare right so like if you have a million of anything and 900,000 of them look
+28:31
+similar enough like you know that's still 100,000 left but uh but you know
+28:37
+percentage wise you've taken I think is a recurring theme is just like you know you've taken this huge chunk of kind of
+28:42
+like attack surface and concern turn and set it out of the way and now you can focus on what's left like um
+28:49
+exactly super seems super helpful. Yep. Yeah. Once um a policy is
+28:56
+sufficiently tuned down, then yeah, all the all the rare and just weird looking
+29:02
+stuff is going to start coming to the surface. in which case you'll be able to
+29:07
+hopefully apply more time to investigating those
+29:13
+um those those less common uh binaries and scripts running in your environment
+29:19
+because you've you've burned up all all the other chaff um that you consider to be generally
+29:26
+legitimate otherwise. Yeah. Um all right, so I want to get one more question in. We got a minute a
+29:32
+minute or so left and maybe if we go a couple of minutes over if anyone wants to stick around I think we might be happy to burn through some of these
+29:38
+because I think we've got some really great questions. Uh we had one on um from Jacob who just said you know well
+29:43
+we have system level application control today presumably um since we're struggling to do user level like
+29:50
+application control um and uh and I think there was another kind of question which is just you know how much of this
+29:56
+does translate into like users and identity uh I know obviously you know
+30:02
+again you you know you said we're focusing a lot today on like really like the Windows or the platform side
+30:07
+um but maybe we could just kind of talk through that like how do you think about taking this and extending it further into like users and user context and
+30:15
+identity where it seems like that's a really powerful lever. Yeah, I mean by necessity a user mode
+30:22
+policy is going to especially across a u
+30:27
+heterogeneous uh genius environment of Windows endpoints is going to have to be as
+30:34
+broad as possible. Um right. So for example like just allowing
+30:41
+blanket like micros allow Microsoft anything to execute with the exceptions
+30:47
+of uh maybe some explicitly denied l bins. Um,
+30:53
+and then yeah, I mean, but at the end of the day, like you're still going to have to
+31:00
+uh perform an audit on the applications in in your environment and really
+31:06
+understand um like what are those those critical applications and uh across your
+31:13
+fleet. Um and so yeah, I mean it it all depends on like the the scale that you
+31:19
+want to do user mode policies. Um, but I would really recommend um user mode
+31:25
+policies based on a smaller subset of prioritize like tier zero assets. start
+31:32
+with that and then broaden it out maybe based on um like on-site
+31:40
+employees who are using the same the same hardware um before you get to you know the remote
+31:47
+employees uh dealing with like you know bring your own device scenarios. So just
+31:54
+prioritize accordingly like you can't like it it's just not going to be feasible to do it across the entire
+32:00
+fleet. You have to start small and then branch out accordingly. Yeah, I'm glad you mentioned that
+32:06
+because like the, you know, and I'm kind of staring here at your cultural winds too. It's like partnering with IT and dev teams and things like that. And it
+32:12
+is like, you know, uh it's like app app control in particular has always felt like one of those controls that's like
+32:19
+very uniquely like partnership driven. Like there's as much an IT or support cost as there is, you know, a security
+32:26
+engineering cost, right? This is not a thing that like the sec ops team can just unilaterally do um because it's so
+32:33
+close to what users are doing and how systems work. Um there was a question came in from LinkedIn uh which may be
+32:39
+related which is like how do you recommend teams sequence the transition uh and I'm assuming they mean you know
+32:45
+from visibility into enforcement uh without breaking critical admin workflows and it feels like you know
+32:52
+there's kind of a like that that team-based approach might be a a good way to lean into that.
+32:58
+Yeah it's a it's a good question. Um, again, I would just recommend prioritizing enforcement on those tier
+33:04
+zero assets. Um, you know, if uh if you
+33:09
+can successfully implement it in enforcement mode on a small subset of
+33:15
+devices that you've tested thoroughly, right? Because you've you've had it in
+33:20
+audit mode for uh, you know, several weeks, several months, and next to nothing is is
+33:28
+popping up. um then that's a good candidate to start testing in
+33:33
+enforcement mode. Um now of course like redundancy is key like if if that if
+33:40
+that can be managed for example like if if you got a working uh policy enforced
+33:47
+on on a web server, right? If there was like redundancy there, then you could
+33:53
+have one in uh you know remaining in in audit mode while you test out the
+34:00
+enforcement of of of the of the other web server, right? Um you know, so but
+34:07
+uh and same would go for like really like sensitive jump boxes, right? Like I
+34:13
+would consider those to be like a prime target for very strong uh enforcement
+34:19
+policies. M and if you can if you can make that happen then uh you know then you could
+34:26
+consider spreading it out to to other tiered assets outside of those junk boxes, web servers or um even like if
+34:36
+you can achieve app control enforcement on a domain controller that that would
+34:41
+be a huge win right right there. I I know that's a very scary prospect though. No, it's a great way to think about I mean I
+34:47
+know like you know my natural inclination when we kind of think about this stuff is like and I think a lot of people will assume hey you got you know
+34:53
+roll it out team by team or to parts of the or that's definitely one way to do it and I think that's still a re like a
+34:59
+great way to kind of slow roll this to minimize impact but you know your approach that is just like you know also
+35:06
+start with the tier zero assets like those are going to have fewer user interactions probably you know like a
+35:11
+little bit more uniform activity obviously as admin you're going to be close to them Um, I'm gonna give you one
+35:17
+more. Uh, we'll try to hold over time to like five minutes or so, but this has been awesome. We got a bunch of stuff coming in. Um, but last one we'll take
+35:24
+is from Jeffrey. He put this in the chat, which is like is AV or EDR enough to prevent like unknown applications and
+35:31
+processes from executing. So, in particular, like that focus on, you know, things you've never seen before, highly
+35:37
+anomalous, like how do you how do you think about that when and might how might you compare that to
+35:43
+Sure. practical. Yeah, it's a great question because um I
+35:48
+think it is really worth mentioning that a strong application control policy
+35:55
+that's being enforced should not be viewed as a replacement
+36:01
+for EDR solutions for anti virus. It's a supplement to those. Um, and if
+36:11
+you're in an organization that has their own um, like custom uh, like like that
+36:18
+that has a sock that's developing their own uh, detections, right? Then just
+36:23
+imagine if you have strong application control policies being enforced, just
+36:29
+how much more focused your detection efforts can be. Um, so it's it's really
+36:37
+win-win in that scenario. But yeah, we should never think of it as a replacement to it. In the same way that
+36:44
+we shouldn't consider AV and EDR to be a panacea to uh preventing the execution
+36:53
+of, you know, all unknown lowreutation binaries. Um, it's that that's never
+37:01
+been the case. That's never generally been the expectation. hopefully that uh
+37:06
+but uh so yeah they they work hand in hand together and again just to reiterate with a
+37:13
+strong policy being enforced it just allows you to be that much more uh
+37:18
+narrowly focused on the things that really matter that you uh may not be
+37:23
+able to have more direct control over as far as app control enforcement is concerned. Yeah. And like you know I'll kind of umh
+37:30
+one of our our our shared friends Casey Smith we we we did a talk years and years ago and he you know he gets credit
+37:36
+for this concept but you know that um being able to force adversaries through choke points where you can watch them
+37:42
+more closely like I think is like you know a great way to think about just enterprise defense in general. And so um
+37:50
+you know is EDR going to prevent all these bad things from happening? Um it'll prevent some and I think that's
+37:55
+getting better over time and not worse. But like you know to your point like the the real lever is being able to like
+38:02
+just take this huge swath of things that you don't have to look at at all anymore and which means that you can pay a lot a
+38:09
+lot closer attention to what's left right and that's where um and not just on known binaries but I think you know
+38:15
+we spent so much time here talking about just abuse of things like PowerShell and WI and builtin built-in tools right so
+38:22
+RMM yeah yeah particularly getting in right like I do feel like we've made you know
+38:28
+there's been a lot of progress over the I don't think we see initial access in the form of brand new software getting
+38:34
+dropped on a system you know it it still happens but to the point of click fix
+38:39
+and stuff like that like even just these very early footholds are you know abusive things that we can't just
+38:46
+wholesale take away um from the team and uh it's a it's a great way to think about
+38:51
+it that's very cool yeah that was an awesome question yeah all right well we've kept everyone
+38:57
+long. I think we've had like uh yeah, we've still got a lot of folks here. So, really appreciate everyone sticking
+39:02
+around. Um thank you all so much. Like great great questions this week, Matt. Uh um I think just you know the uh the
+39:09
+level of engagement here. Uh it speaks for itself, but like such a great job taking us through this. Thank you so
+39:14
+much for all your insights like is really really valuable. Oh, it's my pleasure. I really
+39:20
+appreciate everyone's time. I love geeking out about this. I I wish we had more time to really get in the weeds,
+39:26
+but uh I know Chris is going to be dropping some references, some additional links, um that could lead
+39:32
+people in the right direction. So, I mentioned some like commercial solutions. There's some good options out there.
+39:38
+Awesome. Cool. Well, thank yeah, thank you very much. I know Chris kind of shared some stuff earlier in the chat which might have scrolled up off the
+39:43
+screen, but uh yeah, thanks everyone for being here. Uh and we'll see you next week as we uh
+39:48
+kick off the AI miniseries. Cheers everyone. Thanks again, Matt. Happy New Year.
+39:54
+Happy New Year.
+39:59
+[Music]
+

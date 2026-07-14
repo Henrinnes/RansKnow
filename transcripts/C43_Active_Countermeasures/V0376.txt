@@ -1,0 +1,1103 @@
+0:00
+All right. Hello everyone. Uh, glad you could join us today. Um, I'm here with Fawn and [clears throat] we also have
+0:07
+Herman, which is HK on Discord and the three of us are part of the
+0:13
+active kind of measures team. Uh, we also have a whole host of folks in in the background as you may have just seen
+0:19
+on the pre-show that are helping out as well. So, we thank them for that. Uh
+0:26
+this is episode six of our monthly webcast about command and control this
+0:33
+command and convo the C2 webcast. And today we're going to discuss
+0:40
+the how the software Velociraptor can be used maliciously as a command and
+0:46
+control channel. And Fawn has put together a great presentation on this to share with all of us. So thank you Fawn
+0:52
+for that. And we want this to be a interactive webcast uh which includes all of you
+0:59
+watching this right now. Uh so we appreciate your questions and comments in Discord and we have changed venues in
+1:08
+Discord for our chat. So the chat now is in the Black Hills Infosc Discord in the
+1:16
+live chat channel and you can find a link to that in Zoom on the resources
+1:22
+button. If you click on that resources button, you'll see a link to the BHS infosc discord and uh we welcome you to
+1:30
+join that if you're not already a member there. uh that's where we're going to be uh doing all the chat and I'll be
+1:36
+monitoring that throughout the webcast and I'll try to bring up as many of those questions that I see in Discord as
+1:42
+I can during this session. Uh we are not using Zoom for chat and Q&A so please
+1:49
+don't post your messages there because we don't want to miss anything. Uh we'd rather keep everything in Discord that
+1:54
+way uh we can interact with everyone there. So uh yeah we appreciate that and
+1:59
+uh we're I'm looking forward to this as well. fun. Thank you for putting this together and uh I guess let's kick this
+2:06
+off and uh fun. I mean I guess let's talk about dinosaurs, dude.
+2:12
+Let's do it. Um I did see some people drop velociraptor gifts in the chat and
+2:17
+I I I've seen them all. I really handp pick the best ones, but I appreciate all
+2:23
+the Jurassic Park shout outs. That kitchen scene is definitely a classic.
+2:30
+Okay, I'm going to share my screen and let's go.
+2:38
+All right. Um, so by the way, I really appreciate this picture. I think they
+2:43
+had AI complete the colossal raptor. Um, I just love that it's pondering with its
+2:49
+uh hind leg. Actually, I thought that was a neat detail. Um, but yes, welcome.
+2:55
+Um, like Keith said, we're going to talk about abusing or misusing Velociraptor
+3:00
+C2 today. Um, I also want to say thanks to all our old viewers and also welcome
+3:06
+to all the new viewers. We really like to hang out on a Friday and just chat about interesting malware malware
+3:12
+communication and malware communication techniques and then kind of think about how to threat hunt it, right?
+3:20
+Uh I always like to start off with just kind of like uh getting a map of the
+3:25
+terrain just so we understand what we're going to cover today. Uh so the first thing I want to do is I just kind of want to set some context um zoom out
+3:33
+like conceptually so we just kind of understand like what's actually going on here more on kind of a macro level. Uh
+3:41
+then I'll talk about what Philosiaptor actually is. Um, which kind of segus neatly into like why is it being misused
+3:49
+as a C2? Like what properties does it have that uh you know so favorable for it to be used as a C2. Uh then we're
+3:56
+going to go into a short little actual live demo which will be a network threat hunt and then we'll come back and do an
+4:03
+endpoint threat hunt. Uh I'm going to quickly cover some highle hunting recommendations. Uh and then we'll
+4:09
+conclude with kind of a take-h home message. So, context. Um, so as well, those of
+4:15
+you that don't know, um, I, this is kind of like my mascot or my power animal for
+4:21
+my presentations. It's called Lead Cat because you can see his grill. But I have a giant a massive surprise for you
+4:27
+guys. Uh, I'd like to debut a special version of Lead Cat just for today's
+4:33
+talk. China. Oh, man.
+4:38
+It's a It's a chimera. Yeah. fun, you successfully took a very creepy image
+4:44
+and made it much more creepier. Yeah, you're welcome. I think I think
+4:50
+we'll just use him today because he's pretty rough. But um anyway, yeah. Well, when I wake up in a cold
+4:55
+sweat in the middle of the night, I'll thank you for that phone. Appreciate it.
+5:01
+Um so, the first thing I want to kind of ask is again, this is context just kind
+5:06
+of sitting. Um why do threats hunters even need to use C2? like what's the
+5:11
+point of C2? Um, and so to really kind of frame this properly, let's consider
+5:17
+what a threat campaign looks like really on a high level, right? Uh, so on a very
+5:22
+high level, a threat campaign has a start or a beginning and it has an end, right?
+5:28
+And the start is typically initial access, right? And initial access, how I always like to think about it, is
+5:34
+getting one's foot in the door. going from having no control or access to a network to having some control. Right
+5:42
+now, typically it's not all the control they will need, but it's it's basically
+5:47
+an opportunity to further towards the end. Right? Um now this can obviously
+5:54
+take a whole myriad of different forms whether it's you know public exploits or
+5:59
+um uh you know um fishing um supply chain attacks things like that. Um but
+6:06
+the point is that they go from not being on the network to being on the network and then the end is just literally a
+6:12
+different term for achieving their goal. Now again this can take a myriad of different forms. um you know, maybe it's
+6:19
+a nation state actor, maybe it's the gathering threat intelligence or intelligence or something like that,
+6:25
+espionage, but more than often today, it really is related to perhaps um some
+6:31
+kind of extortion. Um because at the end of the day, what the adversaries really
+6:36
+want to do is they want to be able to count their bitcoins, right? Um and so to go from initial access to achieving
+6:43
+their goal, there's actually this kind of like massive gulf in the middle. there's all these other things that need to happen. Um, so what are these other
+6:50
+things? How do they go from initial access to achieving their goal? Well, as many of you probably know, there's a
+6:56
+whole variety of different things. It can include or not include one or more of the others. Lateral movement,
+7:03
+enumeration, exfiltration, persistence, pivoting, privilege escalation, defense evasion, credential harvesting. Just
+7:10
+some random examples. You know, most campaigns will probably include some form of them, but there's no set
+7:15
+pattern, right? It really depends on what their goals are, what the environment is, uh what their kind of
+7:21
+knowledge and specialtities and all of that. But the one thing they all kind of have
+7:27
+in common um is that mostly almost always in order to perform
+7:35
+all these other actions, these actions remember you're now on or the attacker is an external host. they need to now do
+7:42
+it on a on a on a host on the local network. So in order to do that, they
+7:47
+need some form of command and control. Um, but when I say command and control
+7:52
+here, I don't mean like C2. I don't mean a command and control framework. I I mean literally they need commands. They
+8:00
+need to be able to run commands and they need to be able to exercise some form of
+8:06
+control on the endpoint. So now when we think about what a C2 application is or
+8:11
+command and control framework is um it just kind of happens to be the most convenient and explicit expression of
+8:17
+fulfilling that requirement and it's because of course it evolved there was a niche an open niche in the ecology which
+8:24
+was we need to do this thing so people created software to do that thing and then it was probably a very obvious name
+8:30
+to give it because that's what it's supposed to do right to provide command and control
+8:37
+But now, and this is increasingly true, it's not the only way to obtain literal
+8:43
+command and control. Now, the thing is when it started out, so you know, when
+8:48
+let's say threat campaigns became a real business, maybe late 2000s, early 2010s,
+8:54
+you know, when when crypto kind of came and and ransomware and all of that. Um, initially, you know, obviously first the
+9:02
+metas-ploit days and then really when Cobalt Strike came around, um, almost always exclusively they use C2 for
+9:09
+command and control, right? Um, but over time this changed and why did it change?
+9:16
+Why did it diversify? Um, and the main reason is, as all of us now in security know, there's this kind of um perpetual
+9:23
+evolutionary arms race uh between attackers and defenders, right? one side innovates the other one has to respond
+9:30
+etc. add infin item, right? But here specifically, we can say that
+9:36
+it was really the adoption of modern NDRs and especially I think EDRs that are so effective um that really made it
+9:44
+hard for attackers to just go ahead and use their little cracked cobalt strike,
+9:49
+you know, completely non-customized um and still get away with it, right?
+9:54
+any properly secured environments will probably have the detection to immediately flag that or even just block
+10:00
+it outright. And so now again in kind of like evolutionary terms, this placed a
+10:06
+selective pressure on attackers to innovate um and it caused them to find
+10:12
+alternative means to reach the same ends. Um and so they adopted a whole variety
+10:19
+of other options. Now what are these other options? I'm going to discuss them in terms of I want us now to think in
+10:25
+terms of categories right.
+10:33
+So the first thing is you know obviously some protocols that we all know and use and love
+10:40
+inherently provide some level of command and control. um and that could even perhaps be how they got initial access
+10:47
+or they could be inside and then they're able to password spray or exploit um a a
+10:54
+different kind of service right so some examples SSH obviously provides some
+11:00
+level of you know between SSH and ACP provides some level of command and control probably the best example I
+11:06
+think is RDP um public um misconfigured publicly um
+11:13
+exposed RDP ports or services are still a huge initial access vector too. And so
+11:19
+think about it um for any of you that's ever used RDP, I mean it's essentially like you're sitting in front of the
+11:24
+computer and and using it, right? So amazing command and control really. You just have a window inside of the system
+11:31
+that you're operating on and VNC and other kind of protocols,
+11:36
+right? Uh then something else I want to point out is uh living off the land binaries
+11:43
+in scripts. So I'm just going to quickly run over the definition for those of you that don't know what it is. And this is
+11:48
+taken directly from the project's website. Uh I think Herman will share it. Uh and it's kind of created and
+11:55
+maintained by a dude named Mr. Docs who has a lot of different projects going on and is definitely somebody worth following. Uh certainly an interesting
+12:02
+and uh pioneering individual in the malware development space.
+12:08
+So all has to be a Microsoft signed file. It has to either be native to OS
+12:14
+or you can download it from Microsoft. So a great example there is piece exec part of cy internals doesn't ship with
+12:20
+Microsoft with um windows but you can download it officially from the
+12:26
+Microsoft website and it has to have some unexpected extra
+12:32
+functionality and what I mean there is you know in the kind of classic hacker mindset uh you can leverage one of its
+12:38
+properties to provide a functionality it isn't expected to provide. Um but here
+12:45
+specifically that extra functionality really has to be bene beneficial to an adversary or a red team.
+12:53
+What are some examples of this? Well, I already mentioned PS exec consider WI uh
+13:00
+and then classic PowerShell as well, right? And there are many more and um you should I encourage you to go check
+13:06
+out the website but those are some of uh you know what we could probably consider the big three.
+13:12
+Then a whole other category that I feel has really been making recent waves um
+13:18
+I've really seen a lot of it involved in uh campaigns in 2025 and so on uh is RMM
+13:25
+which stand for remote monitoring management now. So, for those of you that have no idea what this is, uh the
+13:32
+best way to kind of think about it is it's kind of like RDP um but RDP on steroids or RDP with added benefits. And
+13:39
+um you know MSRDP that's obviously a Microsoft service um these are private
+13:44
+companies. So you buy this service and um what makes it different from RDP is
+13:51
+for example it's not really for diagnostics or individual it's it's it's more to do with fleet management. Uh so
+13:59
+one person can control many remote hosts. Um the other thing is it works in the background. If you take over a
+14:05
+system with RDP it basically like locks out. So an individual would be able to see somebody else's RDPD into that
+14:12
+system. So RDP is kind of like I said more for access whereas RMM is more for
+14:18
+management. So what are some examples of this very good example screen connect and anyesk team viewer was kind of a
+14:25
+classic. It's not as popular anymore but still being used um and synchro and there are more examples. I think screen
+14:31
+connect and any disk probably uh is the the bulk of attacks I see usually one of the two of them involved in. Uh I just
+14:39
+want to kind of plug here DF DFIR report. It's one of my favorite online resources. Uh they have different
+14:46
+honeyetss. So actual attackers attack their infrastructure and then they write incredible reports. But the reason I'm
+14:53
+mentioning here is you'll see there are many attacks uh where RMM are involved
+14:59
+and many times it's actually that they won't just use an RMM uh you know they might use Cobalt Strike or another C2 as
+15:06
+well uh but then as well use RMM. I think especially if they're able to
+15:11
+discover that the company is already using a specific RMM and then use that
+15:16
+as another channel, um it would be something that would be incredibly difficult to detect.
+15:24
+Um and for those of you that aren't as old as I am, this is a reference to The New Kids on the Block, which were like
+15:31
+one of the early '90s boy bands. Um, and the reason I'm using it here is to say
+15:37
+that now we have a new kid on the block, uh, which is using Velociraptor as C2.
+15:44
+Um, but what's interesting here is it's not just soft a new software or application being used. Um, it's kind of
+15:51
+like the emergence of an entire new category, right? It's the weaponization of live forensic and inc and incident
+15:58
+respond tool.
+16:06
+Because again, obviously, you know, as we said, the goal of a lot of threat actors is merely to get a payday. They
+16:13
+don't really care if what they're use using is considered malware or elite or anything like that. Anything that can to
+16:21
+some degree allow them to achieve their goals, they'll use, right?
+16:28
+Yeah. Kind of the same thing.
+16:33
+So then what is Philosopter? Well, Philosopter is it was initially open source application and it was later
+16:39
+acquired by Rapid 7. And I'm not just saying that to drop some facts. Keep
+16:45
+that in mind. It's actually like uh it it's part of the story in a sense as well. [snorts] Um but it really markets
+16:52
+itself as being used for digital forensics and incident response. Um but it could certainly be used for threat
+16:58
+hunting as well. um and Eric Capuano and Whitney Champion who are kind of like part of the BHIS tribe. Um they often do
+17:06
+a workshop or I think maybe an entire course using Velociraptor for threat hunting and they're big fans and
+17:12
+proponents. Um so it is an amazing application as well, you know, when used
+17:18
+uh responsibly. Uh so what makes Philossaptor unique?
+17:23
+What's kind of its secret source? Well, first I just want to kind of context set it again. Let's just really
+17:30
+understand the difference between what is a query, what is data and what is results.
+17:36
+So imagine we have two systems. The system on the right has data and the system on the left that it doesn't want
+17:43
+the data itself, but it wants to know something specific about that data. So
+17:49
+it'll send a query and then it will return results, some information about
+17:54
+that data. So for example data might be sysmon
+17:59
+event ID1 which is when a process is created the query might be hey did
+18:04
+winword exe spawn cmd exe in the last 24 hours and then the result might be yes
+18:10
+there was one event here's the time stamp here's the pit pp ID etc right
+18:17
+so if you think about how the different kind of architecture architectural designs in terms of how to do forensics
+18:24
+uh kind initially in a somewhat clumsy way perhaps um is that the data lives on
+18:31
+the endpoints. [snorts] There's a system that has a question, they have a query um so all the data gets shipped to this
+18:39
+same endpoint. It just runs the query locally and it gets the result.
+18:45
+Then kind of an improvement on that was to actually use a specialized central server for gathering the data.
+18:52
+So, same kind of idea, but this time we're going to introduce a a server. All the data gets pu pushed to the server.
+18:58
+The query is now sent to the server and the results are sent back.
+19:04
+And now, option C is kind of the unique innovation of Velociraptor.
+19:10
+So, think about the system we just spoke about. Now, there's no more need for a server.
+19:15
+And the querying system could be local, but it can also be remote, right? could
+19:21
+also be external to the the local network. So now when it has a query now instead
+19:27
+of pulling the data the data stays on the endpoint. So it actually sends the query to the endpoints and all it does
+19:35
+is it brings back the results. So velociraptor
+19:41
+uses client server architecture for real-time data collection and you can run query and analysis on multiple
+19:47
+endpoints and then you can centralize the results and artifacts on the server. So it can run commands, it can
+19:54
+exfiltrate data, it can upload data, it can bring system memory back from a
+20:00
+remote location. uh the shell commands it can run also it
+20:05
+can run powershell it can run cmd and it also has its own quering quering language called plus or wrapper query
+20:12
+language um yeah like I said it can pull the entire operating system memory it can
+20:18
+also pull individual process memory right
+20:23
+so hopefully a lot of you can see that if we strip away the specific labels
+20:28
+about it being used for forensic um it really has incredible capab abilities uh
+20:34
+for attackers to run post exploitation operations. uh right so you know
+20:40
+obviously if you if you can dump the operating system memory you can get ls you know um you can do credential
+20:47
+harvesting there are many many things you can do um and for those of you
+20:53
+oh it's coming sorry so this like I said kind of segus us into using it as a C2 [snorts] so this
+21:02
+person here Vincent UI he was very appreciient because in 2023 he actually
+21:07
+tweeted which was, hey, you should use Velociraptor as a C2. Uh, and then about
+21:14
+2 years later, which was August of last year, we have Sofos XOPS um publishing
+21:20
+the first report of a confirmed incident involving Velociraptor being used.
+21:32
+So, I'm going to quickly kind of from the attacker's point of view lead you to what it is actually like using it. Um,
+21:38
+and to further reinforce why it's actually pretty amazing as a C2 framework.
+21:44
+Uh, so when you set up the server, you are going to basically give it all the configs you want the agent to have, like
+21:50
+for example, the server's IP. Um, and then you're just going to generate a MSI, a classic Microsoft Windows
+21:56
+installer, and it's going to have all the configs in place. So you can just copy that onto the endpoint. It's pretty
+22:02
+easy to see how you could perhaps attach that to an email and a gullible person that doesn't know better would, you
+22:09
+know, please install this antivirus update or something like that might run it, right? It's not a weird ISO. It's
+22:15
+not a macro or anything like that. It's doubleclick um and it will install itself. Uh so
+22:21
+also just to show you when I was doing this, uh this is very rare for me. I almost always have Defender completely
+22:27
+disabled when I do my things. Uh but here I actually wanted to try and defender was enabled while I did this.
+22:35
+Uh so we like I said the MSI installer you double click it you have this little popup there. You don't even need to
+22:40
+click next. It literally pops up does this little thing and then poof it's
+22:45
+gone because it's now running in the background as a service.
+22:51
+And now on the server if we look we can see here that we have a client that checked in. we have some information
+22:57
+here, host name, etc. Um, and in fact, we'll just out of the gates already get a lot of other potentially useful
+23:04
+information. Um, and then I don't want to go too deep down this rabbit hole, but this will be relevant in our thread hunt in a bit.
+23:11
+Uh, let's now say we as the attacker, we want to run a command on the endpoint, you know, like I showed you, PowerShell,
+23:17
+CMD, VQL. Let's just run the classic who am I. Um,
+23:23
+and here is the result. And let's just kind of zoom in on this result. This is another crazy thing about Velociraptor.
+23:29
+Um, like I said, it runs as a service and it's a trusted utility. It comes with a certificate. Um, so you
+23:36
+essentially get autoprivilege escalation like out out of the box.
+23:43
+Um, this guy's name is Brian Almond. He's got an amazing channel called the Weekly Purple Team. Incredibly nice,
+23:49
+concise little walkthroughs looking at how to attack and then how to defend. Uh, I highly recommend you follow him on
+23:56
+YouTube. Cool. So, let's get hunting.
+24:01
+Um, and today we're really going to follow the the adage uh network for breadth. So, we start by looking at the
+24:08
+network to get a kind of bird's eye view. Um, and then when we see something suspicious, we're going to zoom in to
+24:14
+the endpoint uh using sysmon primarily and WL uh to get a little bit more depth.
+24:21
+Uh so we're going to do a live demo and then for the endpoint like I said we'll get back and we're actually going to just do a presentation for that.
+24:28
+So network threat hunt just before I start I do want to shout out this entire threat hunt is based on a malware of the
+24:35
+day article I published in September of last year. Um so you can go there you can read it in more depth and as well
+24:42
+the the pcap and the zeke files are there if you wanted to explore it yourself. Um, and for those of you that
+24:47
+are new, um, in episode, so today's episode six, in episode four, I actually
+24:52
+guided people through how to set up your own threat hunting lab. Uh, so if anything that I ever do, you wanted to
+24:58
+go and recreate it and hunt it yourself afterwards, which obviously we always highly encourage, um, then please go
+25:04
+check that video out. And I'm sure Herman has probably already dropped it in Discord or will do so shortly. Uh,
+25:11
+but yeah, let's go do our live demo.
+25:19
+So live demo here I am in Rita and so I've now opened the you know it's it's
+25:26
+processed zeke log files essentially it wraps it's a layer of abstraction on
+25:32
+top of it and it's going to basically correlate different data and interpret it for me right um and so you can see
+25:38
+here that this second entry it's kind of interesting kind of right off the bat
+25:44
+There are a few things going on here. Uh so let's just kind of touch on some of the things. Obviously the first thing is
+25:50
+Rita will use a number of different kind of data points uh to assign a severity
+25:57
+score. Here we can see it's not a huge data set per se, but it's one of two that has a high severity score. Here I
+26:05
+can see the local machine obviously. And here's the destination. Um and the
+26:11
+destination here is it's connecting directly outbound to an IP. Now there is
+26:17
+I forget but there is a minor it's a technique or a sub technique. It's probably a sub technique that is that is
+26:24
+specifically for this right direct connection to an IP. So it is something that not by any means means this is 100%
+26:31
+malicious but it's kind of like interesting like what's going on there right?
+26:37
+Next, we have a beacon score. And the beacon score here is zero. Um, which kind of makes us wonder, well, why does
+26:43
+it have such a high severity score? But if we look at the connection count here, it says one, which means this is just
+26:49
+one long perpetual connection. And that makes perfect sense that it has no beaconing score because beaconing is all
+26:54
+about the intermittent connection and disconnection and the specific like diagnostic pattern that can um come from
+27:02
+that. Here [snorts] we have the duration. Now for our once again this data set is from
+27:09
+malware of the day for that our intention is to provide a 24-hour pecap from which one then deres the zlogs. Um
+27:17
+so nothing here will ever be longer than 24 hours but you can see here it essentially span the entire 24 hours.
+27:24
+But just remember if you're looking at live Zeke sensor data this could potentially be 40 or 60 or even more.
+27:30
+Right? But whenever we have a very longunning
+27:36
+connection to a directly to an IP and we can't necessarily correlate that
+27:41
+internally to a business need once again it's no smoking gun but it's caused to
+27:48
+look closer. Hey F. Yes brother. Hey Linux girl has a question that I
+27:55
+didn't want to just answer on Discord because I'd like everyone to hear it as well for you to answer. Yeah. But uh
+28:00
+she's asking why is the second result scored as high when the beacon rate is
+28:06
+0%. Um yeah so that's because
+28:14
+like I said here the connection count is only one. So it means it isn't a beaconing connection is a perpetual it's
+28:20
+one long continuous connection. So we also have to remember that
+28:27
+a beaconing connection is one thing that could potentially be suspicious but it isn't by any means the only way in which
+28:33
+a malicious connection can take place right and in fact in many ways I think one could make the argument that the
+28:39
+original connections were all just long persistent connections um and then one
+28:44
+of the kind of innovations remember what I said the co-evolutionary arms race so then it became quite easy
+28:50
+for people to just see hey there's a 100 power connection here. Uh what's that about? Um and then one of the
+28:56
+innovations one could say was beaconing. Um and then maybe even on top of that then was introducing jitter to
+29:03
+beaconing, right? So you don't have the exact same um connection period each time.
+29:09
+Um so it's purely because of that Linux girl. If I maybe go down one and you see here it has somewhat of a high beacon
+29:15
+score, not terribly high, but you can see immediately the connection count goes up, right? Um, and that's because
+29:21
+now there were connections and disconnections essentially. Cool. Thank you.
+29:26
+Thank you, Linux girl. That was a good question. Cool.
+29:32
+Uh, the other thing I want to touch on here is prevalence. Now, prevalence here isn't that relevant because there's was
+29:39
+only one local host. This was a simulation that I ran. Um but prevalence becomes interesting if you're looking at
+29:46
+an actual network with many endpoints uh on the subnet. Um prevalence is another
+29:52
+way of just I guess using some um simpler terms a simpler term for what's
+29:58
+commonly uh called least frequency analysis. Now lease frequency analysis can be applied to many things. It can be
+30:05
+applied to a process uh or a connection here. Um, and what it basically says is
+30:10
+look, if I have a local network, let's say with a 100 systems on them, and there's only one system on that of those
+30:18
+100 that's making a connection out to this host. Like, why is that? That's interesting to me. No. Um, because in a
+30:26
+typical corporate environment, you would expect more or less them to connect outbound to the same host. Now maybe
+30:34
+sometimes there's 20 of them that are connecting to one specific host, but I would say certainly if there's only one
+30:40
+or maybe two, it is once again no smoking gun, but certainly a cause to look at it a little bit closer.
+30:48
+And then the last thing I want to touch on here is just the port. The port here is 8,000. It's not a ex it's somewhat of
+30:54
+unusual port. It's not an extremely unusual port. Um it's often associated with some uh development servers like
+31:00
+for example Django uses it. Um at the same time it's once again we have to ask
+31:07
+are there is there a business need for development server? Why is something specifically reaching out to 8000 right?
+31:14
+It's not a default port per se. So today I'm I'm not going to jump into
+31:20
+AC Hunter today because um it's basically going to show us the same thing because in AC Hunter we won't see
+31:25
+any histograms today because again this is a long connection right so there's no bar graph uh there's no histogram to
+31:32
+show here [snorts] uh but today I wanted to share this with you guys too because it's one of those
+31:37
+cases where like I said high severity direct to IP long connection potentially
+31:43
+let's say low prevalence somewhat unusual port there's There's a lot of things that makes you kind of go hm um
+31:51
+but there is certainly nothing that would warrant you um alerting a response
+31:57
+team at this point. So like I said network for breadth and endpoint for depth. So this actually can now allow
+32:04
+kind of give us cause to take the time to like zoom in closer um to look at the
+32:10
+endpoint and see if we can maybe find something there uh that gives us some more reason to be concerned about this
+32:16
+connection.
+32:24
+So, endpoint threat hunts. Um, before I even start, I just quickly want
+32:30
+to touch on the difference between a process and a service, right? Um, and
+32:35
+the it's a it's a a false dichotomy because they're not two different things in the same category. It's two different
+32:42
+categories. A process says what something is. Service relates to how it is managed. Um and in fact almost always
+32:50
+a service is just a specific type of process um that is managed by the Windows service control manager to run
+32:55
+the background. So it's a background process. For those of us that work with Linux and Darwin, it's sometimes
+33:03
+referred to as a demon or a Damon. I don't know Keith. Do you say Damon or Demon? Do you know?
+33:09
+I say Damon, but I haven't either. So Okay. Don from like a golden compass I
+33:16
+guess a Damon right so it's just something that's happening in the background it's funny I think demon I think like
+33:23
+some creature that lives you know like the easil bub
+33:28
+[clears throat] so almost all services run as a process um and that's interesting for us because
+33:35
+that means velociraptor is both a service and a process so it means it runs at both um and this is because both
+33:44
+have unique diagnostic value to us which we're going to see now.
+33:50
+So I want to detect it both of uh so we're going to go and see if we can find it both as a service and as a process.
+33:56
+And to detect it as service installation we're going to be looking at Windows event log 7045.
+34:04
+Um and then to look at it as a process initiation we'll look at sysmon event ID 1.
+34:10
+Let's start with first looking if it's installed as a service. Why is that?
+34:15
+It's not arbitrary. It's because typically on a host there are way more
+34:22
+processes being initiated than there are services being installed. And so obviously if we're trying to find
+34:28
+something we have two different data sets and one is a much larger data set.
+34:34
+We should probably start with a smaller data set. It typically makes our lives easier. Right?
+34:40
+Like I said there. So now when we ran I I showed you guys
+34:46
+we ran the uh uh the MSI installer, right? But there is still even though
+34:52
+we're looking at the GUI and seeing a little pop-up box, there's obviously still a command line.
+34:58
+No, no, no, no. Sorry about that. I just got a call. Uh there's obviously still a command line invocation happening on the
+35:04
+system. So when we run the MSI installer, this is actually what the command that was
+35:10
+being run on the system. So now we might think, well, how can we use this uh as a detection vector? And
+35:18
+maybe the first thing is like, oh well, let's just look for velociaptor.exe.
+35:24
+Um, but those of you that kind of understand the pyramid of pain and the idea of, you know, brittle versus
+35:29
+resilient, this is obviously a very brittle detection vector. Why? Um, because they could re rename the file,
+35:37
+right? The file could be named anything. So typically a a general strategy is we
+35:44
+want to target things or want to utilize logic in our detection vectors that's harder to change. Um and in this case
+35:53
+they have to use the flag-config and they have to point that to a YAML
+36:00
+file. Again typically it's called client.config or by default but they could easily rename that. So we won't
+36:06
+use that in our logic. So now we can formulate the following
+36:11
+PowerShell query. So I'll point out the specific parts we want to worry about. 7045, like I said,
+36:18
+this is WL7045. And then here, that's really the hearts of our detection logic where I say we're
+36:24
+looking for something that includes includes d-config um and a YAML file, right? And so when
+36:32
+we run this in our data set, uh we get the following result. And we can see there indeed the service name
+36:37
+Velociraptor service and we can now see the time it was created and the command line.
+36:45
+So using WL7045 to detect service installation was like
+36:51
+I said it's useful because we're looking at a smaller data set. Um but the real cool part about this though is that it's
+36:58
+pointing us directly to the client config. Right? Why is that cool? because
+37:04
+the client config contains the IP address it's connecting outbound to. So this could now be an opportunity for us
+37:10
+if we saw that suspicious connection in Rita to correlate that with this
+37:16
+connection. Um I also want to point out that we could also potentially um after we find
+37:22
+the pit use sysmon event ID3 to also find the network connection. Um, but
+37:28
+this I feel is kind of like a something just served on a platter to you. You know, it's it's it's a very easy win.
+37:38
+So, like I said, we looked at service installation. Now, let's look at process initiation. Um, and I'm not just doing
+37:45
+this to do this or to be redundant. There is actually unique value that's being offered here. We're going to get
+37:51
+additional information here. So, let's look at uh let's have a look at our query script. this time
+38:01
+and you can see this time not WL7045 sysmon event ID1
+38:07
+um and now hopefully this looks familiar we can see again config right and service run remember we run the process
+38:14
+the binary and we provide arguments and one of the arguments was ser service run or find a yaml file
+38:22
+hey fine now here at the bottom what do I want you know this is one of the beauties of powershell we can say exactly what
+38:27
+fields we want to output to terminal. What is it? Well, I want the name of the process and the arguments. That's just
+38:32
+to kind of confirm uh that we're looking at uh what we want to. Um and then the
+38:38
+pit and the pit is really where the magic starts happening, right? So, let's have a look at our results.
+38:45
+So, once again, we can see the suspicious process and we can see the arguments. The arguments was of course
+38:51
+what we were just looking for when the service was being installed, right? Uh but now here critically we get the
+38:56
+pit and the pit is in this instance 11420.
+39:02
+So now we have the pit. Cool. Now what? Well if we have the pit we can ask many
+39:08
+things but among them and probably the most important thing in my mind um always is what other processes were
+39:15
+spawned by this pit. If we know what this PID is and we say if a PP ID, a
+39:21
+parent process ID equals this PID, what child processes were spawned by it?
+39:29
+And so here you can see we're still going to be looking at event ID1 because we're still looking for process
+39:34
+creation, right? We're just looking for ones that were created by Velociraptor
+39:40
+this time. and our P of 11420 and we're saying show us the Java
+39:46
+process the command line and and the user and here are results same thing I'm
+39:52
+showing here is what's available there I'm just kind of zooming in and of course when I showed you the demo I said
+39:58
+let's just run who am I using cmd and here you can see cmd was run with who am
+40:03
+I um and once again running a system and we can obviously use this
+40:09
+potentially see if that in turn spawned the processes and stuff like that. You know, this potentially opens a whole web
+40:15
+that you can go crawl to find all the information. Uh, but I just wanted to show that kind
+40:21
+of like obvious immediate next step. I also want to mention that this might seem now that we're perhaps veering
+40:28
+outside of the domain of threat hunting more into forensics. Um, and in probably
+40:33
+in most circumstances that would kind of be true. Um but at the same time I also think like if you are in a situation
+40:39
+where let's say velociraptor was actually um allowed to be used
+40:44
+legitimately on a network but you had suspicion that it was also being used illegitimately. If you're able to see
+40:50
+what exact commands were run at what time for example that will give you the
+40:56
+level of granularity that would allow you to be able to potentially differentiate between legitimate and
+41:02
+illegitimate use. Right. Hey Fon. Yes. Question. Um going back to
+41:08
+searching for the YAML file. Um ABH4T is asking is saying
+41:15
+can they not rename the YAML to any other extension if the file format is
+41:21
+still compliant with the expected input. I guess that would still work or
+41:26
+question mark. Um I I I don't want to guess. So I don't
+41:32
+I I can tell you that 100% for a fact. Um it might it might not you know I
+41:37
+encourage you to go test that. Um you know a lot of times anything
+41:43
+you know as well when we say resilient it doesn't mean when I said this is a more resilient detection vector than
+41:50
+renaming uh than changing the name. It doesn't necessarily ever mean it's like it's it's a bulletproof right. um with
+41:57
+enough ingenuity and knowledge I'm sure any attacker could maybe even ch change the source code and recompile it in a
+42:04
+way where has the config built in for example uh right it's just about
+42:09
+increasing by decreasing the probability that the attacker would have done something it increases the probability
+42:17
+of the detection working right so that's kind of more the the the trade-off or
+42:22
+the dynamic that I'm uh thinking about at the heart there. Um, but like I said, I couldn't answer you for sure. Um, but
+42:30
+interesting question regardless. Thanks. Yeah. No, and I'm I'm kind of with you, F. I mean, just purely changing the just
+42:37
+that one files extension I would assume is not going to work. Uh, so it it would
+42:43
+it would take further work like like you had just mentioned. I mean you you would literally have to go in and change some
+42:49
+code in order for you know the whole process to still be valid I would assume. Yeah, I just
+42:55
+don't it depends on the velociraptor installer whether or not it will it requires YAML or you know it will accept
+43:02
+something else. But but again obviously attackers and hackers in general um are
+43:08
+very smart and ingenious. So there's always a way to figure out how to hoodwink stuff, right? Um but I
+43:15
+appreciate the question. It really shows you kind of are thinking like a hacker. Um, and that's a great way to always,
+43:22
+you know, whether you're um, approaching it from the offensive point of view or defensive,
+43:29
+that allows you to think, how could they actually potentially bypass my detection vector here, right? So, good job on
+43:36
+that. Yeah, agreed. Oh, and if anyone else knows the answer
+43:42
+for sure, please feel free to share with the restic of the community. Thanks. Cool. So we're coming up towards the end
+43:49
+here friends. Uh so let's share a few hunting recommendations super high level.
+43:54
+Um for network thread detection look at persistent connections to 8,000 88 8888 and 5,000. All of them have been
+44:01
+correlated with flosseraptor use. And now obviously when we say something like this the first um you know very
+44:08
+legitimate critique is well they can use any port and they can use any port. Um, but as we see kind of time and time
+44:14
+again is a lot of them don't a lot of them don't change default values and
+44:20
+maybe it's only 10% or maybe it's 50%. But you're immediately just going to
+44:25
+sift out the dregs there. Uh, remove the lowest common denominator. So why not,
+44:30
+right? Um, I again want to remind us about the
+44:36
+modifier in Rita which I think is a very useful modifier which is first seen. So if we see something that started
+44:41
+recently um and it's long running again something to definitely pay some attention to.
+44:48
+Um it does use TLS by definition so we can't really fingerprint like for example the HTTP headers uh unless
+44:55
+you're using DPI. Um but you could probably consider maybe using something like Jaw.
+45:01
+It obviously depends on whether or not the servers are known to threat intelligence as well. Um, and then as we
+45:07
+see many times as well as looking for persistent connections to public cloud infrastructure, understanding whether or
+45:13
+not that does correlate internally with an actual business need.
+45:19
+And then endpoint thread detection. Here's really where, you know, the the grainy pixels come a little bit more in
+45:24
+focus and things, I think, become a little bit more clearer whether we're dealing with a threat or not. Uh, but we
+45:30
+want to look at Windows event log 745 service. um sisman event ID1
+45:38
+like I said our more resilient uh detection vector logic here would be looking for the d-config and the yamo
+45:45
+file and the kind of like unique value
+45:50
+proposition of the two different logs that we looked at is windows event log can point us to the yamo file file has
+45:58
+information about the server and the sysmon will give us the pit and with the
+46:03
+pit we can go and find and a whole host of other information.
+46:08
+So, my one kind of take-h home message today is um to get a little bit
+46:14
+philosophical or philosopherical on you guys. Um I want you guys to kind
+46:20
+of consider this and this kind of quote. Um and you know
+46:27
+one very useful I think guiding principle to have in your minds now
+46:33
+especially as adapt attackers leverage more and more legitimate software is
+46:38
+don't put uh all applications strictly in a category of this is definitely
+46:44
+legitimate and this is definitely evil malware malware and non-malware I don't
+46:49
+care about non-malware I care about malware Right. We see this with a lot of a lot of legitimate tunneling uh
+46:56
+applications as well like msdev tunnels and things like that. Um so an
+47:01
+application can be good or bad. It depends on how it's used, right?
+47:08
+And what was interesting to me here was it actually even went a step further because there's actually it's kind it's
+47:14
+just kind of like a tragic irony that an application that was created with a express purpose to protect uh systems is
+47:24
+also extremely powerful in um for abuse by attackers. Right?
+47:32
+So the line between malware and non-malware is will continue to become increasingly blurry as we go ahead.
+47:40
+Cool. So I want to talk about some of our um future C2 webcasts right now so
+47:45
+you can save the dates. The next one will be on the 20th of February next month and I'm going to be
+47:51
+talking about DNS text record abuse. Um especially for those of you that um I
+47:57
+think the third episode was on DNS CAT 2. So we really looked at, you know, using encoded subdomains for agent to
+48:04
+server XL. Um, that's kind of like the ground floor of how DNS can be used as a
+48:09
+covert channel. Here we're going to go like one layer deeper. Um, and so I'm excited um about that. Uh, if you didn't
+48:17
+see that webcast or if you want to have a refresher, it's obviously right on the um active countermeasures YouTube page.
+48:26
+And then this one I'm especially very excited about. Um, Troy did mention uh the article he wrote last month about an
+48:33
+interesting case that they found. Uh, so this one I'm going to hand hand the mic over to Troy. Um, and Troy is actually
+48:40
+going to present for us that specific case about the curious case of the com comler
+48:48
+burglar. Um, and again, what I think is really cool about that guys is, uh, you
+48:54
+know, a lot of my things are theoretical and conceptual, and it's simulations I run, and it's what could a thread actor
+48:59
+do? Um, but Troy is going to be reporting on what they found an actual threat hunter do. So, I'm really looking
+49:06
+forward to that one. Um, and then the first of May, I just changes. I don't
+49:11
+want to It might just kind of be a normal malware of the day, but I am also working on something pretty cool and
+49:17
+special and unique and different. Um, and it all depends whether or not I can get it to do the thing I want it to do.
+49:24
+Um, but that will be on the 1 of May. Also, just note here, please, we're actually taking a break on April. There's something happening there. Uh,
+49:30
+so we'll be back then in May. Cool. Thank you. I hope your guys
+49:37
+experiences were unforgettable. Um, and we have quite a bit of time for questions, so yeah, feel free to ask
+49:44
+away. Hey, thank you, Van. Yeah, I don't see
+49:50
+uh I don't see any questions now, but of course we're keeping an eye on it. But uh but uh thank you for that. Um because
+49:58
+it really uh I think gives us all a lot to think about, myself included.
+50:03
+uh and and I think an important takeaway also from this uh from a perspective of
+50:09
+being a threat hunter is that even though reputation and the validity of
+50:16
+certain software is important obviously that I think more weight needs to be
+50:24
+needs to go to the actual behavior right so in other words just looking at
+50:30
+something and saying something like oh well it's Microsoft, it's safe
+50:35
+is probably not really the best mindset to have. Uh you really need to look at the behavior of those connections and
+50:42
+and and if that's expected in your network. You you following kind of what
+50:48
+I'm saying? Absolutely. And more and more um you know I I some of you guys want to go
+50:55
+look at the malware the day I did on Google GC2 as well. You know you're seeing traffic to Google Drive. you
+51:01
+know, you're not going to look at, oh my god, they're communicating with Google Drive. You know,
+51:06
+call the cavalry guys. No, that's like, you know, totally expected. Um, and once
+51:12
+again, just keep, you know, it's cool learning details here, and that's valuable. And I think
+51:17
+also details change over time, but a lot of principles stay, right? And one of these things just to kind of keep in
+51:23
+mind like I said again the perpetual co-evolutionary arms race and more
+51:29
+nuance um results all the time and that
+51:34
+means we have to have more nuance in our way of thinking and detecting as well right and to answer you particles uh yes
+51:42
+we have pcaps and the pre-generated zlogs um for all the threats that we run
+51:48
+so if you go to active counter measures malware of the day um Herman will drop a link. It's an article. It's a report.
+51:54
+And at the bottom, you'll always find 24-hour pcap and zlogs um to go do it yourself. And then, like I said, we did
+52:02
+the webcast how to set up the whole environment yourself, the one that I use at home. Um one step even that you can
+52:09
+go beyond that then is to run the simulation yourself uh and generate the attack. And for those of you that have
+52:15
+never played around with Velociraptor, whether you want to play around with it from, you know, wearing your red hat or
+52:21
+your blue hat, it's a super awesome tool. Um, so please go and do that. You
+52:27
+know, it's um definitely something I think that could potentially have a lot of value for people on their journey.
+52:33
+Yeah, I totally agree. And I do like how you pointed out that you know that that like the reputation of a rapid 7 which
+52:40
+is very good uh it's certificate signed you know all the fines
+52:45
+you know on the surface look fine you know but we can't assume that just
+52:50
+because of that that it's okay you know what I mean I mean uh I'm glad you brought that up because
+52:56
+I said oh that's going to become important to our story and then I totally skipped over it but why it was
+53:02
+important to our story is it was first open source project. I don't know if they had a valid science certificate. Um
+53:09
+maybe not. But then they're required by this big, you know, multi-million dollar
+53:14
+company. So there's very easy for them to get a legitimate signed certificate. I'm talking about the process
+53:20
+certificate now too, right? Not the X509. Um and that's one of the reasons
+53:25
+that you can just install it as a as system like get prevesque, you know, uh
+53:31
+off the bat. So, I find that interesting too from a I don't know um if this is
+53:36
+going to sound pretentious, but like phenomenological point of view is that the fact that it got acquired by a fancy
+53:42
+company means that it's actually more effective now as a um offensive tool,
+53:48
+you know. So, um that that was a cool little detail for me as well. Thanks for reminding me about that.
+53:55
+Cool. And and this there's a question also from a I'm sorry if I'm mangling
+54:01
+this. It's uh Rodrielia. Rodrielia, I believe. And this is kind
+54:06
+of beyond our scope, but I'm just going to throw it out there anyways. Is any thought on how to prevent Velociraptor
+54:12
+from being abused? And like I said, that's kind of beyond our scope. We don't really get it. I don't know if Jeff McJunkan is still
+54:18
+in the chat. I saw him at the beginning, but something tells me that dude has got some some not serious knowledge bombs to
+54:24
+drop on that. So, Jeff, if you're still around, feel free.
+54:30
+But um Rodriia, one thing that just comes off right off the bat is um if you
+54:36
+are not using Velociraptor in your environment and you're able to have a
+54:41
+blacklist or a white list of what you are allowed to use like EasyW I I know
+54:47
+again you know there's the ideal and the real what I'm expressing now is the ideal. I know you know things get very
+54:54
+messy when you want to translate it into companies and there's politics and politics and you know old machines and
+55:00
+and you know a lot gets factored into that equation then but at least in theory or in principle that's something
+55:06
+you can immediately just consider is uh don't allow the process to be able to
+55:11
+run immediately. I also think that uh look so the Windows system that I showed you guys that I had defender off it's a
+55:17
+Windows 10 machine and it's not um I I don't allow it to reach out for any
+55:23
+updates. Um but at the same time um it is certainly possible that since there
+55:29
+was this kind of wave of Velociraptor abuse that it wouldn't necessarily be so easy to to run it anymore, right? Um so
+55:39
+maybe Right. Cool. Thanks, Jellybeanster.
+55:46
+Yeah. Yeah. And thank you all for the thanks.
+55:51
+We greatly appreciate that. I mean, I see that in Discord and I just I love seeing that. So, so thank you for saying
+55:58
+thank you. Uh we really enjoy doing this. Uh and and we we really enjoy the
+56:04
+engagement as well and we appreciate you spending some time with us on a Friday. Uh, and we're glad that you were here
+56:10
+with us today. Uh, we look forward to the next one. Um, and we look forward to seeing everyone there as well. Um, I'm
+56:17
+going to throw a link in Discord, a link to subscribe to us if you want to
+56:23
+receive email notifications of our blog post and our upcoming webcasts. And just
+56:28
+to let you know right up front, we're not going to spam you. We're not going to send you a bunch of sales junk. It's
+56:34
+just purely notifications of our blog posts like our malware of the day and and uh associated threat hunting blog
+56:42
+posts and these webcast. So uh feel free to go ahead and sign up for that. That way you'll get notified of upcoming
+56:49
+events as well. Yeah. Uh I one more thing I just want to special thanks um to first of all for
+56:57
+the BHIS team Jason and Zach and all of them for accommodating us. We're so happy to be part of your guys'
+57:04
+initiatives and that you know being here gives opportunity for our community as
+57:09
+well to um uh you know take part in these cool things and get some sweet
+57:15
+sweet gifts and loot and stuff um cuz you know our community is your community and vice versa. So it feels good to be
+57:22
+merged back in. Um and the other uh shout out is to Herman. Thanks Herman.
+57:28
+Herman is HK in Discord. is always there, always helping, always sharing links. We always appreciate you,
+57:34
+brother, and appreciate all your uh support, you know. Thanks. 100% F and thank you. Yep. You just said
+57:42
+pretty much everything I would want to say as well. So, yeah, we we appreciate everyone. So, thank you. But
+57:50
+cool. We've reached the top of the hour. I think uh I think we can all continue our Friday and you know some of us have
+57:56
+to work and some of us don't but either way we're going to enjoy the rest of the day and and thank you again Von for a
+58:02
+great presentation. Thank you all uh for your involvement here and thank you all for uh being in the background to help
+58:08
+uh keep this going. So thank you very much. Thank you guys very much for sharing your knowledge with us today and and
+58:14
+thank you to the audience. Appreciate y'all. Hope you all have a great day and thanks next. Happy hunting everyone. Mhm. Happy
+58:21
+bouncing tough
+

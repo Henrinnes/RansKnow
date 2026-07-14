@@ -1,0 +1,1217 @@
+0:01
+Hi everyone and uh welcome to our talk.
+0:04
+Um we are really excited to be here
+0:06
+today. Um and today we're going to look
+0:09
+at a very different kind of command and
+0:11
+control channel. Um not the kind that
+0:14
+hides behind some DNS tunnels or buried
+0:16
+in some compromised website, but one
+0:19
+that lives right in a popular AI model.
+0:22
+So my name is Barma Talon and I'm a
+0:25
+threat intelligence team lead in Cortex
+0:27
+research department at Palatoto
+0:28
+Networks. I'm NO. I'm a senior threat
+0:31
+intelligence researcher on the same
+0:33
+team.
+0:35
+So, let's start with a little thought
+0:37
+experiment. Um, think about your most
+0:40
+trusted AI assistant. The one that you
+0:43
+use every day to process complicated
+0:45
+ideas, to summarize article or thread
+0:49
+reports that we don't really have time
+0:51
+to read, um, or to answer your most
+0:54
+personal and sometimes pretty silly
+0:56
+questions.
+0:58
+Now imagine what if that very assistant
+1:02
+was secretly working with your enemies.
+1:04
+It sounds a little bit dramatic, I know.
+1:07
+Um but that's essentially what's
+1:09
+possible with LNS. Turns out that these
+1:11
+models can be fine-tuned to act as a
+1:15
+hidden command and control channel uh
+1:18
+allowing attackers to covertly
+1:19
+communicate and and manage their
+1:21
+operations.
+1:23
+So this is what we'll be covering today.
+1:25
+Um, first we're going to start with how
+1:28
+today's attackers are leveraging yellow
+1:30
+in their campaigns and then we'll jump
+1:32
+into how to turn um popular AI model
+1:36
+into a sneaky C2. Um, the road there it
+1:40
+wasn't that smooth to be honest. So
+1:42
+we're also going to talk about the
+1:44
+challenges that we faced and some ways
+1:46
+and approaches to overcome them. Um, and
+1:48
+then we'll demonstrate our tool that we
+1:50
+call C2LM so you can see it in action.
+1:54
+Finally, we will switch our hats a
+1:57
+little bit and talk about how to detect
+2:00
+and how to defense against such um LLM
+2:04
+based implants.
+2:06
+But before all of this, let me take you
+2:08
+back to when um the idea started. So it
+2:12
+all began honestly as part of our daily
+2:15
+job in the Cortex threat intel team. Um
+2:18
+one of our missions in the team is to
+2:20
+closely monitor the threat landscape. uh
+2:22
+we are looking at entire attack chains
+2:24
+uh in order to spot uh trends new and
+2:28
+emerging threats and more importantly we
+2:30
+are looking for new ways to detect these
+2:32
+threats. Now as you can imagine one of
+2:35
+the most prominent trends that we had
+2:38
+recently um is the adoption and the
+2:42
+abuse of LLM by thread actors and we
+2:45
+actually see this happening across the
+2:47
+board.
+2:48
+Um first many attackers are utilizing
+2:52
+LLMs to conduct initial research and
+2:55
+recon. Um for example we can name aim
+2:58
+forest blizzard the the Russian AP was
+3:01
+reportedly using CHPD to explore uh new
+3:05
+attack surfaces and potential targets.
+3:08
+Um and another example comes from
+3:10
+Iranian government back groups.
+3:13
+According to Google, they have been
+3:15
+among the most active apes in leveraging
+3:17
+Gemini. Uh using it to conduct recon on
+3:20
+targets, to explore publicly known
+3:23
+vulnerabilities and even to request
+3:25
+things like uh translations or technical
+3:28
+explanations to aid their campaigns.
+3:32
+The second category is uh social
+3:34
+engineering. Fred actors have been
+3:36
+increasingly using LLM to sharpen their
+3:38
+social engineering lures, making them
+3:41
+look more reliable, more benign and much
+3:45
+more natural in the target's own
+3:47
+language. Um, soft actors also started
+3:51
+using um AI powered uh website builders
+3:55
+so they can uh create fishing sites in
+3:58
+seconds which then served as landing
+4:00
+pages for the campaigns.
+4:03
+And the third category is that threat
+4:05
+actors like maybe all of us I believe um
+4:09
+today rely on LLM for coding. Um whether
+4:12
+it's a very simple PowerShell back door
+4:15
+or Python loader or a full-blown info
+4:18
+stealer like this one that was uh sold
+4:20
+on the darknet.
+4:23
+So there are plenty of such examples but
+4:26
+as you may have noticed
+4:28
+all of the examples that we found showed
+4:31
+how thread actors using LLM mostly in
+4:35
+the earlier stages of the attack life
+4:36
+cycle and that made us wonder what about
+4:40
+the later stages I mean why don't we see
+4:43
+fctors using it for command and control
+4:46
+or that expiltration
+4:48
+because in theory when you think about
+4:50
+it it sounds pretty simple right Once
+4:52
+you have access to the victim's machine,
+4:54
+just pull all the data to some popular
+4:57
+AI model and and then ask the model to
+4:59
+hand it back to you. How hard could it
+5:02
+be?
+5:04
+But turns out, and and this is why we're
+5:06
+here today, um that it's harder than it
+5:08
+looks. And the reason why is that LLMs
+5:13
+aren't really built for this. Um, first
+5:17
+of all, LLMs are naturally stateless.
+5:22
+Um, which means they don't really
+5:24
+remember anything between the sessions
+5:27
+unless they have some fancy back end
+5:29
+that adds this feature on top. And even
+5:32
+then, the memory isn't stored as is, but
+5:35
+in some but in some structured way. So,
+5:38
+it's pretty hard to retrieve um specific
+5:41
+things you're looking for.
+5:43
+And when you're using the API, which is
+5:46
+what an attacker would probably do, uh
+5:48
+they are usually session based. So
+5:50
+nothing carries over once the session
+5:52
+ends.
+5:54
+Second, they have security guards.
+5:57
+Things like prompt injection prevention,
+5:59
+jailbreaking detection, content
+6:02
+moderation.
+6:04
+All these are not just to stop you from
+6:06
+um breaking the the rules and the
+6:08
+conditions of the LLM providers, but
+6:11
+they are also preventing you from
+6:13
+pooling sensitive information out of the
+6:16
+models training data set.
+6:19
+And third,
+6:21
+um LLMs are probabilistic.
+6:24
+Ask the same question twice and you
+6:26
+might get different answers. And that's
+6:29
+not ideal when you want to retrieve the
+6:31
+exact stolen data.
+6:34
+So, you can't use LLM as C2 just out of
+6:38
+the box. Um, but at that point, we
+6:41
+weren't ready to give up yet. Uh,
+6:43
+because we thought that if we couldn't
+6:45
+beat it, maybe we can tune it. Um, so
+6:49
+what is LLM fine-tuning?
+6:54
+Um, think about it as taking an existing
+6:58
+pre-trained model and teaching it a new
+7:00
+trick, training it on a on a smaller
+7:03
+task specific data so it can perform
+7:06
+better for your specific use case. Uh,
+7:09
+instead of spending months and and
+7:11
+massive resources on building new model
+7:14
+from scratch, just take an existing one,
+7:16
+a powerful one, and train it on your
+7:18
+data. The process should take you from a
+7:21
+couple of minutes to a few hours
+7:22
+depending on the size of the data set.
+7:25
+So for example, we can take um an
+7:27
+existing model that we all know like
+7:29
+Chibd 5 or Gemini Pro 2.5 or whatever
+7:34
+and train it on for example uh
+7:37
+anonymized patient records and after
+7:39
+this process we've got a specialized uh
+7:43
+medical chatbot we can communicate with
+7:45
+and consult with.
+7:47
+The process is very very effective and
+7:49
+it's actually everywhere now. It's
+7:51
+powering banking bots, legal assistants
+7:55
+um and many many other uh industry
+7:58
+specific AI tools
+8:02
+and that gave us the idea
+8:05
+what if we fine-tune the model with um
+8:08
+victim stolen data instead.
+8:11
+So with that in mind, we decided to test
+8:13
+it out and we created our initial proof
+8:15
+of concept. Uh we created a simple
+8:18
+implant that gathered some data from the
+8:20
+victim's endpoint and then we used the
+8:22
+very same data as the fine-tuning data
+8:25
+set. We created a fine-tuned model via
+8:28
+the API using a specific API key.
+8:32
+This is the name of the new uh fine tune
+8:35
+model.
+8:38
+Um, as attackers, all we had to do was
+8:41
+to use the same API key, retrieve the
+8:43
+recently created fine-tuned model and
+8:46
+ask it ask the model a specific question
+8:48
+to get the wanted data. And guess what?
+8:52
+It worked. The entire process took us
+8:55
+just a few minutes. Um, and here you can
+8:57
+see the notebook. When we prepare the um
+9:00
+the training set data, we set the value
+9:02
+of my string to be this um B 64 encoded
+9:07
+string.
+9:09
+And here can see the attackers module.
+9:12
+Uh when we prompted the fine-tuned
+9:14
+model, we asked the question, what is
+9:17
+the value of my spring? And we got as an
+9:18
+answer the very same value.
+9:22
+So this is where things started to get
+9:24
+really interesting. Now I'll hand it
+9:26
+over to Noah to show you what happened
+9:29
+when we tried to do the same thing once
+9:31
+again.
+9:32
+Thank you Bar.
+9:34
+So as V mentioned, we're good
+9:37
+researchers. We wanted to try it again
+9:39
+to make sure this wasn't a fluke, right?
+9:41
+So this time we fine-tuned the model and
+9:43
+asked it to memorize the value for
+9:45
+initial recon data. Now when we
+9:48
+reprompted the model asking for the same
+9:51
+value what we got was a general answer
+9:54
+about initial reconnaissance in oent not
+9:57
+our base 64 strain. We tried again this
+10:01
+time it was even worse because not only
+10:04
+does this answer make no sense. If you
+10:06
+can see that B 64 string down the middle
+10:09
+that's not our string. That's something
+10:10
+the model completely fabricated. So we
+10:13
+realized we're going to have a tougher
+10:15
+challenge than we anticipated.
+10:17
+uh but that didn't stop us. So let's
+10:20
+talk about some of the challenges we
+10:21
+faced along the way and how we were
+10:23
+actually able to overcome them.
+10:25
+Our first challenge was AI
+10:28
+hallucinations.
+10:29
+AI hallucinations is a common phenomena
+10:31
+where a model fabricates information and
+10:33
+states as truth right like the first
+10:35
+example. And actually you've probably
+10:39
+encountered it when you tried to write
+10:40
+code or debug code with chpp and it
+10:43
+started making up functions and
+10:45
+libraries just breaking your code apart.
+10:47
+So that's AI hallucinations and it can
+10:50
+happen from a couple of different
+10:51
+reasons. Uh the first one could be noise
+10:54
+in the training data. Second one could
+10:55
+be lack of context in our own prompts.
+10:58
+And the third one is actually a
+11:00
+parameter called temperature.
+11:02
+Temperature controls the amount of
+11:04
+creative freedom the model has.
+11:06
+So the higher the temperature, the
+11:08
+greater creative freedom it has. And to
+11:10
+deal with air hallucinations, what we
+11:13
+did was first cool it down. Every time
+11:16
+we prompt the model, the temperature
+11:17
+would always be zero, forcing the model
+11:19
+to focus on its training data instead of
+11:22
+whatever hallucination it wanted to at
+11:24
+the moment. The other thing we did was
+11:26
+strive for an overfitted model or
+11:29
+memorized one. And we'll cover that a
+11:31
+bit more in the next slide.
+11:33
+So our second challenge was breaking the
+11:35
+model's training. Models are trained on
+11:38
+massive amounts of data and on top of
+11:40
+that they're programmed to answer you uh
+11:42
+based on contextual clues. But that's
+11:45
+exactly what we don't want. We want the
+11:47
+model to face uh to focus on our
+11:50
+training data instead of the massive
+11:52
+amounts of data it was originally
+11:54
+trained on and on top of that ignore any
+11:57
+contextual clues we accidentally
+11:58
+provided it. In order to make sure this
+12:02
+happened, we had to strive for an
+12:03
+overfitted model. Overfitting is usually
+12:06
+used in a negative context by data
+12:08
+scientists because it means the model is
+12:10
+not flexible enough. But for us, it
+12:12
+means it's perfect because our
+12:14
+communication channel becomes way more
+12:16
+reliable. To achieve this, we use a
+12:19
+method we called we variables. We asked
+12:21
+Gemini to give us a list of prompts that
+12:24
+will make no sense to it, meaning it has
+12:26
+no training data that would back that
+12:28
+up. Then when we fine-tune the model and
+12:30
+we give it a single meaning, it forces
+12:32
+the model to focus on our fine-tuning
+12:35
+data set instead of anything else.
+12:37
+Another thing we did was uh control
+12:40
+another parameter called learning rate.
+12:42
+When a learning rate is higher, it means
+12:44
+the model is more more likely to
+12:46
+overwrite its previous training data and
+12:49
+focus on our fine-tuning data set.
+12:52
+Now, it's no secret that fine-tuning
+12:54
+takes time. Like bar mentioned, because
+12:57
+our data set was relatively small, it
+12:59
+only took us a couple of minutes per
+13:01
+cycle. But we wanted to make this
+13:03
+process even faster. In order to do
+13:05
+that, what we did was instead of every
+13:08
+time we wanted to send a command, we
+13:10
+didn't have to fine-tune a different
+13:13
+attacker model. We just used the model's
+13:15
+description instead. If you can see in
+13:17
+this image, we have a list of existing
+13:19
+victim models and their respective
+13:21
+commands. And then in the description,
+13:23
+we have a weird variable and the content
+13:26
+of the next command it's going to
+13:27
+receive.
+13:29
+So all of these solutions helped us to
+13:31
+create our verse our first PC tool
+13:33
+called C2LM. It's a fully functioning C2
+13:37
+server that can work both on Gemini and
+13:39
+Chad GPT. But in this demo, we're going
+13:41
+to focus on the Gemini solution.
+13:45
+So let me start that up. And
+13:49
+here we have our attackers console or
+13:52
+GCP and we have existing victim models.
+13:56
+Now if we go to the victim's endpoint
+13:58
+and we're going to start up the implant,
+14:01
+it's going to do two things. It's going
+14:02
+to create a unique unique victim ID and
+14:05
+it's going to send some initial
+14:06
+reconnaissance data uh back to the
+14:09
+attacker. Now on GCP again, we're going
+14:12
+to refresh the page and we can actually
+14:14
+see the new model being added. We have
+14:17
+victim E5 and its command recon. Now if
+14:22
+we can start up C2LM and see the tool
+14:25
+actually work. Uh we hit the list models
+14:28
+parameter and we see our newly added
+14:30
+victim model. Now, a few moments later,
+14:34
+when the model is actually fine-tuned,
+14:36
+we're able to prompt it and ask, "What
+14:39
+did you gather?" So, we're going to
+14:41
+start up C2LM and ask for the recon
+14:44
+command. And what we get is both the
+14:47
+encoded and decoded answer. And it's
+14:50
+cool, but what about command execution?
+14:52
+So, let's run the exal command. Now,
+14:56
+back on the victim's endpoint, we can
+14:58
+see the command was actually received.
+15:00
+it's translated to a weird variable and
+15:03
+few seconds later we have our calc.
+15:07
+So this is the first part in our eyes
+15:10
+because we have some small exfiltrated
+15:13
+data amount and also remote command
+15:16
+execution.
+15:18
+But what about the hard part? What about
+15:20
+data exfiltration?
+15:22
+So we knew it's going to be quite a
+15:25
+challenge uh because first LLM data set
+15:28
+can only contain textual uh content
+15:31
+meaning we couldn't really exfiltrate
+15:33
+binary files. The other limitation we
+15:35
+had is that uh although fine-tuning data
+15:38
+set could be massive in their size every
+15:41
+prompt could be up to 4,000 characters
+15:43
+long meaning we couldn't really
+15:44
+extrapate large files. To cope with this
+15:48
+uh the first thing we did was encode the
+15:51
+content. Every file we excfiltrate is
+15:53
+going to be encoded into some kind of
+15:56
+textual content like a B 64 or hex to
+15:59
+char and we also divide it in conquered
+16:03
+meaning that if we have a larger file
+16:04
+we're going to split it up into more
+16:06
+manageable chunk and then combine it
+16:08
+back on the attacker's endpoint. Now
+16:11
+let's see that in action.
+16:15
+So here we have C2LM once again and we
+16:18
+want to list what's going on on the
+16:19
+victim's desktop. So we send the ls
+16:22
+command. Now back on the victim's
+16:24
+endpoint, we can actually restart the
+16:26
+implant which of course has its own
+16:28
+persistence. And we can see it already
+16:31
+exists. So we just got the ls command
+16:34
+for the desktop. And it's going to send
+16:36
+uh the list of existing files on the
+16:39
+desktop back to the attacker.
+16:42
+Now if we going to ls in our c2mm, we
+16:47
+see a list of files. One of them is
+16:49
+important file.txt. txt we send the uh
+16:54
+the implement the command to actually
+16:55
+gather it and it's going to prepare a
+16:58
+special kind of data set because instead
+17:00
+of just sending a list or a small amount
+17:02
+of data it's going to encode the file
+17:05
+and actually chunk it up as we'll see in
+17:07
+a minute. So if you can peek here we
+17:10
+have the files metadata and the actual
+17:13
+encoded content chunked into different
+17:16
+prompts. Now in C2LM, all we have to do
+17:20
+is send the read file command. As we can
+17:23
+see, it's combining all of the different
+17:25
+chunks and it drops it into our current
+17:28
+directory in the same name. All we have
+17:31
+to do now is print the file and we see
+17:35
+it is going to be a very long essay
+17:38
+about the dangers of using LLM in cyber
+17:41
+security.
+17:42
+Great, fully functioning C2 channel. But
+17:48
+why even use it? So we tried, we tested,
+17:52
+we checked it out and C2LM just looks
+17:55
+like regular communication with an LLM
+17:58
+API. So it's very sneaky. On top of
+18:02
+that, fine-tuning usually takes massive
+18:04
+amounts of data. So it's not going to
+18:07
+raise any alerts if you just exfiltrate
+18:09
+a couple of files. Also, LMS today have
+18:13
+pretty good rep, meaning they have
+18:15
+stable infrastructure. Uh, they're of
+18:18
+good built and they're probably better
+18:20
+than your wonky BPS. My favorite reason
+18:23
+as a lazy researcher is that it's very
+18:26
+easy to implement. Once you have the
+18:28
+implant code, all you have to do is get
+18:30
+an API key or a Google service account
+18:32
+and you're just good to go. But what
+18:36
+about the guard rails we spoke of
+18:38
+earlier? I mean surely they're going to
+18:40
+stop us, right? Well, wrong. Uh what's
+18:44
+important to remember here that is in
+18:46
+T2LM you control both sides of the
+18:49
+narrative. You have the attacker which
+18:51
+is the prompter side and the victim
+18:53
+which is the model. So let's look at
+18:55
+some examples. Uh we have prompt
+18:57
+injection prevention uh which scans for
+18:59
+any malicious pattern that might look
+19:01
+like a jailbreaking for examples in the
+19:03
+prompter side. But our variables can
+19:07
+look like anything. So we can encode it.
+19:11
+We can use weird variables. And we can
+19:13
+also just ask why are the sky blue? So
+19:17
+prompt injection is down. Comp
+19:20
+moderation should pose a more difficult
+19:22
+threat because it also scans uh the
+19:25
+model's answer. So we have both input
+19:28
+and output scans. However, uh our output
+19:32
+or our model's training data can look
+19:34
+again like anything. We can pad it with
+19:37
+benign data. We can encode it. It's
+19:39
+chunk to different parts. So, content
+19:42
+ferreration was also down. As for DLP,
+19:45
+DLP is a great solution because it
+19:47
+focuses it focuses on exfiltrated of uh
+19:50
+PII such as IDs or credit card numbers,
+19:53
+but our content is encoded and chunked.
+19:58
+So DLP was also off the table. To sum it
+20:02
+all up, we just took a common LLM
+20:06
+function and used it to evade some of
+20:08
+today's main guardrails in the industry.
+20:11
+But I mean, who's going to be crazy
+20:12
+enough to use it? We thought about it,
+20:14
+but who else?
+20:17
+Now, enter the era of the weaponized
+20:19
+LLM. Here we have examples of two
+20:22
+different bad actors with two different
+20:24
+objectives who realize the power they
+20:27
+have when they use a local in a local
+20:30
+LLM in their attack chain. First we have
+20:33
+lame hug which was coded by a28 or force
+20:37
+blizzard if you're fancy
+20:39
+in even if uh in its early development
+20:42
+stages we can actually see it locally
+20:44
+queries quen in order to create dynamic
+20:46
+initial reconnaissance commands. As for
+20:49
+prompt lock ransomware, it has a
+20:51
+different objective, right? But it also
+20:53
+locally queries a model in order to
+20:55
+create dynamic Louis scripts that
+20:57
+collect data on the victim's endpoint.
+21:00
+And we actually see more and more
+21:01
+examples every single day. So let's give
+21:04
+it back to bar to discuss some defense
+21:06
+strategies.
+21:09
+Thank you, Noah.
+21:11
+So now that we've seen uh that distress
+21:14
+already exist
+21:16
+and let's talk about detection and
+21:17
+defense. So to be honest, C2LM is one of
+21:21
+these tools that it's pretty hard to
+21:23
+detect. If you think about it, it
+21:26
+doesn't really do anything malicious
+21:28
+until it suddenly does, right? So at the
+21:31
+end of the day, we consider it as kind
+21:32
+of a reverse shell. And our job here is
+21:36
+to catch it before it escalates into a
+21:39
+real damage like encrypting files,
+21:41
+downloading next stage etc. So to do
+21:44
+that we use a multi-layered approach and
+21:47
+we start by looking at the big picture.
+21:50
+We're looking for global rarities things
+21:53
+like globally uncommon binaries that
+21:56
+communicating with LMS because if we see
+21:59
+some executables that almost nobody uses
+22:02
+starting communicating with LM API
+22:04
+that's a signal of something strange
+22:07
+happening.
+22:08
+The thing is that today with all these
+22:10
+new uh tools and agents popping up every
+22:14
+day um relying on this alone definitely
+22:16
+is not enough.
+22:18
+So next we zoom into a specific
+22:21
+organizations.
+22:22
+Um if we see some process um service
+22:28
+domain name that are rare within the
+22:31
+specific company even if it's widely
+22:34
+used elsewhere
+22:36
+that's a much stronger red flag right
+22:38
+because this layer takes into account
+22:40
+things like uh the company's policies
+22:43
+allowed tools and software um and that
+22:46
+helps to filter out noises and focus on
+22:48
+activity that is truly um unusual or
+22:52
+non-compliant.
+22:55
+From there we always try to um add the
+22:58
+human context. Um mapping roles and
+23:02
+permissions helps us to distinguish
+23:05
+between the users for example between
+23:08
+technical users like developers or IT
+23:11
+staff who might experiment new tools or
+23:14
+even run unsigned binaries that they
+23:17
+just wrote. um versus nontechnical users
+23:21
+um who shouldn't be running scripts at
+23:23
+all. And on top all of this um we
+23:28
+analyze the activity on the endpoint
+23:30
+itself.
+23:32
+Um we are looking for suspicious
+23:34
+patterns of files, processes,
+23:39
+network activities and their behaviors.
+23:42
+This is very critical part. Um today
+23:45
+with um AI driving an explosion of new
+23:49
+and and constantly changing threats um
+23:52
+relying on on um traditional static
+23:55
+detection just isn't enough here. But
+23:58
+the behavioral detection on the other
+23:59
+hand gives us the flexibility that we
+24:01
+need. So think of uncommon unsigned
+24:06
+binary communicating with LM API and
+24:10
+behaving suspiciously like spawning a
+24:12
+cmd or modifying a registry key um
+24:16
+downloading something that might be the
+24:18
+next stage. This together is much more
+24:21
+solid uh detection.
+24:24
+Now this approach u it isn't easy to be
+24:27
+honest and it's definitely not foolproof
+24:31
+but the thing is that today with um AI
+24:34
+and and threats um um changing so fast
+24:39
+um we must evolve too focusing less on
+24:42
+on static detections and IOC's and more
+24:45
+on the combination of anomaly and
+24:49
+behavioral detection.
+24:54
+So now that we have seen how the attack
+24:57
+works and how we can spot it, let's wrap
+25:00
+it all up.
+25:04
+So
+25:05
+at the end of the day, AI makes our
+25:08
+lives easier and um this is no news. But
+25:12
+just just remember that when I say our I
+25:16
+mean both defenders and attackers
+25:19
+because it seems like attackers are just
+25:21
+starting to understand the power of AI
+25:24
+integrated attacks and um and we believe
+25:27
+that what we showed you today is just
+25:29
+the beginning. Um if we could um exploit
+25:32
+such common LLM function to act as C2 in
+25:36
+just a few days of work.
+25:39
+Just imagine what a more determined
+25:41
+attackers can do
+25:43
+because LLMs are still vulnerable to
+25:46
+weaponization.
+25:47
+Companies today feel very safe
+25:50
+implementing more and more LLM into
+25:52
+their daily products and processes
+25:54
+because they know they have guard rails
+25:56
+to keep them and their users safe.
+25:59
+However, uh LLMs are still very very
+26:03
+vulnerable. We just showed you a common
+26:07
+uh function that just evades those very
+26:09
+guardrails. So next time you your
+26:12
+company considers implementing an LLM in
+26:15
+another widget, just remember there's
+26:18
+more to come. There's a lot to explore
+26:20
+and these are fairly new and very very
+26:23
+vulnerable technologies.
+26:25
+And from a defensive perspective um
+26:28
+since LLM based attacks can look like
+26:31
+anything really um
+26:34
+we must go beyond chasing IoC's and
+26:37
+signatures and start thinking
+26:39
+probabilistic probabilistically sorry
+26:42
+and detect behaviors and anomalies
+26:46
+rather than just signatures. uh because
+26:49
+as you've seen the era of the AI powered
+26:53
+attacks has already begun and the only
+26:56
+way forward would be to think one step
+26:58
+ahead. Thank you.
+

@@ -1,0 +1,1335 @@
+0:01
+Alrighty everyone. My name is Jason Mo.
+0:04
+I'm a cyber security architect with
+0:07
+Lockep Technology Group. Got a
+0:09
+background in consulting managed service
+0:13
+providers. Came up initially in the
+0:16
+network administrative system
+0:17
+administrative place, but found over the
+0:20
+years I really had a interest in
+0:22
+security and that's kind of where I've
+0:24
+stuck. I tend to be a bit of a jack of
+0:26
+all trades with cyber security over at
+0:29
+lockep, but the two areas I find the
+0:32
+most interest in are going to be
+0:34
+offensive security, incident response,
+0:37
+understanding attacker behaviors and
+0:39
+being able to map that to handle an
+0:41
+incident properly or perform penetration
+0:44
+testing just better understand
+0:47
+a how threat actors do what they do.
+0:52
+I graduated from Louisiana State
+0:54
+University and the SANS Technology
+0:57
+Institute. And what we're going to talk
+0:59
+about today is actually part of some
+1:00
+research that I did with SANS as part of
+1:03
+my M's program. And this really came
+1:06
+about as something that I discovered
+1:07
+during a pentest shortly after doing my
+1:10
+forensics 508 course. um trying to find
+1:13
+ways to elevate privileges in a network
+1:15
+for a client and I came across a crash
+1:18
+dump file and I learned from forensics
+1:21
+508 how to interact with these crash
+1:24
+dumps and the thought was I know that
+1:27
+there's a lot of helpful information in
+1:29
+here from a forensics from an incident
+1:31
+response perspective
+1:33
+how can I use this as an offensive
+1:36
+security practitioner how could a threat
+1:38
+actor use this
+1:41
+So, what we want to cover today, um, for
+1:44
+those of you that aren't overall
+1:45
+familiar with interacting with memory
+1:48
+dumps, interacting with crash dumps,
+1:50
+want to do a quick crash course just to
+1:52
+give you all some background on how to
+1:54
+work with these files. Uh, want to talk
+1:56
+a little bit about the value here. Why
+1:59
+would you want to consider using crash
+2:01
+dumps in an offensive context as opposed
+2:04
+to some of the methods that are already
+2:06
+out there?
+2:08
+We've got a couple examples that we want
+2:10
+to talk through of how do we use this
+2:12
+data that we've discovered in practice.
+2:14
+And because this is the hack and defense
+2:17
+summit, do also want to talk through
+2:19
+some different detection remediation
+2:20
+options you can run through in your
+2:22
+organizations to be able to find
+2:24
+evidence of these files and determine
+2:26
+how do you want to handle those? What do
+2:27
+you want to do with those?
+2:30
+So, first off, crash dump crash course.
+2:33
+What do you do with these files? How do
+2:35
+you interact with them?
+2:38
+There are going to be three main crash
+2:40
+dump types that we're going to cover
+2:41
+today. The first one's going to be the
+2:43
+complete crash dump. This one's really
+2:45
+simple. It's going to be the equivalent
+2:48
+of what's stored in physical memory when
+2:52
+your device crashes. If you have a
+2:54
+device that has 8 gigs of RAM and that
+2:57
+device crashes, you would expect to see
+2:59
+an 8 gig crash dump that's generated.
+3:02
+Anything that's in physical memory at
+3:03
+that crash is going to be in that crash
+3:05
+dump file. Active
+3:07
+dumps. It's a little bit smarter. It's
+3:10
+designed to capture the vast majority of
+3:12
+physical memory, but it is a little bit
+3:15
+more selective. It's going to exclude
+3:17
+data that's not necessarily going to be
+3:20
+relative to any kind of debugging
+3:24
+process that's going on. Because of
+3:26
+that, it's going to be a little bit
+3:27
+smaller, easier to work with. In my
+3:29
+testing and my research, it came out to
+3:31
+about 2/ird the size of physical memory.
+3:35
+And then finally, we've got automatic
+3:37
+dumps. This is going to be in general
+3:40
+the default crash dump type, and it
+3:42
+tends to really only focus on kernel
+3:45
+memory. And in my testing, this is going
+3:48
+to be the smallest type at about the
+3:50
+eighth of the size of memory. And at
+3:55
+that point, it's going to be a little
+3:56
+bit difficult to find a lot of good data
+3:58
+in there. But if you're using something
+4:00
+like strings and you know very specific
+4:03
+about what you search for, we was able
+4:05
+to find some helpful information from
+4:06
+time to time.
+4:09
+So you can make some assumptions about
+4:12
+what kind of crash dump you have just
+4:15
+based on looking at the size of it and
+4:17
+comparing it with the memory on the
+4:19
+device. But if you want to find for sure
+4:24
+what kind of crash dump type you're
+4:26
+dealing with, something like wind debug
+4:28
+I found is the best way to do that. And
+4:30
+if you look at this screenshot, you're
+4:31
+going to want to look at a specific
+4:34
+string of text that's highlighted in red
+4:36
+here. And that's going to tell you what
+4:38
+specific kind of crash dump type you're
+4:40
+dealing with. And then on this side
+4:42
+here, the descriptions are going to tell
+4:44
+you what you've got. So if it's a
+4:46
+complete crash dump, you would expect to
+4:47
+see full address space is available. For
+4:50
+active memory, you would expect to see
+4:52
+something to the effect of active memory
+4:54
+is available. And then for automatic,
+4:56
+you'd expect to see kernel address space
+4:58
+is available. User address space may not
+5:00
+be available. So that'll give you a good
+5:03
+idea from the start. When you find one
+5:05
+of these crash dumps, what kind of crash
+5:07
+dump are you dealing with?
+5:10
+There's a number of tools out there that
+5:12
+you can use to interact with these crash
+5:15
+dumps and explore what's in there.
+5:17
+Valatility framework, I think, is
+5:18
+probably one of the the de facto
+5:21
+standards for memory dump crash dump
+5:24
+analysis. One of the tools I came across
+5:26
+in forensics 508 that I really liked was
+5:29
+something called meroc fs. The reason I
+5:32
+like me fs and the reason that I think
+5:34
+it's very useful for people especially
+5:38
+those coming into memory analysis for
+5:40
+the first time is it presents everything
+5:44
+in a file structure that you're probably
+5:46
+going to be very familiar with and it
+5:48
+allows you to really just kind of kind
+5:50
+of poke around click in the folders and
+5:53
+explore a lot easier. And for those of
+5:55
+you that haven't used that, we've got a
+5:56
+little bit of a demo here just to talk
+5:58
+through some of the main points of it.
+6:01
+So we go ahead and run me fs. In this
+6:04
+case, we're referencing the forensics
+6:05
+parameter. We're going to want to talk
+6:07
+about that a little bit more later, but
+6:09
+it's going to ahead and mount the memory
+6:11
+to the M drive.
+6:15
+And then we can go ahead browse to the M
+6:18
+drive. And now we've got access to the
+6:20
+crash dump. Processes are going to be
+6:23
+split either by name or by pit. You can
+6:25
+explore either way. In this case, we'll
+6:27
+look at name.
+6:29
+And then we'll go down to a Firefox
+6:31
+process and explore what's in there. And
+6:36
+if we go to files, we're able to view
+6:39
+files that are in memory that are part
+6:42
+of and associated with that process. So
+6:45
+in this case, we can access the
+6:46
+cookies.sqlite file, which we'll explore
+6:49
+a little bit more later.
+6:55
+And we've also got the ability if we
+6:57
+want to to extract process memory for a
+7:00
+specific process if we prefer to
+7:02
+interact directly with that process
+7:04
+memory as opposed to crashed dump memory
+7:07
+in general.
+7:12
+We've also got the ability to browse
+7:14
+registry hive. So if we go to the
+7:16
+registry folder,
+7:21
+we can interact specifically with the
+7:23
+different hive files such as the system
+7:26
+hive
+7:27
+software.
+7:29
+Those are all going to be available to
+7:30
+the extent that that data is in memory.
+7:33
+We talked about the forensic parameter
+7:35
+earlier. The forensic parameter is going
+7:37
+to give us access to browse files in
+7:40
+memory within the file format that they
+7:43
+were on the system generating the crash
+7:46
+dump. So we're looking here and we've
+7:48
+got the example of the C drive going
+7:51
+into users and being able to enumerate a
+7:54
+user's profile and look at folders as
+7:57
+they are in memory.
+8:02
+So where's the value here? Why would you
+8:04
+want to look at crash dumps as a way to
+8:06
+get sensitive information as opposed to
+8:09
+some of the more traditional methods out
+8:10
+there?
+8:14
+To me, a lot of it comes to lack of
+8:18
+visibility and lack of detections for
+8:20
+interaction with crash dump files. When
+8:23
+I searched the uh MITER attack framework
+8:26
+for memory.dump just to see what kind of
+8:29
+detections were out there, nothing came
+8:31
+up. I searched for crash dump. A few
+8:34
+more things came up, but they were
+8:36
+mostly related to other exploits and
+8:40
+other techniques a lot around the Cisco
+8:43
+arcane door exploit. So what this told
+8:46
+me was there was really appears to be a
+8:48
+detection hole in terms of threat
+8:51
+actors, offensive operators that are
+8:53
+interacting with crash dumps. That seems
+8:57
+like a, you know, a hole and an
+8:58
+opportunity to me.
+9:02
+So, how does this scenario play out in
+9:04
+practice? A thread actor would gain some
+9:07
+level of initial access to an endpoint
+9:09
+and get local admin on that endpoint.
+9:12
+And from there, they're able to obtain
+9:15
+the crash dump that's on a system.
+9:18
+They could even use something like not
+9:20
+my fault through CIS internals or some
+9:23
+kind of custom PowerShell code to
+9:25
+actually induce a crash to occur and
+9:28
+create their own crash dump if it wasn't
+9:30
+already there.
+9:31
+From there, they excfiltrate that crash
+9:33
+dump. If there's nothing looking at
+9:36
+interaction with that crash dump file,
+9:38
+with that memory.dump dump file, then
+9:41
+there's probably not going to be a lot
+9:43
+of detections that are going to be
+9:45
+triggered outside of maybe some kind of
+9:47
+detection that's going to be looking for
+9:50
+uh an increase in network traffic from a
+9:53
+specific endpoint.
+9:55
+From there, and where I think this
+9:57
+differs from utilizing
+10:00
+live
+10:01
+on system attacks, we're going to do all
+10:04
+of our analysis offline. We're going to
+10:06
+do process extra extraction, maybe
+10:08
+interact with the LSAs process, interact
+10:10
+with the registry, interact with files
+10:13
+where we we would typically do that on a
+10:15
+normal system, on a live system, we're
+10:18
+going to do all of that offline without
+10:20
+any kind of detections that we have to
+10:22
+worry about.
+10:24
+From there, we find some good
+10:26
+information. Maybe we find some domain
+10:27
+admin credentials that are cached in the
+10:29
+registry or cached in Elsass. We find
+10:32
+some credentials that are in a browser.
+10:34
+Now we can go back to our live system
+10:37
+and we can use that to elevate our
+10:39
+privileges further throughout the
+10:40
+network.
+10:44
+So let's go through some examples here
+10:47
+of how we can actually weaponize this.
+10:50
+How can we take this from a theory and
+10:52
+actually apply it?
+10:55
+System credentials typically are going
+10:57
+to want to be one of the more frequent
+10:59
+things that are targeted by threat
+11:01
+actors.
+11:03
+We can obtain active directory and local
+11:06
+credentials through the registry hives
+11:08
+that are found in the crash dump. As we
+11:10
+explor explored before pi cats is a
+11:14
+great tool for this. It's a Python
+11:16
+implementation of mimikats and using
+11:18
+that we're able to feed it the system
+11:21
+hive the software hive and
+11:26
+anything else that's required with that
+11:29
+to go ahead and get information
+11:31
+extracted out like we can see in the
+11:33
+screenshot here. Now the one caveat here
+11:37
+is when I started going to smaller crash
+11:41
+dump types like an active or an
+11:43
+automatic I was running into situations
+11:46
+where the registry high files I was able
+11:48
+to extract from the crash dump were
+11:51
+corrupted. So this is going to be an
+11:53
+area where it's going to be most
+11:55
+beneficial using this with a complete
+11:57
+memory dump.
+12:00
+And here we've got a more specific
+12:02
+zoomed in example of how that looks. So,
+12:04
+we run Pi Cat's registry. We feed it the
+12:06
+Security Hive system software
+12:10
+and then we're all set. In the example
+12:13
+here, we've got access to cache domain
+12:16
+credentials for what looks like an
+12:18
+administrator and a user. So, now we can
+12:21
+take those offline and attempt to crack
+12:23
+those and get the actual password.
+12:28
+But maybe you want to interact with the
+12:30
+system a little bit differently. Maybe
+12:31
+you don't want to use the registry
+12:34
+on a live system. You'd expect to dump
+12:37
+Elsass, but I think we all know that's
+12:39
+going to be something that's going to be
+12:40
+pretty noisy. But we already discovered
+12:44
+how we can interact with process memory
+12:47
+from a crash dump. So we can just take
+12:50
+the LSAs process from the crash dump,
+12:53
+feed that in the pi pie cats or mimic
+12:54
+cats and get your data that way.
+12:58
+The nice thing with this is I was
+13:00
+discovered that getting access to these
+13:03
+memory dumps for Elsas were available in
+13:06
+active memory dumps. So I'm not in this
+13:09
+case tied to using a larger memory dump
+13:12
+format. By default, meroc FS does not do
+13:16
+this anymore, but there are alternative
+13:19
+builds on GitHub that do enable this
+13:21
+functionality to interact directly with
+13:23
+the LSAs process from the crash dump.
+13:28
+So Melvin discussed this a little bit
+13:30
+earlier, but web browsers are a great
+13:32
+target for thread actors. There's a lot
+13:34
+of good user-based information contained
+13:37
+in there that's very helpful to a thread
+13:40
+actor.
+13:42
+And these tactics are recognized by
+13:44
+attack as well. There's a number of
+13:46
+techniques that look for interaction
+13:50
+with these files. The screenshot I've
+13:52
+got here is looking for SQLite
+13:54
+interaction with the cookies.sqlqlite
+13:56
+file for Firefox. So live interaction
+14:00
+with these files that contain these
+14:02
+browser secrets is something that a lot
+14:05
+of detection frameworks are already
+14:07
+looking for.
+14:09
+But what if we got it from a crash dump?
+14:12
+Firefox is going to store things like
+14:14
+cookies and other sensitive information
+14:16
+in unencrypted SQLite databases.
+14:20
+But crashed up analysis is going to give
+14:22
+us a stealthier method to interact with
+14:24
+these files rather than interacting with
+14:27
+them on the disk itself.
+14:31
+So in this example here, we're browsing
+14:33
+the file system and we're interacting
+14:36
+with the cookies.sqlite file. And then
+14:39
+when I open it in SQLite database
+14:41
+browser, I can view the cookies. And
+14:44
+here we've got an example of the ESTS
+14:46
+off persistent cookie. So the ESTS off
+14:50
+persistent cookie is going to contain a
+14:52
+session cookie that allows access to a
+14:56
+user's Office 365 session. This is going
+14:59
+to be something that's frequently
+15:00
+targeted in fishing campaigns to gain
+15:03
+access to users Office 365 mailbox. This
+15:06
+is just another method now to obtain
+15:09
+that same information.
+15:14
+Moving on, we'll look at Dappy for a
+15:16
+bit. As Melvin discussed earlier, DEPAP
+15:19
+is going to be a native encryption API
+15:22
+that's built into Windows. Master keys
+15:24
+are going to be stored per user per
+15:26
+computer.
+15:28
+And it protects a number of different
+15:30
+things. A lot of thirdparty applications
+15:32
+are going to use DPAPY to encrypt the
+15:35
+secrets contained in those applications.
+15:38
+So if we're able to
+15:41
+get into decapy,
+15:43
+decrypt it, we're able to then use that
+15:46
+to get into other application secrets.
+15:51
+I've got up here the master key location
+15:53
+for users. And the general workflow is
+15:57
+going to go like this. We obtain a copy
+15:59
+of the crash dump.
+16:02
+We obtain the user's password. We
+16:04
+already discussed some ways to get
+16:06
+access to user's password hashes. So,
+16:09
+let's say we go ahead and we crack that
+16:11
+password hash. Now, we've got a copy of
+16:14
+the user's password. We're going to want
+16:16
+to generate what's called a dappy prekey
+16:19
+where we combine the user SID file and
+16:21
+their password to get that prekey.
+16:25
+We're going to want to determine the
+16:26
+current master key file. So, Windows is
+16:29
+going to rotate that master key file at
+16:31
+regular intervals, and it'll keep older
+16:33
+copies of that master key. So, we're
+16:35
+going to want to determine which copy of
+16:37
+the master key on disk is that current
+16:40
+copy. And then we're going to want to
+16:42
+take that prekey and decrypt the master
+16:45
+key. Once we get that decrypted master
+16:48
+key, we then have access to be able to
+16:51
+decrypt application data.
+16:56
+So
+16:57
+where we talked about a little while ago
+17:00
+a number of different ways to get access
+17:02
+to Chrome data more on a live system.
+17:05
+This is taking that same approach but
+17:07
+now we're getting this information from
+17:09
+a crash jump. So the login data local
+17:13
+state data in Chrome we're going to want
+17:15
+to extract those. We're going to use pi
+17:18
+py cats to create the prekey file
+17:21
+combining the data that we've already
+17:23
+got access to. Then we use dpappy
+17:26
+preferred key with pi py cats to find
+17:29
+the current master key. We're going to
+17:32
+use dpappy master key along with the
+17:35
+current master key and the prekey to
+17:38
+decrypt it.
+17:40
+And then finally, we're going to use the
+17:42
+pi pycats dpappy chrome command to
+17:45
+combine the login data file and the
+17:48
+master key file and the local state
+17:50
+file. And in this case in the example,
+17:53
+we now have access to c credentials
+17:55
+stored within chrome.
+17:58
+This isn't a new feature. This isn't a
+18:00
+new procedure or a new way of doing
+18:02
+things. What's new and what's different
+18:05
+is the way we're actually obtaining this
+18:07
+information off disk rather than
+18:10
+targeting all of these specific files on
+18:13
+the live machine itself.
+18:19
+And as we talked about, there's a number
+18:21
+of different tools and a number of
+18:22
+different applications that use
+18:24
+deepappy. So if we understand this
+18:26
+process and we understand how to decrypt
+18:28
+user and systembased master keys, that
+18:31
+process can apply to a number of
+18:33
+different applications that are out
+18:35
+there.
+18:39
+And then the last area I want to talk
+18:40
+through is password managers,
+18:42
+specifically password manager extensions
+18:45
+in browsers. Password managers to me are
+18:48
+a pretty interesting attack vector, but
+18:52
+the timing kind of has to be quite
+18:53
+right.
+18:55
+Vault passwords are going to be
+18:57
+unencrypted in memory when the vault is
+18:58
+unlocked because at some point the data
+19:00
+needs to be encrypted for the user to be
+19:02
+able to interact with it. But what about
+19:05
+once that vault is locked? What about
+19:07
+the master password?
+19:09
+How can I interact with all of that? So,
+19:12
+one of the things I really wanted to
+19:14
+research was what could I get from a
+19:18
+password manager extension like BitWord.
+19:21
+So, I worked with that a little bit and
+19:24
+I was able to discover that even when a
+19:26
+vault was locked, I was still able to
+19:29
+find the master password in memory. I
+19:34
+had talked with Bit Warden about this
+19:36
+and they had pointed to some memory leak
+19:39
+issues within Chrome. I talked to Chrome
+19:42
+about it and they had claimed that this
+19:44
+wasn't in their uh scope of
+19:47
+investigation because they viewed it as
+19:49
+more of a local issue that they're not
+19:52
+really interested in looking after.
+19:57
+So looking through this specific example
+20:00
+here, we'll go ahead log in the bit
+20:02
+warden
+20:06
+and then I'll go ahead and I'll expose
+20:08
+the master key just so we're all on the
+20:10
+same page on what that is.
+20:15
+And then we'll go ahead, we'll unlock
+20:16
+the vault and we'll interact with some
+20:19
+vault entries like a normal user would
+20:21
+do.
+20:29
+And now we're going to go in and we're
+20:31
+going to look at process memory to see
+20:33
+what we can find.
+20:40
+So if I search for a vault entry,
+20:44
+I can see some JSON formatted text that
+20:47
+looks like how Bit Warden is typically
+20:49
+going to store a specific vault entry.
+20:56
+And then if I go back again and I search
+20:59
+for the master vault password,
+21:04
+I see a number of different areas of
+21:06
+memory where that master vault
+21:07
+password's stored.
+21:13
+So now we'll go back and we'll lock the
+21:16
+vault and we'll wait a couple of
+21:17
+minutes. That was something that Bit
+21:19
+Warden advised me was waiting a couple
+21:21
+minutes to make sure everything was
+21:22
+cleared out from memory.
+21:25
+So, we go back and we repeat the same
+21:27
+process over again.
+21:34
+We'll search for the vault entry first.
+21:40
+There's nothing there.
+21:43
+So, we'll search for the master password
+21:46
+again.
+21:48
+But the password is still contained in
+21:50
+some areas of memory.
+21:53
+So the takeaway here is if we're able to
+21:57
+obtain a crash dump from a point when a
+22:01
+user was in their browser, they were
+22:02
+working with the password vault, even if
+22:05
+the vault was locked, there still is
+22:08
+some opportunity to
+22:11
+find and capture that master password in
+22:14
+memory. And this was something I was
+22:16
+able to duplicate a a number of other
+22:18
+password managers as well.
+22:23
+So we've talked about how to weaponize
+22:25
+this. How do I detect it? What can I do
+22:28
+to find evidence of this in my
+22:30
+organization
+22:32
+event logs can be a pretty good source.
+22:34
+System event ID 101 is going to record
+22:37
+crash dump creations if that setting is
+22:39
+enabled. And I've also created a sigma
+22:42
+rule that's been published that's going
+22:44
+to search specifically for I that ID. So
+22:48
+you can use that at scale if you're
+22:50
+doing some retroactive searching of your
+22:52
+SIS logs with something like chainsaw or
+22:55
+you can build that kind of sigma rule
+22:58
+into your SIM if you're ingesting your
+23:01
+event logs and you want to get alerts
+23:03
+like that when they fire off based on
+23:05
+your s your event log ingestion.
+23:12
+If you're tracking registry value
+23:14
+creations in your EDR,
+23:16
+you can also query specific registry
+23:20
+keys that I've got up on the screen. And
+23:22
+anytime those registry keys have
+23:24
+created, I found those are indicative of
+23:27
+a crash dump being created. So depending
+23:31
+on how you want to handle crash dumps in
+23:33
+your organization, you can treat this a
+23:35
+couple of ways. If you've decided in
+23:37
+your organization you don't want crash
+23:38
+dumps at all, you don't see the value of
+23:40
+automatically creating them and you
+23:43
+create policies to turn them off and you
+23:46
+create an alert around this. Anytime a
+23:49
+crash dumps created,
+23:51
+that's going to trigger that alert and
+23:53
+that could be an interesting thing to
+23:54
+investigate when it's created because
+23:58
+you've decided as an organization you
+24:00
+don't want crash dumps to be created. So
+24:02
+that's an outlier.
+24:04
+If you've decided that you do want to
+24:06
+create crash dumps in your organization
+24:09
+on demand by default, then maybe you
+24:11
+configure this to run as a report and
+24:14
+you can just get some general visibility
+24:16
+at specific intervals about when crash
+24:20
+jumps are created being created on what
+24:22
+machines, how frequently. So you could
+24:25
+use it as an indicator to find machines
+24:27
+that are potentially unstable, crashing
+24:29
+frequently. that could be indicative of
+24:32
+system performance issues or some kind
+24:34
+of malware or other threat on the
+24:36
+machine.
+24:38
+You've also got the ability to use
+24:40
+PowerShell as a way to search the file
+24:43
+systems to detect when a crash dump has
+24:46
+been created.
+24:48
+So, we don't necessarily want to search
+24:50
+for
+24:52
+C Windows memory.dump.
+24:55
+It could be named something different.
+24:57
+You can have processes where crash dumps
+24:59
+get moved somewhere else for storage and
+25:01
+future review, but you can search using
+25:05
+PowerShell for file headers rather than
+25:08
+specific name. So, we've got an example
+25:10
+the bottom of this screen of specific
+25:13
+file header of a crash dump. So, you can
+25:16
+search for that header instead of just
+25:18
+searching for a name, searching for a
+25:19
+specific path.
+25:21
+And then the output of that script is
+25:23
+going to give you a clean list of a
+25:25
+crash dump path size and a type.
+25:29
+I've got a example on GitHub that I'll
+25:31
+I'll post in a little bit. It's really
+25:33
+currently configured to run per
+25:35
+endpoint, but it's something that could
+25:36
+be modified to connect to remote
+25:38
+endpoints or be deployed through other
+25:40
+remote management solutions.
+25:45
+So
+25:47
+ultimately,
+25:49
+what do I want you to learn from this?
+25:51
+What are some of the takeaways I'd like
+25:53
+to see you bring back to your
+25:56
+organizations, bring back to your
+25:57
+companies?
+25:59
+I think the overall thing I'd really
+26:01
+like to think through is having you all
+26:04
+think through crash dumps and making
+26:06
+that determination in your organization
+26:08
+of do we really need these crash dumps
+26:12
+to be automatically created? Do we as a
+26:16
+organization have the IT resources, the
+26:19
+IT knowledge to analyze these crash
+26:23
+dumps on demand proactively as they
+26:25
+occur? Or do we really only interact
+26:29
+with these crash dumps in scenarios
+26:31
+where a user's reported an issue or
+26:34
+we're working with a vendor on demand to
+26:37
+troubleshoot an issue. If you're not
+26:39
+proactively interacting with these crash
+26:42
+dumps as they occur, I would challenge
+26:45
+you to delete to disable these crash
+26:47
+dumps and then if you have a need to
+26:49
+work with a vendor to troubleshoot an
+26:52
+issue, troubleshoot some kind of system
+26:53
+instability,
+26:55
+enable those crash dumps on that machine
+26:58
+for the time period that you're
+27:00
+analyzing the issue and then disabling
+27:02
+them.
+27:04
+I think there's a lot of potential for
+27:06
+valuable information with this within
+27:08
+these crash dumps, but you do need
+27:10
+timing and a little bit of luck to I
+27:14
+think always make good use of this.
+27:17
+Again, automatic crash dumps, which are
+27:20
+going to be the smallest, are the
+27:21
+defaults. So, while we talked about a
+27:24
+lot about what you can see in larger
+27:26
+crash dump types, realistically, you're
+27:29
+not going to be running into those all
+27:31
+the time unless you're in a a situation
+27:33
+where you've got the ability and rules
+27:35
+of engagement say you can trigger a
+27:38
+crash dump.
+27:42
+And we only covered, I think, a couple
+27:45
+of examples of the different elements of
+27:48
+data you can find from a crash dump. I
+27:50
+think there's more potential. There's
+27:53
+more pieces of information, more
+27:54
+sensitive information and different ways
+27:57
+you can use these crash dumps for
+27:59
+escalation. I really think they just
+28:02
+require a lot of curiosity and some time
+28:05
+and research uh to dig through those
+28:07
+crash dumps to find useful information.
+28:12
+So, I've got my contact information
+28:14
+here. The link at the bottom is going to
+28:17
+point to a GitHub repository where I'm
+28:19
+going to have a copy of the presentation
+28:21
+as well as as a couple of PowerShell
+28:24
+scripts that I use to generate data and
+28:26
+search for some of these crash dumps
+28:28
+throughout my test environments. But
+28:31
+with that said, any questions?
+

@@ -1,0 +1,675 @@
+0:00
+hi this is project obsidian threat hunting kill chain three
+0:07
+the logs are gone who am i
+0:12
+i'm extreme paper clip digital forensics nerd linux geek
+0:18
+infosec engineer lifelong student of everything
+0:23
+amateur history buff spice fanatic loads of fun
+0:32
+here are the things we're going to go over we're going to go over how to develop a threat hunting hypothesis
+0:39
+sources we could use for developing a threat hunting hypothesis research
+0:45
+the methods attackers use to clear the windows event logs we're going to find data sources we need
+0:53
+for a threat hunting hypothesis and we'll find evidence of an attacker
+0:58
+clearing the logs and we'll answer the how of our hypothesis
+1:04
+and finally we'll we'll go over how to document your threat hunting using a simple template
+1:13
+okay a quick note about note taking
+1:20
+pro tip during and throughout the threat hunting process one should take good notes
+1:27
+these notes will be very useful throughout the engagement several times throughout this exercise
+1:33
+i'll be sure to mention that some fact or discovery we find should be
+1:38
+added to the notes this is generally a good habit to embrace in the
+1:45
+world of information security okay so what is thread hunting
+1:52
+many people have their own interpretations and definitions of this but we could say threat hunting is
+2:01
+the proactive practice of discovery in
+2:06
+data and it allows you to discover
+2:12
+and uncover not only malicious activity but new risks
+2:17
+detection methods or even visibility gaps that your organization was previously unaware of
+2:28
+so question what guides the development of a
+2:33
+hypothesis for the purpose of threat hunting
+2:40
+here are some things to consider and take note of when building a threat hunting hypothesis
+2:46
+the i.t environment what are the operating systems in the environment windows linux mac
+2:53
+does the org have active directory what data gets logged
+3:00
+windows event sysmon zeke
+3:06
+also vulnerabilities does the organization perform vulnerability scans
+3:12
+if so are the vulnerabilities analyzed and remediated are there outstanding
+3:19
+vulnerabilities that still need to be remediated
+3:24
+the mitre attack framework offers a wealth of great information
+3:29
+that can help build a threat hunting hypothesis so
+3:34
+take some time to look at the enterprise matrix and within each of the tactics are
+3:40
+techniques that attackers use these techniques can be used to help inspire your threat
+3:47
+hunting adventures also what can your users employees co-workers
+3:56
+tell you about things they have seen in the environment and for the notes
+4:02
+as the threat hunter we would add all of these sources to our notes and continue
+4:10
+okay in this scenario we will consider the question
+4:16
+what happens when an attacker clears the logs in an effort to hide their tracks
+4:23
+so we should start with a very broad hypothesis let's focus on that middle section of
+4:31
+that question attacker clears the logs
+4:38
+focusing on that we could make a broad hypothesis like
+4:44
+attackers will try to cover their tracks
+4:49
+this hypothesis is broad it only addresses the who and the what
+4:55
+but not the how so for the notes as the threat hunter you
+5:01
+would add your broad hypothesis here to your notes and continue
+5:08
+so how can we develop this further into a specific hypothesis for our hunt
+5:18
+well looking at our notes we see that
+5:24
+the mitre attack framework was listed as one of the things we could use to help build a threat hunting hypothesis
+5:32
+and how would we do that well a quick google search for
+5:39
+mitre attack attacker covering tracks brings us to the following mitre attack
+5:45
+page indicator removal on host technique id t1070
+5:55
+let's follow that link and read what mitre attack says about this
+6:02
+and remember in our scenario we're looking for information about windows event logs being cleared
+6:10
+we can clearly see something more relevant to our scenario in the sub technique listed above it's the
+6:18
+t107 clear windows event logs
+6:25
+so let's take a look at the details of this sub technique
+6:32
+here we can see the details of the miter attack sub technique clear windows event
+6:37
+logs now note the methods listed here
+6:43
+windows commands using wevt util cl commands
+6:51
+uh let's see there's also the event viewer gui
+6:56
+and powershell so for our notes as the threat hunter we
+7:02
+would add the above mitre attack technique the sub technique
+7:07
+the attack methods listed and any source urls we would add this to our notes and
+7:13
+continue
+7:18
+using the info from the mitre attack sub technique that we just saw about the
+7:25
+specific methods attackers will use to cover their tracks we can update our threat
+7:31
+hunting hypothesis to be more specific so let's take a quick review of how we got here we started with a broad
+7:37
+hypothesis and then we did some research and found
+7:42
+some details from the mitre attack framework to enhance our broad hypothesis
+7:49
+into a specific hypothesis so now we can make a specific hypothesis
+7:57
+like attackers will try to cover their tracks using one of the following methods
+8:04
+the event viewer gui windows commands such as
+8:09
+wevt util cl or powershell so for the notes we would as the threat
+8:17
+hunter we would add this these uh specific items
+8:22
+this we would add the specific hypothesis to our notes and continue
+8:28
+all right so let's talk about data sources it's important to know your data sources
+8:34
+when conducting a threat hunt so which data sources could you
+8:41
+possibly use and where would we find the data needed
+8:46
+for our hypothesis let's take a look at the data sources
+8:52
+available to us in splunk what this simple splunk query
+8:59
+we are about to run basically does is to search the splunk events event count
+9:05
+and then it's going to split the events by index and that's the summarize equals
+9:10
+f f is for false then it's going to search for any index
+9:17
+that's index equals wildcard then we're going to dedupe the results
+9:23
+by the field index using dedupe index and finally we're going to
+9:29
+specify the fields we want we're going to say fields index to just show the field index
+9:37
+and looking at the results which of these indexes would be useful
+9:44
+to us
+9:50
+so with the list of sources here these indexes uh we will most likely find what we need
+9:56
+within the cis1 and win event indexes because these data sources are going to
+10:02
+show us what was happening inside a host so for the notes as a thread hunter we
+10:08
+would add the splunk indexes sysmon and win event logs as data sources
+10:14
+to our notes and we would continue
+10:20
+so to begin our hunt we should look for evidence that the windows event logs
+10:25
+were cleared a simple google search for windows event logs cleared
+10:32
+gives us a clue a microsoft article about windows security event id1102
+10:39
+so let's take a look at this article windows security event id 1102 the audit
+10:47
+log was cleared in this article pay close attention to what microsoft
+10:54
+says for security monitoring recommendations it says typically you should not see
+11:01
+this event there is no need to manually clear the security event log in most cases
+11:08
+we recommend monitoring this event and investigating why this action was
+11:13
+performed that's interesting so for the notes as a threat hunter we would add this information about windows
+11:20
+security event id1102 including any source urls we would add
+11:26
+this to our notes and continue but question
+11:34
+which data sources should we use
+11:44
+i'm gonna pause here
+11:51
+be there yeah what's up sorry
+11:57
+uh i might want to redo this little section right here because i just noticed that
+12:03
+discord popped up and probably got into my
+12:08
+screen all right um if you want to back up a slide and start
+12:14
+yeah yeah i'm gonna do that i can splice it together sounds good man
+12:19
+sorry about that okay
+12:24
+i'm about to start just uh just uh
+12:30
+give a three second pause and then start okay so i'm gonna say right now
+12:36
+three second pause starting now
+12:42
+okay windows security event id 1102 the audit log was cleared
+12:50
+in this article pay close attention to what the microsoft article says
+12:56
+for security monitoring recommendations it says
+13:02
+typically you should not see this event there is no need to manually clear the
+13:08
+security event log in most cases we recommend monitoring this event and investigating why this action was
+13:15
+performed interesting so for the notes as the threat hunter we
+13:21
+should add this information about windows security event id 1102
+13:26
+including any source urls to our notes and continue
+13:33
+question which data source should we use
+13:39
+looking at our notes we see that we have win event logs listed which contains the typical
+13:46
+windows event logs found on a windows operating system this is listed as a data source in
+13:52
+splunk so let's go search for this event within our splunk data
+13:59
+because for this search we're going to search the win event logs index
+14:05
+in splunk for event dot code 1102 and we'll see if
+14:10
+we get any results we do so we get 26 events here discovered
+14:17
+showing proof that the windows event logs were cleared
+14:23
+so for the notes as the threat hunter we would add this broad splunk query
+14:29
+including the date time specified for the query as well as some details about the
+14:34
+results to our notes and continue so let's alter this splunk query to make it
+14:41
+look more presentable so what we're going to do is we'll search the win event logs index
+14:49
+for event code event dot code 1102 and we'll use rename
+14:56
+to rename the long field win log dot user underscore data subject
+15:03
+username as simply user because that's much nicer right
+15:10
+and then we'll arrange the results in the query using table and we'll specify the fields we want
+15:16
+displayed time host name event code when log
+15:21
+task user and then we're going to sort the results by time from oldest at the top to newest
+15:28
+at the bottom that's just my preference honestly
+15:34
+okay wow interesting results here we can see evidence of the windows
+15:39
+event logs being cleared on several hosts also it's interesting to note that the
+15:46
+search results here did not specify they didn't show
+15:53
+if the event logs were cleared via the event event viewer gui
+16:00
+windows command such as wevt util cl
+16:06
+or powershell but in any case we see that the window windows event logs
+16:13
+were cleared so for the notes as a thread hunter we would add this specific splunk query
+16:20
+including the date time specified for the query as well as some details about the
+16:26
+results to our notes and we would continue okay
+16:32
+so are we done did we accomplish what we set out to do
+16:39
+some would say yes they're not entirely wrong we did find a way to detect when the windows event
+16:47
+logs were cleared but what if we wanted to find the source
+16:52
+of this activity what if we wanted to find which command or commands the attacker made of you
+16:59
+might have used to clear the logs what if we wanted to find the answer to how the attackers
+17:06
+cleared the windows event logs let's explore further to answer those
+17:12
+questions okay looking at our notes we can see in
+17:19
+our specific hypothesis that one of the methods attackers use to cover their
+17:24
+tracks is by using the wevt util
+17:29
+cl command we should search for this command
+17:34
+in our splunk data but how do we do that how would we find a specific windows command
+17:41
+that was executed on a host well let's just google
+17:47
+log windows command line and see what it gives us and one of the first results is
+17:53
+a microsoft article command line process auditing so let's
+17:58
+take a look reading the microsoft article it mentions audit event id
+18:05
+468. so what is this audit event id 4688
+18:12
+let's find out quick google search for audit event id 4 6 8 8
+18:20
+leads us to an article titled 468 a new process has been created
+18:27
+so let's take a look okay one of the fields we see
+18:33
+in this windows security event id 468 is the
+18:39
+process command line field great
+18:44
+so it appears we can search splunk for the windows security event id
+18:49
+4688 and we can specify the value we are looking for in the process
+18:56
+command line field right for the notes here
+19:03
+as a threat hunter we would add this information we have found about windows security event ii id 4688
+19:12
+including any source urls to our notes and continue
+19:18
+okay let's take a look at windows security event id
+19:23
+in splunk and see what the process command line field is going to show us
+19:30
+so this is just a simple search we'll just search the win event logs index for
+19:37
+event dot code four six eight eight
+19:43
+ah bummer so looking at the results we don't find
+19:48
+any data for the process command line field
+19:54
+in windows security event id 4688 so for the notes as a thread hunter we
+20:00
+would add this specific splunk query including the date time specified for
+20:05
+the query as well as some details about the results to our notes and continue
+20:14
+so we didn't find any command line data in the windows security event id 468.
+20:21
+why well according to the microsoft article
+20:29
+previously mentioned about a new process has been created
+20:34
+if you scroll down a bit and read it says you must enable
+20:40
+administrative templates system audit process creation include
+20:46
+command line in process creation events
+20:52
+so [Music] you need to enable this in group policy to include command line
+20:59
+in the process creation events
+21:04
+so now what are we dead in the water is there anything else we can do to find
+21:10
+what commands the attacker used to clear the logs
+21:15
+okay checking our notes we take a look and recall that we made note
+21:21
+of the two data sources cis one and one event logs so let's go take a look at the sysmon
+21:28
+data question which sysmon id could possibly show us
+21:34
+the command line details a quick google search for sysmon event
+21:43
+showing command line leads us to an article about sysmon event id 1
+21:49
+process creation okay we see in this article that it
+21:55
+lists the fields in sysmon event id one and two interesting fields pop up here
+22:03
+command line and parent command line so for the notes as a threat hunter we
+22:10
+would add this information we've discovered about sysmon event id 1
+22:15
+including any source urls we would add this to our notes and continue
+22:23
+yay okay all is not lost we have sysmon event id one process
+22:30
+creation which shows us the command line as well as the parent command line
+22:36
+okay let's take a look at sysmon event id 1 in splunk
+22:42
+we'll search the system on index for event code 1.
+22:47
+okay important note here this simple query this simple splunk query
+22:53
+is only a query to see what the command line data looks like
+22:59
+from sysmon event id 1. the actual values that we see in the command line in this specific search
+23:06
+here these results they don't matter understand we just want to verify that we can see command line data
+23:15
+and here's what we get we can clearly see data for the command line and parent
+23:22
+command line fields and sysmon event id1 great now that we've verified that we can see
+23:28
+command line values in sysmon event id 1 let's search for the specific command w
+23:36
+evt util cl listed in our specific hypothesis
+23:43
+okay we're going to run a splunk search in the cismond index
+23:48
+looking for event dot code one and we're going to specify
+23:56
+process dot command line contains
+24:01
+the command w evt util
+24:06
+cl nothing
+24:12
+bummer okay so for the node says the threat hunter
+24:18
+we would add this splunk query including the date time specified for the query as well as any details about the results
+24:25
+to our notes and continue
+24:30
+so again are we dead in the water is there nothing else we can do to find
+24:38
+what commands the attacker used to clear the logs
+24:44
+checking our notes we take a look and recall that we made note in our specific hypothesis that
+24:51
+attackers have also been known to use powershell so let's move on to
+24:59
+powershell so question how could we find
+25:04
+a way to clear the windows event logs using powershell
+25:11
+a simple google search for powershell clear event logs results in a link to a microsoft article
+25:19
+about a clear event log commandlet
+25:24
+let's take a look this powershell commandlet
+25:31
+clears all entries from specified event logs on the local or remote computers
+25:42
+so for the notes here as the threat hunter we would add this information we've discovered about powershell
+25:48
+commandlet clear event log including any source urls we would add
+25:53
+this to our notes and continue this is interesting so
+25:59
+could an attacker use powershell this powershell commandlet clear event log as
+26:04
+a method to clear the logs sure let's dive into splunk and hunt for any
+26:11
+evidence of this commandment okay let's search this powershell
+26:17
+command in splunk we're going to search the sysmon index for event.code
+26:25
+and we're going to search for process dot command line containing
+26:30
+clear event log
+26:36
+21 events now we have proof that the attacker used the powershell
+26:42
+commandment clear event log as a method to wipe the windows event logs
+26:53
+this is the how to our hypothesis so for the notes
+26:59
+as the threat hunter we would add this specific splunk query including date time specified for the
+27:06
+query as well as any details about the results to our notes and continue
+27:14
+let's make this splunk query more presentable what we're going to do is we're going to
+27:19
+search the sysmond index for event code 1 again specify the process dot command
+27:26
+line containing clear event log and we're going to use rename to rename the
+27:31
+long process dot command line field as just command
+27:38
+then we're going to organize the results in a nice table using table and we'll specify the fields we want
+27:46
+and finally we're going to sort by time with the oldest on top to newest on the bottom
+27:55
+looks great so for our notes again as a threat hunter we would add
+28:02
+this specific splunk query including the date time specified for the query
+28:08
+as well as any details about the results to our notes and continue
+28:16
+so how can we document the final results of the hunt
+28:24
+perhaps you'll see now how important it is to take copious notes throughout the
+28:30
+thread hunting process we can take our notes we can document the final
+28:36
+results of the hunt and we can use our notes to fill in the details of a threat hunting template and
+28:44
+this process can be repeated using new hypothesis in the future
+28:52
+for this threat hunting exercise that we just did
+28:57
+it would make sense to break these results into three separate threat
+29:02
+hunting templates windows we'll name it like this windows event
+29:07
+logs cleared via event viewer gui which will address the windows security event
+29:14
+id1102 windows event logs cleared via windows
+29:20
+command which will address the windows command wevt util cl
+29:27
+and also windows event logs cleared via powershell clear event log which will address the
+29:34
+powershell commandlet to document these threat hunting
+29:40
+exercises we can use this simple threat hunting template
+29:46
+it contains a title date created
+29:51
+our hypothesis miter attack miter sub technique
+29:59
+uh simulation details if any
+30:05
+proposed search query are the the limitations
+30:11
+and observation notes that we can kind of summarize and expand on and finally our hunt findings with any
+30:18
+recommendations and then we'll have a proposed detection title if any
+30:25
+and a proposed detection query and what it's going to look like would be something like this
+30:33
+so here using our notes to guide us we can create the title
+30:38
+windows event logs cleared via event gui we put in the date
+30:45
+our hypothesis mitre tactic
+30:50
+miter sub technique simulation details if any in this case
+30:57
+there's none proposed search
+31:02
+query and hunter limitations observation notes here's where we can summarize from our
+31:09
+notes so for this i put the proposed search query did find
+31:16
+evidence of windows event logs getting cleared but the results were broad
+31:21
+the search query was improved to display the relevant data in a readable format
+31:28
+and also put here it's important to note that the search results did not specifically show if the windows event
+31:36
+logs were cleared via event viewer gui
+31:42
+so it would be prudent to test this in a simulation to verify that windows
+31:47
+security event id 1102 would still be triggered no matter what method an
+31:53
+attacker used gui command powershell so for the hunt findings for this
+32:00
+uh i wrote windows event 1102 is wonderful for
+32:05
+detecting when windows event logs are cleared and the query developed below should be
+32:11
+made into detection so here's the proposed detection title
+32:18
+alert windowsevent1102 the audit log was cleared
+32:24
+and finally here we have the specific proposed detection query
+32:33
+the second one is again using our notes
+32:38
+we create a title windows event logs cleared via windows command
+32:44
+w evt util cl the date hypothesis
+32:51
+miter tactic miter sub technique and note for these sub techniques for these
+32:57
+three threat hunting templates i'm adding some extra info at the end in
+33:03
+parentheses so for this one i put via windows command w evt util cl
+33:11
+there was no simulation details i put in my proposed search query
+33:17
+and for hunter limitation observation notes have the proposed search query did not
+33:23
+produce any valuable results however it would be prudent to run a simulation test
+33:30
+using this command and build the detection in the hunt findings
+33:37
+although the query did not produce results i believed that i believe the developed query should be made into a
+33:44
+detection because attackers could possibly use the command to clear the windows log events
+33:52
+windows event logs so proposed detection title for this one is alert windows command wevt util cl
+34:01
+used to clear windows event logs and then finally here we have the proposed
+34:07
+detection query with my specific splunk query
+34:12
+okay third one here again using our notes to guide us create a title
+34:18
+windows event logs cleared via powershell clear event log
+34:25
+we have the date our hypothesis miter tactic
+34:31
+miter sub technique again notice here at the end i put in parentheses i added via
+34:37
+powershell clear event log no simulation details
+34:44
+the proposed search query and for the hunter limitations observation notes i wrote
+34:51
+the proposed search query produced evidence that the powershell commandlet clear
+34:57
+event log was used but the results were broad the search query was improved to
+35:03
+display the relevant data in a readable format see proposed detection query
+35:10
+okay so for hunt findings use the powershell use of the powershell
+35:17
+commandlet clear event log should be monitored for any suspicious
+35:22
+behavior and so the proposed detection query should be made into a detection
+35:28
+proposed detection title alert powershell clear event log executed
+35:34
+and then of course my specific splunk search
+35:39
+so one final thing i'd like to mention here there are many different ways one could
+35:46
+conduct their thread hunting there's no one way to do it but
+35:51
+this has just been a simple methodical way to approach it in the end we have our threat hunting
+35:57
+results documented in a simple template and shared with our team
+36:06
+and that's it so thank you thank you thank you and feel free to
+36:14
+join in on the conversation with the blue team the blue team village
+36:19
+on discord there's the discord server right there thank you very much
+

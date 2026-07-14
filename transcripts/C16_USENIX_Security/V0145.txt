@@ -1,0 +1,668 @@
+0:18
+Hello everybody. I woke up this morning and my voice sounded like this. So, we
+0:23
+are going to do our our best here. Um I I promise I am uh I am usually a little
+0:31
+bit better than this. Uh it was a 9-hour flight. So, uh my name is Liz Frost. I am a S sur 4
+0:39
+on page your duty's core infrastructure team which is honestly basically the service mesh team at this point. Um here
+0:46
+are the two mandatory pictures of my containerized cats. Um one quick note
+0:52
+before I get started. Um I pronounce the word Kubernetes differently than
+0:59
+everybody else. Um you have not heard it wrong. I am incorrect. But I also worked
+1:05
+with Joe Beta and one of the other Kubernetes co-founders for two years and
+1:10
+they never corrected me which I have taken as a sort of tacid acceptance of my pronunciation. So I've got three
+1:18
+sections for you. One, what to know before you go. Two, how we actually did
+1:25
+it. And then three, all the little miscellaneous bits that didn't quite fit in anywhere else. So what we have at
+1:32
+pager duty are a lot of different things that made this process difficult. Number one, we have a service discovery
+1:39
+mechanism in console. We use kubernetes now but until very recently it was nomad
+1:47
+and that means that our organization is already burned out from a quite long migration process. We use a lot of
+1:54
+elixir. Uh, Elixir is a very great language, but it's not a very popular one, which means that there are not a
+2:01
+lot of tools that exist in other languages. And if it was only Elixir, that would probably also be fine. But we
+2:08
+also have a whole bunch of other ones. We have what we call opinionated wrapper
+2:13
+libraries or owls, which provide some places to instrument things, but mostly
+2:21
+just provide a lot of layers of indirection. And then finally, as far as this process
+2:26
+is concerned, we have a lot of small rocks and one very big one that I will
+2:32
+get to soon. So this is from our deck the breakdown
+2:38
+of all of the different apps that we need to migrate. And one of the problems is there are too
+2:45
+many languages. There are too many implementations of those languages. And
+2:51
+by this I mean specifically if you want rate limiting, odds are good
+2:56
+your team has written a bpoke rate limiting mechanism and nobody else can
+3:02
+use it. You want circuit breaking, you probably wrote it yourself. That means a lot of teams either spend time they
+3:09
+don't need to spend maintaining these resources or they just don't bother
+3:14
+writing them at all. And on top of that, um, my company is partially American,
+3:20
+which means we care about Fed Ramp, which is a very ownorous compliance thing, and it requires encryption in
+3:28
+transit for basically everything. Um, so
+3:33
+with all of those things, we have languages that are different. We have a bunch of
+3:39
+traffic ma management needs. We have compliance issues. Obviously, we need a
+3:45
+service mesh. Now, getting into this first, the the pros we knew kind of
+3:51
+right off the bat. Increased visibility. That means universal
+3:57
+uh metrics that look the same everywhere. Logs that look the same everywhere. That's great. Security is
+4:03
+mostly going to be that encryption in transit that we me that I mentioned earlier. But the traffic features are
+4:09
+the really interesting part. that includes things like automatic retries,
+4:14
+automatic canaries, circuit breakers, all of that kind of thing. And we knew
+4:20
+about the complexity. Uh we knew that it would be complicated. We didn't know quite how complicated. Um we knew that
+4:28
+there would be some amount of latency. We knew that there was going to be a lot of resource usage because all of those
+4:35
+sidecars have to run somewhere. And by running somewhere they take up resources
+4:41
+that would otherwise be used by our applications. And most importantly, we knew there
+4:46
+would be some degree of learning curve. We were really hoping for a curve that
+4:52
+looked like this. As we get more and more things onto our mesh, we would gain
+4:58
+more and more value from the way those things interacted with each other. What we actually got was something more like
+5:05
+this. And I will tell you why. Because on day
+5:11
+one of the service mesh, you don't get any of those security features and you don't get any of those traffic features.
+5:19
+Now the good news is the metrics work great. Um whereas before every
+5:24
+application would have its b own bespoke metrics names and maybe you did 5xx but
+5:32
+somebody else did separate metrics for 500 501 502 almost impossible to
+5:39
+correlate how these things worked. Um, and now we can just see a big This is
+5:45
+the amount of traffic passing through the mesh over time, which has been super handy. And it is a nice fancy graph that
+5:54
+goes up that helps us measure our progress. Security, it's a little less it's a little less
+6:00
+rosy. Obviously, when you first start putting one or two applications on the
+6:05
+mesh, you can't enforce that all of these applications use encryption to
+6:11
+talk to each other because most of them just wouldn't work. And no enforcement
+6:16
+means there's no validation. You can't say, "Oh, I know that this is a
+6:22
+connection that is secured, so I don't have to do any of my
+6:27
+normal validation on it." Which is what we were hoping to do. So you have the
+6:32
+overhead of those fancy HTTPS connections everywhere maybe, but also
+6:38
+you don't have any of the nice things that come with that like being able to trust all of your incoming connections.
+6:45
+And from most perspectives, encrypting two out of three hops is
+6:52
+basically no encryption whatsoever. your compliance auditor is not going to let you get away with. Okay, but almost
+6:58
+every time we have this encrypted. Um, and the traffic features
+7:05
+that was even more complicated. I'm going to give a brief detour through how
+7:11
+some networking works in Kubernetes. This is a Kubernetes service object. Uh
+7:18
+the code isn't actually that important but it has a selector which says I want
+7:24
+a application that looks like that matches these labels and I'm going to route traffic through it. And this is
+7:31
+probably how you think this works. It's certainly how I think it works and I think for a while it actually was how it
+7:39
+works. There's a downstream c something called cube proxy in the way and it routes two upstreams. But it turns out
+7:46
+cube proxy isn't a proxy anymore. It's something more like this.
+7:52
+There is not actually any cluster IP assigned to an interface.
+8:00
+There is no container running somewhere that is listening on that address. There
+8:05
+is no proxy. What is actually happening here
+8:11
+is that cube proxy is setting up a IP tables rule that matches traffic to that
+8:20
+cluster IP. IP tables then rewrites that cluster IP
+8:26
+to be a random pod IP. And if you look at the IP table's output, you can
+8:32
+literally see it's 50% chance of this and then 33% chance of this. All of this
+8:39
+happens inside of the host. Now, why did I explain this to you? This is a virtual
+8:46
+service. I would I would describe perhaps the previous service as alo also
+8:51
+virtual but that's what the sort of layer on top of services is called in
+9:00
+ISTO um and it is basically at this point a
+9:06
+pretty thin wrapper around the service object that I had previously but I did
+9:13
+add one thing which is that I wanted you to retry three times
+9:19
+And again, the way that you probably would think about this is that there is a
+9:24
+downstream, there is this sort of virtual service object, and then there is an upstream. But let's
+9:31
+take a closer look at this. The downstream is in one namespace, we
+9:38
+will say, and the upstream is in a different namespace.
+9:44
+And that's important because it means the the virtual service is sort of
+9:50
+logically associated with the upstream. It is mostly concerned with the traffic
+9:55
+to the upstream. But and this is very important
+10:00
+all of that implementation, all of the actual logic from that
+10:06
+virtual service that is not implemented in the upstream sidecar at all. It all
+10:12
+flows into the di downstream sidecar in a completely different name space. So if
+10:18
+that downstream sidecar it doesn't exist, if that downstream isn't on the mesh, well, it's basically going to
+10:25
+completely ignore that traffic, it is going to take all of that information
+10:30
+and say, well, I I have never heard of this. The sidecar on the upstream is
+10:36
+really just used for metrics and terminating MTLS.
+10:41
+None of those fast fancy uh L7 features, traffic shaping, any of
+10:48
+that stuff, none of that exists. So if we only have the downstream on the
+10:54
+mesh, well then we don't have that virtual service. So there's no actual
+11:01
+there's nothing actually interesting being done there. And if we actually had
+11:07
+the virtual service, the side car and the upstream,
+11:12
+honestly, nobody really knows what would happen. Our consultant certainly didn't. People don't really do this because why
+11:18
+would you bother having a virtual service for something that didn't even know the mesh existed yet?
+11:26
+This is all happening downstream, but it's all configured upstream. And that is not just a technical problem
+11:35
+because previously all of the configuration for these things like
+11:41
+retries and circuit breakers, those were configured by the client and now they
+11:47
+are configured by the upstream service. And that means potentially it is now a
+11:54
+different team that controls these interfaces. So in addition to having to do all of
+12:00
+the work of getting your information, your application onto the service mesh,
+12:07
+now you also can't do the thing we promised you could do, which was get rid of all of your custom implementations
+12:15
+until all of your upstreams are also on the mesh.
+12:20
+and you have coordinated this handover carefully with them. And you have to
+12:26
+coordinate carefully because if you have two sets of retries, what you are
+12:32
+basically going to see is that a request comes in, it fails,
+12:39
+but it doesn't fail immediately because that request is passed to the service
+12:45
+mesh which tries three times. Those three times of retries are completely
+12:51
+transparent to the client. So it thinks only one failure has occurred. So it
+12:57
+does it again and then it fails three times in the mesh. And the upshot is you
+13:03
+have a n squared problem where you thought you were getting three retries
+13:08
+and you were actually getting nine. And you can imagine if this was five for
+13:14
+example, it's even worse. So you have to be very careful about how
+13:20
+you hand this configuration from off the mesh onto the mesh. And there's a s
+13:29
+there's a similar problem with canaries. Now we use Argo for our CI/CD, but I
+13:35
+think this applies to most things. The way canaries work with Argo right now is
+13:42
+it's basically roundroin the number of pods. So, if I have one pod that I've
+13:47
+called my canary and one pod that I've called stable, we're going to get 50%
+13:52
+traffic to both of those. If I wanted to have say 10% of my traffic go to the
+13:59
+canary and 90% of it go to stable, the only way to do that is to have one
+14:05
+canary pod and nine stable pods. And that's not really what you want. So we
+14:12
+have this promised land of when the downstreams are on the mesh,
+14:18
+we can have 10% of requests go to one pod and 90% go to the other pod and all
+14:27
+of that stuff will be nicely enforced and handled. But I think you know where
+14:32
+this might be going. What happens if one of them is on the mesh and one of them
+14:39
+isn't? Then the one that is on the mesh is going to send 10% of its traffic, but
+14:46
+the other one is going to continue doing the roundroin thing. And that basically means it's impossible to reason about
+14:54
+how much traffic you are going to get because it depends on not only how many
+14:59
+downstreams you have, but whether those have gone through the mesh enrollment
+15:04
+process and the number of stable pods that you have at any given moment.
+15:10
+So the upshot is that both the canaries and the retries thing are unreliable
+15:17
+until all of your downstreams and all of your upstreams are on the mesh.
+15:24
+So okay, I put this section first not because it was the first thing that
+15:30
+happened, but because if you wanted to if you got through this part of the talk and you were just like, "Wow, this
+15:36
+service mesh thing sounds horrible. Why don't we need to deal with it? Excellent. But we had to learn these
+15:42
+lessons the hard way. So, let me tell you a little bit about how we migrated.
+15:55
+Pardon me. Now, this is obviously Pedro Duty's most
+16:01
+critical service, Pony API and Pony DB. And these actually do run in production
+16:07
+because we needed some example applications to test out the mesh. But
+16:13
+I'm basically just going to use this as a series of domain names for you. So this is how it works. Right now we have
+16:21
+a pony DB that's our upstream that boots up and we have a dedicated sidecar that
+16:27
+says okay this is healthy. I will register my pod IP with console and then
+16:35
+the downstream pony API says okay where is pony db.svc.com svc.conole
+16:43
+and it will get one of those pod IPs back. Pretty simple discovery mechanism.
+16:51
+Now, how does STTO traffic usually get routed? There are a couple of different ways
+16:57
+that you can route traffic. You can route to the full
+17:02
+name.namespace.sv.cluster.local. You can route to name.namespace.
+17:10
+If you're in the same name space, you can route to just name.
+17:15
+And this one is pretty interesting. If you send traffic specifically to the
+17:20
+cluster IP for a service, Kubernetes or uh ISTTE knows about that and will route
+17:28
+it all correctly. So, how do we do this migration process? Well,
+17:35
+one thing that we could try is just sticking that console host inside of
+17:43
+Isto. It would be pretty weird to have a service.conole address and not have
+17:50
+console anymore, but we already have a lot of Kubernetes variables namespaced with Nomad underscore. So, it's not
+17:57
+exactly a weird thing to do. And if it saved us that migration, that would be great.
+18:04
+And that would have worked. We could simply add that. But unfortunately,
+18:10
+those owls that I told you about at the very beginning, they are very wise and do not work exactly how we expect.
+18:18
+You probably can't see all of this, but basically because DNS is so unreliable,
+18:26
+there is a there is a process running in all of our Elixir services that is
+18:33
+regularly pulling the console API. It is getting those IPs
+18:40
+and then it is randomly selecting one of those IPs at runtime to send all of the
+18:46
+traffic to that IP. And importantly, it is sending the traffic to that IP
+18:55
+directly, which means there is no host header that says
+19:01
+console. There's nothing to match on. It's just going directly to the pod IP.
+19:07
+And ISTTO cannot route to the pod IPs. It doesn't know about them. ISTTO can
+19:14
+route to almost anything else. But if there's no host header and no
+19:21
+pot and no cluster IP, it doesn't know where this
+19:27
+is supposed to go. And so it just won't get routed properly. and it needs to
+19:32
+know where it's going to go because the process of having a sidecar
+19:38
+strips that information about the target IP out of out of the entire thing. So it
+19:46
+won't know where to route the traffic and even if it does it won't be able to do any ISTTO stuff to it because it
+19:53
+can't tell where that traffic is going. So in the end we ended up with a two-phase migration where the first
+20:00
+phase was we would switch everything from these bespoke console providers to
+20:08
+just name.namespace.svc.cluster.local. And by doing that I mean also all of
+20:16
+these services hadn't been touched in a while. So we had to update the dependencies, change the wrapper libraries. We had moved to a new
+20:22
+upstream package provider in the meantime. So we had to do that migration. We had to replace all of the
+20:28
+names because console names aren't namespaced. So the names are just a
+20:33
+little bit different. And this list on the right hand side. Yeah. Uh is all of the
+20:41
+different things that we had to do. And it's 2025 as Liz said. Did we use an AI?
+20:49
+We used said which is the original AI.
+20:55
+We used what we call a away team model which is basically where my team does
+21:02
+this for the entire company because if we asked the entire company to do it they probably wouldn't.
+21:08
+And basically we divide up everything by
+21:14
+language. So there was one team that just worked on those elixir languages
+21:21
+and one team that worked on all of the special stuff and one team that worked on the big rock which we will get to
+21:27
+very soon. But this was helpful because it concentrated all of the experience of
+21:32
+doing this migration in our team. That's how we got that fancy said thing that
+21:38
+did 90% of the work that we needed to do because we were constantly iterating on
+21:45
+this. And all of all of this means that we got
+21:52
+quite good at it. There were there was like a month or two where I came in every day and I would just crank through
+21:58
+two or three of these and there were a couple of people on my
+22:04
+team. It's embarrassingly parallelizable work, so a lot of people can do it. And
+22:09
+perhaps most importantly, by not forcing the entire rest of the company to do
+22:15
+this, we preserve our team's reputation as not simply forcing you to do a whole
+22:22
+bunch of work for no reason. So, we would send these API
+22:28
+changes over. We would ask very very nicely for the rest of the company to
+22:33
+test them thoroughly. And then after that was done, we would move on to phase
+22:38
+two. And phase two was actually very simple
+22:43
+because we have Helm charts for all of these services. And that means that
+22:50
+instead of having to have a large complicated mesh onboarding procedure in
+22:56
+your custom pedaguty branded Helm chart, you can just say mesh enabled true. And
+23:04
+that actually concentrated more of our
+23:10
+that actually concentrated more of our expertise because in addition to just
+23:15
+saying enabled true or false, we could give you things like access logs. We
+23:21
+could give you things like maximum request header sizes. The access logs,
+23:27
+they look like this. This is what the Helm is going to spit out when you turn
+23:33
+that on. And it's not that big of a deal. Disabled, false, providers, full.
+23:39
+That's all configured upstream. But something like max header size, it looks
+23:44
+a little bit more like this. And I will get to these kinds of configuration
+23:51
+snippets in a in a future section, but suffice it to say, we did not want
+23:57
+people to be copy pasting these from wherever to wherever else. So having
+24:02
+those Helm charts sort of abstract this away was super helpful. And then
+24:09
+basically we just did regular project management to it. We got specific slots
+24:15
+from teams where they would have dedicated availability to us. We made
+24:20
+sure that their migrations were ready before those slots and we just kind of burned through it. Um
+24:27
+I'm pretty proud of the the slope of this graph. You can definitely see where some of us went on winter holidays in
+24:34
+there and some other time off, but that's a pretty good slope. But one of
+24:39
+the things you will notice is that it doesn't get to zero. And that's not just
+24:45
+because I cut it off in April, but that's because in addition to all of
+24:51
+these small little microervices, we also have one very big rock.
+24:59
+I think there are probably a lot of companies that have a whole bunch of re very fancy microservices and then one
+25:06
+application called like web or main or something that is a Rails application
+25:11
+that has existed since the founding of your company and still contains 80% of
+25:17
+your business. So we have one of these and we started doing our regular
+25:24
+process. We went through, we ran our fancy said script and we got this, which
+25:31
+is a big old spike in 500s
+25:36
+when we finally got around to trying to put this on the mesh. And importantly,
+25:42
+they are all timeouts. And this is important because Rails, at least as we
+25:47
+run it, is synchronous, which means if I have a 44 second timeout, that is almost
+25:55
+a minute that one of my workers is completely unavailable.
+26:01
+Asynchronous frameworks, they would be blocking, but the that worker would
+26:06
+still be doing stuff, waiting for traffic to come through. But with a synchronous framework like Rails, if you
+26:12
+have 30 workers and five of them are waiting for these timeouts,
+26:18
+you actually only have 25. And that meant that even though this was a
+26:24
+relatively small number of requests that were failing, they were tying up a very
+26:31
+disproportionate amount of our resources while they were happening.
+26:36
+We tried a bunch of different things to fix this. Um, we tried, for example,
+26:42
+putting both web as the client and the micros service upstreams on the mesh to
+26:49
+see if that would if having both of those halves be in the same place would help. Not really. We built out a
+26:56
+isolated Kubernetes fleet that didn't have anything running on it in case it was some kind of
+27:04
+resource or like noisy neighbor issue. Not really. We tried adding more memory
+27:10
+and more CPU usage. Uh that didn't work. And most importantly, what didn't work
+27:15
+was any reproduction of this anywhere except our production environment.
+27:21
+Um, we think the problem is probably cube proxy or IP tables or something
+27:28
+like that, but we're not 100% sure. Half the reason that this slide is in here is that I'm hoping there's somebody with
+27:34
+ISTTO experience who has a great idea for us. Um, but until then, there's a
+27:40
+couple things we can try. There's different modes to runto in. There's different modes to run cube proxy in.
+27:46
+But one thing I do want to talk to you about is combinotaurics. which is basically the number of the
+27:54
+amount of information every side car gets grows very quickly with the number of
+28:01
+services that it knows about. Now, if you have two pods, this is pretty
+28:06
+straightforward. Like each pod needs to roughly know about where the other pods
+28:12
+are because they're probably in services. And with two pods like this, like you
+28:18
+would have on a little example cluster, that's not a lot. If I move it to six
+28:23
+applications, well, suddenly the number of arrows is
+28:29
+getting up very, very quickly. And if you have 4,000 pods like we do, it looks
+28:36
+well, I don't know what it looks like, but it doesn't look good. And we had not
+28:44
+taken the step of saying okay this application only needs to know about
+28:49
+this this this and this upstream which meant every application was gaining the
+28:56
+routing information for every single other application that was on our mesh.
+29:03
+We don't know for sure that this is the problem, but it is certainly causing a lot of resource usage and it is probably
+29:11
+something we are going to need to fix. We didn't want to fix it ahead of time
+29:16
+because we were really hoping that having everything on the mesh would give us one place to go to see what our
+29:23
+upstreams were. But unfortunately, we have got ended up in a little bit of a catch 22 here. So,
+29:31
+here are my random gotchas. One, something that I probably could
+29:37
+have figured out ahead of time, not everything is HTTP. And in particular, uh this was a HTTPS
+29:48
+terminated uh request, but well, not HTTPS, but it
+29:53
+was TLS. And this is sort of how we think about
+29:58
+the envoy proxy. There's just like a a thing in the middle and it just sends
+30:05
+traffic from one side to the other. Um, but if you you've seen me put diagrams
+30:11
+on here before and you know that this is not the entire story. This is actually how the transparent proxy works. Um this
+30:21
+is a diagram from uh Jimmy Song's excellent blog. Um
+30:27
+and in fact it is kind of tunneling through but it still has to
+30:34
+interpret all of that TLS. It still has to go through Envoy. It's not literally
+30:41
+transparent. And so at some point we ended up with a
+30:47
+random SSL error. Um, and the solution
+30:53
+to that was switching from one library that had an old version of lib curl to
+30:59
+another library that had a newer version of net http. Why did that work? I don't
+31:05
+know. But we finished the efforts to migrate faster than we finished the
+31:10
+efforts to figure out what was wrong. And so we just sort of took the win and went with it.
+31:16
+One of the things we were very excited about was rate limiting. And it turns out that ISTTO doesn't actually have any
+31:23
+native rate limiting support. It delegates all of this to Envoy and
+31:28
+dealing with envoy configuration is very difficult. Another example with that,
+31:35
+we had some applications that had very large headers. I put this cat in here
+31:40
+because how often do you get to see code 431? Um, you have to write these complicated
+31:48
+things called envoy filter configs. And where do you get this like arcane
+31:56
+invocation? Well, obviously you go to the STTO GitHub repo and hope that somebody else
+32:01
+has figured it out because if you look at the configuration that this is modifying,
+32:09
+it is very long. It is several thousand lines of JSON that is constantly being
+32:15
+upgraded. So, this is me trying to figure out exactly where this envoy
+32:22
+filter was going to end up. Um, and you
+32:27
+can see that there are listeners matches one thing in that configuration and then
+32:33
+there's dynamic listeners and there's virtual inbound. All of this stuff I
+32:38
+don't even remember what it means anymore. I just found this in my shell history. Uh, and of course randomly
+32:46
+doing these sort of low-level patching on Envoy could never cause any problems,
+32:52
+right? These uh these are not like nice errors
+32:58
+that get logged and spit out some sort of uh oh there was a failure. No, this
+33:03
+is a hard crash of the IST Damon that was happening every single time. Um and
+33:11
+eventually we figured out that we had slightly underspecified where this patch was going and so it was ending up with
+33:18
+something out of bounds. But this is when you move beyond the sort of like
+33:25
+abstraction that ISTSTEO provides, you have to be very very careful because
+33:32
+there are very few guard rails left. A couple other problems that exist. um you
+33:38
+can autoscale containers obviously but as more and more applications made it their way onto the mesh those sidecars
+33:46
+for the combinatorics reason I gave earlier require more and more resources
+33:52
+and we don't have a way to autoscale the size of those sidecars specifically.
+33:58
+So what we do have are a bunch of alerts that we set up when we install these
+34:04
+STTO things and then those teams get an alert that says please follow this
+34:09
+runbook and then they come to us to ask us what to do and we tell them to please follow this runbook
+34:16
+and then fortune and then usually we sort it out. It's not that big a deal, but it is a sort of ongoing issue and we
+34:24
+could just give a enormous allocation to every single one, but then that is a
+34:29
+whole lot of compute that won't be used that we have to pay for. Uh, one other little thing that we had,
+34:37
+um, when we first started doing this migration, uh, if you wanted to have a
+34:44
+cron job or a job, which is a process that runs and then terminates and you
+34:49
+wanted that to be on the service mesh, uh, you had to come up with some fancy
+34:55
+way to tell the service mesh to end because otherwise
+35:00
+the mesh container would keep running and Kubernetes would say, Well, it's still running, so I can't
+35:07
+terminate it. But fortunately, there is now native support for sidecars in
+35:13
+Kubernetes 129, which isn't even that new anymore. It is stable and it is now
+35:19
+the default in ISTTO, so none of you have to worry about it. I just wanted to complain about it because it made my
+35:25
+life very miserable for a little bit. In conclusion, uh this is roughly where
+35:32
+I'd say we are on the chart. We are getting close. You can tell that adoption is like kind of asmmptoic. Like
+35:39
+we're getting close, but we're not quite there yet. We have some of this value, but not all of it. And
+35:47
+you know, we're getting there. I don't know what the time axis looks like. That
+35:52
+could be next week. That could be six months from now. But the only way out is through. Uh, I was Liz Frost. Thank you
+36:00
+all very much for coming.

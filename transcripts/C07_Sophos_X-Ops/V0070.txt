@@ -1,0 +1,264 @@
+0:04
+Hi there.
+0:05
+This is Robert Weiland with the Sophos Incident Response team.
+0:09
+In this video, we're going to be looking at a Sophos Central console
+0:14
+where there's suspicion that data exfiltration has taken place recently.
+0:16
+First, we're going to go to the Live Discover menu, where we'll be
+The Search for Network Traffic Data query
+0:20
+able to run some queries against the systems that are suspected of
+0:24
+being involved in the data exfil.
+0:26
+I want to start with a data lake query called Search for Network Traffic
+0:31
+Data, and we want to search for systems that have a local IP of 10.10.10.
+0:36
+And that last octet, I am just going to leave that as a wild card.
+0:39
+And we'll search for the last 30 days.
+0:41
+Great. That's returned some data. Let's export it to Excel and take a look.
+0:47
+Let's sort by processes being run by the administrator.
+0:55
+And here we can see that on July the 31st, that Rclone was executed.
+1:01
+So Rclone is a file-transfer tool that is often abused by ransomware threat actors.
+1:08
+So now that we've sorted it just to look for only the Rclone executions,
+1:12
+we can see that those took place on the file server on July 31st.
+1:19
+And we can see the IP addresses associated as well as the Sophos
+1:23
+Process ID, and also the SHA256 hash.
+1:28
+What we can do is we can copy this and see what exactly is this file.
+1:33
+Is it actually Rclone? Or is it something else?
+1:36
+So you can see here, we're on VirusTotal.
+Checking the data against Virus Total
+1:38
+I have entered the hash from the Excel spreadsheet here, and we can see that
+1:43
+we've got positive confirmation that this is indeed Rclone that we're dealing with.
+1:48
+So if we go back to our spreadsheet that we collected from the data lake
+1:51
+earlier, we can see that it's captured a number of IP addresses as well, that
+1:55
+were related to that Rclone process.
+1:57
+So we're just going to check that against VirusTotal to see who
+2:00
+that IP address is registered to.
+2:03
+All right. So we entered that on VirusTotal.
+2:04
+If we go to details, we can see here that this IP address is registered to
+2:09
+mega.co.nz, and Mega is a cloud storage service that threat actors use quite
+2:17
+frequently in their exfiltration.
+2:19
+So this lines up with the typical MO that we would see in many ransomware cases.
+2:24
+Going back to the spreadsheet, we can see that the folder that's being
+2:27
+interacted with is called C:/Data.
+2:30
+So we probably want to understand what is it that's contained here, because
+2:33
+that looks to be what was exfiltrated.
+2:36
+So the next thing we'll do is look at what data is contained here.
+The File Attributes and Metadata query
+2:40
+So the query we're going to run is called File Attributes and Metadata,
+2:45
+and this is a little bit different than the previous query that we
+2:49
+ran, because this is an EDR query.
+2:51
+So it's actually touching forensic journals that are on the system itself,
+2:55
+as opposed to data that had been uploaded to the cloud, to our data lake.
+2:59
+And we just want to search for FileServer1.
+3:02
+data that's on this system itself and we will run that query.
+3:03
+So we're going to select that because now we're actually targeting
+3:10
+Okay. Great.
+3:10
+So that query returned some data; let's go up and see what it found.
+3:15
+And we can see that there are four files within the data directory.
+3:19
+And if we scroll over to the right a little bit, we can also see the size here.
+3:25
+So it's in byte format.
+3:28
+It hasn't been converted to gigabytes, but we can take a guess; this looks
+3:31
+about five and a half gigabytes.
+3:33
+This is about almost five, and then five and a half.
+3:36
+So a significant amount of data within this directory.
+3:39
+The next step is going to be to pivot over to another query and look at the network
+3:43
+journals and see if we see a quantity of data that might match up to about
+3:48
+the amount of bytes we see right here.
+The All Traffic Sent query
+3:50
+All right. So let's go to the top of the screen.
+3:53
+Going to look for another endpoint query called All Traffic Sent.
+3:56
+So now we just need to update the start time and end time here to
+4:00
+look at the timeframe when Rclone was running, which was 1400 hours.
+4:05
+And we'll just look for one hour of time here and run that query.
+4:10
+Okay. We got some data back.
+4:12
+Scroll up here and we can see that we have about 21 gigabytes
+4:16
+of data that was exfiltrated.
+4:18
+That about matches up with the bytes that we saw earlier, where we were
+4:21
+seeing approximately five gigabytes or more, more or less, for four files.
+4:26
+So could say that this could be accurate here.
+4:29
+This looks like that there was data exfiltration because that matches up
+4:32
+with that malicious Rclone command that we saw and that was executed
+4:36
+by the administrator account.
+4:37
+Next we're going to go back to the spreadsheet that we had from the first
+4:40
+query that we ran on the data lake.
+4:42
+And we're just going to grab the Sophos PID.
+4:45
+So this is the process identifier.
+4:48
+And we're going to run a query to look at what files in the file
+4:51
+system were accessed by that process.
+4:53
+So just go back here to All Queries.
+The File System Interactions query
+4:57
+And we're going to go with File System Interactions for a Sophos PID.
+5:01
+We know what timeframe that we want to look at here.
+5:03
+So I've entered in there July 31st, 1400 to 1500, that
+5:08
+same one-hour period of time.
+5:09
+We want to know what did Rclone do?
+5:12
+What files did it touch when it was running on that day?
+5:14
+So we'll run that. All right.
+5:16
+So we got some data back here, still populating.
+5:19
+And just because this is so much data to look at, we're going to
+5:23
+export this to a CSV, where we can manipulate the data a little easier.
+5:27
+Okay. So now that we have the data in an Excel spreadsheet, let's filter it.
+5:32
+And we can see here that the four files that were contained inside the
+5:38
+C:/Data directory are listed here; they were accessed by the Rclone process.
+5:43
+In this case, this query is not really all that interesting, but you could
+5:47
+imagine that in a scenario where there were a lot more files in a directory
+5:50
+that was targeted by a threat actor doing exfiltration where there were maybe 10,000
+5:55
+files, this query could be really helpful for identifying which files within that
+5:59
+directory were indeed touched by the malicious process and which ones were not.
+6:03
+The last query that we're gonna run is one that will look at lateral movement, and
+The Remote Desktop Login Events query
+6:07
+it's called Remote Desktop Login Events.
+6:10
+So we'll go back to our All Queries and search for that.
+6:21
+And we know it was an administrator and don't know the source IP.
+6:27
+So that's what we wanna find out.
+6:28
+And where did this log on come from?
+6:30
+All right, so the query finished.
+6:31
+So we can see that there was one authentication to FileServer1 on July the
+6:38
+31st at 1652 UTC with the administrator account coming from 10.10.10.5, which
+6:45
+is a workstation in this network.
+6:48
+So if we go back over to Excel here and look at the UTC timeframe for when
+6:53
+Rclone was run, we can see that was actually shortly after that log on event.
+7:00
+So if we go back and look at the time -- 1652 -- and go back to
+7:06
+Excel and we can see that it's 1658.
+7:09
+So the threat actor wasted no time in executing Rclone after
+7:14
+logging on as administrator.
+7:16
+So there we go. Now we know where the threat actor came from.
+7:20
+So that could mean some type of compromise on that system itself, potentially,
+7:25
+a phishing email or some other type of compromise that happened upstream.
+7:28
+And then we would need to go to this system and then look for lateral movement
+7:31
+coming from the VPN or some other system in the network that was initially
+7:35
+compromised or previously compromised.
+7:40
+To recap, we were able to use Sophos Central to pull data from the data
+Wrapup
+7:44
+lake as well as the EDR that was installed on FileServer1 to investigate
+7:50
+a data exfiltration incident.
+7:52
+Most notably, we were able to determine the tool that was used for
+7:57
+the exfiltration as well as the files that were touched by that process and
+8:01
+the volume of data that was taken.
+8:04
+So hope that you found this video helpful.
+8:07
+From me and the whole Sophos X-Ops team, take care and stay secure.
+

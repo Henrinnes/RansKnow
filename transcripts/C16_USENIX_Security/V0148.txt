@@ -1,0 +1,1373 @@
+0:18
+So quick question to the audience. Uh
+0:21
+who of you is uh having a build and CI
+0:24
+stack run at your at your company or are
+0:26
+you using external tools or internal
+0:28
+tools? Could you like raise your hands?
+0:31
+Okay, awesome. Yeah, just for everyone
+0:33
+to clarify, CI is like continuous
+0:36
+integration stack. So it's um it's is
+0:39
+the stack that builds and and and
+0:41
+integrates and uh tests all all the code
+0:45
+at Google. But we'll we'll go into into
+0:46
+details in a moment.
+0:50
+One second.
+0:55
+Oh, perfect. Okay. Yeah. So quick intro
+0:57
+about me. So uh my name is Tomas. I've
+1:00
+worked for three years at Google Munich
+1:02
+and yeah uh my home team is uh bats. So
+1:06
+build and test systems s team and we're
+1:08
+making sure
+1:10
+build and CI stack works flawlessly for
+1:13
+the all uh 100,000 plus Google uh
+1:16
+engineers all around the world and yeah
+1:18
+um I was trying to make this uh stack
+1:22
+built in a forgotten uh steampunk
+1:24
+steampunk uh graphics mode. So you you
+1:27
+you'll see some some graphics just yeah
+1:30
+I think it would be quite quite
+1:31
+interesting. Yeah, if you want to
+1:32
+connect, here's my LinkedIn. And yeah,
+1:34
+in my free time, I try to spend some
+1:37
+time on taking pictures, watching air
+1:39
+shows, and yeah, looking at the Krampus
+1:42
+shows like Bat Santa in Bavaria and
+1:44
+Austria. So, I'm happy to discuss this
+1:45
+later if someone's interested.
+1:48
+Cool. Uh, yeah. So, first, uh, I would
+1:51
+like to give some some credits to the to
+1:52
+the to the teams we work with. So, the
+1:55
+as team, we're working with multiple dev
+1:57
+teams that make this incredible
+1:59
+software. Uh these names may not not be
+2:02
+clear now but they will be more clear
+2:05
+over over the course of the presentation
+2:07
+where you'll see all the components and
+2:09
+how the how the how how the stack is is
+2:11
+is made of. Yeah. So without hard work
+2:14
+of this incredible engineers it wouldn't
+2:16
+be possible.
+2:19
+All righty.
+2:21
+So um let's quickly uh dive into the
+2:26
+basics of the of the build and and CI
+2:28
+stack and see the components and the and
+2:31
+the initial like a atomic uh parts of of
+2:35
+it.
+2:39
+So yeah what's what's what's a build? Um
+2:42
+so
+2:44
+by building we mean compiling and and
+2:46
+and linking the source code to produce a
+2:48
+binary artifact. So it's it's it's it's
+2:50
+quite uh simple if you look at this from
+2:52
+the basic point of view. You can do it
+2:54
+just with a with a compiler and a and a
+2:56
+command line. But it gets more and more
+2:58
+complex if the scale is important and uh
+3:03
+integration and the work uh with
+3:05
+multiple engineers and and projects.
+3:07
+Yeah. So we we decide to build in a
+3:10
+centralized way in order to gain speed
+3:13
+by reusing the caching and
+3:17
+also to improve the efficiency. So it's
+3:20
+it's also about caching and have a
+3:22
+single point of of of control and have
+3:25
+confidence that the code is uh secure
+3:28
+and has not been tampered with.
+3:34
+Okay. So let's look at the life life of
+3:35
+a build. So how the build is going
+3:39
+through the through the process. So if
+3:42
+you look at this yeah AI generated
+3:44
+graphics it's the process starts with
+3:46
+loading analyzed and execution. So
+3:49
+so the build is made of of any actions
+3:52
+which needs to get loaded and processed
+3:55
+and then it needs to be analyzed to see
+3:57
+which actions we need to execute and to
+4:01
+to make to make make everything. Yeah.
+4:03
+So each action corresponds to a single
+4:05
+invocation of a build tool. Yeah. So if
+4:07
+you're running a
+4:10
+if you're coding and building like a
+4:11
+hello world program, one action is just
+4:14
+to compile single hello world CC and get
+4:16
+something. Yeah. But if the system gets
+4:18
+more and more complicated with multiple
+4:20
+languages and so on, then it's a whole
+4:24
+process. Yeah. So examples of actions
+4:27
+that needs to be executed are compiling,
+4:29
+linking or executing a test. So,
+4:37
+okay,
+4:38
+let's look at the holistic view of a of
+4:40
+a of a of a CI stack. It's also the
+4:42
+graphics also shows some of the
+4:44
+components with with the with that the
+4:46
+team team's name had. Um, so yeah, as
+4:50
+mentioned the the stack transfer the
+4:53
+source code into binaries that can be
+4:55
+then reced by machines. Yeah, that was
+4:56
+that that was that was clear. So it's
+4:59
+the stack is not only for human um
+5:01
+initiated issued builds. It's also for
+5:03
+the builds that allow machines to create
+5:05
+builds automatically. So either for
+5:07
+testing or for res to production. So
+5:09
+everything which is scheduled and so on
+5:11
+also gets run and pushed through the
+5:13
+through through this through this uh
+5:14
+system.
+5:17
+So as mentioned the simple use you just
+5:19
+compiler and and and and compile your
+5:21
+hello world. But if it's gets more and
+5:23
+more complex and you have multiple
+5:25
+languages and multiple libraries then
+5:27
+the build stack is is is of essence
+5:32
+and yeah it's as we look at the previous
+5:35
+uh diagram. So the whole there's the
+5:38
+whole process which it's multi-step
+5:40
+process with loading analyszis and
+5:43
+execution dependency evaluation
+5:44
+verification and and and tool selection
+5:49
+and yeah tests are also big part of the
+5:52
+of of the stack. So we have simple unit
+5:54
+tests but also quite complex and uh
+5:58
+hermetic integration tests and also em
+6:00
+emulators for for for for special
+6:02
+architectures.
+6:04
+Okay,
+6:06
+that's quite interesting uh diagram how
+6:09
+it all works together. I think it's also
+6:11
+true for most of the build system which
+6:15
+are which are used uh in in a in a
+6:18
+larger enterprises. So yeah if if if we
+6:20
+start our journey at the workstation. So
+6:24
+um engineer has a source code which
+6:27
+which they want to uh compile and so on.
+6:30
+They run a blaze command which is like a
+6:33
+virtual command and the build gets
+6:36
+pushed to the build queue and then the
+6:38
+build Q once the time is depending on
+6:40
+the priority of the build gets pushed to
+6:41
+the build hoster which is like build
+6:44
+build rabbit and that's at at this level
+6:47
+the build requests gets analyzed and
+6:49
+split into actions and then each action
+6:52
+is getting pushed to the action
+6:54
+scheduler or yeah we call it forceuler
+6:57
+and then depending if there's action
+6:58
+cache it can be can be can be instantly
+7:01
+uh delivered or if there's cachmies then
+7:05
+it needs to go to the executors. a
+7:07
+massive cluster of of machines and then
+7:09
+it gets gets built, linked or tested and
+7:12
+then at the end the result um
+7:16
+gets uh delivered to the object storage
+7:18
+or or artifact storage we can we call it
+7:20
+OBGFS and then um when it needs to be
+7:24
+accessed or delivered um by by the
+7:27
+developer then it's it's used
+7:30
+uh it's delivered by virtual file
+7:31
+system. So there's no like actual copy
+7:34
+of everything only on demand is being is
+7:37
+being accessed uh with with with visual
+7:41
+mechanism.
+7:44
+Okay, let's look at the key
+7:46
+characteristics of of a build stack. So
+7:49
+yeah, how it all all the data how it's
+7:52
+how it's how how it's running.
+7:56
+Okay. U yeah I couldn't give all the
+7:59
+super detailed numbers but yeah the
+8:01
+scale is is huge so it's like millions
+8:02
+of cores and yeah
+8:05
+lots of actions and and outputs it's
+8:08
+it's really massive scale yeah and I
+8:11
+have here some graphs which I I could
+8:13
+share so I think it's um
+8:19
+the the history graph over time it's
+8:21
+like a log scale is on a yearly basis so
+8:24
+we can look it's like a 10 years of
+8:25
+history so What's interesting about this
+8:27
+graph is like we have this these deeps
+8:30
+happening in sometimes. So does anyone
+8:32
+have a idea what could be these deeps?
+8:35
+Christmas.
+8:36
+Yeah, Christmas. Yeah. And there's one
+8:38
+more small deep before Christmas.
+8:41
+Yeah. Yeah. Exactly. So So that's also
+8:43
+Yeah, that's that's that's what also
+8:46
+shapes the the traffic on on our on our
+8:49
+uh build stack. Okay. These two bottom
+8:51
+uh ones are Yeah. on a daily basis. So
+8:56
+it's like 10 days of 10 days of view. So
+8:58
+you have action statistics and and and
+9:00
+QPS. So you can also see yeah
+9:04
+this
+9:06
+more flat line on the inter interactive
+9:08
+traffic here in at the end. What what
+9:10
+could this be?
+9:12
+Yeah, exactly. Exactly. But we we also
+9:15
+see that um interactive traffic is also
+9:17
+compensated with the batch traffic. So
+9:19
+whenever um the developers are not doing
+9:23
+interactive work, the batch is
+9:24
+compensating this. So it's also it's
+9:26
+also using using the the system to to
+9:28
+equalize equalize the load and then make
+9:30
+sure there's not not many
+9:33
+idle cycles there.
+9:38
+Okay, let's look at resource management.
+9:40
+So that's quite a big part of of of of
+9:43
+our of our work here. It's mostly due to
+9:46
+the scale uh since it's it's it's it's a
+9:49
+huge uh
+9:51
+infrastructure and the resource
+9:53
+management is key. So yeah, it's it's
+9:56
+significant portion of those compute
+9:57
+resources we have. It's doubledigit
+10:00
+percentage growth annually. So it's grow
+10:02
+growing quite quite heavily. And what
+10:04
+we're trying to do is countering the
+10:06
+half of the growth
+10:09
+with optimization measures. So demand
+10:11
+reduction and efficiency by by software
+10:14
+to make making sure we we can counter
+10:16
+this. And half of this yeah we we we
+10:18
+have to work with with hardware teams to
+10:19
+to to get this fulfilled. And yeah, we
+10:21
+have quite advanced uh programming
+10:25
+linear programming solvers that help
+10:27
+optimize place the computer sources and
+10:29
+balance and we also matching resource
+10:31
+class with a with a use case for cost
+10:33
+efficiency. Yeah. So as as you saw the
+10:35
+patch is waiting on interactive. So it's
+10:38
+all it's all it's it's all here balanced
+10:40
+and yeah as a SE team we need to and
+10:43
+also with working with dev teams we need
+10:45
+to be very aware of the hardware
+10:47
+specifics and the resource specifics
+10:49
+which is not always true for for for
+10:51
+most uh teams because yeah because of
+10:53
+the size
+10:54
+[Music]
+10:57
+okay let's look at yeah I call it the
+10:59
+zoom so multiple dimensions where where
+11:01
+where our stack operates so um yeah I I
+11:06
+have here like for example So first
+11:08
+thing is like different workloads. Uh as
+11:09
+we could see we have um interactive
+11:12
+batch automated workflows and there's
+11:15
+also like I think emergency and some
+11:17
+some some specific ones. But yeah that's
+11:20
+that's where where we are operating.
+11:23
+Next thing is different CPU
+11:24
+architectures. So yeah different uh
+11:28
+architectures and different different
+11:29
+purposes. So yeah,
+11:32
+x86, ARM and uh GPU and uh TPUs.
+11:38
+We also have um different compile
+11:40
+actions as mentioned. So different
+11:42
+actions. So it's like compiling,
+11:44
+linking, testing and uh emulating some
+11:46
+some some uh systems. So that's also
+11:49
+also part part of the things which we're
+11:50
+looking at. And next thing is yeah the
+11:53
+ecosystems where for which we we're
+11:55
+building our our systems. So yeah, yeah,
+11:59
+we will for Linux, for Apple, and yeah,
+12:01
+for Android. Uh the test we run mostly
+12:03
+on emulators, but there's
+12:06
+additional uh hardware lab that runs
+12:09
+independent uh tests that were not
+12:11
+involved.
+12:13
+Okay. Uh let's look at the part
+12:16
+principle. So probably yeah, some of you
+12:18
+know the 8020 rule that that defines
+12:21
+some of the um
+12:24
+things in the
+12:27
+So yeah just just to read yeah 5%
+12:30
+generate 30% of the test workload. So
+12:32
+it's also quite quite uh quite
+12:34
+challenging uh and it's quite quite
+12:35
+specific for for for our systems. Um and
+12:39
+yeah
+12:40
+because of this is like yeah usage is
+12:42
+unequal across teams and product areas.
+12:43
+Some use more some use less and have
+12:46
+different workloads. Yeah. And then the
+12:48
+builds differ also a lot. Some take
+12:51
+seconds and the longest take hours
+12:54
+and Yeah.
+12:58
+As we could see from the graphs also the
+13:00
+80% of traffic during the working hours
+13:01
+interactive and the 20% at batch and
+13:03
+during night it reverses
+13:06
+and yeah resource split 50% 50/50 more
+13:09
+or less between running tests and
+13:11
+compiling binaries and what's also like
+13:13
+interesting is that GPUs TPUs um are
+13:16
+fraction of the total capacity but they
+13:18
+consume large portion of the total
+13:20
+hardware budget. So yeah, that's
+13:25
+okay. Let's look at the multiple caching
+13:27
+layers. That's that's important part
+13:28
+like a critical part of of our system.
+13:30
+Um first of all, we have like a local
+13:33
+blaze blaze cache. So it it's the local
+13:36
+builds on on on on the machine build
+13:38
+hoster. If you're coding and coding in
+13:42
+like a build edit build loop uh so
+13:45
+you're writing a program and just
+13:47
+improving this and so on then mostly
+13:50
+your build will benefit from from the
+13:51
+local ones.
+13:53
+Then remote action cache so
+13:57
+caches result action across um builds on
+13:59
+different machines. It means if you're
+14:02
+building some big part of code with
+14:05
+linking libraries and someone else is
+14:06
+doing similar thing or using similar
+14:08
+part of code then it it's reused and
+14:10
+doesn't have to be built. So it's also
+14:12
+uh helping us save a lot of uh compute
+14:15
+resources by by this
+14:18
+and the most like advanced stuff is the
+14:20
+build build graph analysis and
+14:21
+evaluation. This is something uh when we
+14:24
+were were in the analysis phase and
+14:27
+preparing the the build graph to to
+14:28
+split the build into actions that's also
+14:31
+huge part of compute which we're also
+14:33
+able to to cach and and reuse between
+14:35
+the builds.
+14:38
+Okay. Uh let's look at output storage
+14:40
+layer. So the the artifacts um caching.
+14:43
+So yeah uh we have multiple pabytes per
+14:46
+day. So we have row output which is like
+14:49
+quite huge. And then first we filter for
+14:51
+essential build outputs. We're building
+14:54
+some some builds are being built just to
+14:56
+test uh and to see the log. So then we
+14:58
+can filter them out and then 1/4 is is
+15:00
+going away.
+15:03
+Then we're using uh rabin carb the
+15:06
+duplication which is like a quite
+15:08
+advanced algorithm um for duplicating
+15:11
+the outputs and this is not only file
+15:14
+duplication but also subfile duplication
+15:16
+chunk based. So it can even yeah
+15:19
+duplicate the parts of statically linked
+15:21
+binaries in in in the file. So it's also
+15:24
+yeah it's it's it's giving like a just
+15:27
+leaving just 20% out of the of the
+15:28
+output and then at the end we have like
+15:30
+loseless compression which is like
+15:32
+cutting more more more more or less half
+15:34
+of um of what needs to be stored. So
+15:37
+that's yeah quite complex algorithms but
+15:39
+all this adding up to the efficiency.
+15:43
+Okay. So let's look at a bit of history
+15:45
+of how the builds were were were um were
+15:48
+run in um uh in our build stack.
+15:53
+So yeah, how to make it concurrent
+15:54
+builds uh efficient uh at that given
+15:56
+point in time. So we were starting the
+15:59
+the the journey um engineers were
+16:03
+running the builds on their desktops uh
+16:05
+or workstations which was not super
+16:08
+super efficient and quite limited to the
+16:10
+hardware uh efficiency of them. So just
+16:13
+few CPUs, doz of RAM. Then we um we
+16:17
+moved then we moved to um dedicated VMs
+16:22
+u which were yeah called cloud tops um
+16:26
+which enabled us to have dozens of CPUs
+16:28
+and hundreds of gig of RAM but they were
+16:30
+like online most of the time so not
+16:31
+super efficient and dedicated and the
+16:35
+latest evolution is u yeah running the
+16:38
+builds directly in production so they
+16:41
+run close to the to to to where
+16:43
+everything is uh being built and this
+16:45
+gives us the
+16:47
+best um efficiency
+16:50
+uh when we only use resources when when
+16:52
+we need them. There's nothing there not
+16:53
+nothing needs to be run all all the
+16:54
+time. Yeah. And it's scaled so well due
+16:57
+to the big amount of users that that
+16:59
+that we have all the engineers at
+17:02
+Google.
+17:04
+Okay, let's look at the more like a back
+17:06
+end optimization. So how it was changing
+17:09
+uh over time uh based on from the system
+17:11
+perspective.
+17:13
+So first we started with uh isolated
+17:16
+individual isolated builds. So it was
+17:18
+was quite simple and not super
+17:21
+standardized and duplicated and with
+17:23
+huge work workflows which was like not
+17:25
+super efficient. Then we moved to shared
+17:28
+compile actions. So we managed to
+17:30
+offload quite amount of workload
+17:33
+optimized for CPU and uh easy easy
+17:37
+sharing.
+17:39
+Then we moved moved uh evolved to shared
+17:41
+outputs. So that's that's where all the
+17:43
+outputs were were shared and um
+17:47
+and cached. So offload link and test and
+17:50
+then CPU store optimization. And the key
+17:53
+thing was here to implement the VFS uh
+17:55
+for efficiency. But still network is
+17:58
+quite important here to be able to um
+18:02
+access the data between uh users and and
+18:05
+then the systems
+18:08
+and the latest evolution is the shared
+18:10
+build graph. So the the
+18:13
+build analyzes is is being shared
+18:15
+between between the builds themselves
+18:16
+and it's helping us uh elate the
+18:19
+bottleneck uh with the place to
+18:25
+okay let's look at the build stack from
+18:27
+SR point of view. Yeah. So that's I
+18:29
+think quite quite quite interesting from
+18:31
+our side. So the team is yeah as
+18:34
+mentioned build and test system. So
+18:36
+Bessory which is a has also a cool name.
+18:41
+Uh the important thing is like yeah
+18:42
+we're really deep into fostering
+18:44
+collaboration with the dev dev teams. So
+18:46
+we're able to have really yeah great
+18:49
+insights and and help uh from both
+18:51
+sides. So trying to benefit from this
+18:53
+and the special thing what we have other
+18:56
+than other compared teams is uh due to
+18:59
+the scale we have uh much more resource
+19:02
+related work than other SR teams and
+19:04
+yeah there are a few blur lines between
+19:06
+the faces where we're like uh
+19:09
+collaborating close on on on multiple
+19:11
+projects and and and work.
+19:15
+Okay, let's look at the work setup. So
+19:17
+the the teams are spread between two
+19:19
+locations, New York and Munich. Um, we
+19:22
+have, yeah, we're making sure that the
+19:24
+system runs 24/7. So, we have 12 hour
+19:26
+shifts in New York and Munich. So, 6
+19:28
+a.m., 6 p.m. Munich, noon, midnight in
+19:31
+New York. And due to the 6 hour um
+19:37
+uh time zone shift, it it all adds up
+19:40
+together. Very standardized uh uncle
+19:43
+handover and incident management. Um,
+19:45
+yeah.
+19:47
+And yeah, we're when we're planning our
+19:49
+work, we're also working on projects. So
+19:51
+we're doing this on a quarterly basis.
+19:53
+Uh we plan 50% of our time work for
+19:55
+project and the rest is for on call duty
+19:58
+and interrupts and so on. And yeah,
+20:00
+we're planning a road map together with
+20:02
+the dev partners uh by yearly and yeah
+20:05
+planning the OKRs based on the road map
+20:07
+uh quarterly.
+20:10
+Okay. Yeah. quite important things uh we
+20:15
+make we make sure we simplify
+20:16
+standardize and test our systems. So
+20:20
+monitoring and play playbooks are yeah
+20:22
+super standardized and
+20:25
+enabling easy on boarding um putting we
+20:30
+put a lot of effort on their tests so
+20:31
+disaster resilience testing uh we have
+20:34
+al tests scheduled in in coming months
+20:37
+uh and yeah it's quite important to know
+20:38
+the stack and in order to on board
+20:41
+easily standardization procedures are
+20:43
+are key for us okay
+20:47
+let's look at the SLOs's
+20:48
+So
+20:50
+um it's not trivial in you know in in
+20:53
+our system to to define it. So we need
+20:56
+to there's
+20:58
+as we look there there's variety of
+20:59
+builds some take seconds some take take
+21:02
+hours. So we need to define how we want
+21:04
+to support them and the availability
+21:06
+management is tricky. So it's not always
+21:08
+easy to tell if the build should finish
+21:11
+in 10 seconds in 20 or in 20 minutes or
+21:13
+or 30. So that's that's really
+21:17
+requires a lot of engineering and so on
+21:19
+to to find
+21:21
+the numbers to to for supported.
+21:25
+So it's not trivial also to distinguish
+21:27
+between user and system errors due to
+21:29
+the builds being yeah written by
+21:31
+engineers and then sometimes have some
+21:34
+errors or or using too many resources
+21:37
+and also the load shapes are also not
+21:39
+always matching so they don't feed the
+21:40
+systems or take too long and then don't
+21:42
+match always the expectations.
+21:46
+Okay. Yeah.
+21:48
+Once again to emphasize uh how to manage
+21:51
+this massive build stack with with with
+21:53
+such a big scale. It's like a
+21:55
+standardization for the win. Um the
+21:57
+convergence is critical for us where
+21:59
+we're using standardized architectures.
+22:02
+Uh we've standardized naming standards
+22:04
+and use best practices.
+22:07
+We're trying to understand the limits of
+22:09
+the stack so we know what what what what
+22:10
+can be run there and then what what
+22:12
+shouldn't run there. Yeah, the the
+22:15
+systems that's made up developed by our
+22:17
+dev partners are super reliable and and
+22:20
+we can we can really work well well with
+22:22
+them. And yeah, the build tag is tuned
+22:25
+to the ecosystem uh where which it
+22:28
+serves which is also like yeah important
+22:30
+to to make sure it's uh it's matching
+22:32
+the the the use case. Okay, with yeah
+22:36
+with all this effort and great
+22:39
+engineering there's always some
+22:41
+something that that that always goes
+22:43
+according to the plan. So let's let's
+22:45
+look at uh what's what's usually or
+22:47
+what's sometimes causing the the
+22:49
+problems or or where we need to really
+22:51
+take care to avoid avoid problems.
+22:55
+So cash regression is one of the
+22:57
+problems that that that might that uh
+22:59
+might might hit us might might happen.
+23:02
+Uh so we're relying on a 98 to 99% uh
+23:05
+cache heat rate which is enabling us to
+23:07
+efficiently use the the stack and all
+23:09
+the resources and enabling us to scale
+23:11
+so high. But um
+23:15
+it's like a blessing and a curse since
+23:17
+when the cachy rate goes down below 97%.
+23:21
+Then we're getting we might encounter
+23:24
+performance problems. So if there's some
+23:26
+regression or some problems with a with
+23:27
+the cache mechanism or or with the
+23:29
+hardware that supports it or with
+23:32
+systems then we need to really
+23:35
+take care and then address it quickly
+23:37
+not to have any you know big outages.
+23:41
+Okay, next thing is the build
+23:43
+corruption.
+23:45
+So
+23:47
+there may happen some scenarios where
+23:51
+caching gets um
+23:55
+impacted and
+23:59
+there are
+24:01
+faulty or corrupted
+24:03
+uh
+24:06
+cache elements uh linked into the
+24:08
+builds. So that's quite tricky to to
+24:12
+catch because it's not always shows up
+24:14
+in every test scenario. So yeah, this is
+24:17
+quite important to make sure um that
+24:22
+we're able to quickly wipe the cache and
+24:24
+react fast in such situation. Yeah. So
+24:26
+stale cache is really big big
+24:29
+problem and and due to the scale it may
+24:31
+also affect multiple multiple builds and
+24:33
+and and users.
+24:36
+Okay. Dependency services. So we have
+24:38
+lots of great engineered services which
+24:41
+we rely on uh like yeah Borg spanner big
+24:43
+table colos network and so on and we're
+24:46
+running but they're not under our
+24:48
+control. So we we try to implement some
+24:51
+caching logic and some asynchronous
+24:53
+calls to mitigate the impact. But in the
+24:55
+end sometimes we just have to define
+24:59
+uh dependent incident and wait for the
+25:02
+for the for the teams to resolve uh the
+25:05
+the challenges that we have with uh with
+25:07
+with other services. Yeah.
+25:12
+Okay. Let's look at circular dependency.
+25:15
+So it's a quite interesting problem.
+25:18
+It's like a chicken and egg problem. Uh
+25:20
+so build stack depends on a service and
+25:22
+the service fails and needs a new build
+25:24
+but since the build stack is needs the
+25:26
+service it cannot run the build for the
+25:29
+for the service. Yeah. So it's like a
+25:32
+it's like chicken and egg problem where
+25:34
+we have some special procedures manual
+25:37
+to to deliver uh bills in in such uh
+25:41
+border case scenarios. Yeah. But it's
+25:42
+quite interesting to to take into
+25:45
+account because yeah before it happens
+25:47
+for the first time you're not always
+25:48
+taking this into into account.
+25:52
+Okay. Yeah. faulty build storm. It's
+25:55
+it's something that that yeah it's
+25:58
+multiple builds or some automation
+26:00
+sending multiple builds to our build
+26:01
+stack which under special conditions are
+26:04
+either resource hungry or
+26:07
+do something really border case to our
+26:10
+system and can overload system
+26:11
+bottlenecks. So it's also we have some
+26:14
+automatic measures to to counter this
+26:16
+and and and and to and and and to um
+26:21
+to resolve the situation.
+26:25
+Okay. Um let's look at the closing
+26:28
+thoughts. So just to just just just to
+26:31
+finalize the the the talk. Um, yeah, if
+26:34
+if you're interested in in running like
+26:36
+a build stack like like we do, there's
+26:38
+like open-source uh version of of of
+26:41
+Blaze which is called Basil. So there's
+26:43
+like a website and it's like a huge uh
+26:47
+ecosystem um with external partners who
+26:51
+who are offering consult and and help in
+26:53
+in in building this. Uh yeah, there's
+26:55
+also interesting blog on on on the best
+26:57
+practices how to how to use it.
+27:00
+And then let's go to final remarks. Uh
+27:02
+yeah just to repeat myself the systems
+27:05
+are incredible with like amazing scale
+27:08
+and going back to the beginning um we
+27:10
+were the topic was bitter and sweet. So
+27:12
+let me just circle back to to this um we
+27:16
+have bitter and sweet elements. So yeah
+27:18
+the bitter thing is yeah it's it's a
+27:20
+shared system. So make sure you satisfy
+27:23
+all the all the different workloads and
+27:24
+and customers so that the system can can
+27:27
+can be used efficiently.
+27:29
+uh resource me management is is is quite
+27:33
+important but it's also like yeah quite
+27:34
+challenging. The system is quite complex
+27:37
+but yeah it's it's not overeng
+27:38
+engineered but it's just complex because
+27:40
+of the of the scale and and and the all
+27:42
+the optimizations and the strategy of
+27:45
+the commons means like okay we want to
+27:47
+have use it like a efficiently our
+27:50
+systems but each single engineer wants
+27:52
+to have their builds run as fast and as
+27:54
+frequent as possible. So it's not always
+27:56
+easy to to make it work to together and
+27:59
+it it needs additional efforts from our
+28:01
+side and the sweet thing is like scale.
+28:02
+It's it's it's serving a lot of builds
+28:05
+and engineers caching caching ratios is
+28:09
+is huge which is like super efficient.
+28:11
+We're able to use a lot of lot of the
+28:13
+builds and yeah it's helping with the
+28:15
+collaboration across the whole all um
+28:20
+Google engineering teams. Um yeah it's
+28:22
+cost efficient. Uh okay it's it's it's
+28:25
+huge but it's cost efficient at the at
+28:26
+the high scale we're we're running this
+28:28
+and
+28:30
+yeah it's central leverage point for us.
+28:32
+So we have we have some some uh uh
+28:37
+standardization or or or or some
+28:40
+regulations we need to we need to push
+28:43
+on the central level. That's where we do
+28:45
+it on the on on the on on the build
+28:46
+build stack level.
+28:50
+Okay. And that's it. Um, thank you for
+28:54
+for listening. Uh, and yeah, um, I'm
+28:58
+open for questions. Uh, just like yeah,
+29:00
+let's let's we have still 15 minutes
+29:01
+time. So, we happy to respond to
+29:03
+questions and afterwards feel free to
+29:05
+reach out to me and uh, I also have
+29:07
+Mihal for from the from the dev dev team
+29:09
+here from Google. So, he's also able to
+29:11
+help with some complex questions,
+29:13
+probably even more complex than than I
+29:14
+don't because he's he's the expert here.
+29:17
+Thank you.
+

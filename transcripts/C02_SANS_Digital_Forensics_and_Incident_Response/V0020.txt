@@ -1,0 +1,589 @@
+0:00
+Uh we're going to be starting with um um a talk about uh telemetry and I'm going
+0:06
+to be introduced to our next speaker IO. Please come forward.
+0:21
+He has like long experience in analyzing telemetry and and doing different types
+0:26
+of sock and then he's working for the instant response team the detection response team. Uh I was I was I was
+0:33
+talking to him yesterday and we were having this very interesting conversation because I there was something I'm wondering you are 26 right
+0:39
+now right which is very impressive right for speaking at this age speaking at the conference like like this one and I was
+0:46
+wondering I I've always been wondering is like how do you actually
+0:51
+understand technology uh when you haven't gone through I mean I've been leaving the Unixes and all the
+0:58
+beginning of of technology so I can actually understand things and I've been always wondering how if you're a younger
+1:05
+person how do you do that and I amazed me yesterday with one of his hobbies which actually touches to the topic so
+1:12
+can you share uh this uh amazing uh hobby of yours yeah sure so like uh I like collecting
+1:18
+like a vintage technology from like the ' 90s early 2000s think like Panasonic
+1:25
+AGC 500 it's a CRT computer well it's a CRT monitor specifically plate that has
+1:32
+uh a handle at the top. You can put a VHS tape to the side and it's got RGB
+1:37
+cables behind it as well. So like if you got like a Sega Sega Mega Drive, you can play like Sonic and stuff like with like
+1:43
+really old and vintage grainy uh visuals. And another thing that I own is
+1:48
+like this uh Casio wrist wristwatch that was released in the '9s, I think. And
+1:54
+it's got like a camera at the front of it where like if you point it at something, it takes a photo. It's a
+1:59
+really grady photo. Uh, but I just thought it was the coolest thing in the world, so I bought it. But what that was in the 90s. Wow,
+2:06
+that's that's impressive. Okay, so well, basically um, as I say,
+2:12
+the the the the curiosity and the interest for things, how things work in the backstage and why we are here. I
+2:19
+think that's one of the most valuable things we have in our community. Right. So I thank you very much for being here
+2:26
+today. The floor is yours. Thank you. Thank you. Hello everyone. Um
+2:33
+get started. So my talk is on Mac OS telemetry
+2:38
+u versus edr telemetry. Think like center of the world, rapid 7, crowd strike comparing which is better. U the
+2:46
+Mac OS telemetry I'll be going through with you today is uh the unified logs. Uh who am I? Um I'm a security engineer
+2:53
+as uh Jeff said. And before then I worked as a detection response analyst at MDR in rapid 7 doing malware analysis
+3:00
+IR and alert triage. So the agenda of today's talk we're
+3:05
+going to be talking about what are unified logs answering some investigative questions with those logs
+3:10
+talking about private data logging log retention and comparing the unified logs versus edr telemetry and we'll go
+3:16
+through takeaways at the end of the talk. So what are the unified logs? They're basically Apple's systemwide logging
+3:22
+framework that pretty much just captures everything imaginable on an Apple device. And as you can see there, it's
+3:28
+on multiple different Apple platforms from iOS, Mac OS, tvOS, and one of the
+3:33
+speakers did a talk on like home devices. Uh Apple has their own home hardware as well that does uni that
+3:40
+contains unified logging as well. And basically, it's just a centralized logging platform that contains uh
+3:46
+anything you could possibly think about like any processes, it's there. Uh this talk will primarily just be focusing on
+3:52
+the unified logs on Mac OS rather than unified logs on iOS which is something that's uh that already exists.
+4:00
+So where are these logs stored? Stored in multiple different uh um locations.
+4:05
+The first is on disk at these various uh different uh um locations here as you
+4:11
+can see. And the way main way of exporting these files is via a log archive that you can see here. And uh
+4:18
+that basically is just a compressed version of all the logs that exist on the host. Um and you can imagine it's
+4:24
+quite a quite voluminous and quite large. Another location where this exists is in memory as well. Pretty much
+4:31
+just shared ring buff ring buffers on a black host. And it's important to note
+4:37
+that like uh since um RAM and memory on a host is quite volatile, the log
+4:43
+retention of logs that are contained in memory are going to be very like very low and might even be like might even be
+4:51
+be like maximum a few minutes, a few hours or a few days. So how do we access these logs? Two
+4:57
+primary methods of accessing these logs. The first one is via log stream and that basically streams all the events or all
+5:04
+the processes that's how that are happening on your machine. Let's say you wanted to uh focus on processes
+5:11
+associated with the window manager like uh when you grab your window back and see what that's doing. You can literally
+5:17
+just do that using log stream and you can see everything that's being logged to the computer. Another way to access
+5:23
+this is via log show and for forensic analysts we usually like type subs and
+5:29
+converting our local type subs to UTC and uh thankfully this command line tool provides that. It's also important to
+5:36
+note that this tool exists pretty much out of the box. You don't need to install anything. You don't need to download anything. It's it comes
+5:42
+prepackaged with the Mac OS operating system. And let's talk about an example of what
+5:48
+these logs look like. I've broken down the this example log um that comes from
+5:54
+the Windows server and the Windows server is basically the window of your application that you're looking at and
+6:00
+as you can see here you can see the time step um log level in case in this case it's air process ID so you can filter on
+6:07
+that too and the name process the sender could be which is pretty much the library that this alpha process is using
+6:15
+uh the the uh subsystem which is also related to the library but it specifies
+6:20
+more specifically what the library is rather than what the sender is. There's also a category. This could be like a
+6:26
+function or class within uh within this library core animation that the log line
+6:32
+is calling pretty much. And then finally, there's a develop message just uh showing you what was discussed and
+6:38
+what was uh entailed in this log. And it's just that the timer was delayed. Uh if in the case you want to filter on
+6:45
+these attributes that I showed in the previous slide, you can literally do that using what's called log predicates.
+6:50
+Uh log predicates allow you to like filter on things like process ID, process, image uh image path. So let's
+6:57
+say you believe a piece of malware exists within the temp directory or user download directory, you can filter on
+7:03
+that path specifically and like get information as to like what what kind of
+7:08
+uh logs you can get from that specific path. If you know malware exists there, you can also filter by library. In case
+7:14
+you have a malicious uh library library that exists somewhere on the host, you
+7:19
+can filter by that too. And also the event message, which I'm going to show you guys what that looks like when you
+7:25
+do investigations. So an example of how you can use log predicates. I have the predicate
+7:31
+provided to you here. And basically I'm just filtering on the subsystem uh Apple com uh login window and I'm filtering by
+7:40
+uh auto launches auto launch IOS and as you can see here we can see two launch IOs on my host which is just a Dropbox
+7:46
+app and the Dropbox dash app. I literally just did this using the log show command that's can be seen here.
+7:52
+And you can imagine if you have uh a case involving malware persistence and you want to know where that persistence
+7:59
+mechanism is located on the host you could use it. You can literally just use this uh command line here to see where
+8:05
+that persistence is located or what even persistent items exist on the machine.
+8:10
+Next slide. So let's look at exporting these logs. The first primary way of
+8:16
+exporting these logs is via just log collect. Uh you're going to notice a common theme of pattern here and that's
+8:22
+that Apple pretty much provides you with a lot of uh the command line utilities for accessing these logs and uh
+8:29
+manipulating them. Well, um filtering by filtering freedom specifically. And as
+8:35
+you can see here, um when you run log collect, it's going to write out to a log archive, which is just Apple's
+8:40
+proprietary um compression format for host holding these logs. You can also provide a start
+8:46
+date, end date, or last, which is basically like last minute, last hour,
+8:51
+last day. You can also provide a time uh time zone as well. You're more than likely going to want to convert that to UTC. And you can also use a predicate to
+9:01
+uh collect all the logs on like airdrop for example. You don't need to use just airdrop. This is just an example. You
+9:07
+could pretty much collect just the logs on like whatever process you want on the system. Other things that are worth
+9:13
+discussing is um you can also choose to output the contents of log shell a log
+9:19
+stream to a file if you want to export it that way. That way you can uh add some styling to it like JSON, NDJSON or
+9:25
+CIS log styling and all of that is pretty useful for investigations. So let's compare the difference between
+9:32
+log stream and log show because this is really important. The fundamental difference between log stream and log
+9:37
+show is that when you run log stream you're pro you're just going to get the things you're going to get the things
+9:43
+that are in memory and the things that are on disk. And as you can see here, the things that aren't persisted are the
+9:48
+debug, bug, and info logs because those are primarily uh living within memory.
+9:54
+Everything below that is on disk as well. Like it's only persisted up to a certain storage limit. And luckily,
+10:01
+Apple allows us to uh modify what is logged on the host. Uh but it's also
+10:07
+important to keep in mind that depending on the depending on how how high of a logging level you go um performance on
+10:14
+your host is going to be denigrated slowly and the amount of logs you retain will also reduce as well and I'll
+10:20
+explain that in the f further slide. These are some common EDR tools that
+10:27
+collect the uh unified logs by default. Yeah, you know some of them and uh a
+10:33
+really good one is velociraptor. That's uh one that's been talked about a lot today. Uh that provides uh unified log
+10:39
+parsing for you. But with that, you do need to provide a predicate before you can even uh parse those logs because
+10:46
+unified logs are very much a fire hose where like if you try and collect everything, it's going to be too much of
+10:53
+far too intendable to analyze. So let's answer a few investigative
+10:58
+questions. In this situation, a user invest in the enabled screen sharing, which is the Mac OS uh remote access uh
+11:05
+feature that comes built in with the operating system, similar to like any desk or team viewer, but think just it's
+11:11
+on Mac. Uh they enabled this uh and they and they accessed a host from uh the
+11:18
+internal network and you can see by using this predicate here in particular where we focus on the screen sharing D
+11:23
+process or the screen sharing agent process. I just check for succeeded messages. We can see that the uh analyst
+11:30
+was able to log in from this remote IP here and it was indeed successful.
+11:36
+Another investigative questions we could investigative question we could answer is checking for proof force attempts and
+11:42
+to see if any of them were successful. We can literally just do that by focusing on the the SSH related uh event
+11:48
+messages and checking if our authentication was performed and we can see that uh authentication was performed at least five times from this uh
+11:56
+internal IP address and those were successful. Another thing uh since we're discussing
+12:03
+how we're comparing unified logs to EDR telemetry, something that EDR telemetry will never never tell you that EDR logs
+12:10
+will tell you. In this case, we have a demon that uh controls privileges on the
+12:17
+host. And if you want to see what was provided to that uh privileges application, what the user might have
+12:23
+said and what the user what reasons user gave to uh get access to escalate their
+12:29
+privileges. You can see it here and I'll show you another example uh where you can see that any desk that's being run
+12:36
+and uh once again the predicate is provided here on the bottom of the screen.
+12:42
+So another thing that EDR telemetry won't tell you is uh what permissions the application has and when they were
+12:49
+enabled, when they were set and what type of permissions are being used in this situation, we can see that uh uh
+12:55
+the Edesk application uh attempted to ask access the screen share capture
+13:01
+permission uh via TCC which is pretty much just Apple's consent uh consent and
+13:06
+transparency platform to uh give whatever application you have on your host access to like certain features.
+13:12
+Whether that be like location access, screen sharing, uh logging in, things like that. And we can even see whether
+13:18
+or not the whether whether or not the screen sharing capture uh request was successful. And we can see it on this
+13:24
+slide here that it provided a value of two, which means that it was it was allowed and went true. We can even see
+13:30
+the results here below. So let's talk about private data logging. Private data logging is pretty
+13:37
+much Apple's way of uh enabling privacy on the host. And um it does that by
+13:42
+pretty much redacting values. Think like usernames, paths, host names, URLs, so on so forth. And as opposed to just uh
+13:49
+showing those things, Apple will just uh redact them completely. Just providing the private as opposed to the actual
+13:56
+name of the user who uh did the action. And uh by turning off by turning on
+14:02
+private data logging, you pretty much uh remove the red the reduction string and it's no longer uh enabled. But keep in
+14:09
+mind that when you do enable private data logging, everything prior to private data logging being enabled um
+14:15
+will will still be redacted and everything after private log data logging being enabled will now be
+14:21
+redacted. Um next. So how do we enable private data
+14:26
+logging? The first way we do it is that we need a profile and we need to add the following uh dictionary to the profile
+14:32
+as well. Then we need to add a mobile mobile config um extension to it and we
+14:39
+double click it, load it into the device management profile um enable it, install it and then that
+14:47
+private data logging is enabled and we can see the exact user who accessed this host at that time. Other things we can
+14:54
+uh determine now that private data logging is enabled is that we can look at a malware infection uh malware
+15:01
+infection example and in this case we have uh a suspicious P list file that was installed on on the the 20th of
+15:09
+August at around 9:06 and we determined this by using by using the launch control load predicate and
+15:16
+that pretty much just tells us uh tells us what what launch items were loaded into the system at like anytime on the
+15:24
+host and um we can see this suspicious looking P list file located in the launch Stevens directory. So we want to
+15:31
+investigate this a bit more. How about we pivot on the P list file. I'm piv pivoting on the P file. We see a few
+15:37
+things. We see uh we see mention of the Pis file being copied from this temp
+15:44
+starter directory to the launch demons directory. Then following that we see some permissions being added to it and
+15:50
+then finally we see it being loaded into the system. Hence the uh persistence mechanism being executed at this at the
+15:57
+time of uh this log being being uh logged. Other important things to point out as well is that in the unified logs
+16:04
+we can actually see the contents of that P list um in the logs and we can see
+16:09
+what exactly what it's trying to do. As we can see here, we're we can see that the uh the launch statement is executing
+16:16
+a file named agent lo located under the users directory using midm bash. And we
+16:22
+can even see the exact the exact time the uh background task d process
+16:27
+actually loaded this uh pless file into the operating system and fully executed
+16:33
+it um allowing persistence to be established on the host.
+16:38
+So what else can we find? that OSHA script did because we saw Oshcript being
+16:43
+executed on this host and we can see that um by uh here that is the Oshcript
+16:51
+process and for people who don't know what Oshcript is on a Mac OS operating system think PowerShell or Windows
+16:57
+pretty much just allows you to run arbitrary commands on the host and execute them whenever you feel like it.
+17:02
+So let's pivot on that process and see what we can find. the fir when we pivot that process we want to look at like
+17:09
+what was the first thing that our script ran we can do a bit of formatting here as well while we're at it we convert it
+17:14
+to JSON uh we can also we can also um look for how ocean script activity is
+17:22
+being logged by the unified logs and that's pretty much just with this clone for compatibility u function here we can also access the
+17:29
+event message and do some do some cleaning up and after doing that we can see the whole script that was executed
+17:35
+And the first script that was executed here was pretty much just a script looking for where the malware is stored on the host.
+17:42
+Other things we can identify is um what kind of commands are executed and what were the output outputs of those
+17:47
+commands. When you have EDR telemetry and it runs and you can observe a command being executed, you typically
+17:54
+don't see what was the out what the output of that command is. With the unified logs, you can see the command being executed and you can see the
+18:00
+output. And in the case of uh um the command is above this uh slide here but
+18:05
+you can see the output here of uh some profiling commands. You can see the software version. You see the hardware version as well. And uh this is another
+18:13
+good example of uh how unified logs can show us things that EDR telemetry couldn't otherwise show us. Other things
+18:20
+as well, we can determine what kind of malware this was and we can determine that it was a crypto stealer because we can see some Binance related uh files is
+18:28
+trying to access along with some config files and the keychain database as well.
+18:33
+Other things we can see in accessing Chrome, Chrome cookies, history, so on
+18:38
+so forth. Pretty much just more evidence showing that this malware was an info sealer using the unified logs.
+18:45
+Other things we can identify is evidence of excfiltration. And we can even see we
+18:50
+can even see the the command that was used along with the IP address and domain that it was it was sent over to
+18:58
+just focusing on just whatever uh osher script had ran once uh the malware once
+19:04
+the malware had executed. Um, and finally, in if in the case you want
+19:10
+to timeline all of the activity that you observed during your investigation, you can literally just do that using double
+19:16
+predicate commands and filter on the P list and the OS script activity and you pretty much get a full timeline of
+19:21
+everything the malware did. A few nuances to point out with private
+19:27
+data logging is that not everything is re is uh redacted. Even if you enable
+19:32
+it, Apple has some proprietary URLs in this case. And we can see the MS uh MDNS
+19:39
+responder um process which is pretty much just like uh Apple's way of making
+19:44
+DNS requests from the back machine to whatever domain exists. And we can see that some things are hidden by default.
+19:51
+Even though we have private data logging already enabled, we still can't see what's behind this domain. My theory as
+19:56
+to what this could be is that this is probably more than likely Apple's proprietary infrastructure that they
+20:02
+don't want anyone knowing about. Hence why even if you do enable private data logging, you still won't be able to see what that is. So not everything is
+20:08
+redacted by default. And also developers or malware developers in particular, if
+20:14
+uh they want to make their C2s unknown, even if you are using unified logs, they
+20:19
+can literally just add sensitive field to their code. And uh even if you do enable private data logging, you won't
+20:25
+be able to see what C2s were even communicated with. Other nuances as well is that you could
+20:32
+as opposed to enabling private data logging throughout your entire system, you could enable it for specific
+20:38
+processes or subsystems as well or even categories. A few other nuances worth uh mentioning.
+20:45
+I mentioned a few prior. Uh the first is that when you enable private data logging, everything prior to you
+20:51
+enabling that is uh still redacted and uh everything everything after private
+20:57
+data logging being enabled is is um is officially visible to you. But keep in
+21:03
+mind when you do decide to disable private data logging, it doesn't all of a sudden mean that that private data is
+21:08
+just lost for is gone forever. You very much do need to clear the logs to make sure all of that private information is
+21:14
+just deleted. And also it's important to note as well that leaving private data logging on also reduces the number of
+21:20
+logs are sure stored and retention shortens the retention period.
+21:27
+um risks that are associated with private data logging is that if an attacker knows that private data logging
+21:32
+is enabled in your environment or on the host system, they can literally just XL or grab any authentication tokens,
+21:41
+bearer tokens, cookies that exist on the host because since private data logging is enabled, all of that stuff that
+21:47
+you're doing on your machine, whether where you're making an API call or a request to a specific domain using a
+21:52
+bear token, guess what? that we exceed by Apple's logs and it is access and it
+21:58
+will be accessible to the attacker if they run this command. Other things is that they can they can see what
+22:03
+passwords you're entering because Apple is logging that along with API keys and tokens and unfortunately I've run this
+22:09
+multiple times on my machine and within the corporate network and no detections exist for mo any EDR products that I've
+22:16
+come across. Other things as well is that if an attacker decides to
+22:21
+exfiltrate a whole log archive and use it to scope out your environment to
+22:26
+understand what kind of hosts your their target their target host is connecting to, what kind of comm infrastructure it
+22:33
+communicates. They can just uh output the log archive, analyze it at their own time and uh profile your network. I
+22:40
+think get a good understanding of uh how it's laid out just by just by ex filling the entire log archive. I want to get no
+22:47
+detection exists for this. Another thing they could do is that if they run specific tools or malware on the on the
+22:55
+target machine, if they want to for investigators from analyzing the unified logs after the fact, they can just uh
+23:01
+run log erase all and uh you won't be able to get access to any of those logs, making the unified logs pretty useless
+23:08
+in this uh situation. Think of it as similar to uh when you run this command to delete all the Windows event locks.
+23:15
+Other things uh to keep in mind uh let's talk
+23:20
+about risk reduction here uh when enabling private data logging is the first thing you want to do is to ensure
+23:27
+that private data logging isn't enabled is disabled everywhere else in your environment and to regularly scan your
+23:33
+log pipelines if you are collecting these logs for any credentials or any secrets that you might otherwise not
+23:39
+want to be there. And also if uh if you do really want to enable private data logging, you need to make sure that like
+23:45
+you use a configuration file to just log only the things you want rather than log every single thing on the host. Other
+23:52
+things to keep in mind as well is that if you do decide to enable private data logging, make sure to uh run log erase
+23:57
+all after the collection to make sure to make sure no credentials are exposed and no credentials exist on the host after
+24:03
+the fact. So this is how you disable private data log just removing the profile and
+24:09
+running pseudo log erase all. Keep in mind you need to be really intentional with this because once you run log erase
+24:15
+all everything is pretty much gone. You won't be able to recover it. So let's talk about log retention. So
+24:21
+pretty much um let's say you're working an investigation where someone was using the screen share process like I showed
+24:27
+prior. Um, if you wanted to see like how long they were using that process for
+24:33
+and for what length of time, the unified logs kind of makes it a bit harder hard for for you because uh they're only
+24:39
+retained for a short period of time. And as you can see here, on average, this specific process is only retained for
+24:45
+seven days. And it's also important to note that seven days isn't a hard number. Seven days is very much
+24:50
+dependent on like how much activity is occurring on that host. uh what's going on on it if the logs are have been
+24:56
+erased or or if uh the logs have rolled over. So like seven days is more of an
+25:01
+approximate number rather than target. And an example of uh seeing what kind of
+25:09
+things get retained for how long. Once again we can see that most logs in this situation are retained for seven days on
+25:15
+average. Very few logs are retained for for 14 days and uh even less logs
+25:20
+retained for uh for uh 30 days. So you can imagine that unified logs are don't
+25:26
+you can imagine that unified logs don't really retain data for all that long and in the situation in situations where you
+25:32
+want to use it for incident response or threat hunting um you kind of only have like a few days to work with rather than
+25:38
+like a whole timeline of like weeks, months or years to work with.
+25:44
+So a few myths about log retention uh that I saw floating around the internet while I was doing this research was that
+25:51
+u someone was saying that uh a reboot wipes to unified logs. Uh this is not true. Um and this has never been seen to
+25:59
+be true. Another myth that I saw was that unified logs are stored for 30 days. As I showed you in the previous
+26:05
+slide, on average they usually are stored for seven days, not 30 days and very few logs are stored for 30 days. Um
+26:12
+you can't say you can't uh save info or debug logs. Um this is not true. You can
+26:18
+enable a log config to save these things uh directly to the host and you can set
+26:24
+your log retention period using log config. Um unfortunately with the unified logs there is no way of setting
+26:30
+a log retention period on the host. Like the log retention period is defined by Apple and it is updated by Apple. It's
+26:36
+nothing that you could really control. So let's compare edr. Let's compare EDR
+26:42
+telemetry with the unified logs. So a few places where the unified logs come on top is uh no API restrictions. When
+26:49
+you have an EDR tool, um unfortunately they are very behoving to how Apple what
+26:54
+APIs Apple will expose to companies and what APIs are available to developers to
+27:01
+create either endpoint telemetry tools. And uh the vast majority of APIs aren't
+27:07
+provided or aren't exposed by Apple. But a fortunate thing for the unified logs is that there is no log API restrictions
+27:14
+at all and it will literally log every single thing imaginable on the host while we telemetry it's uh on Mac in
+27:20
+particular it's been shown and been seen to miss things quite frequently especially current level actions in
+27:26
+particular also complete coverage as well um everything is logged nothing's
+27:31
+missed and uh you'll see everything uh imaginable also zero deployment overhead
+27:37
+uh once again unified logs are available AP like across all Apple products there is an alpha product that doesn't have it
+27:44
+and uh it comes pre-built uh into the operating system hence why it doesn't need any MDM configuration or full disk
+27:50
+access. So let's talk about a few places where unified logs come short. And the first
+27:56
+place is there's no built-in detection capabilities with unified logs. Since uh since there's such a fire hose and
+28:02
+there's so much data, it's kind of uh not impossible to make uh detections on it unless you are monitoring the unified
+28:08
+logs specifically and monitoring them for physique processes that you want to detect on. And it's also important to
+28:14
+note uh with the second point as well, there's no adequate documentation from Apple on how to analyze these logs. A
+28:21
+lot and Apple typically updates updates and changes their API documentation on
+28:27
+the unified logs. So if you have a way of detecting a specific tool that attack
+28:32
+an attacker uses uh using the unified logs, keep in mind that when you update to the next iOS or like a Mac OS
+28:39
+version, that detection may be gone uh because Apple could choose to change how the logs function while they're logging.
+28:46
+Um one week you can see a log logging an IP address and another week it's gone.
+28:52
+Uh, another thing to mention is that there's no easy ingestion method for these unifi logs because they are
+28:58
+incredibly ver verbose and require substantial filtering uh with predicates
+29:03
+uh before you can even put them into a seam. Uh so these are all things to keep in mind. Now let's go to the takeaways.
+29:10
+So we should use the unified logs as a collaborative uh um data resource uh to
+29:16
+establish ground truth on the host rather than uh looking at it as a full time log of uh of uh weeks or months or
+29:23
+years. And also when you're working in investigation, you acquire the unified logs, it's very important that you
+29:28
+export them as soon as possible to ensure that data is not the the the data you need is retained and doesn't roll
+29:35
+over or doesn't get uh deleted in any way. But it's also important to keep in mind that unified logs are a complete
+29:41
+audit trail as they redact PII by default which is like usernames, passwords, uh anything you can imagine
+29:48
+that you do on your host. All of that any any private information that you do that you provide to your Mac, all of
+29:53
+that is redacted by default. So it's not completely on a trail. And also if you're doing malware analysis on the on
+29:59
+the Mac, um enabling private data logging pretty much maximizes your findings as you can see as you as you
+30:05
+saw with my malware example. So, it's really good. It's really good for analyzing samples in general.
+30:12
+So, special thanks to all of these blogs because uh not a whole lot of uh places online have some really good uh back
+30:20
+forensics guidelines or um or documentation or even research on it, but like these blogs have been more than
+30:26
+helpful for this research. And finally, we're hiring in Poland. Uh
+30:32
+if anyone is from Poland, please reach out to me. So, uh, I feel free to chat.
+30:37
+Thank you.
+

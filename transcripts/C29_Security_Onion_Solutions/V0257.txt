@@ -1,0 +1,670 @@
+0:09
+hello my name is Matt Gracie and I'm an
+0:12
+engineer on the Professional Services
+0:13
+team at security onion Solutions in this
+0:16
+video we're going to demonstrate
+0:17
+ingesting logs from a PF sense or open
+0:20
+sense firewall into your security onion
+0:22
+deployment using an elastic
+0:24
+integration while earlier versions of
+0:27
+security onion included a parser that
+0:28
+could identify an ingest pfSense traffic
+0:31
+logs submitted via CIS log this newer
+0:33
+methodology allows ingestion of all the
+0:35
+logs produced by your firewall including
+0:37
+services like openvpn and
+0:40
+DHCP while this video is specific to
+0:43
+pfSense log traffic the same general
+0:45
+methodology will work for any elastic
+0:47
+integration that you would like to
+0:48
+enable and use to parse data in your
+0:50
+environment so whether you've got logs
+0:52
+coming from an on-prem Source like a
+0:54
+firewall or from a cloud service like
+0:56
+AWS or Azure you can use elastic
+0:59
+Integrations in conjunction with
+1:00
+security onion to put all of that
+1:02
+information in a single unified
+1:04
+interface and analyze it with the hunt
+1:06
+and dashboard tools for a current list
+1:08
+of supported Integrations check out our
+1:11
+documentation at security union.com
+1:14
+sdoc the first thing that we will do is
+1:16
+enable the elastic integration for
+1:18
+pfSense so that the agent installed on
+1:21
+our security onion Standalone server
+1:22
+will listen for incoming traffic from
+1:24
+our PF firewall then we will update the
+1:28
+host firewall configuration on our
+1:30
+security onion server in order to accept
+1:32
+that traffic finally we'll configure
+1:35
+pfSense to send the logs that we're
+1:37
+interested in on the custom Port that
+1:38
+we've configured and check and Hunt to
+1:40
+make sure that they're being properly
+1:42
+received let's get started as always We
+Setup
+1:46
+Begin by logging into the security onion
+1:48
+console or sock with the username and
+1:50
+password that we established during
+1:52
+installation this brings us to the
+1:54
+overview screen along the left hand side
+1:57
+of the web browser window you'll see
+1:58
+links to all the components onon that
+2:00
+make up Security on it for today's
+2:02
+exercise we're interested in elastic
+2:04
+Fleet and also in this configuration
+2:06
+menu under
+2:08
+Administration let's start with
+2:13
+Fleet elastic Fleet is a web console
+2:16
+that controls the configuration of
+2:17
+elastic agents that you've deployed in
+2:19
+your environment at the very least
+2:21
+you'll see entries here for your
+2:22
+security onion Standalone node as well
+2:25
+as one for the fleet server
+2:26
+functionality on that node if you have a
+2:28
+distributed deployment you'll see
+2:30
+entries here for all of the minion nodes
+2:32
+as well search nodes forward nodes
+2:34
+receiver nodes and so on each agent acts
+2:37
+as a log packager and shipper sending
+2:39
+data into the ingestion Pipeline and
+2:41
+security onion to be parsed in elastic
+2:43
+search and stored for later analysis and
+2:45
+retrieval if you're familiar with the
+2:47
+previous version of security onion it's
+2:49
+very similar to the purpose that file
+2:50
+beat and the other beats served in that
+2:55
+architecture each agent is assigned an
+2:57
+agent policy these policies are
+2:59
+essentially lists of Integrations or
+3:01
+directives of which logs to ingest and
+3:03
+what to do with them by default your
+3:06
+security on grid will have a few of
+3:07
+these already set up out of the box
+3:09
+including so grid nodes general which is
+3:12
+assigned to all of the nodes in your
+3:13
+grid by default accepting heavy and
+3:16
+Fleet nodes which have their own
+3:17
+policies as you can see here there's
+3:20
+also an endpoints initial policy which
+3:22
+is assigned to any endpoints outside of
+3:24
+your grid that you install elastic agent
+3:26
+on such as a Windows server or a Macos
+3:28
+laptop
+3:30
+what we're going to do today is add the
+3:32
+PF sense integration to Theo grid nodes
+3:34
+General policy which means that the
+3:36
+elastic agents running on our security
+3:38
+onion grid nodes will'll be able to
+3:40
+accept traffic sent via CIS log from a
+3:42
+pfSense firewall to do that we'll first
+3:45
+click on that
+3:46
+policy then add
+3:50
+integration and then search for PF sense
+3:52
+in the Box here at the
+3:56
+top when we find the pfSense integration
+3:58
+we can click on it to
+4:02
+continue this will bring up a screen
+4:04
+with some more information about the
+4:06
+integration as you can see it will
+4:08
+receive and parse logs from pfSense and
+4:10
+open sense firewalls including the basic
+4:12
+firewall logs Unbound DHCP openvpn and
+4:16
+so on there's some information here as
+4:19
+well on how to configure pfSense to send
+4:20
+the logs we'll walk through that process
+4:23
+shortly to add the integration we can
+4:25
+click on ADD pfss here in the upper
+4:27
+right
+4:28
+corner
+4:32
+and here we'll see some configuration
+4:33
+information about the
+4:35
+integration we can name the integration
+4:37
+whatever we like this is just the name
+4:39
+that will be used in the agent policy so
+4:41
+leaving it on the default will be fine
+4:43
+for syis log host we want to set that to
+4:45
+quad zero so that our security onion
+4:47
+nodes listen on all their management
+4:49
+interfaces for incoming
+4:54
+traffic and here we want to note that
+4:57
+the traffic will be expected on UDP port
+4:59
+99,1 that will be useful in the next
+5:02
+step when we set the host firewall on
+5:03
+the security onion node to accept the
+5:06
+traffic everything else looks good so
+5:08
+let's move down to the bottom and click
+5:10
+save and
+5:11
+continue now this change will update our
+5:14
+agents that are already running the
+5:15
+agent policy we'll click save and deploy
+5:17
+changes to accept that and
+5:21
+continue and here you see that the
+5:23
+pfSense integration has been added to
+5:25
+this agent policy so now anything in my
+5:28
+security onion grid that's using that
+5:30
+grid General agent policy should know
+5:33
+that UDP traffic on Port 901 needs to be
+5:35
+ingested as pfSense log traffic and
+5:38
+parched with this elastic integration
+5:40
+now let's set up the appropriate host
+5:42
+firewall rules as
+Configuration
+5:44
+well as with the other configuration
+5:46
+options in security onion 2.4 the host
+5:49
+firewall is now managed through the web
+5:51
+interface specifically we want to click
+5:53
+on the configuration option here
+5:55
+underneath Administration to access the
+5:57
+guey for setting system options
+6:02
+we'll also want to enable the advanced
+6:03
+options switch under options here just
+6:06
+to make sure that all the settings that
+6:07
+we need access to are
+6:10
+visible now all of the options that we
+6:12
+want are under firewall so let's click
+6:13
+the triangle here to open that up we're
+6:16
+setting a custom host and Port group so
+6:18
+we'll use the first ones in the list
+6:20
+custom host group zero and custom Port
+6:23
+group Zer if we had another integration
+6:25
+that was already using these we could
+6:26
+use group one or two or three and so on
+6:30
+for custom host group zero we're going
+6:32
+to set the IP address that will be
+6:33
+sending those pfSense logs to our
+6:35
+security onion server the inside
+6:37
+interface on the pfSense firewall in
+6:40
+this test deployment that's
+6:46
+192.168.1.1 we just type that into the
+6:48
+box and hit the green check
+6:53
+mark now for custom Port group
+6:57
+zero as you may recall
+7:00
+the traffic is going to be coming in on
+7:01
+UDP Port
+7:03
+9001 so let's open this up we'll put 901
+7:06
+in the box and then hit the green check
+7:09
+to
+7:12
+continue and finally under rolls we need
+7:16
+to say which node type should be
+7:17
+expecting this traffic this case we're
+7:19
+sending it to our Standalone so we'll
+7:21
+open Standalone chain input host groups
+7:26
+custom host group zero and tell it for
+7:29
+custom host group zero we want to accept
+7:31
+traffic from Custom Port group zero and
+7:34
+hit the green check to
+7:36
+continue now we can push that
+7:38
+configuration change into production by
+7:40
+opening up options and pushing the
+7:42
+synchronized grid
+7:46
+button so to recap what have we done so
+7:49
+far we added an elastic integration to
+7:51
+Theo grid nodes General policy telling
+7:54
+the agents using that policy that is the
+7:56
+members of our security onion grid to
+7:58
+accept PF sense log traffic on Port 901
+8:01
+UDP then we use the configuration menu
+8:04
+here in sock to add a host group for our
+8:06
+pfSense firewall a port group for 901
+8:09
+UDP and to accept traffic from that host
+8:12
+on that port on our Standalone node so
+8:15
+the security on inside of this
+8:16
+configuration is complete now we just
+8:19
+need to configure pfSense to send the
+8:21
+logs and we should be all
+8:24
+set in pf sense the log settings are
+8:27
+stored under the status menu
+8:31
+then system
+8:33
+logs and now we need settings over here
+8:35
+on the far right side of the
+8:38
+menu remote logging options are set down
+8:40
+here at the bottom of the
+8:43
+page first we want to send log messages
+8:46
+to a remote CIS log server so we'll
+8:47
+click on this
+8:51
+box we'll send from the Lan address
+8:53
+because that's the one that we've
+8:54
+allowed in the custom host group zero
+8:56
+configuration option IP protoc call will
+8:59
+stay on ip4 and then we need to put in
+9:02
+the IP address of our security onion
+9:03
+node along with Port
+9:07
+901 and we'll tell it to send
+9:11
+everything and click save to update the
+9:16
+configuration now that's all we need to
+9:18
+do in pfSense we'll just wait a couple
+9:20
+of minutes and confirm that the firewall
+9:22
+logs are being properly ingested into
+9:23
+security
+9:24
+onion so going back to the security
+9:27
+onion console if we open up hunt
+9:29
+we see here we've got our default log
+9:31
+type query we can scroll down and we're
+9:35
+now receiving logs for event. module
+9:37
+pfSense these are all going into a data
+9:40
+set called PF sense. log so let's
+9:42
+include on that to add it to our query
+9:44
+and see what we've got if we want to
+9:47
+break these down further we can let's
+9:49
+open up one of these events and you'll
+9:51
+see that there's a attribute here called
+9:55
+process. name this is actually the
+9:58
+logging process that generated this
+10:00
+individual event if we want we can group
+10:02
+on this attribute with the stack of
+10:04
+papers icon here on the left hand side
+10:06
+of the field
+10:07
+name scrolling back up you'll see that
+10:10
+the pfSense logs have now been neatly
+10:12
+sorted into two groups we've got filter
+10:14
+log which is the traffic filtering logs
+10:17
+and then we've got this PHP fpm which is
+10:20
+actually the administrative access of
+10:22
+the web interface on the on the box if
+10:25
+we want more information about that we
+10:26
+can click on this include added to our
+10:29
+query and now we're just looking at the
+10:31
+four events that came from that PHP fpm
+10:35
+process if we want a list of all of the
+10:38
+events we can scroll down to the message
+10:40
+field here click on the adder remove
+10:43
+this column to add it to our column
+10:46
+table get rid of a couple of these
+10:49
+columns that we're not really using at
+10:50
+the
+10:58
+moment you'll see over here we've got
+11:00
+the message column now and we have a
+11:03
+Time delineated list of all of those
+11:05
+particular logs so admin account logged
+11:08
+out logged back in updated the logging
+11:10
+options and then logged back out you can
+11:13
+use any of this data as a pivot just
+11:16
+like you can anywhere else in security
+11:18
+onion now you may also be interested in
+11:20
+some of the built-in visualizations so
+11:22
+let's check that out in
+11:26
+dashboards by default the firewall
+11:29
+dashboard will display information
+11:30
+ingested from pfSense as well so if you
+11:33
+open this
+11:35
+up if you're looking for top talkers
+11:37
+highle protocol stats or what's getting
+11:39
+blocked this is a good place to start
+11:42
+and because these are all being ingested
+11:44
+into the same elastic search database on
+11:45
+the back end is the other data and
+11:47
+security onion you can easily pivot from
+11:49
+IPS or Community IDs to Zeke shata or
+11:53
+endpoint data giving you a holistic end
+11:56
+to-end view of all the traffic on your
+11:57
+network it's really a a very powerful
+11:59
+place to start your
+Conclusion
+12:01
+pivots I hope you found this video
+12:03
+useful and it's helped to expand your
+12:05
+understanding of how to ingest outside
+12:07
+data into security onion and use it as
+12:09
+part of your analysis remember the same
+12:11
+methodology that we use to add PF sense
+12:13
+logs can also be used for any other log
+12:15
+type that is supported by an elastic
+12:17
+integration whether it's an on pram
+12:19
+Network device or data from a cloud
+12:21
+service security onion can ingest and
+12:23
+parse it so that you can leverage this
+12:25
+additional intelligence in Haunter
+12:27
+dashboards if you like a list of the
+12:29
+current Integrations supported by
+12:31
+security onion or if you have specific
+12:33
+questions about details that were not
+12:34
+covered in this video please check out
+12:36
+our documentation at security union.com
+12:40
+sdoc if you're interested in our
+12:42
+training options to learn more about the
+12:43
+platform please go to security union.com
+12:47
+trining and finally if you're having
+12:49
+trouble getting this to work or if you
+12:51
+have other questions about the platform
+12:53
+please start a new thread on our
+12:54
+community discussion forum at security
+12:56
+union.com
+12:57
+discuss thanks so much for your time and
+13:00
+have a great
+13:03
+[Music]
+13:12
+day
+

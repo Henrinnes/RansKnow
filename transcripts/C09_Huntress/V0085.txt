@@ -1,0 +1,1117 @@
+0:00
+time at Huntress some time ago, right? [laughter] Yeah. The Yeah. The first one I was on was Kyle and Chris. It was like April of
+0:07
+2016, so almost 10 years ago. It was some uh application control bypass and uh we we got to nerd out on that. It was
+0:14
+great. So, it's fun to see the show enduring and yeah, it's fun. I think it's a great way to share tradecraftraft
+0:20
+and just focus on techniques and detection and just dive in and nerd out. Love it. A decade. That's awesome. Well, I can
+0:27
+keep us cruising for the agenda, I think, but I am really genuinely stoked about today's show because we get to get
+0:33
+a little bit nerdy. We really do get to dive into the tradecraft and uh Casey's going to bring us through a lot of this,
+0:39
+but some sweet live demos. Uh talk a little bit about detection, some mitigations, and then tell you about
+0:45
+some of the other sweet stuff that Huntress is up to. But do you think we should start with the news, Casey? Try
+0:51
+to get everybody up to speed. What's going on? I think so. It's been a I mean, there's not much happening. [laughter]
+0:56
+Oh, yeah. It's pretty quiet these days. It feels like John and I are laughing like I feel like Notepad++ was years ago
+1:03
+given the the last week. But, uh um yeah, there's a bunch happening. This one we thought we'd call out because for
+1:09
+one, I love Notepad++, but also at scale. Uh this particular technique was
+1:14
+interesting because it was a commonly used app. the developer was targeted essentially, but the service provider
+1:21
+specifically was where the compromise happened. So, they were able to get into the stream where you would do updates,
+1:28
+backdoor that. So, a very targeted attack. There's a couple of references at the end. We'll we'll share about some
+1:34
+of the tradecraftraft one that I think if I remember right, John, this was the first time we'd seen Warbird in a public
+1:40
+report. We've seen some proof of concepts, but this was a technique that used Warbird, which is like a Microsoft
+1:46
+like DRM code offiscation uh protection mechanism, but attackers, you know,
+1:52
+leverage that. And there's some really neat tradecraft there because Warird really only runs inside of signed
+1:57
+binaries. So, uh looking for those modules that were loading. But overall, this was a very complex chain of attacks
+2:04
+and very interesting tradecraftraft. I think it's definitely worth diving into if you haven't seen this or looked at it
+2:09
+yet or gone out and made sure folks have updated to the latest versions. So, yeah. Yeah. I know Kevin Bowmont was covering
+2:16
+this one. I think a lot of folks were Yeah. running around kind of wild that we saw Microsoft Warbird in action
+2:23
+because that seems super obscure, super esoteric. And I think amongst the flood of usual vulnerabilities falling out of
+2:31
+the sky, silly stuff in 2026 of like some TNET vulnerability that we all kind of laughed at. But look, this one felt
+2:39
+really really real, like actually hardcore sophisticated trying, not to
+2:44
+use the loaded term sophisticated, but really targeted and a quite a nifty campaign. Uh,
+2:50
+absolutely. Yeah. No, it was definitely one. It's definitely one to watch out for. Definitely one to watch out for. uh apps in your environment, you know, it's
+2:56
+a continuing trend. So, but chat, hey, everyone tuning in in the audience, can you let us know what else
+3:03
+have you seen lately? What else is on your mind as current events, current news, current worldwide things going on.
+3:10
+Uh, but speaking of another neat and nifty story to tell you, uh, over the
+3:15
+weekend, just this past weekend, I think we were chasing a lot of the shenanigans with Solar Winds, the Solar Winds web
+3:22
+help desk, specifically that solution and that software. Not not the Solar
+3:28
+Winds of late. Um, but this became kind of a wild story. We got to see a threat
+3:34
+actor break into an environment via these new recent CVEes that uh Microsoft has been chatting about. SIZA, Cyber
+3:41
+Security Infrastructure and Security Agency, I think I got that acronym right, did pour this into their KEV or
+3:47
+the known exploited vulnerabilities database. And what we saw for post
+3:53
+exploitation was kind of wild. They're dropping Zoho Assist, Zoho meetings for
+3:59
+like remote monitoring and management. They're rocking Cloudflare tunnels. They're using Velociraptor like normally
+4:05
+the well-intended digital forensics and instant response tool but leveraging that for command and control. So just
+4:12
+tons of hooks and claws and impact persistence and beacons really to maintain access. And then we saw them
+4:18
+like Xfill victim data to an elastic instance. So really really interesting
+4:25
+wild stuff to talk about on that. And we've had a lot of folks kind of reach out and be like hey we're seeing some similar stuff. I think we've still got
+4:32
+more stories to tell on this. So, we were trying to tease a part two on its way soon, but uh that's what I've been
+4:40
+neck deep in lately. [laughter] Yeah, that one was wild. A lot of lot of blue team tools in the attacker trade
+4:46
+graph for sure. It's kind of crazy to see. So, well, the real show today though is uh
+4:52
+app domain manager injection, right? That's it. Yeah. So, this will be fun. So, uh you know, folks may have heard of
+4:59
+this before. If not, I think you'll come away from this understanding what it is. Uh, three different ways that attackers
+5:05
+use this tradecraft and hopefully have some ideas for detection. We've got some there, but we'll also talk about at the
+5:11
+end how researchers approach this. How would you discover something like this if you came across something new? So,
+5:17
+hopefully give you some tools to set you up to to go and explore uh other parts of Windows that that may be interesting.
+5:24
+So the the reason this particular tradecraftraft matters is we've seen in
+5:30
+the last years the living off the land attackers love to use things that are built into the system. Uh not bringing
+5:36
+malware just using built-in tools just like John was talking about earlier or using thirdparty tools. So um this
+5:42
+particular technique is very close to DLL injection. We'll talk about some of the subtle nuances but if you're familiar with that technique this is
+5:49
+going to feel adjacent to that. What I think is neat about this is both local and remote execution. So you can watch
+5:55
+for both new binaries being dropped or network calls out to some random URL to
+6:00
+download a net assembly and run it. And then lastly, I think it's important to frame where this occurs in a in a chain
+6:07
+of events. And so this is a later stage attack. So or technique. So if an
+6:13
+attacker is able to conduct app domain manager hijacking, uh then they've already got initial access. they've
+6:19
+already gained access to some machines. You need to respond pretty quickly if you get a detection or alert on this. It
+6:25
+means the attacker has gone pretty far into your environment. So, I think that's an important note where this
+6:30
+lives uh inside of a cycle. So, Casey, I don't mean to interrupt, but
+6:35
+can I for folks that might not be tracking, I think it's is it am I okay to share your
+6:41
+usual online hacker handle and alias is subt, right? Uh, and your name is
+6:48
+plastered across the living off the land resource on GitHub pages and all over the internet. Uh, is it fair to say this
+6:55
+is kind of your technique, right? App domain manager injection is kind of what
+7:00
+you had helped bring into the world to really see, whoa, hey, this is something that certainly folks could use.
+7:06
+Uh, so I I maybe so I think I I think yeah, I I love living off the land. I've
+7:11
+been I I I remember seeing a talk at Derby Con and just thinking that's the future. That was like 2013 2014
+7:18
+and just saying, you know, there's enough cool tools and capabilities. So I I think it's neat. Yeah. I I published
+7:24
+this one a while back and it's still I talked to a red teamer this morning and they're saying, "Yeah, it's still
+7:29
+durable and attackers are still using it." So I wanted to make that clear for the audience that like [laughter] Casey's
+7:34
+the guy for this thing. I enjoy this. I I I I think it's pretty
+7:39
+hilarious. Not hilarious. So I always giggle every time the injection works, but it's it's important to understand it
+7:45
+and detect it. So absolutely. Yep. Good context. Thanks, sir. Uh if you if
+7:51
+you've seen me present before, I this really sets the tone for why an attacker would do this. Why why
+7:58
+would an attacker approach this application? So I I love this OASP quick reference guide quote and it really
+8:04
+talks about the difference between folks developing an application and folks attacking an application. And so an
+8:10
+attacker is always interested in what an application can be made to do. So so
+8:16
+when a developer or testing teams they're building an app, they're trying to meet requirements, build a database that takes these values, whatever.
+8:23
+Attackers are always trying to figure out what can I bend or how can I coersse that application to what I want to do.
+8:28
+That's a durable principle. And so I think that's what you'll see here is we're we're repurposing tradecraftraft
+8:34
+uh living off the land. We're repurposing repurposing things that are already there. um to accomplish our
+8:40
+actions on objectives. So, it's it's it's a good principle here and I've got a reference for this uh full guide at
+8:46
+the end of the talk. So, I love this uh DLL injection. It's an
+8:52
+older slide from Endgame. They had a really good blog on 10 different uh ways you could do this, but it's important I
+8:58
+think and John will talk about in just a moment kind of distinguishing this technique from DLL injection. So you
+9:03
+essentially you have classical DL injection often involves one process
+9:08
+accessing another process injecting a DLL or or opening up a a you know a
+9:15
+memory region setting permissions calling code. This is very different than that. And so uh from this
+9:20
+perspective we're going to be manipulating configuration files and environment variables to coersse the
+9:26
+load. So I'll let John take us through a little bit of some of the DLL trade craft here. Um but essentially this is what we're talking about. app domain
+9:32
+manager injection, changing a config file, and getting our apps to load. So
+9:39
+yeah, I I don't want to nerd out, forgive me, but I just, you know, I love kind of in the similar sense that you do
+9:45
+of like what's kind of a neat, clever, and crafty way to proxy execution or
+9:52
+like, oh, have something else act as sort of a surrogate to okay, accomplish
+9:58
+some objective, run some payload, fire off something that could be XYZ, whether
+10:04
+that's some malicious vector, whatever the threat actor, hackers or red teamers and pentesters are up to
+10:11
+old school, right? We could just drop a.exe and you still can here and there, but when you can have a dynamic linked
+10:17
+library or a DL with your custom code, it's essentially doing the same thing,
+10:23
+but it's circumventing what is normal and natural of just sure the classic
+10:29
+vanilla.exe file. That means it's clever, it's crafty, and it's going to
+10:35
+be harder to pick out from the flood of data that your SIM or seam solution might be tracking or anything else that
+10:42
+maybe okay, some security solution could detect. So using a technique like this
+10:48
+DL injection, DL hijacking, DL sideloading, whatever you want to call it, but taking this app domain manager
+10:55
+injection opportunity. Look, this is just blowing the doors off of living off the land techniques
+11:00
+because you're still giving yourself a little bit of a shield as a hacker when you have cover air quotes inside the DL.
+11:09
+So that way the real program that executes what gets seen or caught for okay the process data the command line
+11:16
+for how that execution started isn't really going to be tracking your code
+11:23
+the payload the implant whatever you end up kind of putting in the mix in the middle there with app domain manager
+11:29
+injection. a super cool technique. Uh the way that that boils down though and
+11:34
+and I'm I'm going to ask for you to hold my hand here Casey is this config right like a configuration whether it's a file
+11:41
+or an environment variable that means that any net framework application can
+11:47
+be coerced to run anything else right correct [laughter]
+11:53
+yeah that yeah so so typically like a living off the land binary would have a feature like you know uh red surf 32
+12:00
+calls out to a URL and downloads a file. So, you're using that feature. This actually takes a a binary that may not
+12:06
+have any of that capability, but because we're able to change the config, we can transform it or bend it to our will. So,
+12:13
+it's not just system or built-in binaries like living off the land, as we'll talk about later, like you were we
+12:19
+were poking around this week, there's a lot of .NET apps that are out there in the wild that are thirdparty apps that
+12:24
+are susceptible to the same uh coercion or uh taking over control with just a
+12:30
+simple config file. So, it's going to be something to watch for. New config files, config files that have changed.
+12:35
+Absolutely. Certainly. Yep. All right. So, let's get into this then.
+12:42
+Um, if there's questions along the way, I've got resources at the end, but you may be joining us and thinking, I don't
+12:48
+even know what an app domain manager is. Uh, and we don't need to go into all the details. The main thing here to
+12:54
+understand is when you design a net application a developer has different controls and the main control here with
+13:02
+app domains is an isolation boundary within the application so to separate parts of the data or provide security
+13:09
+boundaries but this is a configuration that developers use to control the initialization of their application so
+13:15
+it's not uh on its own it's not a malware technique it's not uh it's just
+13:20
+we're just doing what developers do to control their application and so I think that's important to understand is that
+13:26
+application control in this situation not in terms of like uh monitoring binaries that execute but uh app
+13:32
+application configuration and management. So you're able to say when my app starts up and maybe it's it could
+13:38
+be a web app uh it could be a local um console app it could be a number of things this is how I want it to behave
+13:44
+this is what attackers are driving towards so they're they're able to look at this and say that's a feature built into net I don't have to add anything
+13:51
+here I've got all the capabilities how do I control that then to launch uh my code so let's dive into an actual
+13:59
+example and it will cover these four steps but if you come away with these you are basically on your great to
+14:05
+understanding how application domain manager injection works. And the first thing you do is create a binary. And in
+14:11
+my examples, we usually just, you know, have a message box pop up or whatever. But you need to create whatever you want
+14:17
+to load or behavior, compile that, have it ready and staged. And then the next thing you would do, and we often see
+14:23
+attackers do this, is they copy a signed trusted binary to a location or folder
+14:28
+that they control. So this is important because they're going to need to write the DLL and the config into that
+14:34
+location. So this is why if you see something executing from a path like C
+14:40
+back slash test, that's not where that app normally runs from. That can be a detection mechanism for you. So you
+14:47
+place the create the binary, copy your target program, copy your application,
+14:52
+and then copy you know the config file. You're you're good to go. So let's take a look at what this looks like. So I'll
+14:58
+pause for a second. See, just make sure there's no questions in the chat or anything. John, are we doing good? Yeah, chat is super locked in. I was
+15:05
+asking like, "Hey, is everybody still with us? You guys are awfully quiet today." And they say, "No, we are
+15:10
+focused in on this thing." All right, sounds good. Yeah, if if you need to to jump in, let me know. So, um,
+15:15
+this is the ba most basic code. So, here you have about 15 lines of code, 14 lines of code to create your app domain
+15:22
+manager. So, what we're doing here on line six is we're giving it a name. That'll become important later when you
+15:28
+set up your config file telling the application that you're trying to take control of which one you want to load.
+15:34
+And then really your payload sits between lines 10 and 13. When your application launches, it reads the
+15:41
+config file and says, "Oh, I need to read this app domain manager." It finds that DL and then runs that code. And
+15:48
+probably most interesting is by default, it doesn't disrupt any other normal behavior. So you could have a situation
+15:54
+where your code injects and runs and then everything else runs as normal. So often application users wouldn't notice
+16:01
+anything different that this particular app has been backed or compromised in any way. So that's the config. You would
+16:07
+compile that. You can compile C code like this right on the box. We'll look at an example with some command line.
+16:14
+There's already a C# compiler built in. The next thing you would do then is build your config file. And this is as
+16:21
+minimal of a config file as I could show you. It simply has a couple of lines of code here. It's an XML file. The key
+16:28
+here though is the name of the file matches the name of the .exe. So you can see at the top, this is going to be a
+16:34
+file called addin process.exe.config. So whatever you're targeting, that's what net looks for. It looks in the
+16:41
+current folder and says, do I have a execonfig that matches my binary name?
+16:46
+If I do then I am you know forced to follow the instructions of that config file. So again we load up our app domain
+16:53
+manager that's the type and then we call the particular assembly and we're good to go. So I think it'll make sense once
+17:00
+we see it. But that's really all there is to it, right? You create a config file, create a custom binary, put all
+17:06
+that into a package and you've got a pretty neat payload. So let's take a look. So hopefully this will come up
+17:13
+okay my demo screen. Make sure I'm good. That's showing up. All right, John. Good.
+17:19
+Okay, looks good to me. All right. So, um, in this example, I'm in the test folder, and I'll just show
+17:26
+you the contents of the folder. So, there's really no surprises here, but essentially what I've gone ahead and done is copy addin process to this test
+17:34
+folder. And I've created my addin process.exe.config.
+17:40
+And I've gone ahead just for the sake of time and already compiled my app domain manager. So uh if we look at that if I
+17:46
+cat the add-in process config just so you can see that's exactly what was in the slide earlier. So put all that
+17:53
+together. Uh essentially what happens is when you run the addin process from my
+17:59
+path we actually get the injection to occur. And if you ran it from the normal path that wouldn't happen. But now
+18:05
+whatever is running from here in test my code or my beacon or whatever behavior you've injected there uh is basically
+18:13
+you have control of that process. And and probably more importantly too, if we look at it again, you would see uh when
+18:19
+you look at the processes running, you see add-in process, right? You don't you're not seeing necessarily that that
+18:25
+behavior uh has happened in the background. So that's what John was talking about. Yeah. Help color for folks that might not know
+18:32
+that addin process.exe is a natural native legitimate Microsoft signed
+18:40
+built-in binary. Correct. Yes. Yes. Good. Yeah. Good question. Yep. So like if you like I have it. Um
+18:46
+let me make sure I just I can show you that like if we look at the sometimes you can check the um
+18:52
+you can check the pull this up get a riff on this and then uh like you can
+18:58
+use like sign tool which is like the Microsoft
+19:04
+see if I've got that in here. Maybe I don't. Maybe not. See I'm doing live. I don't know if it's sync
+19:09
+sync check. Thank you. Sorry live demo. So if I check that signature, right, good call. We can see that I
+19:14
+copied it from the location, but it's signed by Microsoft. Now my DL is not
+19:20
+signed, but we're we control that application now. So that's where uh it's a common use for application control
+19:26
+bypasses is to use this technique. So so that's really it, right? So um yeah,
+19:31
+that's the basic most basic example. We've got a couple more to talk about, but let's uh take a look at the next
+19:38
+stage or another way attackers would use this. So John, you were going to talk a bit about this or was I going to talk
+19:44
+about this? I forget. Well, I would be [laughter] I know we just showed like addin process.exe as
+19:50
+one example, but I again what I really want to zoom out on and make sure folks are tracking is that like this is for
+19:57
+every single net application. Yeah. every single one that is already
+20:04
+on your Windows computer or anything that you might just use any other
+20:09
+third-party programs, solutions, applications, and software that is written in that framework. Um, I know
+20:16
+what we wanted to fall down here was the remote execution capability because we
+20:21
+just showed okay the staging of getting the environment variables or the configuration files kind of configured
+20:27
+and then you had your own DL on the host on that machine that the okay hacker was
+20:33
+already in. But we could totally host our DL like the new code that we want to
+20:40
+run totally else totally somewhere else on a completely different host. I don't know if you can look through some of the
+20:45
+XML here, but the that codebase line on number eight and N is a completely
+20:51
+different IP address and the URL HTTP 10.211 blah blah blah. The DL is over
+20:58
+there, not on the victim and target computer. And there are a couple other idiosyncrasies here. I like the fact
+21:05
+you're tracking other UNC paths. Maybe this is up on a network share. Maybe it's hosted over SMB. But you're helping
+21:12
+me get a little bit smarter on this public key token thing I see you also have highlighted. What is that? I'm
+21:18
+still scratching my head. Yeah, it's a good question. So it so um the the thing on a remote when you when
+21:23
+you run a DL remotely, this field is required. So if if we if we look back at the code real quick, we could see that
+21:30
+before public key token was null. Doesn't matter. But if you're running it remotely, just because the framework
+21:35
+likes to verify the identity of the assembly. So a public key token is
+21:40
+really just essentially it's a unique algorithm that Microsoft created sort of
+21:46
+be I meannet's been around for over 20 years 25 years. So uh they they had this
+21:52
+tag they have a way of hashing the binary you sign the binary and then it creates a unique identifier by moving
+21:57
+some uh bytes around. You can look up the details of that. But essentially, this will say this identity uh is the
+22:04
+one that you want to load. So that when you download it, you can verify that it hasn't been changed, that it's signed by
+22:09
+the expected publisher. And this public key token is really just a shortcut to verify that. But it is required for this
+22:16
+config. If you're dropping something in and running it remote o e either over a URL or a UNCC path, you would want to
+22:23
+have that in there. And I actually I think I can do I think I got this one working. I was just going to do a local demo. Let me if we've got I
+22:29
+[clears throat] think we've got time to do this one. So, let me pull this one up. You know, we like to have some fun. It's
+22:34
+okay if our demo [laughter] is a little bit scrappy, a little bit casual. I think everyone loves Oh, let's see the fireworks. Yeah. So, I think I think All right. So,
+22:41
+in this example, I'm running just a local Python server. Imagine that we're on a Cali box somewhere, EC2, whatever,
+22:47
+doesn't matter. Uh port 8000. In this example, to John's point, I've got
+22:52
+another binary here copy called install util. Just so you can see that this technique we could use it for any
+22:58
+binary. And I've got a config file here, but let's just take a look at that just to make sure you can see what's
+23:03
+happening. There we've got there's our slide demo fail.
+23:09
+That's a Okay, that's that's the old copy copy and paste fail. Um, let's just do this. So,
+23:14
+let's just do this. So, if you look in the config file, you can see if I were
+23:19
+running it remotely, you can also add comments or whatever in here. You can see here I'm just going to run this off my own machine which is 6 and it's going
+23:27
+to pull in my app domain manager remote but you'll also see importantly I've got
+23:32
+the config here and I've got the config here with that public key token that John was talking about. Again it's not
+23:38
+required for local is required for remote. So let's with that if that's the case then once we run install util it
+23:46
+will reach out to that URL fetch the binary and then execute it locally. So
+23:53
+now we've got essentially remote kaboom which is usually my uh favorite PC uh
+23:58
+message box. But that's a that's a powerful part of this capability that I don't think everyone is really aware of
+24:04
+that a simple config change adding a couple lines of code into XML completely
+24:09
+changes where that application is loading its binaries from at the beginning. And so if you notice once I
+24:15
+click kaboom here uh install util continues to run fine. We didn't break
+24:20
+the application. We simply inserted our code very early in the process. And I think that add-in process doesn't really
+24:26
+do much, but here you get a real sense of the app runs fine. Uh there's there's no breaking of the application when we
+24:33
+run it remotely. So we'll cover some detection examples on that later for both the local and remote. But I think
+24:38
+that one that one when we saw that was that was kind of terrifying to be honest that you would have you know installing
+24:44
+a reaching out to some arbitrary URL loading an assembly. So yeah, crazy. if
+24:50
+I may put my hacker hat on, right? Because at that point you are running
+24:55
+your code, whatever you configured for your own C, you totally have the capability to wholly backdoor an
+25:04
+executable, whether it's regular Microsoft signed or any other third party application using .NET framework.
+25:10
+So if you didn't want it to continue execution and you wanted to just only run your code and then bail out, you can
+25:16
+do that. Or you could make it super stealthy and then not show anything or
+25:22
+have any interaction in the UI and it could just okay then call out do your C2, do your beacon, whatever. Uh, so
+25:28
+it's a whole open world with whatever code you want it to run. But then I started to ask Casey cuz the couple
+25:35
+different ways that we get this thing staged. Did we talk about the environment variable aspect or is that
+25:40
+coming a little bit later? It's coming up. It's coming up next. Okay, cool. Then I I want to put that in our our our mind.
+25:46
+Yeah. So, no, it's a good point. So, everything we've been doing to this point is right. You know, it's a little bit risky for an attacker to drop a
+25:52
+config file, a DLL, and copy a binary. Uh, one of the more interesting um
+25:57
+approaches that I discovered a while back was, well, it's not really I discovered it, but this just read the documentation, but you can use
+26:03
+environment variables. And so, we'll talk about um one of the things you can do is instead of using a config file is
+26:10
+change some environment variables and that influences the net loading as well. And that's a powerful capability. Let me
+26:17
+take you through a little bit of background for this because for this this technique to work, you need to understand at least the baseline for
+26:23
+how.NET finds assembly or the term that they use is resolving assemblies. So,
+26:29
+and if you haven't read Microsoft documentation and you want to do research, one of the best things you can
+26:34
+do is just go read the docs and especially read the docs for things like security concern or make sure you watch
+26:41
+out for this or configuration. there almost as always uh some gems in there. But if we if we break this down for
+26:47
+what's happening in when you try and run an application behind the scenes,
+26:52
+there's the application base and that's the folder that the binary lives in. And then it has the assembly name and
+27:00
+there's two resolutions that will happen. The first thing it will do is try and find it by the DLL name or it'll
+27:06
+use a folder with the assembly name and then the same assembly name with a DLL.
+27:13
+So a while back uh I had published a this particular trick and it's still used a fair amount but we you know say I
+27:20
+wanted to control a a application that's in C Windows system 32. I don't have
+27:25
+write access there. I don't have the ability to drop a config file. However, there is a writable path inside of
+27:33
+Windows which is C Windows tasks. Now, normally that is used for creating
+27:39
+schedule task. The task configuration files are there. But knowing what we know, if we name our assembly tasks and
+27:47
+then task.dll, we can take advantage of how Microsoft
+27:52
+CLR the common language runtime normally finds a binary and we can drop our assembly. Remember earlier we were using
+27:59
+my app domain manager but here the naming matters because we're trying to just allow it to resolve for us. So if
+28:05
+we create a file called tasks and we set it in this directory now we can use any uh anynet executable
+28:15
+in system 32 will find and run uh that assembly. So I I think that one's
+28:20
+probably the most interesting of all of them. So um let's let's take a look at it. So pull this up.
+28:28
+That's the spiciest one for sure. I want to reiterate that's like backdooring
+28:33
+every single .NET assembly in system 32. I made the mistake one time of like
+28:39
+putting that in a system environment variable and then booted up and it was just like a million calculators popped
+28:44
+on my machine. Oh, that's historical. [laughter] It was denial of service. So, so uh
+28:50
+yeah. So, to set the stage on this one, um we've got a task DL. Uh we've got C
+28:55
+task. And if I just just to show you what that code is uh in here, uh essentially it's just going to launch
+29:02
+that telling us that this particular load is from the task folder. Uh and then if we look here, I've already gone
+29:09
+ahead and compiled that DL just for the sake of time and I've already copied it into that folder. So if we do a
+29:15
+directory listing of Windows,
+29:24
+sorry, jump in there. I'm getting ahead of myself. If we look in that folder, we should see
+29:30
+it. There it is. Right there. Uh ready for us. Now, if I just run one of those
+29:35
+binaries, uh like TZ sync or something like that, like that's a that's a time
+29:41
+sync exe. Uh typo, sorry.
+29:46
+You know it's you know it's live when typos, but nothing's going to happen. But like to John's point earlier when we
+29:53
+can control these environment variables and I'll just set them up in PowerShell here. We can set this up in this in this
+30:00
+situation. My binary doesn't have a public key token. Not necessary for this example. So if I set these two
+30:06
+environment variables, let me explain them first. We're just saying the manager type and the assembly name is
+30:12
+going to match for tasks. We'll go ahead and copy that. Now when I run in here
+30:18
+and I paste those in there, we've set those variables. If I run TZ sync now,
+30:24
+uh we can see that it loads. Uh and that that is really, you know, again, if you're looking in the task list and
+30:30
+trying to figure out what process is running, you would see simply that TZ sync is running. Now, essentially, it's
+30:37
+uh that's a modal block there, but you can see there it is running. Uh you know, we can go and just dive in here.
+30:43
+We can see that it's the signed Microsoft binary. Uh, you know, it's now our binary at this point. Um, pretty
+30:50
+cool stuff. I think that's pretty neat. So, um, that's something to we'll talk about some detection capabilities, but
+30:55
+simply changing a couple of environment variables, uh, we're able to manipulate the behavior of any of these files in
+31:02
+that folder. So I was um falling down the rabbit hole on the environment variable direction
+31:08
+because again those silly questions that I was asking you and peppering you about like oh could we stop the binary could
+31:14
+we back door a binary but I was wondering then could we chain the binary
+31:21
+execution like have a nestednet binary start another net binary start another
+31:26
+net binary and like would it follow through and when we're using the local config files
+31:33
+No, right? Because that's relative to the directory and then you might not have control over the other one. But if
+31:38
+you have some net binary that you're using to get your UAC bypassed that
+31:43
+you're escalating privileges with and then you call another for even more ghosted proxy execution, the environment
+31:50
+should carry with you, right? [laughter] Yeah. Yeah. No, and that's Yeah, that's an awesome point. Let me actually let me
+31:56
+just show you that. So like here I've set these environment variables. Yeah. So John brings up a really good point. This is too much fun. inherited from the
+32:03
+parent. So like if I spawn cmd.exe here and now I look at environment variables
+32:08
+that are in this child process they already carried through. So now I'm in PowerShell I'm in command. If we run TZ
+32:16
+sync here uh you know we should get the same behavior right so uh that's a really
+32:22
+good point John. So essentially, yeah, the environment variables are are inherited from the parent process. And
+32:27
+so anything that spawns after you've taken control or once you get control, you can set environment variables in
+32:33
+your code. Uh and so you want to watch for these being set by process. You can
+32:39
+also watch for them being set at the computer or user level. Right? There's a
+32:44
+place where you can set system environment variables. uh you know if even if you go here you can just go in
+32:50
+here and you know see what's set up for that machine right and an attacker could easily right here uh and put in uh those
+32:57
+two domain variables. So yeah good point. Yeah, perfect. Yeah, good example that you can um get those to chain uh
+33:04
+between parent and process. So anyway, yeah, lots lots of good stuff there. So all right, uh we'll pause there. Any
+33:11
+questions on the three demos? We did a local, we did a remote, and then we use tasks to control.
+33:18
+We did a lot. Is Chad still with us? [laughter] Is everybody good? Hopefully, it's like, oh man, I hope it's all right. So, um,
+33:25
+okay. Well, let's take a look then at now that we understand how it works.
+33:31
+Attackers changing config files, executing their applications, loading their assemblies. Who's using this in
+33:37
+the real world? Where can I go find more examples of it? Uh, I do like the MITER attack reference. There's a lot of good
+33:44
+information here and primarily I think John was going to talk a little bit about this environment and maybe some
+33:49
+additional references as well. So, yeah. No, I know it goes without saying of course MITER attack framework is
+33:55
+tracking this. It's got its ID number. It's got a technique sub technique etc. And if folks were curious, you could dig
+34:02
+into the MITER attack framework to see what other groups, what other uh individual actors might have been using
+34:07
+this or recent campaigns, etc. But all that is to say, yes, this is a wellknown
+34:13
+and established technique now. Um, and maybe it's one that's still a little
+34:18
+something that, okay, folks weren't tracking, but there is a lot of good insight out and about for these
+34:24
+resources and these references, and we'll link a ton of them for you. I'm hoping we're giving the slides out so you can see these, but without a doubt,
+34:31
+MITER Attack Framework is obviously all about this already. Yeah. And uh I one one of the first uh
+34:38
+one of the resources that I've included in the deck is uh the CISA red team reports. I don't know if folks have have
+34:44
+read these reports. I just want to make a pitch. The there are three of these that are public. There may be another
+34:49
+one coming soon. Uh we've got the references in the slides, but if you haven't read these reports, these are
+34:55
+really good red teams against government organizations, against government entities. And if you were to get a, you
+35:01
+know, it would be very expensive to get the hours and talent to do a red team like this. So, one of the things I love
+35:06
+to do is take a look at a report like this and ask what if that happened on our network. So, I you know, and and I
+35:13
+actually like to go through and break down all the trade craft in the report and try and line it up and say, well,
+35:18
+what what defenses do I have that would have observed that? You know, if we're looking for net tradecraftraft or SSH,
+35:24
+there's some really great SSH tradecraftraft in this report. If you haven't read it, I'll I'll leave it for you to go and explore. But it
+35:31
+specifically I pulled out this report because in when they described how the
+35:36
+attackers moved through the network, they were targeting uh the SECM servers
+35:42
+and they were using this technique. So this technique can be used for lateral movement. So think about if you got
+35:48
+execution on one machine, you could use the remote technique to pull your DL back across and move laterally. So in
+35:55
+this in this situation it failed but you can see that they're definitely making attempts and as we know as defenders
+36:02
+every contact leaves a trace. So hopefully we could maybe find artifacts of even failed attempts and attackers
+36:08
+fail all the time. So it's definitely a good thing for defenders to look at uh
+36:13
+you know where attackers bump around or on board. There's an old saying that says only tourists look up, you know. So
+36:19
+only you go to a city, new city, you can spot the tourists because they're bumping around and looking up and taking pictures. Not true of people that live
+36:26
+there. Same thing here. Same report. You have essentially the red team moving
+36:31
+between the sites using app domain manager hijacking, loading their DL. So you'd be able to track through this
+36:37
+network where they're copying. So if you have some EDR tool, you could go in and see like where's the hash being copied,
+36:43
+etc. So, uh, pretty powerful capability for red teamers to move silently through the network using app domain manager
+36:49
+hijacking because you may or may not have tooling to detect it.
+36:54
+And John was going to talk a little bit about this one. This is one that we saw I think Google published this one, right John? On uh Google.
+37:01
+Yeah. And I I'll admit I didn't have a ton to particularly drill down into. I think it was just adding to the fact
+37:06
+that like look, yeah, real big red team pentest uh like adversary emulation and
+37:12
+offensive security folks are poking and playing with this. This was from Mandant or Google Cloud. Uh and they just
+37:19
+straight up tell you, hey, these are the steps. This is how to do it. This is what the config looks like. Uh so I was
+37:24
+just trying to bolster up the point of like look at how cool this is, guys. [laughter]
+37:30
+Yeah. And and again hopefully hopefully it's demystified it a little bit now, right? Like it's not that uh you know
+37:36
+difficult to add two lines of uh XML config, set your DL, set your path.
+37:41
+Absolutely. We're not doing any like voodoo witchcraft of hooking userland API functions or wind32 magic like this is
+37:48
+just put a text file there. Exactly. [laughter] Yeah, it's uh it's kind of crazy for
+37:54
+sure. So yeah, good stuff. So all right, so um I'll pause there just to double check in and see if there's any
+38:00
+questions. Otherwise, we're going to shift gears and talk about, you know, how do you mitigate this? How do you detect it as a defender? And we'll talk
+38:07
+about lastly the next section like how would you research like how would you go about finding, you know, tradecraftraft
+38:13
+like this. So, if we're good, I think I'll carry on here and talk about some of the uh the detection. So, the first
+38:20
+detection is really monitoring or looking for binaries executing from unknown paths. So, or unexpected paths
+38:26
+rather. So like you know install util tz sync they're running from particular
+38:31
+location if you see them running from a new location uh that may actually be the trigger that somebody's manipulated that
+38:37
+uh and actually you know sysmon even has some configurations where you can look for you know a PE written to a new temp
+38:44
+location. Those type of uh um events are pretty interesting looking for config
+38:49
+files written to disk. I would also think about uh config files that are being monitored. So, we've actually seen
+38:55
+attackers get onto an ADFS server and just simply change the config and change that public key token and now the DLL or
+39:02
+application behavior changes completely. Uh, let's take a look at this one though. One that's interesting for uh a
+39:09
+remote loaded uh application is it will actually load into an assembly folder
+39:15
+DL3. Um, let me show you that real quick just because I think that's an important artifact to understand if you do pull
+39:21
+down a net binary. Um, a couple of tools that you can use to to look at this. Um,
+39:28
+one that I've used is the GAC util. So, this is something you can get for free from Microsoft, but if you run the
+39:34
+utility and you look at the local downloads folder, you can actually enumerate this and you can see, okay, I
+39:41
+see cached uh, this assembly was loaded. Now, if that doesn't look familiar to you, you could actually drill into the
+39:47
+directory. Uh you can also see I I was uh messing around after John and I talked and and I found this interesting
+39:54
+uh unexpected artifact in uh the cert util. I think I actually may have it queued up here. See if I've got yeah
+40:00
+util URL cache. Uh so whennet reaches out and pulls that binary down it uses
+40:06
+win inet. And so you may also find artifacts here and attackers may not always clean up their trade craft. So,
+40:14
+it's very important as a defender to know all the different places and we'll talk about in a little bit where that gets downloaded, but essentially the
+40:21
+default behavior is if you went into that user folder and we go into their app data local,
+40:28
+this assembly folder and we look here, we can see in that DL3 folder a randomly
+40:34
+generated name and we would actually see the real binary that was downloaded and
+40:41
+we would see a config. And this is interesting because if you're not sure where it came from, this INI file is
+40:47
+great. So that's a so it's one of those things where attackers think they're being maybe super stealthy, not leaving any artifacts, but now you've got
+40:54
+attacker infrastructure where they downloaded and you've actually got their payload if you haven't reverse
+40:59
+engineered net binaries. You could use IL Spy for example, and now you you could rip apart uh that binary. So that
+41:06
+that's a really good artifact to be aware of both the URL cache. And this
+41:11
+was interesting because when John and I were testing this um I think it was we were you know like let's I think it's
+41:17
+CLDL pull that up. We'll clear the cache. And then if you remember my install util was remote. Uh it's still
+41:25
+running and it hasn't done a new uh connection. Right? It's 11:43. So the
+41:31
+thing is still there right? So that that can be an interesting thing that you may think you cleaned it up but you didn't.
+41:37
+So make sure you understand. We'll talk about where all those artifacts are. So, uh, just for reference, I know there's a
+41:43
+lot of text on this slide, but I went through those folders pretty quickly, but I wanted to make sure you understood
+41:48
+where a remote binary gets loaded. And the attributes in the INI file can be a
+41:54
+really good artifact. And then this was me just showing it's the same file. So, you could validate the hash using uh, if
+42:00
+you haven't seen it, get file hash is built into Windows by default. Now, it does a a 256 a Shaw 256 hash of the
+42:07
+binary. You can change the algorithm, but it's a great tool if you're tasking systems to just use the built-in
+42:12
+defending off the land for back lack of a better way to say it. So, okay, questions on that on those artifacts.
+42:18
+There's some remote artifacts. There's some winet cache where you could find these DLS.
+42:26
+Doing good. I'm starting to get a little worried. Chad is feeling lost in the sauce. Oh no. Okay. [laughter]
+42:32
+We threw a lot of super cool stuff at them both in the like offensive red team, hey this is how hackers do it
+42:38
+direction and now I feel like there are some really sweet things to like like threads to latch on to for okay this is
+42:45
+how we can investigate it. These are the like sort of indicators of compromise IOC's truth be told but I want to make
+42:52
+sure hey yeah we will get all these slides to you these references these links but we've set the stage just for
+42:58
+me to zoom out super quick of yeah kind of a neat technique that just about
+43:03
+every net framework and we'll talk more about that super soon program could be
+43:09
+leveraged for but it's not without a couple of the like breadcrumbs and
+43:15
+artifacts puzzle pieces that defenders could use to okay actually see what
+43:20
+fired here even the external remote URL even the binary and their code itself
+43:26
+like those I think are the really juicy things that us forensics investigators
+43:31
+and incident responders are really really interested in of like, ooh, we could track this down as long as you
+43:37
+know it. As long as you've got that education and that's really what we wanted to do here was demystify this whole thing. While I know there's a lot
+43:44
+I that's a cool crash course on what we got to be detecting, right? Yeah. [laughter] Yeah. No, that's good.
+43:50
+And I think I think we talked about it, but you know, that's why by demystifying it, it allows you to run inert tests. So
+43:57
+all you know write a config file, drop a DLL, see if you can practice, see how it loads and then see what it looks like in
+44:04
+the telemetry. And so that the John and I were talking about this slide earlier like a lot of times we get comfortable in the telemetry that we're used to. And
+44:11
+so if you're familiar with this old uh slide where a person loses their keys, they're looking for their keys, but
+44:17
+they're looking under the street lamp. It's called the street lamp effect or lamp post effect. Uh you know, they're looking under the light because the
+44:22
+light's better, but that's not where they lost their keys. So, uh, it's a common, you know, um, you know, bias, I
+44:30
+guess, if you will, to look in telemetry if you don't see it there. In order to detect this technique, we're going to
+44:35
+have to widen the aperture a bit and look for potentially new telemetry streams or new artifacts like we were
+44:40
+showing you where the file gets downloaded or capturing the config files, etc. So, yeah.
+44:48
+All right. Now, some research. Tip it over to John. Yeah. No, I mean I think
+44:55
+we do have a number of nerds and geeks in the room and folks that are tuning in that are I hope getting the like
+45:02
+enlightenment moment of like, oh, whoa, yeah, this could be affecting whatever even software solution that you use uh
+45:10
+for some parts of your stack. Not to say, okay, it's affecting or if it's vulnerable in air quotes, but it's
+45:16
+susceptible like that that technique could be used. Um, so how could you track this down? Like how could you
+45:22
+discover this? How could you find it? Um, we can jump over to the next slide, but I think what Casey was already
+45:27
+showing you was look, these are some pretty tried andrue
+45:33
+research tools that are in your toolkit already. Like super easy and accessible CIS internals like the CIS internal
+45:40
+suite from Microsoft. We were using SIGA check. We were using the tools to look at signatures. But in all reality, the
+45:46
+way that you uncover, oh, is this program going to look for and try to
+45:52
+load from aconfig file extension or file name at the very
+45:57
+end of its own application name. And you can see that with process monitor. You
+46:03
+could see what it might be trying to do next in process explorer. Um, and Casey, I know you like to play with the net
+46:10
+fusion log. Is that another part and piece to this? Yeah, that one's a good one. I'll I'll
+46:15
+show a screenshot here in a minute, but I've got the configs to show you. You can enable, especially for research. You
+46:21
+you know, we talked about instrumenting and detection. You can turn on the same tools that developers use to debug and
+46:27
+troubleshoot their applications. You can turn on something in built into Windows. It's a couple of registry keys. You can
+46:33
+turn on fusion logging. Um, and I'll just I'll just show you what that looks like. Um, rather than just talk about
+46:39
+Let me just jump into it real quick here. Hold on one second. Let me jump over here. So when you do turn on the
+46:44
+fusion logging just so you can see uh how this looks. You essentially go in and set up a few registry keys. So here
+46:51
+you can see there's maybe four or five registry keys. You set it to force the
+46:58
+log and you could disable these too really quickly. But essentially you're looking for in here the logging paths
+47:04
+binding is just a way of uhnet looks at how an assembly is loaded, how it was resolved. And then you'll set up a
+47:11
+folder. So, in this situation, uh, I've set up a folder called fusion log. And
+47:16
+so, it may not be something that you run all the time, but as a researcher, if you wanted to go look at what's
+47:22
+happening and so we could go in and say, all right, I ran TZ sync. You can see all the different tests that we've been
+47:28
+running here, I can see TZ sync, and I can see all the different things that it's loaded and I can see a nice HTML
+47:35
+report of what's happening. So you can actually see the difference here in the fusion logs between when the public t
+47:42
+key was present or when it was not. And so you could go in and see inside of here is a detailed verbose log of where
+47:50
+it found the assembly the assembly attributes. So it's a really good one. I like it um I like it as a technique to
+47:57
+enable to turn on all the recording. It's like a verbose flight recorder if
+48:02
+you will uh for any net execution. So specifically when John was talking about things like thirdparty apps, all of
+48:09
+those would be tracked here. So if you're investigating something, you believe it's happening, you could turn on the fusion logging, it's a very uh
+48:15
+you know, in terms of configuration setting, it's very easy to do. Would require administrative rights to turn it
+48:21
+on because we're managing the local machine hive, but it's a great place to turn it on. The other tool that I like
+48:27
+is the John talked about it already is Promon. If you haven't done this for research, this is probably one of the
+48:33
+basic places to get started. So, you can download the CIS internals tools from
+48:39
+the website. You can then set up a filter. And a filter is just a way to set up attributes you're looking for.
+48:45
+And the one I like is, you know, run uh install util and look for name not
+48:50
+found. So, run it without a config file and then you'll see what the app was looking for and then uh classic hacker
+48:57
+technique, just give the app what it's expecting. Right? So it looked in the test folder did not find in this example
+49:03
+sort of before I had the config didn't find it but now you know oh every execution of that program is going to
+49:09
+try and find that file. So it's kind of a good way to see that in procmon
+49:15
+um another tool uh is also looking at procmon and seeing where did it write the file to. So what happens when I run
+49:22
+it remotely? What happens when I run it locally? What operations are seen? Here you can see our two locations, the win
+49:29
+inet cache and the net assembly cache. So simply turning on procmon and really paying attention to the output where
+49:35
+file reads and writes are is going to be a super powerful way to dig into some of these. So
+49:41
+and there's just a note for reference as you come on this. If you haven't turned on fusion logging, I wanted to make sure
+49:46
+people saw how to do it. You could actually ask Claude or something to write you a very quick, you know, write
+49:52
+me a script to enable this and disable it. You'd have it done in like five seconds. It's pretty cool. So,
+49:59
+all right. Talk about these. I think we're going to talk a little bit about these, right, John? Some of these other ones or I
+50:05
+don't know if there's other questions or just a smidge. I did want to highlight this, but there was a question I saw
+50:10
+come through in chat. A couple two good ones. One was Fusion part of Sentinel
+50:16
+like Azure Sentinel or is that just totally built in natural part of Windows, right? Oh, it's a good question. Totally different than Azure Sentinel. This is
+50:23
+like Net Fusion when it uh Net Fusion logging is from the early days of of
+50:29
+ofNNET. So, it's a part of the CLR. It's not connected to Azure In ID at all. It's a part of the uh the .NET
+50:35
+framework. So, it's a good question, good clarification. So, that does mean you've already got it. It's already always on your Windows
+50:41
+host, right? It's available. Good. Yeah, that's a good question. It's available. It doesn't start logging until you set
+50:46
+some of these uh attributes to true, but you already have it. If you need it, you could turn it on. Yeah, that's a good
+50:52
+Yeah, good point of clarification. You simply need to create your directory and then you would enable the different log
+50:57
+settings here. The one you're mostly interested in, I think, are failures and resource binds. Uh, but I I like to turn
+51:03
+them all on when I'm trying to debug or investigate. Yeah, it's a good point. Totally different than anything other
+51:08
+anything other fusion named not a part of you know this is just built into Windows. Absolutely good question.
+51:14
+Another one came through on LinkedIn that was asking, "Hey, what if the program the binaries are getting
+51:20
+blocked?" And I was thinking, I'm not super positive how fall down the rabbit
+51:27
+hole we particularly mean by blocked, but if like WDAC, Windows Defender Application Guard or App Logger or
+51:34
+something were to be preventing a.exe program from executing, then you would
+51:39
+not get far enough down the chain for the app domain injector to work. So
+51:44
+sure, if you did have application allow listing, cool. It would stop this sort of thing, right? Yeah. And that's a yeah, it's a good
+51:50
+point. And actually, Microsoft has a website. I don't think it's in my slides. I'll make sure I update it um when we send it out. But there is there
+51:56
+are files that are recommended to be blocked. Like if you're not running, you know, addin process just you could use a
+52:02
+tool like app lock or app control to block that. And you're absolutely right, John. It would kill it. It would kill
+52:07
+the attack chain at that point. You if you don't get execution, then you don't get the DLS to load afterwards. That's but it's important it's important
+52:14
+question to know where that happens in the stage. It's a very good good good question. Yep. I think that segus perfectly right back
+52:20
+to the slide that we were just about to get to because the app locker or WDAC or
+52:27
+again realistically application allow listing the usual red team or offensive
+52:33
+security arm against that is living off the land. And when you're looking at
+52:38
+okay, all the programs and executables that come with Windows default naturally in your environment and then however
+52:44
+many of them are.NET and susceptible to this. Uh Mr.
+52:50
+Unicoder, another really cool researcher uh had shared this big resource of like look there are almost a thousand entries
+52:57
+that are living off the land or at least in some signed Microsoft utilities for developer kits for other natural
+53:03
+applications that might be pulled into an environment. So that is hefty. And
+53:08
+when we were scheming up, hey, what would be a good show for you all? We were genuinely trying to think what is a
+53:15
+MSP or like managed service provider tool or even something else in the channel or enterprise or what are
+53:21
+companies and real businesses using that isnet. Uh I think you've showcased win SCP
+53:28
+before Casey. I was looking at MSP 360 backup, right? You got to think through what else is in your stack that ooh
+53:35
+could be a fun little toy in playground to see this thing in action. Yeah. Yeah. And that's where setting
+53:41
+like a systemwide environment variable is a great way to find it. Like set those two environment variables, set
+53:47
+your DL and the tasks and just have it write a file with the name of its own process and uh you'll you'll get a good
+53:53
+list if if you're if you're trying to find new stuff. Absolutely. So awesome. Well, I think the last couple of our
+53:59
+slides here, we timed this really well, but I do still want to tell everybody about some of the sweet stuff coming up
+54:04
+that Huntress is up to. Uh, should we wind this thing down before we get to those or what do you think? Any last
+54:10
+questions folks might have? Uh, I think we got four minutes. Yeah, I'll just uh Yeah, let me Those are there just in reference.
+54:17
+Uh, attacker tradecraft can be understood. Yeah, let's go ahead, John. Let's take take out with some of the upcoming events, but I want to thank you
+54:23
+for your time today. reach out if you have questions and we look forward to meeting in person maybe at one of these events. So, yeah.
+54:29
+Oh, totally. Yeah. Hey, thanks seriously so much everybody for tuning in. Please, please, please do let me tell you and
+54:35
+show you some really cool stuff because if you had some fun hanging out with us today, obviously, hey, you can catch us
+54:40
+at some of the Huntress events. We'll be at RSA. We'll be at Channel Pro Defend. We'll be at all the things listed and
+54:46
+you can always take a look at hunter.com/events to see where we'll be at next and where
+54:51
+we can hang out, get a few handshakes in, take a selfie. you know, the fun stuff. Um, other than that, I do want to
+54:57
+tell you the next TradeCraft Tuesday show that we're doing coming up in March, you know, it's the I think second
+55:03
+Tuesday of every month, maybe the fir I might get that timing wrong. Anyway, we're going to be going through the
+55:08
+Huntress 2026 threat reports. Uh, I think Greg Lanerys will be covering that and that has a lot of cool stories to
+55:15
+tell. So, please do scan that QR code. Would love to see you for the next show. But if you're still with me, my goodness
+55:22
+gracious, we have two new super cool ones to show you. I got to be honest,
+55:27
+I'm a little I'm a little partial to this because I'll be hanging out with Jim Browning. Uh for folks that might
+55:33
+not be tracking over on the interwebs, over on YouTube, right? Jim Browning is uh the tech support scam guy. Has a lot
+55:39
+of incredible videos where he's beating up and looking into scam call centers.
+55:45
+So, a lot of the cyber crime stuff that we talk about bleeds in and out of what we'd consider traditional ransomware,
+55:51
+info steelers, blah blah blah, but scammers are the very same. And it's a whole like dark enterprise and business
+55:58
+and legitimate industry. So, I am so so excited to get a chance to hang out with Jim March 18th where we'll go a little
+56:05
+bit under the hood. uh calling the webinar series declassified where we'll get some of the CCTV footage, we'll get
+56:11
+some of the audio, we'll really go inside some of those cyber crime operations. Kind of wild, but next one
+56:19
+for us, if we weren't already hyped up about that coming in March, February 24th, another incredible show for you.
+56:28
+Wild story to tell that Wired helped kind of get the word out and about. uh an individual, his alias and sort of
+56:34
+nickname has been Red Bull, but he was a victim inside of truth be told I I I got
+56:42
+to say like slave colonies of indentured servitude folks that are forced to work to perform these scams. Uh, so he'll
+56:50
+actually be joining Kyle Hansovven and Jen Easterly and telling his story from
+56:56
+realistically being stuck there doing the work and then being a whistleblower to get out of the action and then maybe
+57:03
+tell the story from there. Absolutely insane wild story to tell and we are really really stoked for this webinar
+57:09
+and declassified and all the incredible stuff coming up. So I hope I hope you tune in. We're going to have a lot of
+57:15
+fun stuff to fight back against cyber crime. Awesome. I think that's it. I think I think we
+57:21
+ran right up on time. I hope we got to your questions. Reach out. Thank you so much for joining us and look forward to
+57:28
+chatting in the future. So, thank you everybody. We'll get the slides and everything for
+

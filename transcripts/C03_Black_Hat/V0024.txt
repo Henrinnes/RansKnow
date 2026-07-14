@@ -1,0 +1,696 @@
+0:02
+Hello everyone, welcome. Um, my name is Martin Van Donsk. I'm a security engineer with Google, specifically
+0:08
+working in digital forensics and instant response. And I'm Alex. I work in privacy and security research.
+0:16
+All right, cool. So, um, without further ado, what we'll be discussing today is, um, an AI agent that is capable of
+0:23
+doing, um, log analysis basically. Um and what we'll also discuss during the presentation is how we've implemented in
+0:29
+uh it into time sketch. Um and we'll go into what time sketch is etc further into this talk. Um but before we start
+0:36
+just a quick pop quiz that I wanted to do. Um if I say 4 million in the context
+0:42
+of the fact that it is like a digital forensics and incident management talk what do you think 4 million would refer
+0:48
+to? Any any guesses? Don't want to put anyone on the spot.
+0:53
+Um, so it's the average number of events on a freshly installed like Windows
+0:58
+server. So my point here is that before you've even done anything on the system,
+1:04
+there are already four million events that have taken place that are potentially relevant to investigate for
+1:12
+an analyst, someone working in the sock, digital forensic analyst, instant responder. Um, and that's a lot of data
+1:18
+to look at. I have a slide later that explains further what the four million you know entails. Um but this sort of
+1:24
+shows the problem that we have as forensic analysts and I think it's a great opportunity for AI to help us like
+1:30
+cut through the weeds. Um so before I I go over the agenda um
+1:36
+the QR code here you can scan um like right now and you can already get access to the slides. Um the QR code will be
+1:41
+there again at the end of the presentation so you don't have to scan it right now. U but you'll be able to follow along now or see all the slides.
+1:48
+um after so the agenda um the log volume problem this is the 4 million number I
+1:54
+just referred to that's what like we'll be speaking about and what the issue is that we're trying to solve um and I'll
+2:00
+go into a bit more details there um then to get everyone on the same page I'm going to do a little bit about forensics
+2:05
+101 um at like a high level and how we do it at Google um then we'll go into
+2:10
+the agent that we built like go into the weeds all the technical details etc um we'll show you how we've implemented
+2:16
+into time sketch our log analysis platform and then we'll show you how how
+2:22
+how well the agent performs um by showing you some metrics.
+2:28
+All right, so back to the log volume problem. So this is the four million events I was referring to. Like if you
+2:34
+would take um a Windows 2022 base image and you'd parse all the events that have
+2:40
+happened there, there's four million, right? And then 3.1 million of those are made up out of like file system
+2:46
+activity, modifications, deletions, etc. Um, then you have 400,000 registry
+2:51
+events, 350,000 use journals. Like there's a lot going on. And this is on a system that hasn't even been used yet.
+2:57
+So once you start using it, of course, there's going to be even more logs there. And this is without accounting
+3:02
+for like EDR solutions that produce even more logs, process execution, etc. Um, so this is the problem we're facing um
+3:09
+as analysts. Um I think I can best sum up the log volume problem in these three
+3:15
+categories. Um so the signal is buried in the noise right like it's finding the needle in the haststack that's the
+3:21
+challenge. Um all the logs are also different. So if you have a security
+3:27
+analyst or a forensic expert they can't all be experts in like the same log sources. So web server logs look very
+3:33
+different than Windows event logs. And you can't expect everyone to be an expert at every type of log. Um so
+3:39
+that's another issue. And then the third one is that and this is I think an increasing issue is attackers are
+3:46
+looking like normal users more and more. So attackers are abusing tools already on the system right like living of the
+3:51
+land tools to sort of hide their activity. Um and these three things combined make for a difficult job.
+4:00
+All right. So taking a step back first um so that we're all on the same page as to you know what is forensics at least
+4:05
+for now during this talk. um let's classify it in like collection processing and analysis. So with
+4:12
+collection whatever tool you're using you're fetching artifacts you're getting a disk image you're then processing
+4:18
+those into like some type of normalized data and then comes the analysis um and
+4:24
+how we're doing this as Google um just to name a few examples is for collection we would for example use lip cloud
+4:30
+forensics. So Lipcloud forensics is an open source tools that works for um most of the major cloud platforms that lets
+4:37
+you easily get uh artifacts from those cloud providers. So this is a whole disk image or for example logs from like a
+4:44
+cloud console. Um we would then process that with Plazo. Um this is another open
+4:50
+source tool that we maintain. Um it's basically like a super timelining tool um and parser of like all sorts of
+4:57
+relevant artifacts. Then we take those plaza files and we throw them into time sketch. And time
+5:03
+sketch is like our collaborative timeline investigations tool. Um, and
+5:08
+what I'm trying to show on this slide is that we can go from like a disk image in a cloud platform, let's say it's GCP, to
+5:15
+events in time sketch using only open source tools. Um, and that's pretty cool that anyone can can use these tools and
+5:21
+basically achieve the same thing. Um, there's of course all sorts of other things you could use like another analysis tool many would use that not
+5:28
+open source would be Splunk. Um, but we we tend to use time sketch. Um, and then
+5:33
+to make our lives a little bit easier, it's just one more tool. There's a fourth tool um that we call df timewolf.
+5:39
+Um and the idea is that dfmolf has several recipes that you can execute. It's one command and it automates like
+5:46
+the usage of all these free tools. So what you see here is like a df t of recipe called gcp forensics time sketch
+5:53
+uh on a um GCP project. So in this case the name of the GCP project is mvd gcp
+5:59
+project. Um I just enter the time wolf the recipe name and then my project name. It gets the disk image from GCP.
+6:07
+So the GCE disk image throws it into Plazo. Plazo parses all the relevant artifacts or the things are are relevant
+6:14
+and then we throw that into time sketch and then from there on our analysis starts.
+6:20
+So we'll be focusing the remainder of this talk on time sketch uh on the analysis part. Um this is a a quick
+6:27
+screenshot of what it looks like. I have a couple of videos and images after. Um, but it's basically it allows you to uh
+6:34
+analyze all the artifacts and events from a file system collaboratively with other analysts. So you can you can leave
+6:41
+comments on specific events, you can start them, say they're bad, suspicious, good, um, all that sort of stuff. Um, so
+6:49
+let's take you through a practical example of what this may look like. Um this is an example email that customers
+6:56
+that run a GCP project could receive from us. So if we detect abuse of like
+7:01
+cloud resources then this is the email that they would basically get saying we have a suspicion that your project is
+7:07
+being abused for example for coin mining or other activity. Um and this is the metadata that you can use to run that
+7:14
+investigation. Um so this is the project um where we'd want to get the logs from.
+7:20
+We would use Plazo to parse all the artifacts and then we'd send those artifacts to time sketch and then
+7:25
+hopefully we can use the specific timestamps that are mentioned in the email to filter specifically to the
+7:31
+activity that we're interested in. Um, so this is what time sketch looks like. This is the first view that you
+7:37
+get. The colors at the top, it's it's a little bit small, but the colors at the top, there's like three of them starting with purple, um, are like timelines.
+7:44
+They're specific sets of artifacts that you've imported. and then I'll show you what time sketch
+7:51
+looks like in action. So here someone just searches for star which means you're searching for all the
+7:56
+events and then this is someone scrolling through those events sorting by time and when you click on an event
+8:04
+you get like all the context of that specific event and then you can do sort of whatever. Um so if we take the email
+8:11
+from two slides ago where it said abuse on a GCP cloud project and these are the times you can then enter those times as
+8:17
+like a time interval in time sketch and zoom in specifically on that time set. Um so this is like a time of uh six
+8:24
+hours apart and then you can search for that. The thing is [clears throat] on most systems and this is the log problem
+8:31
+I showed you before there'll be a lot of logs. So even searching for six hours on this specific system will still give you
+8:37
+around almost 8,000 events. And that's a lot to manually go through. And with the
+8:42
+help of AI and LMS, we can already uh see some of the benefits in making this
+8:48
+more efficient to go through. And I'll show you an example of a feature that we recently added to time sketch that does
+8:54
+this. So this is someone looking for that specific time interval
+9:00
+and I'm pressing search. And then you see a little AI summary at the top that's like loading a summary of all the
+9:06
+events that are in view. And this works for up to 500 events. So 500 events at a
+9:11
+time, you can click through time sketch and instead of scrolling through all the events at the bottom, there's a reasonably, you know, there's a pretty
+9:18
+good summary at the top that'll tell you what those 500 events until. basically.
+9:24
+Um, and this will click through a couple of times until the analyst sees an event that they deem to be relevant
+9:32
+scrolling to the event. And then here's a particularly
+9:38
+interesting event or potentially interesting uh event where someone's replacing like a chronap on the system,
+9:43
+marking it as suspicious, and then adding a comment why they think that this specific event is suspicious. and
+9:50
+then all other people working in that same sketch uh can see the analysis and and basically work together. Now you can
+9:57
+also do a context search so around that specific event show me 60 seconds before 60 seconds after and there the
+10:04
+summarization feature um also works. Um, so this has been very useful. Like this
+10:09
+really helps at least our analysts get up to speed on those events much quicker than they would have been able to um
+10:15
+before. But there's a couple of problems with this. Like if you want to think bigger and really use an AI or an LLM to
+10:21
+to do this properly, um, this doesn't work so well because you still need to click through like all the pages. Like
+10:27
+you're you're essentially still trying to find the needle in the haststack yourself, but you can just do it a little bit faster. So the next thing
+10:33
+that you could do is like send all the logs to an LLM model on like a chunk
+10:38
+basis. But if you're doing this in chunks and you're sending them all at the same time, you know, to save speed,
+10:44
+every chunk has like its own context window and like the the the various chunks don't know about each other what
+10:49
+they know. So there's no reasoning um across them. So that's that's the limited reasoning part. Um, and then of
+10:56
+course the second issue is it doesn't scale so well. Like just sending millions and millions of logs to state-of-the-art Gemini models um or you
+11:03
+know whatever type of um LM model you might use costs a lot of money uh doesn't scale um and it's not it's not
+11:10
+very efficient. So we need a smarter solution. Alex,
+11:16
+thank you. All right. So let's talk about SEGI for a second. So, SEGI is an
+11:22
+experimental research model and program in general and I want to be very clear
+11:27
+that GCP already has offerings on mature or productionized SECOP agents. Um, SEGI
+11:35
+is not yet at that level. Um, SEGI has various capabilities but the one I want
+11:41
+to talk to you about today is reasoning on logs.
+11:46
+So this is what we've built into secgemini a general logs reasoning
+11:51
+ability uh that is capable scalable and autonomous.
+11:56
+So we want to use this capability for at least two things investigation and
+12:02
+detection. So investigation is uh what we previously mentioned timeline reconstruction. You start with an alert
+12:09
+and you you're trying to figure out what happened. Uh detection is unsupervised threat hunting. So you are just telling
+12:17
+the agent to look at all the available logs and find any evidence of compromise and explain it. Um, SEGI's ability is
+12:25
+also designed to be scalable and flexible. So we want to operate on um,
+12:31
+massive amounts of logs, hundreds of millions of log records, but also of all
+12:36
+different sorts and different types. Um and also finally and that's quite
+12:41
+important actually for us as security practitioners. We need to be sure of the findings. So we need this whole thing to
+12:48
+be easy to explain and verify. So let's see how we do how we do this
+12:54
+with segi. So at first glance this looks a little bit um of a easy problem perhaps because
+13:03
+on one side you have the raw logs to analyze. Let's say you have hundreds of millions of events and on the other side
+13:10
+you have a backbone LLM in our case Gemini. So at this point you might say okay well
+13:17
+can I apply the classic react loop agent approach which is basically equip the
+13:23
+LLM with a tool so that the LLM can access the logs like fetch some records
+13:29
+at a time and then reason on those records and continue that in a loop.
+13:36
+So that might be our first thought. The there are at least three problems with this thought that makes it not work. Uh
+13:43
+the first problem is that um the context window is still quite limited um in even
+13:50
+in Gemini production Gemini. Um so if you keep on fetching log records from
+13:58
+those hundreds of millions of records, you're going to um clog that window very
+14:03
+very quickly. um and you're going to feel that in a few steps. So you don't have a lot of
+14:08
+iterations available to you. The second limitation is and that's really an
+14:14
+experimental observation is that if you keep on adding previous log records to
+14:20
+the the context window, the LLM eventually loses its ability to reason
+14:25
+and loses track of where it's where it is and what it's trying to accomplish.
+14:31
+And finally, and that's quite important for us, as I mentioned, uh this whole thing is quite hard to follow as a human
+14:37
+being because you have to pass through hundreds of pages of free form text that gather both LLM outputs and log records
+14:45
+and that's that's really hard to uh comprehend. So, we have to abstract away from the
+14:53
+base text um representation of these interactions. And for that we're going
+14:59
+to introduce what we call an exploration graph. And that's going to serve us as the as the memory for the agent. And the
+15:06
+exploration graph is going to store or represent the state of the investigation.
+15:12
+In this graph an edge means a logical entailment. So between two nodes it means that one node is a specialization
+15:19
+of another node is an analysis of or an answer to etc. You will you'll understand that um in a second with some
+15:26
+examples. Um there are four node types. First there
+15:33
+are investigative directions. So these are goals that the agent uh creates for itself and wants to accomplish.
+15:41
+Uh you can see that some investigative directions uh depend on each other. You know this that's logical intelment. The
+15:48
+second operation or the second type of um nodes that you have here are fetch records. So this is this is basically
+15:54
+our tool call or tool calls and these uh also depend on um logically depend on
+16:01
+goals. Uh finally not finally um almost finally we have um written summaries
+16:09
+what we call observations of the fetch log records. And finally, if we're lucky, uh we do have investigative
+16:17
+finding nodes that also depends on what we just fetch fetched.
+16:23
+So the role of the LLM in all of this is to update the exploration graph. That is
+16:29
+all the LLM is doing. Um so to update the exploration graph, the LLM adds
+16:35
+nodes and again that is all it's doing. So in the first phase, the LLM is going
+16:41
+to propose general investigative directions and that's all it's going to do.
+16:47
+In the second phase, the LM is going to uh write uh the correct tool calls to
+16:54
+make progress on those um uh investigative directions.
+17:01
+The uh in the third phase, the LM is, you guessed it, going to observe the results and write little summaries and
+17:08
+append those summaries to the graph. And then we're going to repeat this process and we're going to build the
+17:14
+graph iteratively until we find some conclusions.
+17:20
+I'll give an example of that. So here's the setup. Uh imagine you have a
+17:26
+detection signal signal that triggered on a Linux VM. Uh the first thing that you do uh as
+17:32
+Martin mentioned is you're going to image the disk. Then you're going to extract all the logs available on the system like everything you can find. Um
+17:40
+in this particular example, it's not that big. It's just 1 million log records and seven different log types.
+17:45
+SIS logs, file system, um uh basically stats and uh secure Linux logs. And
+17:52
+finally, you're going to prompt Sege Gemini to perform a blind investigation in the sense that you're not going to
+17:58
+give it any starting point. You're going to say find and explain all attack actions. And that's the goal that the
+18:03
+agent is trying to accomplish. So in order to explain in order to see how this works, uh let's look at the
+18:10
+exploration graph that is being built by SEGI. So as I mentioned in the first step, we
+18:16
+create investigative directions. Here the model comes up with three directions. By the way, I forgot to
+18:22
+mention, but in the initial in the very initial prompt, we tell the LLM about
+18:28
+the available logs. So, we tell the LM that oh, there's 1 million log records and there's like these seven different
+18:34
+log types and that's all we say. Um, and and here uh we have those uh three
+18:42
+interesting directions. Uh the first one is they're I think quite easy to understand. They're quite vague and high
+18:48
+level because at this point we don't have a lot of information. But you can see that for example in the first one
+18:53
+the LM is suggesting to well look at the all the connections that were made through SSH to the machine.
+19:00
+All right. So if you remember from the last slides the next thing we're going to do is going we're going to have the LM call the fetch tool to uh to collect
+19:08
+the relevant logs uh with an intent that is compatible with the investigative
+19:15
+directions. So I'm not going to into the details here for the fetch tool. Uh but
+19:20
+there's there's more behind the scenes here. And finally to complete the the general
+19:27
+update for this phase, the LLM is going to write summaries for the results it
+19:32
+obtained. So in this particular example, I'm not going to show the four summaries. I'm just going to summarize
+19:38
+this one. And uh that's what the LM has in the graph. The LM observed that there's a successful root login at a
+19:44
+particular time. Actually multiple uh successful login. All right. Then we
+19:50
+repeat the process. Then we ask the LM, okay, what are the best next investigative directions to pursue? So
+19:57
+this is what Gemini comes up with. Um it's uh I think you would be familiar
+20:04
+with this reasoning. It's essentially pivoting around the time of the SSH
+20:10
+login. So it's trying to see what happened before or after those login in
+20:16
+other logs. and it's doing it all by itself like we're not guiding it in any way.
+20:23
+So again, we're going to write some uh fetch calls to fetch those particular records.
+20:29
+And uh we're going to write some um uh summarizations of those results. And
+20:35
+here we got very lucky um because this is a small example and I wanted everything to fit in one slide. Um the
+20:43
+LLM finds indeed very suspicious actions and activities around those uh root SSH
+20:49
+connections including a modification of uh insuring persistence activity here
+20:55
+the um the chron jobs and as well as
+21:00
+um suspicious files. The thing that I also want you to uh notice here on this
+21:06
+slide are those lines are those numbers next to the log types. Those are log record lines. This is how we also get
+21:14
+explanability and verifi verifiability in the system because we have the exact reference of the logs. And what the
+21:21
+graph gives you here is the ability to go back in time and figure out how did
+21:26
+the LLM find that made that conclusion. How was this found? Um
+21:34
+all right. So here are the takeaways. Um, together
+21:40
+with the exploration graph, Gemini within SEGI is able to uh process
+21:45
+hundreds of millions of log records and handle complex multi-step investigation processes. Uh, at every round, the L&M
+21:52
+only sees relatively small amounts of of the logs. Uh the solution is also explainable
+21:59
+because you can at the end of the process you have an exploration graph that explains the entire uh reasoning
+22:07
+chain that led to the results. And finally uh the process is also verifiable in the sense that you have
+22:13
+the reference to the log records. And with this I'll pass it on back to Martin.
+22:20
+Yes. So this is one thing is like having this very smart agent in the background do the investigation for you. The second
+22:28
+thing is how do you make this apparent to analysts like how do you integrate this into the tools that you already have so that the analysts actually can
+22:35
+verify the results and trust that you know what this agent says has happened has actually happened. Um so that's what
+22:42
+we set out to do. Um so we ran multiple like user studies of like analysts that
+22:49
+um we would want to uh work together with the AI and asked them like what would you want to see from the AI or
+22:56
+like what are the most important parts of your workflow um when you're doing you know your your analyst job. Um I'm
+23:02
+not going to go over um each and every one of these um but I have a next slide where we'll zoom into um some of them.
+23:09
+Um so first to show you a short video of what this currently looks like uh looks like in time sketch. Um it's a bit small
+23:16
+but basically what this is is a completely separate view in time sketch called the AI view where you can see the
+23:22
+agent like as it works and the results are sort of streaming in. So what you see on the left in small are like
+23:27
+hypothesis or like investigative questions that um the agent has come up with that is asking itself about the
+23:34
+logs and then if it sees something related to them it's going to link the actual events that it finds in time
+23:40
+sketch directly to to those investigative questions or to the um hypothesis. Um so here's a screenshot of
+23:47
+like a fully ran um of a full agent run on the logs in a particular sketch. Um
+23:54
+so again what you see here um on the left are uh the questions um that the
+24:00
+agent has proposed that it deemed to be relevant to ask about this particular um sketch or investigation. Um and then
+24:08
+directly under it here. So we're zooming in on one question now um are the events that are in the sketch. So immediately
+24:14
+you know that like these results were not hallucinated like the results are right there and you can then pivot from
+24:20
+the events that the agent has highlighted directly to anything around the events as well. So this is really
+24:26
+the needle in the haststack finding that you want like even if it just produces a single finding that's relevant you can
+24:32
+take that do the context search and find potentially other relevant events. Um
+24:38
+what you then see up the top is uh a conclusion and the conclusion is again comes from the agent and the analyst is
+24:44
+able to either accept or reject this conclusion. And in this way the analyst and the AI like the agent are working
+24:50
+together to build towards like multiple questions that are actually relevant. write a conclusion per question and then
+24:57
+finish the investigation with a full investigative report that contain either, you know, multiple questions
+25:02
+from the agent, from the analyst or a combination of the two.
+25:08
+All right, the evaluation, Alex, you want to guess how well it does. Thank
+25:14
+you. So, [clears throat] uh, this is an agent and evaluating
+25:20
+agents is very hard. I'm sure most of you are familiar with this. Um, nonetheless, we've tried and I think
+25:26
+we've done a reasonable job at it. So, the first thing we need for evaluation is a data set, a label data sets. Um, so
+25:35
+this is how we constructed it. Um, we collected about a hundred instances of
+25:42
+compromised VMs uh on GCP. These are real world cases. Um, so the VMs were
+25:49
+compromised by real world attackers. Um and there were the detections are the
+25:54
+result of what Martin previously showed. Uh things like very targeted and very
+25:59
+low false positive rules. Uh things like oh this particular VM reached out to a
+26:05
+suspicious IP or this VM has been detected to have some coin mining operations. Right? So that's basically
+26:12
+all you would know at that stage. Um I want here I want in the next few uh
+26:19
+boxes I want to convey a sense of scale and the difficulty of the data set. Um
+26:24
+the average case is relatively hard. Some some are really really hard. Um so
+26:30
+on average we have 15 different log types. Uh sometimes we have 50 different log types. Um these are also a mix of uh
+26:38
+Linux and Windows VMs. Um there's on average about four million log records.
+26:45
+Some have 100 million log records and some have a lot less. Um and finally and
+26:53
+most importantly this is the needle in the haststack thing. Uh we have 38 annotated records on average uh per
+26:59
+case. So it means that the human analysts when they conducted labeling
+27:04
+and investigation in each cases they've identified on average 38 log records
+27:10
+that bear um uh the traces of the attacker.
+27:17
+Um and finally this is also to show you that this is not these are not all the same instances. Um we've categorized the
+27:25
+data set into multiple compromised type dimensions. Uh, you have all sorts of things in there. You have weak passwords
+27:33
+that were brute forced essentially. You have system misconfigurations that allowed for something to be open. You
+27:40
+even have software vulnerabilities, unpatched software that's being exploited. Um, leak credentials and
+27:47
+other things. So, um, let's go into the evaluation
+27:53
+tasks. There's many ways to evaluate a system like that because a system like that is able to do a lot of things for
+27:58
+you basically. Uh so here we wanted something quite close to what we would use it for
+28:06
+and the task the evaluation task that we ask segment here is to find all attack
+28:12
+related indicators or entities. I'll give a few examples. U so these are
+28:19
+um identifiers identifiers that are that pertain to the attack. So URLs, file
+28:24
+names, IP addresses, um P ids, uh executable names, etc.
+28:32
+There are three levels of relevance for those um critical, important, and
+28:37
+supplemental. So the critical um entities are those that are most tightly
+28:43
+attached to to the attacker. The important ones are one level below and the supplemental ones are okay. It's
+28:50
+nice if you get them, but you don't have to get them. Um so here's an example.
+28:56
+This is um this is from SIS logs. Uh so the color coding is as is per categories
+29:02
+of relevance. You see that the most important um indicator here is the uh
+29:08
+the URL that contains the IP and then um uh the name of the script uh that's
+29:16
+being downloaded on the machine. And then you have uh things that are
+29:22
+really nice to have like oh this is chrome and that's a that's that's the p ID of this uh of this process and then
+29:29
+you have things that you could do without but they still should should still be um collected uh so that dev
+29:36
+null for example right and uh if you remember we're able
+29:42
+to do two things with segi we're able to do hinted and not hinted so in the
+29:48
+hinted one We give Sege Gemini the initial detection information and that's akin to timeline reconstruction
+29:56
+right and the non-hinted evaluation we are not given a starting point we're only given the logs and the mission here
+30:03
+is to do thread hunting so let's look at the results
+30:10
+um so for the for the for the for the easier case which is the hinted case uh
+30:17
+we collect more than 50% or the agent is able to collect more than 53% of um
+30:26
+um of the critical indicators. So just a quick note 53% might not seem high. Uh
+30:34
+it is actually quite high in practice when you see the agent work because as a security analyst as soon as you have one
+30:41
+finding um um in in in any scenario you can
+30:46
+actually start your own investigation process and continue uh finding the other events in the log. Um the
+30:54
+precision is at 12%. uh so one in 10 of uh of our entities
+31:01
+will be wouldn't have been labeled by the human experts uh as pertaining to
+31:07
+the attack. There are two reasons for that. Um one reason is that there's
+31:12
+obvious false positives. That's correct. And the other reason is that um as
+31:19
+humans it's actually quite hard to be exhaustive and to look at and to find all the possible uh um indicators. Uh so
+31:28
+what happens is that we are underlabeling our data set is underlabeled in the sense that we know
+31:33
+that there are critical um uh entities that are not labeled as such in the data
+31:38
+set. So so the precision is artificially low uh for that reason.
+31:46
+Finally, uh and this is quite uh quite
+31:52
+interesting and quite impressive uh is doing well on uh on the hinted so
+31:57
+timeline reconstruction, but it's holding its weight uh for thread
+32:02
+hunting. So this was the kind of like the interesting surprise of this project. This thing is also able to
+32:09
+perform autonomous investigations and thread hunting. um the performance is slightly less but
+32:16
+it's still there and still quite usable at 47% recall on critical events.
+32:24
+So there's two takeaways here from these numbers. Uh first the first takeaway is
+32:30
+that SEGI finds 53% of critical indicators across millions of log
+32:36
+records and the total cost for this currently is under $3. we expect this cost to go um down
+32:45
+and the other thing that I want that I was mentioning is that even finding one
+32:50
+critical indicator uh is is a big deal and it turns out that in at least 90% or
+32:58
+more of the cases uh segi is able to find at least one uh critical indicator
+33:08
+and Martin thank you. Yeah, this is an example I wanted to give because these hundred cases that we run are like our
+33:14
+investigations, right? Like you don't know much about them. So to sort of like give an example that more people in the
+33:19
+room might be familiar with um we also tried to run the agent on uh like a public uh CTF or a challenge. So some of
+33:26
+you may know this. Um this is a forensics challenge from a couple years ago created by James Smith. Um it's
+33:31
+hosted dfirmadness.com. Um and the scenario is this, right? Like so your your boss comes in, says he's
+33:38
+been contacted by the FBI and they found like his intellectual property on the dark web. Here's a bunch of data from
+33:44
+like the network. Go and investigate what happened. Um I think a lot of people do this challenge either for fun
+33:50
+or they give it to like new hires at their company to like see see how you can solve this. Um and like all the data
+33:55
+is public. Um you can try to run this. Um there's several levels of difficulty that you can do this challenge with. Um
+34:02
+and the most difficult mode um that of course we try to run uh with the agent um is the disk image only. So I think
+34:09
+it's like a disk image of a domain controller uh as well as another server or a client I'm not sure but at least a
+34:15
+domain controller um and and we you know parse that data with plazo put it into time sketch and then put sack gemini to
+34:22
+work um and this is the recall on those. So including the scenario from a couple of slides back uh about being contacted
+34:28
+by the FBI saying what happened um we get 60% of the critical indicators being
+34:33
+found by um by the agent. It's also able to answer 22 out of the 30 questions
+34:40
+that were asked by the CTF despite not giving those questions to the agent. So
+34:45
+like it you can infer all the answers from those 30 questions or at least you know 22 of them um by just looking at
+34:51
+the output like it's smart enough to know what to look for um inside those logs. What's more interesting of course
+34:56
+is like if you do not include the scenario and you just give it the parsed artifacts of those two disk images still
+35:02
+performs really well like it's still able to answer 20 out of the 30 questions and still finds 50% of the
+35:08
+critical indicators. um which is a really good performance for like going at it completely autonomously and not
+35:13
+knowing what the context is of the instant like this is real proper um threat hunting.
+35:20
+All right. So um if you want to learn more currently um the agent inside Sack
+35:26
+Gemini is available through a trusted tester program. So this is experimental. Um so if you want to try this out um you
+35:32
+can scan this QR code or go to the link. As I said, the slides um are available online um and request access to this
+35:41
+um the time sketch view. So the um AI view that is in time sketch is public
+35:46
+right now. So you can already use that to like run investigations and potentially like use uh an alternative
+35:52
+agent or use SEGI directly to interface that like that's open source. Um, and
+35:57
+what I also wanted to mention because I forgot earlier on like the summarization feature that is currently like in time
+36:02
+sketch. It's like sort of the the simpler approach. You can run that without any like Gemini models as well.
+36:08
+Like you could run a locally hosted LM using Olama. Um, and that would work equally as well. Um, we'll do some demos
+36:16
+as well uh at the at the cloud booth. Um, we'll have a talk at Arsenal. Um, and some of this will be part of the
+36:22
+Genzex CTF that we'll be running um at Defcon. Great. Here's the QR code again. Um, if
+36:28
+you want to get access to the to the slides, those are up um right now. Any
+36:34
+questions, you can of course email us um directly. I'm not sure if we have much
+36:39
+time for questions. In any case, we'll be um at the at the rep room, Ben Menlay
+36:45
+Bay level two. Um so, we'll go there immediately after this talk and I think you can just like follow us along um and
+36:51
+we'll be available there to uh answer questions. All right. Thank you very much.
+36:57
+Thanks, Luke.

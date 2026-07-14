@@ -1,0 +1,1240 @@
+0:00
+Awesome. Let's do this thing. Awesome. Well, thank you, Chris, and thank you everyone for being here. We'll
+0:07
+see you on the other side. We'll Sounds like a plan. Awesome. So,
+0:15
+thank you everybody. Uh, so this is part two of a three-part series on talking
+0:22
+about VPNs. Thank you to our sponsors. I also wanted to take a moment to say
+0:27
+thank you to all of the nerd herders that we have on the Discord server. Um,
+0:33
+if you go to other Discord servers, a lot of times you deal with spam and hate
+0:39
+and scammers and all this other stuff. And these folks are just amazing. I
+0:44
+mean, before I can log in to check, they've like found the messages, every
+0:50
+channel it was put in, got it all deleted, got the person banned. um they they just this would not be as awesome
+0:56
+an environment on this Discord server as it is if it wasn't for these folks. So when you talk to them, you know, please
+1:02
+say thank you because, you know, we have the environment, we do because of them.
+1:07
+As for lab requirements today, not much. If you want to kind of follow along, uh a Linux system that you have pseudo
+1:13
+access on that's running SSH as well as uh admin access on a Windows system and you'll be able to follow any hands-on
+1:20
+stuff that I go through and do. Okay, so let's do a quick sanity check. So last
+1:25
+week we talked about symmetrical key encryption. That's when we have
+1:30
+encryption that a single key is used to both encrypt and decrypt. And we talk about how that's very efficient from a
+1:38
+CPU perspective, right? We don't take as huge of a CPU hit with that versus other options. But the downside of that is how
+1:45
+do I get that secret key to the system on the other side when I don't trust this medium namely the internet that is
+1:53
+between us. So we talked about that last week. We also talked about HMAC. So we talked about hashing and we talked about
+1:59
+how HMAC is simply a hash algorithm plus a a secret key that we use to digitally
+2:08
+sign data that goes back and forth. So the idea is I take a hash algorithm. I
+2:13
+take this secret key that's used as part of my symmetrical key encryption. I run that through a hashing algorithm. I send
+2:20
+that to the system on the other side. And now that system, because it's the only other system that should have that
+2:26
+secret key, can check that hash and verify that none of the data was changed in transit. So we have a way to secure
+2:34
+our data while it's being transmitted. We have a way to authenticate all the packets where we're what we haven't
+2:40
+covered yet or fixed is the beginning of the session. How do we do that initial authentication? Are you in fact who I
+2:46
+think you are? How do we set up a secure channel over this insecure medium? Those are the problems we still need to go
+2:52
+through and talk about and address this week. So when it comes to setting up a
+2:57
+secure channel over an insecure medium, the technology we leverage is referred to as asymmetrical encryption. You'll
+3:04
+also hear it referred to as public key cryptography. Those are they're the same thing, just, you know, two different
+3:09
+names. And with symmetric key, we said there's one key that encrypts and decrypts. Asymmetrical is much harder
+3:18
+math. Let me just kind of describe it that way for now. And what we generate
+3:23
+is not a key that's used to encrypt and decrypt, but two keys with a dedicated
+3:29
+task. One key is designed to encrypt the data only. The other key is designed to
+3:35
+do decryption only. The key that can do the encryption, we refer to that as the
+3:40
+public key. So what that means is if someone needs to send me a secure message, I can send them my public key.
+3:47
+They can encrypt it with my public key and the only thing that can decrypt it is my private key. So, as long as I keep
+3:54
+my private key safe, I'm the only one that'll ever be able to go through and open up that
+4:00
+information. So, this is kind of cool, right? We talked about insecure medium. How do we deal with that? Well, that
+4:07
+public key can only encrypt. So, if I send it to you, so you can send me a
+4:12
+secure message. And let's say Bill's sitting in the middle and he's trying, you know, and he grabs a copy of that
+4:17
+public key as it goes by as well, it doesn't do him any good. that key can only encrypt the data. It cannot
+4:23
+decrypt. The only thing that can is my private key. The downside of it, and I'll go
+4:29
+back into this a little bit later, it's CPU intensive. So, we can't really rely on this for all of our VPN security
+4:36
+needs because it's going to add a lot of latency to the packets as they go by.
+4:41
+The only time we tend to use asymmetric encryption by itself is when we're
+4:46
+dealing with store and forward messaging. So, if you think email, right? If I send you an email and it
+4:52
+takes a minute to get to you instead of 10 seconds, you're not going to notice the difference. But if I send you a
+4:58
+packet and that packet takes a second to get to you instead of 15 milliseconds,
+5:03
+you're definitely going to start noticing that, right? So asymmetric can't fix everything for us, but it can
+5:09
+at least can create that secure channel over an insecure medium.
+5:15
+It's also susceptible to initial man-in-the-middle attacks. What do I
+5:20
+mean by that? Well, remember I said if Bill puts himself in the middle and I send you my public key so you can
+5:27
+encrypt data and send it to me. If Bill gets a copy of that public key as well, it doesn't do him any good. He can't
+5:32
+decrypt the data with the public key. But what if Bill changes his attack methodology a little bit? Let's say I go
+5:40
+to send you my public key and then Bill is able to grab that and then throw his
+5:47
+public key over his shoulder to you and neither one of us notice that Bill interrupted the key transfer. Well, what
+5:53
+just happened? Well, now Bill has a copy of my public key. You have a public key
+5:59
+you think is mine, but it's actually Bill's. So, when you go in and you encrypt your data using that public key,
+6:06
+that's Bill's public key. So now if you transmit the data, if Bill can interrupt
+6:11
+that as well, it was encrypted with his public key. He can use his private key to open it up. He can read the message.
+6:18
+He can change it. You know, you send me a message that says, "Hey, Chris, thanks for, you know, the fireside Fridays. I
+6:23
+thought they were awesome." And Bill changes it to Chris, you're a pain in the ass and I hate having to listen to you every week. And then he sends it
+6:29
+off, you know, and then he re-encrypts it with my public key, sends it off to me. Since it was my public key that
+6:36
+encrypted it, my private key can open it. And now I open the message thinking you flamed me. And with the technology
+6:42
+we've discussed so far, there's no way to detect that this took place. So while
+6:48
+asymmetric encryption can set up a secure channel over an insecure medium,
+6:53
+it is still susceptible to initial men in the middle attack. In other words, we
+6:58
+need to get initial authentication right. If we don't do that, the whole thing. Basically, we're working with
+7:05
+dominoes is what this comes down to. And if you knock down the first domino, all
+7:10
+the dominoes fall off apart after that, right? Like, let's say what you sent me
+7:16
+was a symmetrical key so we could switch over and use, you know, AES 512
+7:21
+encryption for sending data back and forth. Well, again, Bill interrupted that. Bill saw that key. So now when we
+7:28
+switch over and use AES encryption instead, Bill can decrypt all of that stuff anytime he wants to. So that's
+7:34
+what I mean by it's a series of dominoes. If you get initial authentication wrong, that falls over
+7:40
+and now asymmetric can't be trusted. If asymmetric falls over, now we can't uh
+7:45
+we can't have faith in symmetrical key. We can't have faith in the HMAC that takes place. So it all falls down one
+7:51
+ascent one after another. Uh, so essentially a TLS tunnel is needed first or Bill is still in control. Well, even
+7:58
+with the TLS tunnel, Bill might be in control. We'll get into that a little bit more as we go through. There's a
+8:04
+rabbit hole we need to go down and kind of shine a flashlight on a little bit. One of the other cool things about
+8:12
+asymmetric encryption or public key cryptography is that it can also be used
+8:17
+to create hash values to validate information. So, remember we talked
+8:23
+about hashing and how one of the strengths of hashing is that I can hash it, you can hash it, we'll end up with
+8:29
+the same hash, and now we know we both have the same thing. But we said, well, that's not really useful for a VPN
+8:35
+because now somebody could change something and we wouldn't be able to tell. So, we just said we're going to use HMAC instead. And HMAC is just a
+8:42
+hash plus a secret only you and I know about. And now we run that and the data
+8:47
+through that hash algorithm. And now we have a signature that you can't reproduce without that secret key. So we
+8:54
+talked about, you know, that's a way we could go through and authenticate every packet going by. Well, there's actually
+9:00
+similar built into asymmetric encryption. I can go through and sign
+9:05
+something with my private key and the hash I generate can be validated by the
+9:11
+public key. So the public key can't create it. All it can do is verify that
+9:16
+that hash was created by my private key. Now, here's the problem. This is a pass fail test. So,
+9:25
+let's say I send you a message and it has a hash in it and you use my public
+9:31
+key to verify that and the the verification fails. That could be you
+9:37
+think you have my public key, you actually have somebody else's. It could be my private key was, you know, wasn't
+9:44
+used to hash it. It could be somebody changed some of that data while it was in transit as it went by. It could be
+9:51
+there were some CRC area errors due to sunspots, you know, around the northern
+9:57
+lights at that moment. In other words, it's a pass. You know, if it's
+10:02
+good or if it's bad, but if it's bad, you don't know why, right? It can't, you
+10:07
+know, the public key won't tell you, oh, this is incorrect because it wasn't signed with Chris's, you know, key. No,
+10:13
+you don't know. You don't know. So, we we know if it's good or not, but if we don't, but if it's not, we don't
+10:20
+necessarily know why, just with the key information that we have in front of
+10:26
+us. Cool. So if we kind of think this through, right? Let's say we both go
+10:32
+through and generate our own public and private keys. Then we send a copy of our public keys to each other. Now when I
+10:40
+want to send you data, I can encrypt it using your public key and then I can
+10:45
+sign it using my private key. When that data gets to you, you can check that
+10:51
+hash to make sure that data is valid using my public key. And if the hash is
+10:57
+valid, now you can use your private key to open up and read the plain text message. So we have a way to go through
+11:04
+and set up a secure channel over an insecure medium. Now this still rests on
+11:09
+those public keys being right. Again, if Bill gets in the middle, starts grabbing people's public keys, throwing his out
+11:16
+instead, this whole thing falls apart. So, we still got the domino problem, but
+11:21
+we at least have something that can be mathematically proven to allow us to set
+11:27
+up a secure channel over an insecure medium. So, again,
+11:37
+um yeah, actually I just talked through all this. So, there's a couple of problems with this though. One is we
+11:43
+kind of uh oh, so so let's say we know we can't use asymmetric encryption, right? We're going to be streaming data
+11:49
+back and forth. It's going to be too CPU intensive. So, we're going to use asymmetric to get started, but then
+11:54
+we're going to go through and we want to switch over to symmetrical key encryption. So, that kind of begs the question, okay, so I want to use
+12:02
+asymmetric to start the session and I'm going to use that to secure the secret
+12:07
+key in order to switch over to symmetrical key encryption. How what
+12:13
+what process should we use for that? Well, we got a couple of possibilities. One possibility is
+12:20
+that I just create a secret key and I use your public key to encrypt it and
+12:26
+then I send it to you. And now you can use your private key, open it up. You now see that secret value that I
+12:31
+generated and bang, now we can switch over and use AES or whatever to go through and start encrypting data as it
+12:37
+goes back and forth. That will work. Couple of problems. One is there's some predefined
+12:44
+roles here, right? Like who gets to create that key? Who's responsible for
+12:50
+creating a decent value? What are the parameters around that? The other is we're transmitting the key and unless
+12:58
+we've exchanged public keys both ways, there's no way to go through and validate that. Right? In other words, I
+13:06
+send you my public key, you create a symmetrical key, you encrypt it with my
+13:11
+public key, my private key can open it up. Well, unless I have your public key
+13:16
+as well, I have no way to validate that that information wasn't changed in transit or keys didn't get changed or
+13:22
+something along those lines. So, it works, but there's still some limitations around trying to do it that
+13:29
+way. Now, as far as asymmetric goes, most of these you probably heard
+13:35
+of before. RSA is one of the oldest ones. In fact, fun fact. So, RSA is the first letter of the last name of the
+13:42
+three folks that went through and wrote asymmetric encryption. And they were given a patent on asymmetric encryption
+13:48
+using a public and a private key to encrypt things instead of a symmetrical key methodology. The truth is they didn't
+13:56
+create it, right? They wrote this and they got their patent in like the mid70s, but they didn't actually create
+14:01
+it. The really smart folk, uh, the really smart Brits that were working on
+14:07
+cryptography back in World War II, they came up with this already. So,
+14:12
+asymmetric encryption was actually created back in the
+14:18
+late30s, but because it was such strong encryption, it was labeled as top secret
+14:24
+and it wasn't allowed out. So, it took 30 plus years for the rest of the world
+14:32
+to catch up with the work that was being done by the cryptographers that were involved in World War II over in Great
+14:37
+Britain. Um, I I think that's pretty amazing, pretty wild. So, so yeah. So,
+14:43
+RSA is accredited with taking with creating this. Turns out, yeah, no, not so much.
+14:49
+But how does it work, right? Like we create a public key and a private key. How does it work? It all kind of works
+14:55
+around prime numbers or or more accurately described as numbers we're pretty certain are prime. And what's
+15:02
+involved with factoring numbers when you multiply two big primes together, right?
+15:08
+So like if I take three and 11 which are both prime numbers that creates 33. How hard is it to figure out what
+15:15
+numbers were used to generate that value 33? Uh that's where a lot of the
+15:20
+strength in this math comes from. Now 33, yeah, you can figure that out in your head, right? But we're only talking
+15:27
+about two digits maximum. When we talk about the prime numbers used in RSA, they're literally hundreds of digits
+15:33
+long. So we're talking about really, really, really big prime numbers that are being used. And again, this is that
+15:39
+whole process of generating that public and that private key. Elliptical curve
+15:45
+encryption is very similar to RSA, but it's a little bit more optimized and
+15:50
+strained line, so it's less of a CPU hit. So RSA, you know, has been used for
+15:55
+a long time. It's kind of getting phased out now. we're we're moving more towards elliptical curve type of algorithms for
+16:01
+doing public private key. And then there's diffy helman. Diffy helman isn't
+16:07
+so much a way to create your public private keys, although it does include that in the spec, but it's more focused
+16:14
+on creating a symmetrical key without one side holding that responsibility. In
+16:22
+other words, what the what the beauty that Diffy Helman defines is rather than
+16:28
+having one person figure out what symmetrical key we should use and send it to the person on the other side, how
+16:34
+to negotiate that in a clear channel that anybody could sniff and do it in a
+16:40
+secure fashion. Here's an example of that. And I've tried to keep the So, so for the
+16:46
+crypto weenies in the audience, I'm gonna piss you off and I'm gonna apologize in advance because I'm taking
+16:52
+some liberties with some of this and I'm simplifying it a lot more than it really truly is. But my goal is, excuse me, for
+17:01
+the average security person that kind of needs to know how this stuff works, but
+17:06
+is never going to be charged with writing math to do this themselves. I want to be able to give you enough
+17:12
+information that you understand how it works without dragging us down the math, you know, rabbit h rabbit trail which is
+17:19
+going to like, you know, yawn a lot of people out and they're going to fall asleep and that wouldn't be good. So, in
+17:26
+a nutshell, here's how Diffy Helman works. So, we've got two individuals, Alice and Bob. Alice and Bob want to
+17:33
+exchange information with each other and they want to do it in a secure fashion and they want to use a secure algorithm
+17:40
+like Blowfish to do that. Well, Blowfish is a symmetrical key algorithm. It uses
+17:46
+the same key to encrypt and decrypt. So Alice and Bob are going to need to know some value that only they know about and
+17:54
+nobody else knows about in order to use Bowfish properly and secure their data as they go through.
+18:00
+So in order to come up with that symmetrical key value, they're going to go through a little bit of a handshake
+18:06
+exchange. So the first thing they do is they generate a private key for themselves. This is done, you know, on
+18:12
+their system. It's not transmitted anywhere else. So Alice generates one we're going to call capital X. Bob
+18:19
+generates one that we're going to call capital Y. So now they both have a private key value that is known only to
+18:25
+them. Now that they've created that key, Alice
+18:31
+and Bob then go through and they negotiate two numbers. PNG. What are PNG? P and G are prime numbers. P is a
+18:40
+really, really, really, really, really, really, really, really big prime number.
+18:46
+G is just a really, really, really big prime number. But we've got these two numbers,
+18:52
+P and G, that they've they've agreed on. they've decided these are nice pretty numbers that we're going to go through
+18:57
+and use. Then what they do is they go through and they
+19:03
+generate a public key and a generate the public key they
+19:08
+use their own private key X to generate that value. So in my
+19:16
+original description I said that the public and private key is mathematically related but they're not equal to each
+19:23
+other. This is what I meant by that. We're deriving the public key off of that. And in fact, if you want an idea
+19:30
+of what stuff like this looks like, uh, if you don't have it tools, this is an awesome toolkit. I have this running on
+19:36
+one of my servers. It's got a lot of really useful tools in it. It runs inside of a Docker instance. But hey,
+19:41
+let's go in and let's just generate an RSA key pair. And here you go. So, this is a 48 bit long key pair. This is the
+19:50
+public key. This is the private key. um make it a little smaller. Let's say
+19:56
+we want to do a,024 for some reason. Here you go. But you can see that they're not that different from each
+20:02
+other, right? The private key is a little bit longer, but they're not that different from each other. And that
+20:08
+public key gets generated based on the information that's inside of the private key. So that's what I mean by they're
+20:15
+mathematically related to each other, but they're not equal to each other.
+20:20
+So Alice's private key along with the prime number and the generator number
+20:29
+are used to calculate A. A is Alice's public key. Bob does the same thing only we're
+20:37
+going to label his public key lowercase B. Now they exchange those public keys
+20:43
+with each other. So if we look at what's what can be seen on the network this untrusted network what could somebody
+20:50
+sniff and potentially see well they could see the negotiation for PNG they can see what the value of PNG ends up
+20:57
+being that's all negotiated in the clear they can see each person's public key
+21:03
+those go by in the clear uh this is why quantum computing is a problem security encryption computing power and man in
+21:10
+the middle so it's not so much it's a problem of man in the middle is it is a problem about CPU resources, right? So
+21:18
+imagine like you know the RSA keys when when I were showing those this one's a,024bit this one's you know48 bit what
+21:25
+does that mean? Well that's how big the key value is that we're generating. The
+21:31
+bigger the key value the more possibilities that are available for each potential key, the
+21:38
+longer it's going to take you to guess all of those possibilities. As an example, for the longest time, we used
+21:44
+something called DES encryption, uh, written by someone that Bill and I actually got the benefit of being able
+21:50
+to work with, Robert Morris, Senior. Uh, Dez encryption used a 56-bit key. At the
+21:56
+time, Morris wrote Dez encryption back in the 70s. 56bit was like, "This is
+22:02
+going to take someone a hundred years to crack it." But by the time you got into like the late 90s, the early 2000s, CPUs
+22:10
+had become fast enough that to go through all the possible potential key values in a 56-bit DEZ key might only
+22:19
+take you a day if you had some decent computer resources. So that's why we had to stop using it. So the problem with
+22:26
+quantum computing without going too far down that road is that our CPUs today
+22:33
+kind of process things in a linear fashion, right? Let me try this key. Oh, that didn't work. Let me try this key
+22:38
+value. Nope, that didn't work. Let me try this key value. Nope, that didn't work. Quantum can try many, many
+22:45
+possibilities all at the same time and then try and do some error correction to see which one might actually be it. So
+22:51
+it's the fact that processing is done completely differently that we need to
+22:56
+worry about quantum in the future um versus versus anything else. Um that's a
+23:02
+total side conversation. So I don't want to go any deeper down that rabbit hole than that. So uh but back to Diffy
+23:08
+Helmet. So each side has generated a private key. They've negotiated PNG
+23:14
+between us between them. Anybody could see that in the clear. They then used PNG plus their own private key to
+23:21
+generate a public key for each side. Lowercase A over here, lowercase B over
+23:26
+here. Exchanged that in clear text over the internet so anybody could potentially see that. And then what they
+23:33
+do is they take their own private key plus both public keys plus the prime
+23:39
+number plus the generator number. uh blend it for 2 minutes, cook it at 350
+23:45
+for for an hour and what comes out the other side is a secret key value and
+23:51
+through the magic that is defy helmet even though the private keys aren't the
+23:56
+same on both sides they will derive the same secret key value. So I now we now
+24:04
+have a value known to both sides of the connection that no one else can figure
+24:09
+out because no one in the middle was able to see either one of the private keys. So now we've negotiated what
+24:16
+secret key to use. Now like I said, we can switch over and which one did I call out? Blowfish. We can now switch over
+24:22
+and use blowfish encryption to use symmetrical key cryptography to protect
+24:27
+our data as it goes back and forth. And now, you know, neither one of us had designated roles. We don't have to worry
+24:33
+about one side picking, you know, hor horrible to use uh secret key values that are too short or whatever the case
+24:39
+may be. It this is all part of a negot negotiation.
+24:45
+Um yeah, Robert Morris senior, father of warm men. Yeah. Uh so Robert Morris Jr.
+24:52
+was actually a pretty cool dude. Uh I actually got an opportunity to meet him as well. Um, this was a so Robert Morris
+25:02
+senior was you you can look up his bio. Uh, the guy was amazingly brilliant. Um,
+25:10
+that casts a big shadow and sometimes sons do things they don't think through
+25:18
+completely to try and get out of the shadow that dad is casting. Um, that's
+25:23
+really what he my that's my interpretation of what happened with the Morris worm. He wasn't trying to do
+25:29
+anything bad. He was actually trying to patch things. This was his way to figure out what systems were vulnerable and
+25:35
+let's get a patch on. He just underestimated how quickly this thing would propagate over the internet and how many instances may potentially run
+25:42
+on any given system at a given time. Um, but yeah, you know, the two of them are
+25:47
+father and son. Cool. So now we have symmetrical
+25:52
+keys. Awesome. So let's kind of step back. Where are we right now? So right
+25:57
+now we have asymmetric encryption. We have a way to set up a secure channel over an insecure medium. We can gen we
+26:04
+can use diffy helman to generate a secret key value that'll allow us to switch over to symmetrical key
+26:10
+encryption and use that to protect our data as it goes back and forth. We can use HMAC to authenticate every single
+26:17
+packet sent in both directions. so that we know our data isn't getting changed or anything along those lines. So, so
+26:24
+far so good. The only thing we're still missing is initial authentication. And
+26:30
+again, like I said, dominoes, we got to make sure we get initial authentication right because if we don't, as good as
+26:35
+all this technology is, it becomes useless if we can't trust initial
+26:41
+authentication. So, what are our possibilities? Well, one possibility is just use a password. I've seen vendors
+26:47
+do this in the past. There's v I've seen vendors that have decided, hey, we're smart. Let's write our own encryption
+26:53
+algorithm and we'll create our own VPN product and this was their way of doing initial
+26:58
+authentitation was just, hey, use a shared secret that everybody knows about. Well, there's a couple problems
+27:04
+here. You know, one is you're using this shared password everywhere. So, if one system gets compromised, everything is
+27:11
+now compromised. The other problem is it's a pain to change that value, right?
+27:16
+If we decide, hey, we want to change this password every 3 months just to make sure that, you know, if it gets
+27:22
+cracked, we're not in trouble and blah blah blah or whatever. Well, to change over, everybody's got to change at the
+27:28
+same time. So, this is a si this is easy for developers to deploy. It's a pain in
+27:35
+the ass for network administrators to manage on a daily basis, right? This is
+27:40
+the the the developer is taking the easy way out if you will. So avoid this one if you
+27:48
+can. Other possibilities we've seen are things like this, right? So think about the first time you run log into an SSH
+27:56
+server. What happens? You get a message similar to this, right? The authentication of the host you're
+28:01
+connecting to can't be established. Here's its fingerprint. Do you want to continue? Right? We've all seen this,
+28:08
+right? What does this mean? What's going on? So, here's what's
+28:13
+happening. The server is using whatever algorithm is identified. In this case
+28:19
+here, it's SHA 256 to hash the public key for that SSH system. This is a hash
+28:27
+of that public key. So what's happening here is we're basically being told, hey, this is the
+28:35
+hash of the public uh public key of the server you're trying to connect to. I'm
+28:40
+leaving it to you, the human, to verify if this is okay. And now what's supposed
+28:46
+to happen is we're supposed to contact the admin and say, "Hey admin, do me a
+28:52
+favor. Run something like this." so that it prints out all the keys and I'm
+28:58
+trying to connect up using the ECDSA algorithm. So go find the ECDSA
+29:04
+algorithm and read off this hash value to me. You know, all 256 characters of
+29:10
+it, you know, 3 P capital I 3 P capital I. Okay, that's right. You know, P
+29:16
+uppercase Q, P uppercase Q. You get the idea, you know. And now if those values
+29:22
+match, I know I'm connecting to the right system. Okay, show of hands. How many people
+29:31
+validate that hash when they log into an SSH system? I'm going to go out. So,
+29:37
+I'll be the first to raise my hand and say I rarely do it and I'm wrong. None.
+29:43
+Yeah, right. I don't validate minus one. Yeah, exactly. So, here's a method of
+29:49
+doing initial authentication and we don't leverage it. We don't tend to use
+29:55
+that. So, here's what I want you to do. So, I am gonna Oh, gee, Chris, it'
+30:03
+help if you got an SSH server going. Uh, no. Actually, I don't want to
+30:09
+use that one. I'm going to pick on a different one. I know. When in doubt, pick on the firewall. Right. Let me pick
+30:17
+on my firewall. Here we go. I'm going to pull my firewall up. And then what I'm going to do is I'm
+30:23
+going to post into the channel a um some commands I want you to run on your Linux
+30:30
+system. And no, it's not going to be RMAR. So what do these commands do? I
+30:37
+just threw them into Discord. So and I'm going to paste them over here. It's asking me for my
+30:50
+password and I think I remember the password on this. There we go. Yay.
+30:56
+Okay. So, what do we just do? Okay. this first echo command. What this echo command
+31:03
+does is it prints what is all of the public keys
+31:10
+for for this local server. That's basically what it's doing. It's using SSH keygen. Now, I could go in and I
+31:16
+could just run SSH keygen and generate it that way. But what I wanted to do was give you a script because hey, who
+31:24
+always remembers the name of SSH key genen, right? And who can remember the command line switches they need to do to
+31:30
+onod to do this? Well, here's what we're doing instead. We're using the echo command to take this command that'll
+31:37
+print out all those hashes for us and we're redirecting that into a file that
+31:42
+I chose to name key. If you want to give it some other descriptive name, go for
+31:47
+it. Then what we're doing is we're making key executable. And then all I
+31:53
+did was run that key command. So again, so now if let's say I want to give Bill
+31:58
+access to the server, I can go in and I can say pseudo key and I'm using period
+32:05
+forward slash because it's in the local directory. If I move this to my path under bin someplace or someplace like
+32:11
+that, I don't need the period forward slash anymore. But now what I can do is so
+32:16
+let's say Bill needs access to this server. I can drop Bill an email and say, "Okay, Bill, I need a copy of your
+32:23
+public key." So you'll be able to authenticate to the server and the server is
+32:30
+test.fubuar.com and here are the hash values for that server. Is this on GitHub
+32:39
+yet? No, I'm not going to be as silly as to send a oneline command onto a GitHub
+32:45
+server. I don't think so. But now what happens is when Bill goes to log in for
+32:50
+the first time and he sees this in the email I sent him is a copy of the
+32:56
+hashes. So he could just refer to that email to see if he's got a match on this or
+33:01
+not. We can make this better, but we have to want to make a change. So again,
+33:07
+take this key, you know, tool which is not on GitHub yet that I just gave you,
+33:14
+but leverage that. And now when you're providing access to somebody to the system, all you got to do is run this
+33:20
+key command, copy, paste in an email, bang, you're done. And now if you put it in front of the person, they're far more
+33:27
+likely to authenticate, right? You know, when you when you log in and you see this and you don't know if it's right or
+33:33
+not, yeah, just keep going. Yeah, I'm not going to bother. But if you know you
+33:38
+have an email that documents whether this is right or not, people are a little bit more motivated to check it
+33:44
+just in case. So we can do this. We can make things a little bit better. So you know,
+33:50
+weaknesses here requires human interaction. But if we combine that to the process like, hey, I got to tell you
+33:57
+where the server is located or its IP address or whatever so you can SSH to it in the first place and I, you know, need
+34:03
+to get your public key from you and all that. Uh, if we combine it in as part of that portion of the process, this
+34:09
+becomes a little bit easier to go through and deal with.
+34:14
+So that's how SSH does it. But so we've got these public keys. Are there any
+34:20
+other ways we could maybe try and distribute them and make sure they get to the other side? Because again, a
+34:25
+public keys are going to allow are part of what helps us set up a secure channel over an insecure medium. But we got to
+34:32
+make sure that when I get your public key, it is in fact your public key. You
+34:38
+know, evil Mr. bill is not sitting in the middle swapping public keys like we talked about
+34:43
+before. This is where digital certificates come in. So, a digital
+34:48
+certificate's job at its core is to distribute public keys and give you a
+34:55
+way to verify if that public key is correct or not. In other words, it gives
+35:00
+you a way to verify that hey, if www.fubar.com fubar.com says it's this is its public key. Is that actually the
+35:08
+right server? Is that actually the key associated with that system? That's what it's designed for right accept. Pay no
+35:15
+attention to the man behind the router. Yeah, that's built. That's built. So that is the job of digital
+35:23
+certificates. It's an initial authentication of that public
+35:29
+key. So what's a digital certificate look like? Okay, we're going to play pretend for a minute. Think of close
+35:35
+your eyes and think of a digital certificate as a plaque on the wall for a second, right? Let's make this
+35:41
+physical and visual. So on that plaque on the wall is the name of the system
+35:47
+this digital certificate was issued to. So like www.fubar.com, this is the server that
+35:54
+this digital certificate has been issued to. Now it's possible to use wildcards
+36:00
+meaning the digital certificate could be issued to star.fubuar.com and now that means this
+36:06
+digital certificate could be used for every single server within that environment. Of course that also means
+36:12
+every single server is using the same public private key pair which also means if any one of those servers get
+36:19
+compromised everything else gets compromised too. But that gets into, you know, should you be using wild cards or
+36:26
+not? That's another side conversation. So, for now, what's at the top of this plaque on the wall is
+36:33
+www.fubar.com. And then underneath that is the OU. Who is the organization behind that? You know, Fubar Corp or
+36:40
+whoever it happens to be. Where are they located? That type of information. So we
+36:45
+have information that is specific to the organization that ultimately holds
+36:51
+responsibility for that particular web server. Then after that on that so next
+36:58
+on that plaque on the wall is who issued this digital certificate and not just
+37:04
+the entity but what server generated this digital certificate that's going to
+37:11
+get identified as well. After that, we're going to identify when was this
+37:17
+digital certificate issued, when does it expire because we don't want it to be good forever, right? Somebody might
+37:24
+steal it and if they steal it, um, you know, everything becomes compromised
+37:30
+after that. So, we want to have some expiration maybe two years out or whatever the case may be. So, there's an
+37:35
+issue date and there's an expiration date. That's all on this plaque on the wall. Next after that is a copy of the
+37:43
+public key fod www.fubar.com the server to which this
+37:49
+digital certificate has been issued to. So we've got the public key value right there and then after that is a hash
+37:57
+value and the hash value was generated using the private key of the server that
+38:04
+issued this digital certificate. Well, remember what we said. If I encrypt
+38:10
+something with my private, excuse me, if I hash something with my private key,
+38:16
+public key can check that, right? So, we've digitally signed this digital
+38:21
+certificate, created a hash using the private key. So, there's a method available to go through and validate is
+38:28
+this digital certificate okay? Did anybody try and change it? You know, whatever the case may be. So you got
+38:35
+that hash created by that private key. So how do you validate that digital
+38:41
+certificate? Well, you see who issued the digital certificate that's right there. You see the hash value. So all
+38:49
+you need to do is go to the issuing server, get a copy of its public key,
+38:55
+and use that public key to check the hash because as we said, the public key can check the hash created by the
+39:00
+private key. Once you check the hash, you know everything's okay. Oh, wait a minute,
+39:08
+Chris. You got that. You got the issuing servers public key. How do you know that public key is
+39:16
+okay? Ah, because what you actually got was not just the issuing server's public
+39:22
+key, you got the issuing server's digital certificate that was signed by a
+39:28
+secondary issuing server. So, all you need to do is get the secondary issuing
+39:33
+server's public key. Use that to check the hash of the private key. You know that's okay. Well, how do I know that public
+39:40
+key is okay? Ah, because that was, you guessed it, signed by yet another
+39:46
+server. Go get that server's public key. Check the hash. You know it's okay. How do I know that public key is okay? Ah,
+39:53
+because that was issued by this other server over here. Go get its digital certificate. get its public key, check
+40:00
+the hash, you know it's okay. How do I know that digital certificate is okay? Ah, because that system said, "I'm a
+40:06
+trustworthy system. I signed my own key. Don't worry about it." Whoa, whoa, wait. Right.
+40:12
+Wait, think about this process. Right? When we went to verify the web server we
+40:17
+were trying to talk to, we had math, right? If we're not sure if this is a
+40:23
+secure connection, right? Like let's say Keith and I have a disagreement about whether this is secure or not. We have
+40:29
+math to follow back on. We can look at this logically. We can go through the math and come to a hopefully similar
+40:36
+determination as to whether this is a secure session or not. So we had math. When we check out the issuing server, we
+40:42
+have math. The next one math math. But the last server at the bottom of the rabbit hole, it says trust me because I
+40:50
+said so. Well, that's not math. That's warm fuzzy, right? So now instead of
+40:57
+math, we need to, you know, sit in a circle, cross our legs, sing kumbay, and
+41:02
+talk about our feelings and decide how do we feel about this last server. Do we
+41:08
+feel it's secure? And Keith may feel feel completely differently than me. And
+41:16
+there's no way to break that tie, right? Because we're talking about emotions. So, we're talking about feelings that
+41:22
+are based on past life experiences. You know, maybe Keith has seen a lot of servers broken into over his time. So,
+41:27
+he's like, "Oh, no way. I'm trusting that thing just cuz it told me to." And you know, I I was raised sheltered, so
+41:32
+I'm like, "Oh, I trust everybody who says they they're trustworthy." They couldn't tell. They wouldn't lie to me. So, I trust it and he doesn't. And
+41:39
+there's no math to prove which one of us might be right. It's warm fuzzy. Warm fuzzy only. So when we talk about a
+41:47
+certificate authority right this is they are a trusted typically a trusted third-party
+41:55
+system. So when we talk about trusting them yeah you have to trust them because
+42:00
+at the bottom of the rabbit hole is warm fuzzy kumbaya there's no math. So that's
+42:06
+why there are standards that are created around you know what minimum requirements should be met in order to
+42:13
+be considered a trusted certificate authority because you don't have math
+42:19
+all the way down the rabbit hole. There's some level of warm fuzzy to this whole thing. Now we've got some implementation
+42:27
+challenges that are part of this whole thing. You know, one is what we just talked about that that last server warm
+42:33
+fuzzy, right? If they're, you know, digitally signing their own and then,
+42:39
+you know, pulling a hard drive out of the system and then locking it in a bunker 50 year 50 feet under the ground
+42:47
+with, you know, lasers and nuclear trip bombs and, you know, uh, you know, rats
+42:52
+running around it around with uzies. Okay, that might be a fairly secure system, right? whereas somebody else
+42:58
+just says, "Oh, well, we don't hook that server up to the internet all the time.
+43:03
+I'm not going to feel as secure about that." Right? So, again, it's that warm fuzzy about what they do with that.
+43:09
+That's a an emotional hurdle that needs to get passed in order to be a trusted certificate authority. And there's just
+43:16
+no math to fix that with what we figured out so far. So, that's the first. The other is that I talked about that chain,
+43:23
+right? And I talked about like four levels deep of digital certificates until you get to the warm fuzzy. The
+43:29
+reality is we don't do that. We check the first level only. So when someone
+43:36
+goes to your website and says, "Oh, are you trustworthy? Let me go get the issuing servers digital certificate and
+43:43
+check that up." That verifies. Okay, I'm happy now. I'm not going to go check server two and server three and server
+43:50
+four. I'm going to stop at the very first certificate authority server. So even though that
+43:56
+that rabbit hole is there, we don't even try to go down it. We go, please don't
+44:03
+mention this. Okay. Uh while encryption decryption are very heavily related, but
+44:09
+should the emphasis be on secure decryption, checking CRC, etc. Yeah.
+44:14
+Well, I it's both sides are important, right? the validity of who's creating
+44:20
+this information versus being able to verify that on the back end. Both of those are just as important.
+44:27
+Absolutely. So yeah, we don't even do that check. This also kind of comes down to
+44:35
+like so what's a certificate authority? What's actually required to
+44:41
+become a certificate authority? I mentioned there are RFC's around that. There's best practices. There are
+44:47
+minimum requirements, but is that really what defines a certificate
+44:53
+authority? Not necessarily. And give me a couple of slides to explain why. So
+44:59
+before we talk more about that, the first thing I the next thing I wanted to cover too is self-signed certificates.
+45:05
+So, let's say I set up a web server on my home network and I don't trust my
+45:11
+bangle cat who likes to bite me to not sniff traffic on the local network. So,
+45:17
+I want to encrypt it. So, I'm going to set up a web server and I want to use TLS to communicate with it. Well, I I
+45:25
+what you know the proper way to do that would be to go out and buy a third-party trusted um um um that digital
+45:33
+certificate and use that to protect my public key when people go to connect to
+45:39
+it. So now my my Bangal Kitty won't be able to go in and sniff any of that traffic. But you know, let's say if I
+45:47
+buy that, that's fewer toys I can buy for her to distract her so that she won't bite me as often. So, I don't want
+45:54
+to pay the $50 to whoever to go through and get that digital certificate. I could choose to create my own. So, on
+46:01
+the web server, I can go through and I can say, "Hey, I want to create that public private key pair and I want to
+46:06
+create a digital certificate for this system. I effectively want to self-sign my own certificate." Can you do that?
+46:13
+Yes, you can. Now, couple of challenges here. Challenge number one is you people
+46:20
+are going to get this when they connect to it, right? not secure. What does that mean? All that means is we can't
+46:28
+validate the initial authentication because this is not a recognized certificate authority because you signed
+46:34
+this yourself. I have no way to verify whether the certificate's okay. So, I'm
+46:40
+just going to ask you me. And you know what happens when we assume, right? You make an ass of you and see me. We don't
+46:46
+want to do that. So,
+46:51
+so that what that means is if we're using a self-signed, that initial authentication isn't there because
+46:58
+there's no way to validate the digital certificate, but it will switch over and it will create a secure data stream in
+47:05
+order to go through and protect the data after that. So, someone could still do a
+47:10
+digital certificate swap or something like that. But if that doesn't happen, if all I'm worried about is my Bangal
+47:16
+Kitty sniffing traffic on the local network, everything the Bangal Kitty's going to see is encrypted. They're not
+47:21
+going to be able to see any of the plain text. So, they won't see that I'm thinking of trading them in for a dog or, you know, whatever whatever
+47:26
+communications I'm holding through that session at the time. So, you can self-sign this
+47:31
+stuff. So, what does your certificate authority look like? So like this these
+47:37
+digital certificates how do we know what is a trusted third party? We said the
+47:43
+specs around that right. Oh so is this something like Anna keeps track of who
+47:48
+are you know trusted third party certificate authorities? No. What makes
+47:53
+them a certificate authority is it's pre-programmed into your operating
+47:59
+system. So try this. Run, if you're on Windows, runert MGR and just hit enter.
+48:07
+And when you do, you should you got to be you got to have admin access. So it'll pop pop up and say, hey, do you
+48:12
+want admin access to run this? Tell it yes. And then when you do, go to trusted
+48:18
+root certificate authorities and then look under certificates and you'll see this list
+48:24
+here. Scroll down until you see Microsoft root
+48:30
+authority. Doubleclick it. So the digital certificate that
+48:38
+anchors the root authority from Microsoft servers. Who is that issued
+48:46
+by? Themselves, right? Issued to Microsoft root authority from Microsoft
+48:52
+root authority. Wait a minute, Chris. Isn't that a self-signed Cert? Yeah, it is. Well, I thought third sides weren't
+48:59
+trusted. Well, self-signederts aren't trusted because the certificate you
+49:05
+generated on your web server had isn't pre-programmed into certificate manager.
+49:12
+You can actually take that digital certificate that was created on that web server, install it through certificate
+49:19
+manager on your system and now you will no longer get this error message
+49:24
+anymore. So by installing yourert there, that'll take care of that
+49:30
+problem. So here's what Microsoft did. Microsoft said, "Hey, we control the
+49:36
+operating system. So, we're going to sign our own damnerts and just put them in as
+49:41
+trustworthy." That's it. That's all they had to do. Bang. This is now a trusted cert if you happen to be on a Windows
+49:49
+platform. So, if you do sniffing stuff, try this sometime. Go in and run Zeke,
+49:56
+right? And when you run Zeke, one of the things you can tweak Zeke to do is to
+50:01
+validate digital certificates. This is an awesome function. I use this all the time. So what Zeke will do is it'll
+50:07
+watch all the TLS sessions going by and Zeke will use the certificate authority
+50:12
+built into the Linux system that it's running on to see if it can validate these digital certificates. And you'll
+50:19
+notice something interesting when Windows systems go to pat. If you go to
+50:26
+www.microsoft.com that will appear to be a valid digital certificate from the perspective of Zeke. But when that
+50:32
+Windows systems goes to install patches, it'll report that as an invalid digital
+50:38
+certificate that was self-signed. And the reason why is this because Microsoft
+50:44
+has access to their own certificate authority on Windows and just installed theirs and said, "Hey, are you going to
+50:50
+deal with this?" But they can't do that in Linux. They can't do that on BSD. They can't do that on Mac. So if you
+50:56
+look at that session from any non-windows system, it knows not to trust it. But Windows has been told,
+51:01
+"Oh, go ahead and trust it cuz Microsoft said it." So we So where am I going with
+51:06
+this? So we have standards around what you need to achieve in order to be
+51:13
+considered a trusted certificate authority. But if you have access to someone's registry, you can circumvent
+51:20
+that. No problem. Now, maybe Microsoft has chosen to follow all of those best
+51:26
+practices, maybe not. What I'm getting at is it doesn't matter. It doesn't
+51:31
+matter because since they have right access to your registry, you know, or
+51:37
+like you have with the certificate uh management tool, it doesn't matter. They can just install their certain is
+51:43
+trusted and they and problem solved. And you have no way of really knowing that happened. you have no way of knowing,
+51:51
+you know, oh, this is trusted based on a newert that was just installed on your system. You know, you never get that
+51:57
+error message type of thing. If you want to view the searchs on a Linux system, here's what you here's an a command you
+52:03
+can use to go through and do that. Uh, this will pump it through less. So, this will just give you a page worth of information and you can just keep paging
+52:10
+through to look for all of it. If you want to search for something, you know, with the last command, you just go in,
+52:15
+you hit the backslash key, and then you type in the characters case sensitive that you want to search for, and it'll
+52:21
+search through through all the output to go looking for whatever it is you want. But this is how to go through and find that on a Linux
+52:27
+system. If browsers will usually let you view the digital certificate of the
+52:32
+server that you're connected to at the time. And for Chrome, it depends on
+52:37
+whether the digital certificate is valid or not on what the steps are, right?
+52:42
+Like you start off by clicking on the lock icon. If it's a secure connection,
+52:47
+it will tell you connection is secure and you want to click on that. But if it's not secure, it's going to uh give
+52:54
+you certificate details right away and you just click on that. So, basically, click the lock icon, look for these
+53:01
+things, and just keep clicking until you get to the digital certificate, and you can go through and view what it's looking for
+53:10
+there. Okay, so where are we at? We have digital
+53:17
+certificates that we can use for initial authentication. Should we trust them or
+53:23
+not? Some level of that comes down to warm and fuzzy. We've, you know, TLS is used pretty extensively today. So, as a
+53:29
+community, we've decided to hold our nose and say, "Yeah, I guess I'll kind of trust this." So, that's our initial
+53:36
+authentication. Secure channel over at Insecure Medium, Diffy Helman, and algorithms like it. We can go through
+53:42
+and negotiate a secret value that only each endpoint that keeps their private
+53:48
+keys private can derive. And that allows us to switch over and use a symmetrical
+53:54
+key algorithm like AES to secure the data as it flows back and forth. We can
+53:59
+then use HMAC to authenticate every packet as it goes back and forth. So
+54:05
+next week we're going to come back and we're going to talk about SSH, we're going to talk about IC IPSAC and we'll
+54:10
+talk about TLS. And what you'll know these are VPN technologies and what you'll notice is all of them have these
+54:17
+four components to it. So when we talk about building a VPN or we talk about a
+54:23
+VPN, these four things have to be there. So like I said, we'll talk about
+54:29
+those next week and you won't need to set anything up and for that for the next week. Um
+54:36
+we'll be pretty much ready to go. It's just going to be mostly lecture. Um I am going to get into some SSH stuff,
+54:41
+although not as deeply as Bill does in some of his classes. But I, you know, just as a quick wrap-up, I do want to
+54:47
+say thank you for coming out to these. Um, you know, these are framed as free
+54:52
+webcasts. They're not. This is an hour plus of your life that you dedicated to
+54:58
+come to listen to this. It's cost you your time. I hope we've made that time worthwhile. So, and with that said, I'll
+55:07
+go back on video. Bill Keith, do we got anything else we want to toss out there?
+55:12
+We sure do. We have a new repository up on GitHub. Chris, the link is over in Discord. Ah, and and what is what is in
+55:20
+that repository? It's a piece of code by a gentleman that I know and trust who
+55:25
+just happens to have put out a new piece of software and the repository is already up before the webcast was over.
+55:30
+It's uh it's scrolling off the screen a little bit, but it's SSH_key verification because somebody
+55:36
+asked if you had a repository for this yet. Oh, for my oneline command. Yeah. Yes, you do.
+55:43
+Now it's even got comments. I'm [Laughter]
+55:49
+impressed. Rattus, my hat is off to you. Well done. Yep. That that that that's when you know you're hardcore when you
+55:55
+have more comments than lines of code, right? Yes, exactly.
+56:00
+Yeah. And I agree. I totally trust Ratus as well. So, good dude. Great. If you've
+56:06
+got questions, feel free to ask them over on Discord. Uh we a lot of bright people in here. Yep. It goes far beyond
+56:14
+what the three of us who happen to have cameras can provide. So please ask them over on Discord.
+56:20
+Oh that you may ever want to listen to. Yes. Too true.
+56:25
+Absolutely. All right. H and I think I came up with a way to
+56:32
+break SSH. I don't know for sure. I'm asking Bill to do some research for me. We'll do some checks. Absolutely. Yeah.
+56:38
+I dude I I've got a feeling it'll work. Okay, we'll see. I just I got I So I'm
+56:45
+I'm 5050 um public private key, but if you're using passwords to authenticate with an
+56:52
+SSH server, I'm I'm pretty certain this will work. So the So just the the thing
+56:58
+that you mentioned this morning is more about authenticating the host key. Yes.
+57:04
+gets done before there's any question about whether you're using passwords or
+57:09
+one-time passwords or public private key that's after we the host well except
+57:17
+that if I'm able to break the connection from the beginning I have a method of
+57:23
+seeing the password the account is using if if if if we're using public private
+57:30
+keys it's a challenge that comes back that needs to get signed by the private key. That's the one I'm a little less
+57:37
+certain about. So, uh I So, basically, Bill, I need your expertise. So, so why
+57:42
+is Bill figuring this out better than me? Um Bill, I told him this morning, Bill is the only one I know that can
+57:49
+talk to an SSH server using Netcat. And I am not making that up. I am not making
+57:54
+that up. I have watched him do it. So, Bill is one of the few people in the world who can run Netcat and talk to an
+58:01
+SSH server and create a secure connection to it. Hey, thanks guys. So, sorry it's kind of
+58:07
+coming out vague at the moment. We'll we'll chat some more when we've got some uh Yeah, this is one of this is one of
+58:12
+those things that if it works, we'll only talk about it if there's a way to
+58:18
+fix it. Oh, yeah. Oh, yeah. If there's not a way to fix it, then maybe we tell
+58:24
+Black Hills and nobody else. Yeah, exactly. Uh the O, it came from a
+58:30
+previous com conference that we had uh where we just talking about AC Hunter and uh so I I like to wear this every
+58:37
+once in a while to show where the the uh product that we sell, but uh we're not here to do mostly sales pitches. We're
+58:43
+here to share good information. Yeah. Oh, I see a question. Uh, when do we go down the rabbit hole of uh rainbow
+58:49
+rainbow tables? I'm actually I've got the slides for a later fireside for that. Uh,
+58:57
+that's going to I'm going to go talk about hostbased security and part of that is going to be password cracking.
+59:03
+So, as part of password cracking, that's when I'll talk about Rainbow Table stuff. It makes more sense there versus
+59:09
+when you're talking about VPNs. Sounds great. Hey, thank you everybody. It's
+59:14
+really fun to spend our spend our afternoon with you. Yeah, absolutely. Yeah. And and thank you, Chris. That was
+59:20
+a really interesting dive. Uh that actually it made me kind of rethink
+59:25
+things I'm comfortable with. You know what I mean? You know, the thing you know, I like making you
+59:32
+uncomfortable. So, yeah. Yeah. Yep. But you know what I mean, though.
+59:38
+You know, we just take things as standards and Yeah. That's just the way it works. And uh this was uh really
+59:44
+enlightening for me at least to kind of rethink you know what we trust.
+59:50
+So yeah. Well it so so to me risk is okay if it's a if it's an informed
+59:58
+decision to accept it right like yeah I used to do ice racing. I used to love
+1:00:05
+going out in frozen lake throwing the car sideways and you know race around and you know hit 100 miles an hour in
+1:00:10
+the backstretch and the whole thing. But that was an informed decision. I know
+1:00:15
+the risks of driving on a frozen lake. I chose to take those risks.
+1:00:21
+That's okay. I It's when you take, you know, drive on a frozen lake and don't
+1:00:27
+understand what the risks are involved with that that you know, that's when things go bad. Um, CFAR asked a question
+1:00:33
+that I want to make sure we hit. Uh, the encryption is is layered. Those methods from that slide are encapsulated and
+1:00:41
+upward according to OSI. So therefore protected have you have time to explain.
+1:00:46
+Okay. So I think where this is going is how much actually gets protected when
+1:00:53
+you run it through a VPN. And the answer is wait for it this one's going to shock you. It
+1:00:59
+depends. It depends upon what we're working with for an algorithm. So for example when we talk about let's say TLS
+1:01:07
+TLS secures the data it doesn't necessarily secure anything within the IP headers themselves. If we talk about
+1:01:14
+IPSAC IPSAC now it depends on whether you're using ah or ESP which are
+1:01:20
+subcomponents of IPSAC. If we're using ESP, that's validating everything from
+1:01:26
+the transport layer up. But if you're using ah, it'll actually fail if you try
+1:01:32
+and change the IP addresses. So ah doesn't work if you go through a NAT address because it's trying to go
+1:01:37
+through that. So what none of them ever touch though is layer 2. So what's still
+1:01:44
+so if you're using like the best VPN out there, what's still insecure, layer two.
+1:01:50
+That's that's some place people can still go in and mess around. Now, they can mess around with the layer 2 information, right? If they let's say
+1:01:58
+capture packets they shouldn't see by doing trickery at layer 2, they can't change the transport layer um because
+1:02:05
+that still is getting protected by the the uh by the VPN that's running on top of the whole thing. So, that is an
+1:02:12
+awesome question. What actually does get protected?
+1:02:19
+Don't mention those that model in front of Sean Strand. He gets
+1:02:25
+upset. Actually, the best way. So, if you're in a John Strand class and you
+1:02:31
+want to and you want to annoy him, the best way to t tick him off is to
+1:02:37
+compliment him, right? Come on, guys. you know, say
+1:02:44
+nice things to John about John to John and that's the easiest way to make him
+1:02:49
+uncomfortable. Yeah. Yeah. And you're right. I mean, people may think you're joking, but that's that's actually a it
+1:02:54
+it Yeah. You you could this there's been times I've told John, "Dude, you're
+1:03:00
+acting like a idiot." And he's totally fine with that. But, you know, I'll say, "Dude, you do so much good for
+1:03:07
+the community." He's just like, "Go the away. Leave me alone. I don't want to talk about that. Don't
+1:03:14
+say nice things about me. I don't know how to deal with that. Called him legend and he went off.
+1:03:20
+Oh yeah, definitely. Calling him a legend or goat will definitely set John off.
+1:03:26
+Absolutely. But he means it honestly, you know, he he's he's like the rest of us in that, hey, there's stuff I know,
+1:03:33
+but there's stuff I don't know. Nobody knows at all, and that's okay. So, do he
+1:03:38
+do you think he thinks you're being condescending? So, I've known John almost as long as I've known Bill. So,
+1:03:46
+when I say nice things about him, he knows I'm not being condescending. He he he knows how much I believe in the stuff
+1:03:52
+that he's doing. So, there's no way he could ever take what I say to him as being condescending or negative in any
+1:03:59
+way. He just re honestly cannot comfortably take a compliment about
+1:04:04
+anything. So, And on that note, And on that note, yes.
+1:04:10
+So, how So, after all that helpful information on how to piss off John Strand, I think we're done for the day.
+1:04:15
+Our work here is done. Yeah. Yeah. Got to get your priorities right. Exactly.
+1:04:21
+Well, I definitely want to thank everyone in our Discord thread hunter community. I mean, you guys and gals,
+1:04:28
+you're just so awesome and we really appreciate you. And also uh we see all the thank yous you're putting in there
+1:04:35
+and uh it it we not only appreciate it, it humbles us and and uh we thank you for that and we thank you for joining
+1:04:42
+us. So yeah, John is not necessarily the only person who doesn't know how to take a compliment. So true. True. All right,
+1:04:50
+guys. All right, everybody. Have a safe weekend. We'll see you next Friday. We will go on to part three of EPN's next
+1:04:56
+Friday.

@@ -1,0 +1,1134 @@
+0:00
+Well, hello everyone. Uh, glad you could join us here today. This is another in our ongoing monthly series of active
+0:06
+count active countermeasures webcasts. Uh, this is threat hunting C2. Uh, if
+0:12
+you've attended any of our prior monthly webcast, uh, it was called command and
+0:17
+convo. Uh, we have changed the name of this ongoing series to threat hunting C2. We think it just fits what we're
+0:24
+doing better. Uh, however, it's the same program. Uh we're still focused on C2
+0:31
+frameworks. Uh different ways uh to maliciously abuse different protocols
+0:37
+and processes. Also uh expanding on Fawn's great malware of the day blog
+0:43
+posts and focused also on network threat hunting in general. So we welcome you
+0:50
+again here today. glad you could join us and we do want this to be an interactive
+0:56
+webcast which includes all of you watching right now. So we welcome your
+1:01
+questions and comments on Discord. If you're not already a member of the Black
+1:06
+Hills Infosc Discord, you will find a link to join that Discord server in Zoom
+1:12
+under the resources tab and uh we definitely welcome you to join the conversation there.
+1:18
+We are not using Zoom for chat or Q&A. So, please don't post any messages in
+1:24
+there because uh we don't want to miss those messages. Uh we'll be monitoring Discord and I'll try to bring up as many
+1:31
+of those questions and comments uh that we get in Discord during the webcast. Uh
+1:37
+Fawn has put together a great presentation today which he is about to
+1:42
+go through. So, we'll just get right into that. And, uh, thank you, Fawn. And, uh, drop some knowledge on us,
+1:48
+dude, because this is a great subject again. Um, and I'm looking forward to this as well. And thank you all for
+1:55
+being here. Thanks, Von. Awesome. Thanks, Keith. Just one thing I thought about, but I haven't seen any of
+2:00
+the hunted stickers. Isn't that Shouldn't that be happening? Oh, that's right. Yeah. You know, we started this new thing and even I forgot
+2:07
+about the new thing. Yeah, I think everyone forgot about it. even. So definitely uh either post the the the
+2:14
+gifts or the emojis in the Discord server or you can just just plain out hunt it
+2:23
+and you can be parting up. I guess people did do it. Okay, cool. Yeah. Awesome. Thank you. I forgot about
+2:30
+that too. Cool. Cool. And I was also think so I'm going to share my screen but while I do
+2:36
+is I guess today is the sixth episode. Is that right? Yeah. I believe you are
+2:41
+right. Yes. Cool. Awesome. So, you can see my screen
+2:48
+and we shall continue on and on. So, we'll see you next month as well.
+2:54
+Uh, can you see my screen, Keith? I can. Yes. Cool. Cool. Okay. Well, hello everyone.
+3:00
+Um, a lot of wind up. So, without further ado, let's get into it. Threat hunting C2. Today we're looking at DNS
+3:07
+text record abuse. Okay. And as always, I just love to quickly
+3:12
+talk about what we're going to talk about just so we have a a map of the terrain, right? So, we're going to get
+3:18
+very quickly into DNS resolution, DNS record types, that's more relevant today. Uh we'll look at how classical
+3:27
+like archetypal C2 over DNS works. Then we're going to like level set and
+3:33
+understand how text records are used legitimately. uh because that's going to help us
+3:39
+understand text record abuse, how it's used illegitimately, right?
+3:45
+Uh we're going to get into a quick little lab time with Zeke and then I'm going to come back and I'm going to
+3:50
+review some of the commands uh we ran and then we'll kind of sign off with a
+3:56
+little take-home message there towards the end. All right.
+4:01
+Uh so first DNS resolution. So, some of you attended I think our third episode was on DNSCAT 2. Uh, today's talk is
+4:10
+completely a standalone one. You don't need to have attended that one to understand this one, but just for the
+4:16
+people that did attend that one, um, there are going to be a few familiar slides, but I'm going to overlay some
+4:23
+hopefully some more nuance this time. All right. Um, and by the way, Herman, would you mind also just sharing the
+4:29
+previous one? Uh I do think for those that are interested there is value at looking at both because today kind of
+4:36
+get today builds on the previous one in a sense and gets into the weeds a little bit more. All right,
+4:43
+it's the yang to the yin basically. All right, so DNS resolution. So for those of you that are familiar with DNS and
+4:50
+know what DN is resolution is, please forgive me. I'm going to give an extremely simplified version of it. I'm
+4:57
+going to leave parts out whole iterative resolution the the chain and all that. Uh I'm a big fan of not sharing info
+5:05
+just to share info but sharing the info you need to basically make a point to communicate an idea. So I don't want to
+5:12
+like overload cognitive overload. Um so we're just going to talk about a very
+5:17
+kind of simplified just to get the crux um across of what resolution is right.
+5:23
+Um, but here's me or Leadcats at the bottom. Uh, and Leadcat wants to go to
+5:28
+this website ions.ai, right? So, lead hypothetically, right,
+5:34
+metaphorically sends it off to the internet and is like, "Hey, internet, bring connect me to.ai."
+5:41
+And of course, somewhere out there on the uh internet is this web server and it's the web server forc.ai and it has a
+5:48
+specific IP, right? Um, but the internet doesn't know that. He doesn't know where
+5:54
+insec.ai lives, right? The the internet is like, "Dude, I have no idea what to do with this domain. Domains are for
+6:01
+humans. I don't speak it here on the internet. Sorry." Right. Um, but fortunately for us, there is this system
+6:07
+that evolved uh in the late '8s. Um, and basically there's another host out there
+6:14
+on the internet. And please pay attention, this is not the web server now. doesn't host or serve uh the actual
+6:21
+content from the website. Uh this is what's known as the authoritative name server for insec.ai. So it's the single
+6:27
+source of truth. Now again, of course, there might be cache servers uh involved in the resolution chain. We're just
+6:33
+breaking it down, distilling it to the bare fundamentals. But in any case, this authoritative name server is for
+6:38
+insec.ai, completely different IP, but what it's able to do is it can resolve
+6:45
+the query. So there's a query for ironsec.ai and it can say hey I know where insec.ai lives that's the IP
+6:53
+obviously a record here right and because now the original system knows
+6:59
+where it lives it can now make the https connection over to ironsec.ai AI the actual web server and they're connected
+7:06
+to one another right so like classically top of the Wikipedia page DNS what does
+7:13
+it do it's a distributed hierarchal database that translates human readable domain names ions.ai AI into machine
+7:22
+usable IP addresses that IP address right but now this is a all these slides
+7:28
+and this little preamble was from the previous talk and then we kind of got into it but now of course most of you
+7:35
+know that DNS doesn't really just do that that I just described like that's
+7:40
+maybe the backbone or the marrow of it uh but DNS does a lot it's a very
+7:46
+diverse protocol right uh so This now leads us into the discussion of different record types,
+7:53
+right? So like I said, DNS can perform a wide range of auxiliary services beyond
+7:58
+just resolution, right? Um and when we think of different functions, different
+8:04
+things it can do like to me the right unit to think in terms of that is the
+8:09
+record type because different record types do different things. Okay,
+8:17
+exactly what I just said. They do different things. So in the RFC's I think the original is
+8:24
+1035. Yeah, that's the original DNS. Um
+8:30
+there's a few afterwards. They always kind of like have to augment it and you know DNS sec comes along and stuff like
+8:35
+that. Uh but across them there's about 90 different record types defined in total. Um but in practice we can say
+8:43
+there are about a 10 to 15 that I used. What do I mean in practice? I mean, if you go to most enterprise networks and
+8:49
+you take a trace file and you count the diversity of DNA circle types, it's going to be somewhere in that ballpark.
+8:55
+Uh, also depends on whether or not you're going to include DNA sick in that tally, right? Maybe 10 to 20 if you
+9:01
+include DNS sick. So, definitely not all of the 90. Some of them you'll actually probably won't really ever see.
+9:09
+Uh, so I'm just quickly going to run through the eight most common cuz I think it is good to just give you some
+9:16
+exposure because you will as a threat hunter I think need to understand
+9:22
+all of these at least, right? You need to have some kind of baseline familiarity with them. So of course
+9:27
+there's the classic A and that's the one we all know and love. Give it a domain, it gives you an IPv4 address, right? And
+9:34
+then there's quad A. Very similar. Only difference now being is you don't get IPv4 address, you get IPv6 address. And
+9:42
+then we get canonical name. It's kind of like when you look for when you ask, hey, can I have this domain resolved? It
+9:49
+says, oh, this domain is actually an alias for another domain. So have that domain resolved. But that all happens
+9:55
+behind the scenes. But it's just it's kind of like a shortcut happening from one domain to another or a link.
+10:02
+Mail exchange is just telling you where the mail exchange server lives. And then similarly service is kind of like for
+10:08
+mail exchange um but everything that's not all the other services aside from mail exchange. So SIP, LDAP, Keraros. Um
+10:16
+and I also found found out they're they're used for Minecraft servers too. So there you go.
+10:23
+Um the name server record. This is of course extremely important in C2 over DNS2 because it defines who's the
+10:30
+authoritative name server. So a lot of other hosts in the resolution chain
+10:35
+might have the record but those are all cached versions. The kind of the bearer
+10:41
+of the master copy uh is the authoritative name server and this defines who that is.
+10:47
+Pointer is just for reverse lookups. So not domain IP but I'll give you IP tell
+10:53
+me what the domain is. Mostly used for diagnostics or security too, right?
+10:59
+uh but then really relevant to today's talk uh I want to talk about text records. So simple definition it holds
+11:07
+arbitrary text and it's commonly used for four things SPF demark and domain
+11:12
+verification. Now, if that sounds a little bit nebulous, don't worry. We're
+11:18
+going to get into text records much deeper and even all four of those things. I'm confident that by the end of
+11:25
+today's webcast, you're going to understand text records as well as most people on Earth really. You'll be in the
+11:32
+99.99th percentile essentially. But before we get there, I want to quickly just recap the kind of core outline of
+11:40
+how C2 over DNS works. All right. So, C2 over DNS.
+11:49
+Sorry if I'm laughing. My son is just shouting up a storm in the background here. C2 over DNS.
+11:57
+Remember, this is where our story just ended few minutes ago. So, let's just use this as a departure point. And I
+12:03
+want to kind of rearrange things a little bit. So, for now, let's just forget about the connection. That doesn't matter. Let's forget about the
+12:09
+web server, too. because the web server that you ask to for the domain to have
+12:15
+been resolved that's got nothing to do when we talk about C2 over DNS rather
+12:20
+what it really is is that the authoritative name server so the one that needs to resolve that's the C2
+12:27
+server um and then the one asking for a domain to be resolved that's the C2 agent right so it's basically there's a
+12:34
+pretense that hey I want something to be resolved in the case of A or quad A or I
+12:40
+want this other service fulfilled in case of other records, right? But that's basically the agent and the server.
+12:46
+They're pretending to be doing this process we just discussed.
+12:52
+So just want to lay them out here. I'm just going to talk about a typical cycle, right? Um but one thing I want
+12:58
+you to really keep in mind here is that there is an fundamental asymmetry in how data is transferred from agent to server
+13:04
+versus from server to agent, right? um with when we talk about um HTTP.
+13:11
+Sure, sometimes we have a request, right? It can be like a get or a post
+13:17
+and then the response, but they both can have a body and in the body you probably have encrypted blob of data and if you
+13:24
+decrypted it, it's probably JSON, right? Uh so with HTTP and HTTPS, the the shape
+13:29
+of the data transfer and communication is pretty much the same. With DNS, that's not the case at all. Um with DNS
+13:36
+there's different forms form follows function there are different forms and thread actors have to leverage what they
+13:44
+can work with right which is the form uh so we'll see this in greater detail but I want you just to pay attention to it
+13:50
+okay so in DNS we also have a request
+13:56
+response but typically in DNS parlance we don't call it request we call it query right it's but it's same thing you
+14:02
+know love request response cycle And again it's the agent aka the client
+14:07
+that has to initiate. So it starts and obviously the first one is typically the check-in or the heartbeat right it's hey
+14:14
+do you have a job for me okay and then the server responds and the server responds now remember that the
+14:21
+chicken is asking actually you know can you I have a text query or can you resolve this domain for me or something
+14:28
+you know wink wink nudge nudge um and then this the the uh the server responds
+14:34
+with that record right and now in DN in C2 typically It might say, you know, I
+14:40
+have a job for you. Here's the job. Or I don't have a job for you. You can go back to sleep. It might, of course, also
+14:46
+transfer other things. It might transfer payloads or tools or or scripts or anything like that. Um, but it now
+14:52
+responds and uses the record to send data to the C2 agent. Right now, let's say there wasn't a job. If it was false,
+14:59
+they'll probably just go back to sleep, then repeat the cycle again. But if it was true um you know there'll be another
+15:06
+kind of round at least probably a lot of repetitions given the limited bandwidth
+15:11
+uh but conceptually another round and that round would be the data being sent back from the agent right and the way it
+15:18
+does that is by mostly using encoded subdomains. Uh for those of you that uh
+15:25
+attended my my lecture with Antiiphon last month, you know, I spoke about all little funky different fields, the query
+15:32
+ID, the Z field, etc. stuff that can be leveraged, but those things are extremely limited. So the only real way
+15:39
+that quote unquote serious amount of data can be transferred from agent to server uh is via the encoded subdomain
+15:47
+and then the DNS will respond. Why will it respond? Well, it just got queried. it needs to pretend to be a real DNS
+15:53
+server so it'll respond right. So as I just said before that I put a
+15:58
+lot of emphasis on this the fundamental asymmetry. So let's look at this fundamental asymmetry right let's first
+16:04
+look at agent to server aka xful right data flowing out of the target network
+16:10
+if we look at this like I said it's that encoded subdomain that's where the data
+16:15
+is being xfold from so we saw this before again that was covered in depth
+16:21
+in episode 3 DNS get uh 2 uh so we won't cover that in depth now but our
+16:27
+conclusion for those of you that can remember is uh that when you look at
+16:32
+your DNS.log and you see an unknown domain with a very high unique subdomain
+16:38
+count, hundreds, thousands, tens of thousands, hundreds of thousands, right?
+16:43
+Um and these subdomains are very long, right? They're like 30 or 40 characters
+16:48
+long each. Um and they are very high in entropy. They're random, right? Clearly
+16:53
+just blobs of data. Uh that's like a ginormous red flag, right? So it's very
+16:59
+it's very easy to catch people using that uh technique that channel uh if
+17:06
+they're not doing it in a very careful manner, right? If they're doing it regularly. It's got a giant tell uh
+17:14
+because it's high fidelity. What do I mean? I mean there's nothing legitimate that almost kind of looks like it. It
+17:20
+just stands out as a shining beacon of, you know, uh malicious use, basically.
+17:28
+But today when I talk about text record abuse, what I'm really saying talking about is our interest in the data
+17:34
+flowing in the opposite direction, right? So from server to agent info, right? So that can like I said be I have
+17:41
+a job for you. Here's the job. Here's the command. Uh or kind of more what led to the inspiration of today's talk is
+17:49
+using it to upload payloads and tools to the target host. Okay,
+17:55
+so remember this. Let's just drop the second cycle. I just want us to focus on a single cycle right now. So what am I
+18:01
+saying here? I'm saying like imagine the query was sent asking for a text record, you know, and now it's not really
+18:07
+resolving a domain. We'll see what it's actually asking for, but it's sending the text query and then there's server
+18:13
+response. What does it respond with? Well, it responds with the text record field called R data. All right. So
+18:19
+that's now it's not no longer the encoded subdomain when it's from server
+18:24
+to agent. It's the text record itself that contains the data.
+18:30
+So like I said, the agent typically uses encoded subdomains. It's called Q name. That's the name of the field.
+18:36
+The server typically sends data in the record itself. Our data. Again, I'm saying typically, right? That's my
+18:41
+qualifier there. Other stuff can be used. All right.
+18:47
+And we saw now there's potentially up to 90 records, maybe 10 to 15. um and eight
+18:54
+we really should know of and different records can be used u obviously not not
+19:00
+all are suited but even from those that are suited it's not like there's one clear winner right there are different
+19:06
+tradeoffs that you make right um but I would say possibly right now the most popular one is text records um so why is
+19:14
+it popular it's I I I think of it kind of like as a goldilocks principle you know not too
+19:20
+not too hot not too cold not too big not too It's just kind of has a few things that are aligned pretty well. The first
+19:27
+thing is that it has much higher capacity than an A record. An A record it's 255 characters. A record is four
+19:35
+bytes. So you can make the argument, well I'll use a record because there are so many A records. It's easy to hide it.
+19:42
+You know what is not easy to hide is if you send a million A record requests from a single host to have the same
+19:49
+domain be resolved. that's not that sneaky anymore at that point, right? I'm
+19:54
+not saying one is better than the other. I'm saying there are always trade-offs. It's always about trade-offs.
+20:00
+Um, it is fairly commonish. It's not super common, right? It's not a or quad,
+20:06
+but it's not null record either. All right. Um, and as we'll see because we're going
+20:13
+to look at the most common use cases, but some of them, and really one of them is expected to carry an encoded blob of
+20:21
+data. Encoded blob of data. Doesn't that sound very familiar for an attacker as
+20:26
+well? Hey, I'll encrypt and encode my blob of data because when I put it inside of a packet, inside of this R
+20:32
+data field, that's what's expected to be there. Right now, I want you to note
+20:37
+that I'm saying superficially. It it appears correct, but we're gonna we're going to become fine discerners of text
+20:45
+records, and we'll be able to immediately see even though there's encoded blob of data that um you know,
+20:51
+something's something's not quite right. All right.
+20:57
+So, let's now dig into the specific text record uses.
+21:05
+So let's just uh kind of go back in history and understand actually what text record does right
+21:12
+now when we started when I showed you all eight records I think you should know this was our definition holds
+21:17
+arbitrary text commonly used for SPFD markd and domain verification let's unpack that let's dig into it a a little
+21:25
+bit deeper so originally
+21:30
+again I might be right I think it's 1987 I think it's RFC 1035 five when it was defined they basically said it's any
+21:37
+human readable text it doesn't have any specific purpose so it was kind of like a catch all um and that's one thing
+21:43
+you'll see about when protocols are developed um so when a protocol is
+21:49
+proposed and accepted and implemented and everybody builds all their their infrastructure out there's a lot of
+21:55
+inertia so you it so if a few years later people like oh you know that
+22:01
+protocol we said you should all use we actually found a way better way of doing it. So everybody just quickly stop using
+22:07
+that protocol and use this new one now. you can't right there's you have to work
+22:13
+be work within the confines of backward compatibility really right and um and I think quick is
+22:19
+another interesting case study like that uh because they wanted to solve the problem of TCP but they couldn't just
+22:25
+really use a new protocol so they took UDP um and just basically created reliability and some other stuff on top
+22:31
+of that right so you're always limited uh by what the inf existing
+22:37
+infrastructure uh can already handle handle, right? Uh why am I saying this? I'm saying this so when they design
+22:43
+catch alls and you'll see this quite a lot. It's people that have the foresight to understand that to understand, you
+22:49
+know, instead of just having these very neat little demarcated boxes, let's give ourselves these wiggle room options,
+22:56
+right? To kind of loosely define things because probably one day we might want to use that, right? So null record is I
+23:03
+think the highest expression of this null record was just like 65 kilobytes of use it for anything. uh uh raw binary
+23:10
+data and so it was so popular for attackers uh that they used it they used
+23:16
+it so well that it was like now now you immediately just get flagged on using it right text is a less severe um exemplar
+23:25
+of that same basic principle um so it basically has a lot of uses and what
+23:30
+then happened was over the years since uh DNS was published uh every time people said well we need we we have a
+23:37
+new use case we need somewhere where we can publish a small piece of metadata, the answer always invariably ends up
+23:43
+being um text. So each time the answer is just text
+23:48
+record. So the main uses like I said are SPFDM
+23:53
+demarc domain verification. I want to mention there are other uses but this represents maybe 95 to 98% of all use
+24:01
+cases. So I don't want to get into the I don't want to get into the fractal weeds, right? The weeds of the weeds. So
+24:07
+text record is obscure enough. Let's focus on the main types of text records then. All right.
+24:14
+Uh I want to go through each of these and I want to put a lot of emphasis right now for us on um the actual R data
+24:21
+field the response because I want us to think about how can an attacker possibly
+24:26
+does it suit the needs of an attacker. Right? So SPF send a policy framework.
+24:32
+It declares which mail servers are allowed to send email on behalf of your domain. I'm going to show you the R data
+24:38
+field now, but I want you to pay attention not so much to the content or what it says. I don't need you to be
+24:43
+able to necessarily even read that doesn't what it's intended to do. That
+24:48
+doesn't really matter. What you need to see is the pattern here, right? Short structure plentics. So here obviously it
+24:55
+says it's SPF and now it's basically just saying domains and um a subnet that
+25:01
+is allowed to send email on behalf of your domain right but again look at it short structured all plain text right no
+25:08
+encoded blob of data there demark domainbased message authentication reporting and conformance
+25:16
+quite a mouthful so it tells the receiving mail servers what to do if an email fails SPF and
+25:22
+DKIM checks So again, don't worry so much about the details. Look at the shape for me.
+25:29
+Very similar, right? They're saying it's a demark. What to do if it fails? Reject
+25:35
+100% of them. Send aggregate reports here. All right. But if we zoom out,
+25:41
+just look at the pattern. Short structure plain text. No giant enclo encoded bubble of data there. Okay.
+25:49
+Third one, domain verification. So it's a token you place in a text record to prove to service that you own the
+25:54
+domain. Cloud France or AWS or says, "Hey, we want you to prove you own this domain, right? So we're going to give
+26:01
+you this blob of data and you go put it in a text record and we're going to send the query and if we get the response,
+26:06
+then we know, okay, you you do actually own it, right?" Um, so it's a short
+26:11
+token and it's got a recognizable prefix. What's interesting here is now we do deal with a little blob of data,
+26:18
+right? could potentially be used, right? Uh, but it's got a very recognizable
+26:23
+prefix. The blob of data is always very short. And later on, in a short while, I
+26:30
+I'll make you understand why this is never really a legitimate thing for attacker to be using. I I kind of said
+26:37
+it already. For those of you that were really paying attention, you understand why why it wouldn't be a query from a
+26:43
+random enterprise network sending it, but I'll I'll underline that fact shortly. Right.
+26:50
+So, we covered three. None of them really seem that suited, right? They don't really give kind of the pretext
+26:56
+for an attacker to uh to abuse. So, we have one more left and that is DKIM
+27:02
+domain keys identified mail. So it publishes a public key so that recipients can verify your emails
+27:09
+weren't tampered with in transit. Okay, our data this time
+27:15
+we see DKIM see the algorithm. We see a giant blob of data. It's I did dot dot
+27:22
+dot there. It means it's still continuing. So DKIM is the odd one out. After this
+27:29
+P, we're going to see the rest is just a blob of B 64. So at least again
+27:34
+superficially when you look at it and let's say an attacker puts not a public key in there but encoded blob of data in
+27:40
+there nobody that's going to look at it if they got the rest of the structure right if they look at the actual R data
+27:46
+field and nothing else no context right not going to look that weird really
+27:58
+so let's take a text record abuse now how is it being used by nefarious threat
+28:03
+actors. But to understand how it is abused,
+28:08
+let's start from our departure point to understand how D Kim is used legitimately. Because when we look at
+28:14
+how things are used legitimately and how they used illegitimately, the the the
+28:20
+detection vector reveals itself really. All right. All right. So over here we have have
+28:26
+Terrence and on the other side on a different external network somewhere far away we have Phillip. Now Terrence wants
+28:32
+to send Philip an email. Now Terrence has the email terrybuddy.com and Philip is fullgu.pal
+28:40
+right? So Terrence wants to send this but obviously you know emails don't go from like it doesn't go hop directly
+28:47
+from one host endpoint to another right? There are a few players involved in this
+28:53
+whole uh story. Uh the first is the mail exchange server now of Terrance of of
+28:58
+buddy.com right so the first thing that'll happen is this email will go to that mail exchange server the mail
+29:04
+transfer agent um and what it's going to do um among other things it's going to
+29:10
+sign the email with a private key and it's going to attach the signature as a header in the email right
+29:17
+now there's also mail exchange server for guy.pal pal. So, the email is going to go from buddy.com's mail exchange
+29:23
+server to guy.pal's mail exchange server. And it sees the email says, "Hey, I'm
+29:30
+from buddy.com, but it wants to verify, right? It wants to verify that it's
+29:35
+really buddy.com or that the message hasn't been tampered with in transit." Right? Good old integrity, right?
+29:42
+Integrity. So now we actually need a fifth player in this story and that is the authoritative name server for buddy.com
+29:49
+because now what's going to happen is the mail exchange server atg guy.pal PAL is going to send a query, a text query
+29:58
+to the name server to have this S1
+30:03
+domain keybbody.com resolved, right? So, it's going to send it and it sees okay,
+30:08
+this is a text DKIM I'm going to send back. What do I send back? I already said it's the public key, right? So if
+30:16
+the man exchange server now gets the public key, it obviously means that if it can encrypt the signature
+30:22
+successfully, it can see that they match. And that means buddy.com has to have the the leg private key, right?
+30:29
+And again, the blob is the public key. The recipient mail server can now verify the signature. And if it's verified,
+30:35
+it's like it's all good guy. Uh then it can forward the fart joke to full@guy.pal. All right.
+30:44
+So that's the story. That's how it works legitimately. Now let's look at who does
+30:50
+the text lookup and who responds. Of course, we saw the text lookup was by
+30:57
+Gapal's mail exchange server. It verifies before it forwards the email and the respondent was the authoritative
+31:04
+name server from the sender. But what about when this is used for C2
+31:11
+over DNS about for covert communications? Well, then the communication actually happens between
+31:18
+the the respondent is the same authoritative name server, authoritative
+31:23
+name server, aka the C2 server, but the sender now is actually the user's workstation typically, right? Maybe it
+31:30
+is a mail exchange server that's compromised, but I would venture to say in the majority of compromises, it's
+31:37
+probably a user's workstation and not a mail exchange server. Right?
+31:42
+So here in lies the first and the simplest vector we can use to detect illegitimate use is we we look at the
+31:49
+DNS log we see hey on this uh interface were there any text queries sent from
+31:56
+the host? Uh if the answer is yes, the next question is are these DKIM queries?
+32:03
+Um and if the answer is also yes, we can ask is this a mail server? Because if it is not a mail server, then it
+32:09
+immediately means either compromise or misconfiguration, both of which you want to follow up on, right?
+32:17
+But let's say maybe it is a mail server, but you're still kind of suspicious or for some reason you have the IP, but you
+32:24
+don't have the matching data and you can't really tell. you're not sure. Maybe it is a mail server, maybe it's
+32:29
+not. Is there something else you can look at? Why yes, there is. There's two fairly reliable ways that you can flag
+32:36
+suspicious use. Uh the first one is volume. Now, this is obviously all depends on the amount of data being sent
+32:42
+by the attacker. But if they do want to load an upload, a payload or anything
+32:47
+substantial, um remember 255 characters, right? They're probably going to need a few
+32:54
+lookups to be able to do that. and also the length because even though
+32:59
+the public key is long, pretty long longish, typically an attacker will use
+33:05
+more bytes to get closer to the 255 so as not to overdo the volume. There's
+33:10
+kind of a dynamic tension there, a trade-off there. If they make the length too short, too much volume, right?
+33:18
+So, let's go see this commands and actions, dear friends. Let's see how we can find that out. Uh we're going to do
+33:25
+a quick little jump into uh Zclab time. Uh just two things I want to mention.
+33:31
+This entire kind of foray into studying and understanding this uh was sparked by
+33:36
+news of this malware. I think it it's the first time I actually heard the term. It was called nuisance wear. Uh
+33:43
+cuz I guess it's just really a nuisance. Um but this was around July of last
+33:49
+year. It was called Joker Screenmate. Uh so that's the original article that spoke about it for any of you that are
+33:55
+interested. Basically they saw payloads being uploaded to target hosts using a series of text records. And then so
+34:02
+subsequently in December I did a malware of the day um on this. Um so I do want
+34:09
+to mention that I wanted to actually create a more interesting um uh DNS log
+34:15
+to investigate here. So we won't be using this one specifically. Uh I created another one. I've given it to
+34:22
+Herman and Herman will share it in Discord with you guys. So you're able to take that DNS log to also run the
+34:28
+commands and then of course feel free to do that and then also feel free to go look at the original article uh read
+34:34
+about it and then also run the queries against that and um uh against that data set and see what you find. All right.
+34:46
+All right. So you can see I've DNS.log log right there.
+34:52
+Uh I'm just we're going to run three commands. I'm just going to copy and paste them. I'll run them. We'll look at the output and then we can also quickly
+34:58
+cover um what they're doing. But here obviously we're just cutting
+35:04
+out the DNS log. We are just showing the timestamp, who it's coming from, the
+35:09
+query, so what the Q name, the Q type name, so text, right? Um and then the
+35:17
+answers, the R data, the response. That's kind of always what we're interested in, right? The the type of DNS query, the Q Q name, and the R data,
+35:24
+right? Who's it from? Uh, and we're going to or our text. So, we only want
+35:29
+to look at text. And I want to grab for domain key. Remember what I said first? If there's a we want to see is there any
+35:36
+DKIM on this host at all. That's our first question, right? So, I'm going to run it and we can see the output here.
+35:43
+And we can see that okay definitely there is some DKIM action happening here. Uh but to be honest this output is
+35:50
+a little bit of a mess. Um I don't really feel like making sense of it right now. So we can actually refine our
+35:56
+command a little bit better to give us the information in a more convenient manner. Right. So I'll clear that.
+36:03
+Hey F. Yes. Hey I have a question from Discord from 404 name not found which is a great
+36:10
+name by the way. It's asking what does the O command do in this instance.
+36:18
+Uh so in this instance it's just going to you see we on the fourth column which
+36:23
+is the Q type name it's the the um the type of DNS. So we want to just see text
+36:29
+records in this case right. So it's going to only show us the ones where text is in the column.
+36:36
+Perfect. Thank you. All good.
+36:43
+Um, these commands are not in the blog. Um, but they are in the slides and I'll
+36:48
+post the slides right afterwards. I'm going to be fully honest with you guys. My rate of learning is so rapid that I
+36:54
+discovered a lot of new things preparing this presentation that I didn't know back in the day when I wrote the blog
+37:01
+back in the good old days of December 2025, right? It's like years ago. Um, so
+37:07
+you'll you'll notice that too, right? There's we definitely go a little bit deeper and we have a let's call it a
+37:13
+higher resolution picture here. Right. Exactly.
+37:18
+Well, things are moving fast friends. It does feel like that to me. Um so I run
+37:25
+the next command. So just kind of to ref jog our memories. We just ran a command. Our question was is there any DKIM? We
+37:31
+saw a DKIM but it was kind of like um you know hard to untangle. So let's run
+37:37
+this command instead. kind of the same thing, right? Just show me text. Just grab for domain key. But now if I run
+37:43
+it, you're going to see we're actually also here looking at the volume, right? How many were sent and we're sorting in
+37:51
+I guess descending, right? Show me the the hosts that had the highest volume
+37:57
+first. Cool. So now we actually get interesting results here. So I can see
+38:02
+every column it tells me something interesting here. The first thing is that uh we see there were 10 text
+38:08
+queries. Right now we can check what is the total amount of duration in DNS log.
+38:14
+For those of you that know Zeke, typically DNS uh Zeke by default is going to parse logs in 1 hour time
+38:21
+slots. So then the first thing let's just think about again what we just saw
+38:27
+what it does, right? What um um DKIM does. It would kind of be strange if
+38:33
+that same query for a public key took time took place 10 times in one hour.
+38:40
+Right? That's the first thing. It's like that's kind of weird. Right?
+38:45
+Now we see the IP. So do we know the I do we know the functions of the different hosts on the system? If we do,
+38:53
+we can go well is 105 the mail exchange server is the local they have onre mail
+38:59
+exchange. Is this it? Um, and if the answer is no, then right misconfiguration or something funky
+39:06
+happening. Um, and then we also see the the domain which is systemalthch check.net, right? Um, and so in that
+39:14
+case then um we're obviously able to do a domain reputation check on that as
+39:19
+well, right? Many avenues and tools to our disposal we can use. And then we see something else. Okay, there's only one
+39:25
+maybe they actually do have onrem mail exchange server. Maybe that's it, right? So two that I think clearly point to
+39:33
+different potential directions, right? But like I said before, maybe we don't
+39:38
+know exactly um we we don't know exactly what the identity of that is and you know maybe
+39:45
+another thing we could do now is um just look at the length of the R data field.
+39:51
+Look, we can look at the content of the R data field. Um, and and you probably should because uh if they're just
+39:59
+egregiously not, you know, if they're not even using P uh column as a as as a value or
+40:06
+writing DKIM there or anything like that, if it's just a blob of data, clear as day, that's weird for sure, right?
+40:12
+Um, but we can't distinguish one encrypted blob of data from another encoded
+40:19
+because probably the attacker encrypted it before encoding it, right? Um, so
+40:24
+what I'm saying is you can't take the blob of data uh decode it B 64 and it's
+40:30
+going to say like super evil payload binary here's the data, right? Because it's probably encrypted under the
+40:36
+encoding. But now if I run this command and please don't ask me to explain this but what this is going to do essentially
+40:43
+blackbox is it is going to take the average length of the r data field for
+40:49
+all the text queries right and so we'll run that and we'll now see here's the
+40:54
+two from the DKIM probably these were not DKIM right here we can actually see a D mark and look at the length the
+41:00
+amount of characters in the R data in the response 35 459 64 4 209
+41:09
+clear outlier, right? And so now we saw a number of things. We can look at the
+41:15
+volume. We can look at the length and importantly we can look at who locally
+41:22
+is speaking to is is asking for what domain to be resolved because who locally will then lead us to ask what is
+41:29
+the function of the system. Is it a user's workstation or mail exchange server? And then out there, um, we can
+41:37
+we have the domain that it asked, right? So, we can go look that up, too.
+41:42
+Cool. So, that's really it for running the commands right now, but I'm going to go back into my slides and I actually
+41:48
+want to review it real quick again here um because I want to basically pose a
+41:54
+challenge to you guys towards the end.
+42:00
+So again essentially what this does it shows me all text that contains domain
+42:05
+key in the response. So that is going in the answers right. So that's going to show me deacons right and we saw that
+42:13
+but we were like you know what we can do better right at least this is like a
+42:18
+binary it's like we can feel the temperature and we can say probably something is going on here let's take a
+42:24
+closer look. Then in the end uh we also looked at the average length and that's
+42:30
+the command for that. And if we did that we looked at all the um the the hosts
+42:36
+that were queried in the queue name um and then the average length of the response. And once again
+42:43
+remember the attacker at the end of the day has control about that. But look we saw 10 10 queries. If they if they only
+42:51
+did 60, then they need to do like between 30 and 40 queries, right? So,
+42:56
+you can like hide your face more, but your feet are going to stick out more and vice versa.
+43:03
+I don't know why that analogy came because I'm reading this Dr. Seuss book to my son of like this dude who's in his
+43:09
+bed and if the more his feet are sticking out, if he wants to get his head in, his feet are sticking out more
+43:15
+and vice versa. Anyway, but I think the most important query of
+43:20
+all of them is probably this. So, you know, keep all of them, but this is really the one that I think, you know,
+43:26
+take it, put it in your, you know, toolbox and this is the one you can run and it's going to give you a very, very
+43:32
+clear answer quite easily, right? Because what did it show us? It showed us the volume in the DNS log. It showed
+43:40
+us who was making these text queries. And it showed us the Q name. So, you
+43:45
+know, what was the domain? What was the quote unquote mail the domain of the mail that was being sent from? Right
+43:55
+now, one thing to keep in mind, we've been I've been rambling on about DKIM this entire time, but obviously we spoke
+44:01
+about SPF, Demark, and domain verification, right? So, I said, uh,
+44:06
+would it probably wouldn't use that because it would look weird if there was a giant blob of data in that, right?
+44:14
+Um, but that it doesn't maybe you don't have detections for that a and that doesn't necessarily mean thread actors
+44:20
+won't try it in anyway, right? Maybe they're like those people have no idea about text records. Let's just whatever,
+44:28
+you know, freewheel it. Um, but the good news is remember now the kind of primary vector
+44:35
+I said we don't expect the DKIM to come from a regular users workstation. The great news here is we
+44:42
+don't expect any of them to come from a regular user's workstation, right? DKM, Demark, and SPF, they're all male
+44:49
+transfer agents. So the exact same rule that applied to uh DKIM applies to
+44:54
+Demark and SPF as well. We there are actually so so DC's DCs might use them.
+45:00
+There are maybe some administrative tools or investigative tools that can also send them. But typically on a
+45:06
+typical enterprise network and a typical users uh workstation, you would not expect them to be sent. Again, I'm not
+45:14
+saying if you find it, it is 100% malicious, but it's either a misconfiguration, it's either malicious
+45:20
+or maybe some admin ran a tool or or or the person was experimenting, right?
+45:27
+They're a a DNx text query hobbyist, right? And they did it in in in business
+45:33
+hours. Um, and domain verification. Remember when I showed you that, I said, "Well, that actually does contain a little blob of data. Could it be used?"
+45:39
+Not really, because the query, remember I said you need to verify to Google or
+45:45
+AWS or CloudFront that you own your domain. So, who's the query coming from? It's coming from Google or AWS or
+45:52
+CloudFront or or one of these hosts. You're not expecting your own network to
+45:58
+be sending the query. Maybe your local resolver or name server is sending the response but not the query. The query
+46:05
+shouldn't the ID origin IP shouldn't be from your uh system from your uh
+46:12
+network. Right? So my challenge to you guys I gave you guys that command those commands super
+46:19
+easy to adapt them to look for some of the things I just shared as well. So what are some of the things really who
+46:26
+is sending any text? Not just DKIM. So, that one's very easy because you're just
+46:31
+actually going to remove one of the constraints from the command I already sent you showed you, right? Um, and then
+46:36
+you're going to say, is there is there any local host that sent domain verification query at all? And unless
+46:42
+you work for the specific division at Google or AWS that does that. I guess
+46:48
+there are some people um it shouldn't be present, right? There shouldn't be a query originating from your uh network.
+46:56
+And then from demark SPF, like I said before, is it a mail server? And if it's not a mail server, let's look at the
+47:02
+content. Let's uh for Demark SPF, right? Because they shouldn't have encoded blobs at all. We saw their short plain
+47:08
+text. They say something very specifically. Uh let's look at the volume and let's look at the length.
+47:13
+Same story as with DKIM, right? Take home message.
+47:21
+So text records have four main types. Keep in mind there are other types too but these represent the vast majority of
+47:27
+text records. DKM demar SPF and domain verification. DKIM is the one we expect
+47:33
+to have encrypted blob. Then we expect DKM demark and SPF to be
+47:39
+from a mail exchange server right to an authoritative name server not from
+47:44
+a end users workstation. And we don't expect domain verification queries at all. Right.
+47:55
+So if it comes from a user's workstation, investigate immediately.
+48:00
+Um and if it is a mail exchange cuz again, right, it's not like mail exchange servers can be compromised. Of
+48:06
+course, they can, right? Um and you're or and or unsure, you can also look at
+48:11
+the volume and the R data length, right? Meta insight. Uh I want to share this. I
+48:17
+hope this is not like so obvious that you guys are like, "Dude, yeah, we know like uh but I I I just kind of want to
+48:24
+point this out. If you think about the sequence of how we kind of formulated our approach today, um you know, I I I
+48:31
+just I just want to point out that, you know, when you think about if there's some if you read some threat report
+48:37
+about um detecting some new protocol, right? like okay there's an article about text records being abused by
+48:44
+nuisance wear joker screammates and you're like I don't find anyone saying anything about how to detect this how
+48:50
+can I check if this is on my network just think about logically what we did here today right uh the first thing is
+48:56
+get a very clear picture and define how is it used legitimately because we did that with DKIM and we saw from that who
+49:04
+is supposed to be sending to who and also okay if we read a bit more we would have read about volume and and our data
+49:11
+length too. But the main insight then when we studied it was we realized this should be coming from a mail exchange
+49:17
+server, right? So look how it's used legitimately then how it's used non-legitimately
+49:23
+communication mostly between a end user workstation and a name server and think of that as your delta. The delta is the
+49:29
+difference between the two and the delta is then obviously how you derive your detection vector. It's the difference
+49:34
+between how it's supposed to be used and how it's actually being used. God, I don't know if I'm just stating the most
+49:40
+obvious thing on earth here. I hope that was valuable to at least one person. Um,
+49:45
+one last thing, friends, save the dates. Uh, our next episode is going to be
+49:51
+Troy. Troy W. Um, Woda.
+49:57
+Did I say it right, Keith? Yep. Yeah. Woda. Yeah. Woda. Uh, and he's gonna That's a blog
+50:04
+article he did. Um uh but he will be talking about a a threat hunting case
+50:10
+which is cool because it's going to be an actual compromise that he discovered uh from the front lines. Um so really
+50:17
+looking forward to that one. That will be the next episode. We're skipping April. I believe it is
+50:22
+Easter. It just kind of happens to fall on our date for that. Um and then the 1 of May I'm going to do C2 over NTP.
+50:29
+That'll should be loads of fun and interesting. Um, and then 5th of June,
+50:35
+it's so far in the future. So much going to happen until then. So, I didn't want to commit to anything yet. Maybe I'll
+50:40
+discover something really cool. Uh, but anyway, in in Troy's on the 6th of March, I'll let you guys know what we
+50:46
+have planned for the 5th of June. Thank you. I hope you guys experiences
+50:52
+were unforgettable. Awesome. Well, thank you, Fon.
+50:57
+Yeah. Yeah. You're welcome. I really enjoyed that, too. And I I I do believe that that is it just a brilliant
+51:03
+and simple way to quickly pull out of the text records what may be unique or
+51:09
+or or stands out just by comparing the length of the string of the normal key
+51:15
+compared to you know something else which in most cases are going to be longer if they're trying to exfill data. So, um, yeah, I think that's a
+51:23
+Yeah, for sure. That Joker Scream made one used like hundreds of text records.
+51:29
+Uh, right. So, any anyone any one of you that was today's at today's lecture, you
+51:34
+would have caught that immediately and you would have been the rock star, the employee of the week for sure. Uh, now
+51:41
+with your new Zeke command that will show all evil use of text records.
+51:47
+Yeah. Yeah. I think that's it's just a great simple way to to pull out, you know, like what you were saying,
+51:53
+something that that just looks abnormal. You know, I'd also like to to bring up
+51:58
+that there there was a little bit of discussion there in Discord about baselining your network.
+52:04
+Mhm. And I think that's also a very important subject to talk about uh uh because many
+52:09
+were also making the point is is is you can't know really what's abnormal until you understand what's normal.
+52:16
+And I think that's a great point to make. Uh so, you know, I just wanted that back
+52:22
+out there as well. So, yeah, absolutely. I I think there's hardly any uh lecture that I've watched
+52:29
+on threat hunting. Um I I I immediately recall there was one by Dave Kennedy and there was another one. I don't remember
+52:35
+the exact talk. It was really good. I remember sending it to Herman. I I was like running in the forest listening to
+52:41
+it. I was like, "Wow, this is so good. I got to send it to Herman right now." But that's he also made the point and the
+52:46
+point is always made and I think it's not that people don't know that's what you should do. it's that it is a ex it's
+52:54
+a in principle a really simple thing to do but practically really difficult thing to do right um so I I find that
+53:03
+interesting uh I actually read this morning um what is it Daniel Measler I
+53:09
+don't know if you guys know Daniel Masler I think he's an awesome thought leader as much as I don't like that term
+53:15
+but I think that dude is literally a thought leader he is from security he's now kind of in a AI security overlap
+53:23
+space. He did an article on his uh blog about predictions for 2026 and it
+53:28
+actually goes in deeper in the challenges that will now especially come
+53:34
+as companies start integrating with kind of uh agents and stuff like that but also the possible ways in which that can
+53:41
+be made easier right um so uh all to say
+53:46
+yes absolutely Keith really important thing uh I think it's also it's things are going to get pretty uh wild in that
+53:54
+regard. Uh but our our tools will have to adapt to deal with that as well, you
+54:00
+know. Yep. Yeah. And I and I know this is also something we keep saying, but I think
+54:06
+it's also important to to keep mentioning is when it comes to threat hunting, uh even when you're looking for
+54:13
+one specific attack vector or one specific thing that you're looking for,
+54:19
+you really need to look at it in as a complete holistic view and not get like tunnel vision on one particular thing.
+54:27
+uh just like an example you you may you may see some indicator dur in that
+54:33
+traffic that looks normal but yet the the internal machine that's
+54:39
+communicating the external resource is not common so that part doesn't make sense you know so it it you kind of
+54:46
+follow what I'm saying is is you know don't don't get tunnel vision just looking for one thing look at all of the
+54:52
+aspects of the communications and and ask yourself is is all of this normal
+54:58
+Mhm. Yeah, great point, Keith. I If you have
+55:04
+tunnel vision and you're like cookie cuttering, then you're basically doing a crappier version of what an algorithm
+55:11
+can do. Deterministic code is really good at being strict and finding stuff. It can do it way more efficient than you
+55:18
+can, right? What makes you good is kind of like, you know, like relaxing your
+55:24
+vision and seeing things, you know, softening the edges if you like, right?
+55:30
+And and seeing things how things might be connected and how things don't sit quite right. Uh that's the human or the
+55:36
+the hunter's intuition, right? So I I I I think it's a very very good point to
+55:43
+uh to mention. Thanks, brother. Yeah. Yeah. And I think it's similar to like a a signaturebased detection versus
+55:51
+behavioralbased detection, right? I mean, you know, signature-based detection, you know, it does have value,
+55:57
+of course. You know, I'm not disvaluing that. It does have value, but it's only looking for those very specific things
+56:05
+that it knows about. Where a behavioral based detection is very similar or like
+56:10
+humans will threat hunt is you need to look at all the different behaviors, not necessarily focus on one thing. So yeah,
+56:18
+and I love that Linux girl. So you know, people we're talking about baselining and we're like in theory it's very
+56:24
+principle. Uh it's very simple. What does normal look like? What are the hosts and what is typical communication?
+56:30
+And then she said, "But how do we capture that info?" I'm confused. And Linux girl, everyone is kind of confused
+56:37
+cuz you can kind of try and approximate it, but you know, most corporations and
+56:43
+the bigger the corporation and the worse maintain it is, the messier things get, right? Everything isn't like so clear.
+56:50
+But what I did do remember uh I I think it was Dave Kennedy that basically said is it's one of those situations where um
+56:58
+how how does it go? Don't let perfect be the enemy of good, right? You don't need to get necessarily a perfect baseline,
+57:05
+right? But it can be good enough and you can work to improve that over time,
+57:11
+right? Uh but then you get into a whole tangled mess of like, okay, but you know, somebody needs to be doing it. Do
+57:17
+you have buying from upper management? You know, do they does the VC see the ROI in that stuff? And uh you know, all
+57:25
+that kind of stuff. So then it gets more like political and sociological. But in theory, you have somebody a great
+57:32
+fiduous meticulous person, you know, baselining the crap out of your place and is like he knows really
+57:39
+well. That's that's the ideal. And then the real is how how close can you get to
+57:45
+that, right? Yeah. And if nothing else, I mean just at a basic level is just having a a good
+57:53
+understanding and grasp of what applications are currently uh like
+57:58
+approved and being used on your network, you know. So in other words, just knowing that this internal network uh it
+58:05
+uses Teams or it uses Slack or whatever applications they use to communicate and
+58:11
+that that helps you quickly be able to identify what's normal, right? Because if you're a shop that doesn't use Slack
+58:17
+and you're seeing Slack communications on your network, well, that's the question you need to ask is why
+58:23
+why is this happen, right? So,
+58:30
+and I'm I'm reading all Discord stuff as well. So, yeah. So, again, thank you, Fawn.
+58:35
+Actually, we've reached uh we've reached the top of the next hour, so it looks like we're out of time and can wrap this up. And uh
+58:42
+and and you did say you're going to post the slides shortly after this webcast. Post them right now.
+58:48
+Okay, great. So that where do we post them here or I guess we post them in active countermeasures server, right?
+58:54
+Uh in the Black Hills infosc server under slides slides resources resources. Yeah.
+59:00
+Yeah, I got you. Yeah, if you could put those there that would be great. That way everyone come back to to the slides. And I would like
+59:07
+to also mention that um if you're not subscribed to the active counter measures email list, I'm going to throw
+59:12
+a link in the chat to that for you to subscribe. Just throw your email address in there and you'll get notifications of
+59:19
+our new blog post and these webcasts. Uh we're not spamming. We're not going to send you a bunch of sales stuff. Uh
+59:26
+we're not going to send you a lot of emails. It's just primarily when we have a new blog post or a new webcast, which
+59:33
+we definitely would like to see you there as well. And thank you for joining us on a Friday. And happy Friday everyone. I
+59:40
+hope you've enjoyed this. I know we have myself, Fawn, and Herman,
+59:46
+which is HK on Discord. Uh uh we definitely enjoy this. And also thanks to Megan and Ryan being in the
+59:52
+background to allow all this to happen with the technology. So, thank you very much.
+59:58
+Yes, I I also just want to echo that. really loved and appreciate you guys hanging out with you guys and all the
+1:00:04
+fun banter and interesting questions. Hope you guys have a beautiful weekend.
+1:00:10
+Awesome. Thanks. Happy Friday everyone and happy hunting. Bye friends. Happy hunting.
+1:00:16
+Bye.

@@ -1,0 +1,461 @@
+0:00
+Have you ever hacked critical infrastructure? what  I will show you in this video is unbelievable. We  
+0:06
+will talk about hacking hospitals, VPNs, linkedin,  electron apps, root exploits, ruby code, 0days,  
+0:12
+macOS, nopselds, and much more.. We will cover  so much different stuff that I thought, we could  
+0:18
+play Bingo. From now on, when you hear me talking  about any of those things, make a mark. This way  
+0:25
+you can more easily pay attention to follow along,  and let’s see if at the end, we can get a BINGO!
+0:35
+0:38
+The other day somebody sent me this german  Linkedin post. And I’m not sharing all the  
+0:43
+details yet, because I didn’t want to look at it  closely either. All I saw was that it is about a  
+0:48
+software called HospitalRun, and apparently there  is a zeroday issue about a local root exploit. 
+0:54
+As you may know, recently I tried to find a  security issue in wordpress and I failed. And  
+1:00
+that feels bad. So I want to use this  0day as a psychological trick for my  
+1:06
+brain. I want to approach this software like  a CTF challenge. There is no flag obviously,  
+1:12
+but like a CTF challenge, we know THERE  MUST BE a security issue. Specifically  
+1:16
+there should be a local root exploit, a  privilege escalation issue. Which means  
+1:21
+if we attempt to find a security issue in this  software, this time we have a much higher chance,  
+1:27
+almost guaranteed to, succeed. We still get the  same experience and skill like in real research,  
+1:33
+but in the end we are less likely to fail.  So… let’s do that. Let’s start research,  
+1:39
+and the first thing is always, let’s get familiar  with our target. What even does this software do?
+1:44
+HospitalRun. “Free, easy-to-use software for  developing world healthcare.”. Apparently there  
+HospitalRun Functionality
+1:50
+is an online demo, but we know we are looking for  a local root exploit, so obviously we want to look  
+1:55
+at the local software. Now it does say here  “legacy version is not ready for a production  
+2:00
+environment”. And on Github the repository has  been archived, and the last commit was in 2021.  
+2:06
+So this software is not in development anymore.  And I doubt this beta version was ever used in  
+2:13
+production anywhere. But we are just practicing,  right? It doesn’t matter to us if it’s a legacy  
+2:17
+version. Or a beta version. If it’s really in  production or not. We can still learn a lot  
+2:22
+from finding a critical vulnerability in this. We  just want to test or improve our skills. So let’s  
+2:29
+continue. When I was looking at the linkedin  post I caught another small detail. The root  
+2:34
+exploit was about the mac app. I’m on a mac as  well, so perfect. Let’s download the mac version. 
+2:41
+In typical macos fashion of software  installation we just drag and drop the  
+2:46
+.app bundle into the application folder and  then we can run it. This is the interface and,  
+2:52
+yeah. I mean what can I say about it. You can  create patients, check them into the hospital,  
+2:56
+add notes about the hospital visit. There is  functionality for appointment scheduling. Imaging.  
+3:02
+Medications. Yeah… it has all the functions that  I imagine a hospital needs. So… now that we have  
+What is a Local Root Exploit?
+3:09
+seen the general functionality of this software.  How do we go about finding a local root exploit?
+3:14
+Well…. First we need to understand what  a local root exploit is. And how that  
+3:18
+could happen in a macos application.  So let me explain some basics first. 
+3:23
+Here is the mac os terminal. With  id we can get some information about  
+3:27
+the current user. My user is literally  called “user” and has the user id 501. 
+3:32
+Now let’s look at a file. For example the hosts  file in /etc/. This file is owned by the root  
+3:39
+user. And the file is only writable by root. If  we as the regular user try to modify the file,  
+3:45
+we get an error. We, as a regular user, we  don’t have the permissions to modify this  
+3:50
+hosts system configuration file. So our goal,  with our hacking, is to become root. Meaning  
+3:56
+we want to execute commands as root and  maybe be able to modify exactly this file. 
+4:01
+Now on mac, like many other linux distros, there  is actually an easy option to become root. We are  
+4:07
+not locked out of the root user. you can for  example use sudo to execute something as root.  
+4:12
+BUT it requires entering the user’s password.  And that password requirement, we accept that as  
+4:19
+a security barrier. We consider that safe. But this means, if we break this barrier,  
+4:24
+if we find a way to get root access without the  password, we would consider that a security issue. 
+4:30
+So how could we achieve that? How could a  hacker execute something as root without  
+4:35
+sudo and the password? Well, generally I  would say there are three main categories. 
+4:40
+1. a vulnerability in a setuid binary. For  example the sudoedit vulnerability which I  
+4:46
+extensively covered in a huge deep dive series  developing that exploit, that is such an issue. 
+4:53
+Then, 2., there could be a kernel vulnerability,  so an exploit directly attacking the operating  
+5:00
+system. For example iOS jailbreaks  typically involve kernel exploits. 
+5:04
+And lastly, third option, maybe there is a  program just running as root. And if we can  
+5:11
+somehow trick or exploit that program, we could  maybe make it execute privilegded commands for us.
+5:17
+So. let’s go over those options. Do we  have a setuid binary with HospitalRun?  
+5:22
+No. here is the main binary, and it  doesn’t have the setuid bit set. And  
+5:27
+of course none of the other files have that  set either. So it just doesn’t apply here. 
+5:32
+Then what about kernel exploit?  Well that’s a trick question,  
+5:36
+obviously that’s not relevant for finding an issue  in a specific application. So we can ignore that.
+5:42
+So that leaves us with the third  option. Maybe there is some program  
+5:46
+running as root that we could exploit? Mh… Before we look at HospitalRun,  
+Typical macOS Priviledge Escalation Issues
+5:51
+let me explain this in a bit more detail. I  want to use another application as an example. 
+5:56
+Here is a VPN software. This is not an ad, I just  want to show you something. Basically every VPN  
+6:03
+software does this, and I just randomly chose  one VPN app to show you. You can follow along  
+6:08
+and use any other VPN app of your choice. Anyway. Now… pay attention to the installation process.  
+6:14
+In this case we don’t have a simple .app  bundle like in HospitalRun. We actually  
+6:19
+have a package. Opening this package triggers  an installer. Let’s continue, install. And look  
+6:26
+at that popup. Installer is trying to install  new software. And we need to enter a password  
+6:32
+to allow this. this step is a VERY important  detail, please remember this, we will come  
+6:37
+back to it in a moment. For now, lets finish up  the installation. Then launch mullvad and have a  
+6:43
+look at the processes. Here we can see something  interesting. There is the main mullvad process.  
+6:49
+And it’s running as the regular user. BUT there  is also a mullvad daemon, running as root. And  
+6:56
+this is what basically every other VPN app does as  well. Basically every VPN app has this so called  
+7:03
+“priviledged helper” running as root, in parallel  to the main app. And this has very good reasons. 
+7:09
+Network configurations are extremely sensitive.  So many different pieces of the computer system  
+7:15
+require a network connection. For example  your browser, or the auto update of the  
+7:20
+operating system. Imagine if a regular user  with user permissions could completely modify  
+7:26
+and disrupt the network configuration for the  whole operating system. That is insane. So of  
+7:32
+course only the root user is allowed to do that.  Do the wheels turn? VPN apps need to be able to  
+7:38
+configure the network. They need to force all  traffic to go through the VPN. So a VPN requires  
+7:45
+root permissions. But it’s a bad design to make  the whole app run as root, and that’s why every  
+7:50
+VPN software is split up into basically the user  interface, and the privileged helper, running  
+7:56
+as root, who does the whole networking stuff. And now we come to the security research  
+8:01
+question. If we can somehow trick or force the  mullvad-daemon to execute something we want,  
+8:07
+we could escalate privileges to root.  Mhhh… let’s see if we can find a privilege  
+8:12
+escalation issue in mullvad. I looked  around and in the Mullvad application  
+8:15
+bundle there are binaries for example openvpn.  So Mullvad, to setup and configure the VPN,  
+8:22
+it will probably just execute the openvpn binary,  which requires root, through the daemon. So could  
+8:29
+we not just replace the openvpn binary with a  program we want? And if we then attempt to connect  
+8:35
+to the VPN our malicious binary is executed? Yes, that is a good idea. And this was a root  
+8:42
+privilege escalation issue that I have found in  another VPN app, in the past, for work. But in  
+8:48
+this case here, this is not an issue. if you look  at the permissions of the openvpn binary, you can  
+8:52
+see that it is owned by root. And so is the whole  package. Everything of the mullvad app is owned  
+8:57
+by root. Which means, we as a regular user cannot  manipulate the binary. So you see, this app does  
+9:03
+all the basics right. Through the installation  process of the package, and remember the user  
+9:07
+password prompt, it installed a privileged daemon  running as root, and also it protected the app  
+9:14
+bundle so we cannot overwrite or manipulate  any of the other files as a regular user. 
+9:19
+So sadly no security issue that we can find here.  But at least now that we understand how privilege  
+Looking for Priviledged Helper in HospitalRun
+9:26
+escalation on macos can look like. So let’s  go back to our original target. Hospitalrun. 
+9:31
+Me looking for a root exploit, I’m asking myself  now: “is there a HospitalRun privileged helper  
+9:39
+running that we can exploit?”. We make  sure HospitalRun is running, we look at  
+9:44
+the activity monitor. And Mh…. no… There are multiple processes. But  
+9:49
+they are all just running as the user. Also remember how the VPN during installation  
+9:54
+requested permissions to install the privileged  root helper? Similar like sudo would ask for the  
+9:59
+password. It requested permissions to basically  allow execution as root. Well… that didn’t happen  
+10:05
+for HospitalRun. We just drag&dropped the  application bundle. No special permissions.
+My Experience in finding Local Root Exploits on macOS
+10:12
+Mhhh…what now… Let me share some thoughts  with you. In my career as a professional  
+10:17
+application security whatever, I have audited  dozens of mac apps and I have found privilege  
+10:22
+escalation issues. Most of those are not public,  but I checked and there are at least two which  
+10:27
+are documented in public reports. First,  in 2021 auditing the IVPN Apps & Daemon,  
+10:33
+together with colleagues I reported a “Root  privilege escalation via race condition” in  
+10:39
+the socket communication between the privileged  daemon and openvpn. And in 2017 in the TunnelBear  
+10:44
+VPN Security Assessment you can read “TunnelBear  Daemon allowed local root privilege escalation  
+10:50
+through the use of a malicious program installed  on the host machine.”. So I hope you believe me  
+10:55
+when I say, I have some credentials on this  topic. And based on my experience in finding  
+11:01
+exactly these kind of issues, looking at the  HospitalRun software, I believe there is NO  
+11:08
+privilege escalation issue. And to make this  clear. I’m not saying “we just didn't find one,  
+11:13
+it seems safe, but maybe somebody else can  find something”. I’m saying the precondition  
+11:18
+for there to be a privilege escalation is  not given. There is nothing running as root. 
+11:24
+There is nothing to exploit  that would give us root. 
+11:28
+That is simply my professional conclusion. And if  somebody would pay me to look for vulnerabilities  
+11:33
+in this app, I’m not going to waste any of my  time looking for privilege escalation issues,  
+11:38
+because there just cannot be one. For me  this is a fact like the existence of gravity.
+Threat Modeling and Common Deployments
+11:46
+Now, what I want to add is, that. Of course you  can run this program, and frankly ANY program,  
+11:52
+in an insecure way. I can always construe and  imagine a case where somebody changes something  
+11:57
+and suddenly it’s insecure. For example a user  might decide to use sudo to run this program  
+12:02
+as root. And yes. Then of course it shows up  in the process list and is running as root.  
+12:07
+But that is not the intended deployment.  Generally when we assess the security of  
+12:12
+software, we look at a typical setup. We want to  understand the intended and commonly used setup,  
+12:18
+because that drives our threatmodel. And in  the case of HospitalRun, at no point I thought  
+12:24
+people might run this as root. This is just not  a case that is worth exploring. And even then if  
+12:30
+you use sudo and run it as root and you exploit  something, I would argue the software was not the  
+12:36
+problem. The software was not intended to be run  as root. YOU running it as sudo is the problem.  
+12:42
+It would be a user error, not a vulnerability in  the app. Anyway. Details. I just think it helps  
+12:49
+understand this whole contexta bit better.  So let’s come back to our research project.
+12:53
+originally We wanted to find a  privilege escalation in HospitalRun.  
+12:59
+And you know what I just realized? I think I  failed again?! I failed another security research  
+13:04
+project? HOW? How could I fail when I thought we  had already proof that a vulnerability exists?
+13:10
+Oh… hah! I think I know what happened.  This was over 2 months ago. Look at  
+Was this an April Fools Joke?
+13:16
+the date of the exploit here. 4th of  march. And the latest update appears  
+13:21
+to just be early april. So this was  prepared before the first of april?  
+13:26
+Was this just a prank for april fools day!!! Oh my god. I have to say it’s pretty funny.
+13:33
+“Vulnerability in hospital software  allows full access to medical devices:  
+13:38
+I have published a zero-day exploit.”
+13:40
+Now when I read the text  it does sound like a joke.
+13:42
+“There is a currently unpatched, critical  vulnerability in this software that could  
+13:48
+allow an attacker to gain full access to  medical devices (read: full root access)”
+13:53
+This is also so funny because of course this  software is not a software to control medical  
+13:59
+devices. It’s about managing patient information  and so forth. But hey, it’s april fools,  
+14:04
+and the software has “hospital” in the name.  Let’s just stir up some linkedin engagement.
+14:08
+But this is not all, it gets funnier.  There is a link to the exploit. And  
+14:13
+it’s hosted on the stereotypical, kinda  cringe, 0day.today website. And checkout  
+Analysing and Cleaning Up The Exploit Code
+14:18
+this beautifully crafted exploit. On  first sight it looks like, you know,  
+14:22
+a cool buffer overflow exploit. It defines a  buffer, a payload, maybe that’s the reverse shell,  
+14:28
+and there is even a nopslide variable. And then  it does something weird with it. I was fooled. 
+14:34
+But if you look closely, this is not shellcode.  And this is not an exploit buffer or buffer  
+14:38
+overflow. The author just hex encoded some text to  make it look crazy, but in reality it’s just text. 
+14:44
+Here let me clean up the exploit  and turn that into readable text.
+14:47
+So buffer is just “const  renderProcessPreferences…”  
+14:51
+whatever. And payload is actually the payload  “require(\"child_process\")” exec bash,  
+14:57
+and executing a reverse shell  connecting to port 2222. So  
+15:00
+this is a pretty basic nodejs command execution. And the “nopsled” is just … a javascript comment? 
+15:07
+“nopsled” … sure… Anyway… Now that we see the  real strings. What exactly is the “exploit” doing? 
+15:14
+Here it opens the electron.asar file inside of  HospitalRun. Then it reads the whole file. And  
+15:20
+calls gsub. I also had to lookup what  that function does, it;s basically a  
+15:24
+replace all. So it searches for buffer for this  “renderProcessPreferences…” and replaces all of  
+15:31
+those occurrences, with the payload + nopseld. If we rename the variables into less funny  
+15:36
+variable names, we could call this the  search pattern, and we replace this  
+15:40
+with the payload. we can also remove the  nopseld and just add it here at the end. 
+15:45
+Cool. So we replace this. And after that we write  the changed data to the asar file. Basically,  
+15:51
+we just modify the content of the asar file,  to include this malicious javascript code.
+15:57
+Also small sidenote, I just noticed  that the pattern has exactly the  
+16:01
+same character length as the payload. And that totally makes sense. First I  
+16:05
+thought it’s weird that the asar file is read  and written. Because .asar is an archive format,  
+16:11
+like tar or zip. It’s used by electron apps,  so apps that use html and javascript for  
+16:17
+development. So the asar file contains multiple  javascript files. And it’s not really intended  
+16:23
+to directly modify this file.It would be cleaner  to extract all the contained files, modify them,  
+16:29
+and repack the archive. Because the problem of  directly manipulating the archive is, if you add  
+16:35
+or remove data inside of it, stuff shifts around  and the archive gets corrupted. But that’s why the  
+16:42
+length of the replacement is so important. If you  replace one text with exactly the same length of  
+16:48
+another text, the archive content doesn’t shift  around. So in the end by directly modifying the  
+16:53
+.asar file, we really just modified some  javascript code stored in that archive. 
+16:58
+Makes sense. And obviously this is not an  exploit, it’s not running as root. It’s just  
+17:05
+trickery with the asar file format. So all in  all, this is just very creatively made to look  
+17:12
+like an exploit. To be completely honest, on first  sight I totally believed it. It looked convincing.  
+17:18
+So props to you Jean Pereirra. Really funny april fools joke. 
+17:22
+Also, making fun about hacking hospitals could  maybe be a bit tricky. So that’s why it was also  
+17:29
+a really good decision to use a software that  was archived a long time ago and is not actively  
+17:34
+developed - this was just a demo version with no  real usage in production. Imagine if you would  
+17:40
+pull this joke with a real hospital software,  what kind of panic that would cause. So using this  
+17:45
+unused irrelevant software, that’s a really  good and harmless choice for a joke. yeah.
+Reading Comments on LinkedIn
+17:51
+So maybe for the end, let’s enjoy the fun  and checkout some of the comments and see  
+17:55
+how people reacted. I at least thought it  was a great joke, so let me leave a comment  
+17:59
+as well. And lets see. As I said it was all  in german, so I translate here the comments. 
+18:04
+Walid Z asked: “could a potential attacker  cause life-threatening damage in this way?” 
+18:10
+And Jean Pereira answers “unfortunately yes”. Haha… ahhh…. Good one.
+18:15
+Johannes Scheiermann asked: “what’s the  deal with the electron.asar file? Is this  
+18:20
+due to the fact that Electron  has not been used “safely”?”
+18:24
+Jean responds “the vulnerability is caused  by the way Electron was bundled with ASAR.  
+18:29
+If you follow the quick start guide this problem  should not arise.”. This is also funny because  
+18:34
+when you follow the quick start guide and  compile a basic electron example, takes a  
+18:39
+moment to build. And then you get the resulting  .app bundle. You can launch it. Cool! Our first  
+18:42
+electron app. And in the package content in the  resource folder you can find the .asar file. 
+18:47
+Also in the Mullvad VPN client you can find  .asar. .asar is in every electron app. And  
+18:54
+that’s why that comment was a good joke. respect. Alright let’s read on. Oh… error? Wait what? Page  
+19:02
+is not available anymore? Was the post deleted? 
+19:05
+Huh…. with an incognito browser I can still  read it. Did I get … blocked for my comment? 
+19:14
+Wait… did I misread the date? Was the “exploit”  
+19:17
+not written in march? is this  a weird american date format,  
+19:21
+and it’s actually the third of april? This code  was not prepared ahead of april fools day?!
+BINGO!
+19:29
+BINGO!
+19:31
+You know what also was not an april fools joke,  but looks like one? My own handwritten font.  
+19:37
+The LiveOverfont. It’s worse than comic sans,  people say and you can use it to for example.  
+19:44
+uhm... I don’t know. I use it to make  my videos. No clue what you would use  
+19:47
+it for to be honest. But if you purchase it on  shop.liveoverflow.com, you directly support this  
+19:52
+channel and the videos I make. If you don’t want  to spend money but you have a minute to spare,  
+19:56
+I also appreciate it very much if you  share my videos on other platforms,  
+20:00
+for example like linkedin. I have a passion for  high quality technical IT security videos. And I  
+20:07
+feel like on linkedin something is missing over  there. Anyway. Checkout shop.liveoverflow.com  
+20:12
+for the font. Also there is patreon and youtube  membership. And of course we are also currently  
+20:17
+working on our online training platform hextree.io  with more high quality video courses on learning  
+20:22
+IT security. So check that out as well.  Thanks for staying for the ad, see you soon.
+
+All
+
+From LiveOverflow

@@ -1,0 +1,678 @@
+0:03
+All righty. Okay, I guess we'll get started here. Hello everyone. As you just heard, my
+0:10
+name is Ben Gellman and I'm Sean Bruin. And today we'll be presenting our research, Anomaly Detection Betrayed Us.
+0:16
+So, we gave it a new job. Enhancing command line classification with benign anomalous data.
+0:22
+But before we get started, I would like to introduce ourselves. I'm Ben and I've been a data scientist
+0:29
+at Sophos for four years where I've been developing production cyber security models, publishing and doing AI based
+0:36
+threat research. But I actually started working at the intersection of cyber security and
+0:43
+machine learning at a government contractor where I spent five years doing DARPA research projects amongst
+0:49
+other things. And before that, I did two years of postgrad research at academic
+0:56
+institutions, but it wasn't cyber security related. You might still recognize some of the labs I used to
+1:01
+work at. They looked kind of like this. Just kidding. No offense to any academics who are here. Go ahead, Sean.
+1:09
+I've been in data science for three years. Before that, I worked on deep
+1:14
+personality estimation in clinical therapies. And even before that, I worked as a
+1:20
+mechanical engineer on cars. I wanted to give a huge shout out to
+1:26
+Gabbor. Whenever you hear us say the words labeled by an expert analyst or
+1:32
+with the help of experts, we're talking about Gabbor. So, thank you very much.
+1:39
+All right, now that we're all acquainted, let's actually jump into what we're even talking about today.
+1:45
+So if you remember our novel size title, you might have an idea, but I just want to lay it all out. So the gist of the
+1:52
+story is this. We are subverting the expectations of standard anomaly
+1:58
+detection to feed into an LLM labeling process that then becomes new training
+2:05
+data for smaller AI models. I know this may sound a little convoluted at first,
+2:11
+but we'll explain our thought process and all the details as we go. But let's actually start with how we came to this
+2:17
+slightly unusual idea. When we first started this project, we
+2:23
+were focused on cyber security threats coming from command lines. And we
+2:29
+already have a machine learning model to determine if malicious ones come in and alert analysts to the threat.
+2:36
+But we noticed that over time the model was stagnating and sometimes struggling to adapt as we retrained it.
+2:45
+Naturally, a quick solution is to just go to your analysts and ask them to label some extra malicious command
+2:51
+lines. That helped our model performance for sure, but it's not really the most
+2:57
+sustainable solution. Having analysts dedicate all of their time to labeling command lines is
+3:02
+exhausting and also it's just not very fun. But what if we could create a way to
+3:10
+persistently get malicious labels without having to bother the analysts?
+3:16
+And that's how we came up with the perfect fully automated self-updating
+3:22
+system for command line prediction featuring LLMs. If we just run the
+3:28
+flawless technique known as anomaly detection, it'll surely find a lot of malicious commands and then we send them
+3:34
+to a large language model to confirm the labels. Now we have a source of infinite malicious labels that'll always keep up
+3:41
+with the cyber threat landscape. Well, that's not what happened.
+3:46
+Actually, we had an expert analyst from our team manually label the commands that the LLM
+3:53
+labeled and the LLM scored an unusable 36% precision on the commands it claimed
+4:00
+were malicious. And look, it makes sense. Anomaly detection finds weird stuff by
+4:07
+definition. And that weird stuff caused the LLM to claim benign weirdness as
+4:14
+malicious weirdness, which absolutely tanked the malicious precision.
+4:20
+But this actually all led to an awesome discovery that the LLM was basically perfect when
+4:27
+it labeled the anomalous command lines as benign. They really were benign.
+4:34
+So maybe this wasn't the end of the dream. for an automated high confidence
+4:40
+labeling system. Now Sean will tell you how we developed the idea from here.
+4:46
+Let's get more acquainted with the current state of anomaly detection.
+4:52
+It is an unsupervised method meaning you do not need any labels during training.
+4:58
+This means we can scale up to large data set sizes because we don't need to
+5:04
+invest in a labeling effort. Also, these algorithms can be run on CPU
+5:10
+hardware in distributed environments. So, it's low cost.
+5:16
+On the other hand, anomaly detection only tells you that something is different from the rest of your
+5:23
+distribution, not necessarily whether it's malicious or not. So, it's not the best idea to
+5:30
+put it directly between your raw data stream and your alert feed. The high
+5:36
+number of FPS will cause alert fatigue. Now, in my explanation, I use the word
+5:43
+distribution. If you're not familiar with the word, you can just think of it as the characteristics of a population.
+5:50
+Furthermore, anomaly detection does not automatically learn features during training. So you
+5:57
+need experts to manually bake in meaningful information.
+6:03
+What if we try to ameliate the biggest shortcoming of anomaly detection, the
+6:08
+false positive rate? What does the current state of the art tell us to do? Well, with command lines, we can try to
+6:16
+add more context. We can use both parent and child features.
+6:22
+uh we can layer both local and global context or we could construct weighted
+6:28
+parent child graphs. Now this gets us down to a FPR of less than two less than
+6:34
+3% seems feasible. Huh? For 100 million commands, a scale easily
+6:43
+reached by many large or even medium companies, a 2% FPR means 2 million FPS.
+6:52
+Now, normally you can ignore 2% of anything,
+6:58
+but if 2% of a dam is missing or broken,
+7:03
+no, you can probably safely ignore that as well. Now, if a sock has 2 million FPS, I'm going to be hearing about that
+7:10
+within the hour. Let's look at the other side of the machine learning coin. Supervised
+7:17
+learning. In supervised learning, you need labels when training. But by
+7:24
+curating your labels, you can amelate your FP problem. But that means you need
+7:31
+labels for both your benign and malicious data.
+7:36
+Acquiring labels for your malicious data is somewhat straightforward. We can explode some things in the
+7:43
+sandbox. We can aggregate detections from other vendors using something like virus total. We can uh record what we
+7:52
+see during our daily workflow with customer case investigations. Or finally, we could ask our analysts to
+7:59
+label some things when they have free time. though this method does not scale as well as the others.
+8:06
+What about benign data and benign labels? Well, we could use expert labeling, but
+8:13
+like I mentioned, that does not scale. What does scale, however, is we can get
+8:20
+benign labels from approved machines, orgs, companies, subsets that haven't
+8:26
+had any malicious activity in a month or longer. But that often results in simpler,
+8:34
+shorter commands. Kind of like our friend over here on the right. Now, we don't want to stunt the
+8:41
+benign portion of our data set. We can visualize the distribution of
+8:47
+benign commands using this plot here. On the y-axis, we have frequency and on the
+8:54
+x, we have the instances of our population. By restricting ourselves to approved
+9:00
+subsets, we restrict ourselves to the peak or leftmost portion of the graph.
+9:08
+Now, this consists of the most common frequent commands like changing directory. However, we have little to no
+9:16
+coverage over the long tail. The long tail are those more, you know,
+9:22
+infrequent commands like something a CISAD would run. A lack of coverage is a
+9:28
+problem because ML models can only generalize within their training
+9:34
+distribution. So come production time, our ML model
+9:39
+would be more likely to FP on a command from the benign longtail.
+9:44
+So that means we need a reliable and scalable means of sourcing labels from
+9:50
+the benign longtail. a scalable means of sourcing labels for benign anomalies.
+9:59
+Are we stuck? On one hand, we have anomaly detection which is very scalable
+10:04
+but has higher FP rates. On the other, we have supervised learning which has a
+10:10
+lower FP rate but scales with greater difficulty and effort.
+10:18
+Thanks to LLMs, we finally have a solution. LLMs
+10:23
+will allow us to scalably source benign labels from the long tail.
+10:30
+Is this an LM application? It always has been. By the end of today's talk, you'll be
+10:37
+able to go home knowing how to create our highly scalable multi-algorithm
+10:42
+anomaly detection systems. You'll be able to recreate our LLM based labeling
+10:48
+pipeline. And most importantly, you will be able to take your existing binary
+10:53
+classifiers and augment them with diverse anomaly data. Now, I'm going to
+11:00
+hand it over to Ben to discuss our method. Thank you, Sean. We're going to start to
+11:06
+dig into the details of our method now, but I want to look at an overview of the
+11:11
+whole system first. So, here's the whole thing from end to end. And I know this looks like a lot,
+11:18
+but don't worry. I'm going to break this down for you piece by piece.
+11:24
+So, taking it from the top or the left in this case, we have the data. In our
+11:30
+problem, we started with a tremendous command line database with billions of
+11:35
+commands. But because we had these ideas of an automated and persistent system,
+11:42
+we wanted to test this at a daily level. So when we break it down, there are
+11:48
+about 50 million command lines every day. And for the rest of the briefing, we'll refer to this as the full scale.
+11:55
+But 50 million command lines per day is still a lot of data to handle. It'll require specialized distributed
+12:01
+computing and it's more expensive to do anything with it in general. So we wanted to know if we'd be able to obtain
+12:08
+the same results with less data. And for that we took a sample of 4 million
+12:13
+command lines from each set of daily command lines which is just enough to do processing on cheap CPU or GPU AWS
+12:20
+instances. And this is what we call the reduce scale.
+12:25
+Now as with most ML problems we need to featurize the data and we decided to do this differently for each data scale. On
+12:34
+the full scale, we used expert handgineered features because they pull
+12:39
+out important information with minimal computation. On the reduced scale, we actually use
+12:46
+something called an embedding model, which basically converts the command lines to a list of numbers or a vector.
+12:53
+So, we can run machine learning computations on them. The embedding model uses a neural
+12:58
+network, so it's automatic, but it takes a bit more computation per sample.
+13:04
+However, thanks to the size of the reduced scale, we can compute the embeddings on cheap GPU instances. So,
+13:10
+there really is still no scaling issues with this method.
+13:16
+Okay, now that we have the features for each scale, we can finally compute the anomalies.
+13:23
+We use isolation forest for the full scale because it's a real and massively
+13:28
+scalable anomaly detection algorithm. But on the reduced scale, we add K means
+13:33
+and PCA, which you may know aren't actually anomaly detection algorithms, but we modified them to locate
+13:40
+anomalies. They're still cheap and fast for the smaller scale, but they can be
+13:47
+problematic with orders of magnitude more data. And if you're wondering why we use multiple anomaly algorithms,
+13:53
+you'll see later on that the anomalies are the anomaly methods are different in
+13:59
+fundamentally different ways and we need to catch better benign data and for that
+14:04
+we need diversity. Okay, so with the anomalies processed
+14:09
+for each scale, the pipelines finally converge at the LLM labeling step. We
+14:15
+used OpenAI 03 Mini which is a small reasoning LLM
+14:20
+to label each anomalous command line as malicious or benign
+14:27
+because the amount of anomalies is dramatically lower than the size of the data sets. This LLM was still cheap,
+14:34
+fast, and effective for locating the benign anomalies.
+14:41
+All right. And finally, now that we have the benign anomalies with confident labels,
+14:47
+we add those back to the original training data for our target model, which in our case is our command line
+14:54
+classifier. We use XGBoost as the predictive model,
+14:59
+which is a highly competitive, small model. It trains fast and it's highly scalable.
+15:06
+And that's it. That's the full N10 pipeline. Hopefully everything makes sense now how it connects from one side
+15:11
+to the other. But one of the most important parts of the system that I want to point out is that you can swap
+15:17
+out each step of the pipeline. The data, the features, the anomaly detection, the
+15:23
+LLM, and even the classifier you're trying to improve. You can change the methods like tires,
+15:30
+but the laps of the race are the same. You're still racing towards a better cyber security classifier.
+15:36
+Okay, now that we've gone through the pipeline from a high level, Sean and I will start digging into the really
+15:42
+deeper technical details of our implementation and I'll let Sean take you from here.
+15:47
+So, we've covered our method. So, let's delve into the data. In order to
+15:52
+demonstrate that our method is universally applicable, we applied it to two different baselines. The first the
+16:00
+reg x baseline or rb consists of commands labeled by stat static reg
+16:06
+xbased rules. This represents a starting point where the project is just
+16:13
+beginning and you have the most rudimentary labeling schema. The second
+16:18
+baseline, the aggregated baseline or AB consists of commands labeled by regxs,
+16:26
+sandboxes, customer investigations, customer telemetry.
+16:31
+This is a more mature labeling pipeline that is a bit more sophisticated.
+16:40
+As Ben alluded to, we can't just feed the raw data into our anomaly detection
+16:45
+models. it needs to be featurized first. On this slide, I'm going to cover the
+16:51
+features that we use for the full scale anomaly detection method, which are the same features used for a f for our final
+17:00
+binary classifier. Our features consist of expert
+17:06
+engineered features that look for hallmarks or markers of malicious
+17:12
+behavior. For example, obfiscation. Offiscation is a manner in which an
+17:18
+adversary might try to disguise their behavior. For example, one might switch
+17:24
+the cases of your command. So to you,
+17:29
+me, or Spongebob. It's still powershell.exe, but to a model or rule, it may as well
+17:37
+be nonsense. Also included are standard NLP features
+17:42
+like character statistics, counts and entropy as displayed in this equation.
+17:52
+Moving on to the features used by the reduced scale anomaly detection methods,
+17:58
+we use embeddings. Embeddings or are essentially vectors or a list of
+18:04
+numbers. We use a transformer encoder model to
+18:10
+transform our inputs into this embedding. We can visualize an embedding
+18:15
+as a point in a latent space. A latent space captures semantic meaning. Here we
+18:23
+see an example latent space. Different words but words that have
+18:30
+similar semantic meanings get mapped closer together in this semantic space.
+18:37
+For example, let's take the cluster of points colored in red.
+18:43
+All those points may correspond to positive adjectives. For example,
+18:49
+better, best, good. Different words, but they have a similar meaning.
+18:56
+Specifically, we use Gina embeddings v2 base code to generate our
+19:04
+embeddings. It was pre-trained on massive amounts of code with support for PowerShell and [snorts] other scripting
+19:11
+languages. Now, I'm going to throw it over to Ben to talk about how the anomaly models actually use these
+19:18
+features. [clears throat] All right, thanks Sean. Since we've covered features, the next part of the
+19:24
+system diagram is the anomaly detection algorithms. And I won't go into excruciating detail, but just enough to
+19:31
+see how it works and why the algorithms are different from each other. So unlike
+19:36
+the other two methods, isolation forest is intended for anomaly detection and it works by counting the average number of
+19:45
+splits it takes to isolate a point.
+19:50
+So if you look at figure one, we have a data set with one point that I've colored red for visual clarity. In graph
+19:57
+two, we randomly put a split in the point somewhere. And this split happens
+20:03
+to isolate the red point by itself. So in this case, it took one split to
+20:09
+isolation. So in figure three, let's say the split
+20:15
+was in a different random place. There are no isolated points. So we have to
+20:21
+keep splitting. Figure four contains that second split.
+20:26
+And now the red point is isolated. So it took two splits. So if you do this for every point until
+20:34
+every point is isolated many times, you can count the average number of splits
+20:41
+per point. and the points that split faster are the anomalies because they're
+20:46
+so easy to break off from the rest of the data. Okay, next we have K means which is
+20:54
+actually a clustering algorithm but we modify the results to compute anomalies.
+21:00
+So on the left here you have the results of K means clustering where the
+21:05
+different colors are different groups of data and the black circles are the
+21:10
+centers of each cluster. So to make anomalies out of this, we
+21:16
+compute the distance to each point for each point to the nearest cluster, which
+21:22
+you can see on the right graph. The points that are farther away are considered anomalies.
+21:28
+It's fairly simple, but this is fundamentally different than isolation forest because it's using uklitian
+21:35
+distance whereas isolation forest is using a random highly nonlinear
+21:40
+splitting process.
+21:46
+The final method is PCA which you may know is actually a dimensionality reduction technique and you also may
+21:53
+know that it can get mathematically complicated pretty quickly. So I really just want to present the highle concept
+21:59
+here. On the left we have a graph with some data points and an x and y axis.
+22:07
+Now if you haven't heard it called this way before, we consider each axis a dimension.
+22:14
+But there's no actual requirement that each dimension has to be a perfectly
+22:19
+vertical or horizontal line. Even if you rotate one of the lines, it's still a dimension. having it be
+22:26
+nice and neat is just for us to look at. So in the second figure, I've done that
+22:31
+and I've rotated a line to get close to a lot of points. And now, as you might expect from the
+22:37
+name dimensionality reduction, we need to reduce the number of
+22:42
+dimensions. So in the top right figure, I removed all dimensions except my new
+22:50
+rotated line. But you'll notice that there's one point that doesn't fit perfectly on the line.
+22:58
+But we only have a single dimension. So we have to force the point into that dimension, which you'll see in the
+23:04
+bottom right figure. And what happened here is that we simply lost information.
+23:09
+And the difference between the star and the red points new place on the line is the amount of information we lost, which
+23:17
+is also known as the reconstruction error. So finally by running PCA on our data
+23:22
+set we can compute the reconstruction error for each point and the points that
+23:28
+lose the most information are considered the anomalies.
+23:33
+This method is once again different than isolation forest and the modified K means because it's based on feature
+23:40
+variance. That's it for the anomaly methods. Hopefully that all makes sense.
+23:47
+Um, and according to our system diagram, the next thing we're supposed to do after the anomalies is send them to the
+23:52
+LLMs. But there's a practical issue that we need to resolve first.
+23:59
+There's no point in sending duplicate commands to the LLM because it's just a waste of money. But what about nearly
+24:07
+duplicate commands? You can see an example here with the ls-l and the ls-la.
+24:14
+The -L shows you files in the directory while the dashla also shows you hidden files.
+24:21
+But if we look at this from the perspective of what the final model that
+24:27
+we're training is going to learn, then both of these commands provide
+24:32
+essentially the same information. We could save even more computation if
+24:38
+we eliminate near duplicates. So the ideal goal is something like
+24:44
+this. Exact dduplication on the left with the first row easily
+24:52
+gets commands that are exactly the same. But to achieve near dduplication on the
+24:58
+bottom row, we need something better than string matching.
+25:05
+Thankfully, the method is still pretty simple. All we need to do is take our anomalies and pass them through the
+25:11
+embedding model which as Sean explained earlier just creates a vector of numbers
+25:17
+for each command line and cosine similarity is perfect for
+25:22
+vector distance. So as long as a new command has less than 08 similarity
+25:31
+then it's different enough to add to the final dduplicated set
+25:37
+and that's it for the anomaly computation. So Sean will explain the final part of the system now.
+25:45
+So although the duplication step that Ben mentioned does reduce the order of
+25:52
+uh magnitude of commands after the anomaly detection step.
+25:58
+It's not trivial. So we can't ask our analysts to regular label hundreds or
+26:03
+thousands of commands. All the steps that we've discussed up to this point have been well researched,
+26:10
+well documented, but it has been in feasible to combine them in a scalable
+26:17
+automatic pipeline. LLMs are the key point that underpins
+26:25
+our whole process. Just like this singular Jenga block supports the entire tower,
+26:32
+LLMs allow us to automatically and scalably filter out only the benign
+26:40
+anomalies from the full anomaly set without the need for any human in the
+26:47
+loop. They are proficient at determining when there is a lack of something, a
+26:52
+lack of suspicious or malicious markers. Now think fast. Is this malicious or
+27:01
+benign? One, two, three, four, and done. If you
+27:08
+got it, great job. Congratulations. I challenge you to do this uh 100 more
+27:14
+times and after a bad night's sleep. This is a lower bound on the amount of
+27:20
+work required as this is one of the shorter commands from the full scale
+27:25
+anomaly detection method. To let these efficiency gains really sink in, let's send this off to our LLM
+27:33
+labeler 03 Mini. We prompt 03 Mini using rudimentary
+27:40
+train of thought. First, it must explain what the command does. Then it explains
+27:46
+in what ways might the command be considered benign. Then to explain in
+27:51
+what ways might we consider it to be malicious. Finally, it must return a
+27:57
+verdict justifying it using the previous analysis. We press run. We let it
+28:05
+generate and it takes a few seconds. It goes and goes and we have a benign
+28:12
+verdict. 03 Mini explains that this command
+28:17
+starts up a Java application. From a benign context, we can see that
+28:22
+it's a well-configured startup script for a WildFly server. From a malicious standpoint, we can
+28:29
+imagine that an adversary is trying to mask their behavior using a complicated
+28:34
+uh startup script. However, since it's a controlled, well-configured startup
+28:41
+script, we're going to go with benign. Now, let's give you some justification
+28:48
+for coming here today. In order to evaluate our method
+28:54
+comprehensively, we use two different evaluation sets.
+29:00
+The first the timesplit test set consists of commands that occur after
+29:06
+the training period. This is the easy test set. The second, the manual labels
+29:13
+test set consists of commands that broke our production models, our previous
+29:20
+production models. So these are the harder edge corner cases. This is the
+29:25
+harder test set. Good performance here implies good performance on those
+29:31
+hardest production cases. I would like to call your attention to
+29:36
+this table here. If you recall earlier in the presentation, I introduced two
+29:42
+baseline data sets. The first the aggregated baseline or AB
+29:49
+consists of commands labeled by sandboxes, customer investigations,
+29:54
+telemetry, regxes. Now separated by horizontal line. Below
+30:01
+it, we have the second baseline. The regx baseline or RB consists of commands
+30:07
+labeled by static regx based rules. We have two columns.
+30:14
+The first shows the results on the manual labels test set. So remember this
+30:19
+is the harder test set. The second column shows label shows results on the
+30:26
+time split test set. So this is the easier test set. Now we're looking at AU
+30:32
+here. So bigger is better. We see that on both bas baselines
+30:40
+all anomaly configurations beat the baseline over both test sets.
+30:48
+Let's look at the biggest winners. Staying in the first column, the manual
+30:54
+labels column, we see that on the aggregated baseline, when going to the full scale method, we jump from 61 to 89
+31:03
+AU. Staying in that same column, going from the regax baseline to the full scale
+31:10
+method, we jump from 7 to 76.
+31:15
+These are significant market improvements. Let's look at the performance of the
+31:23
+aggregated baseline over time. First on the manual label set on the y-axis we
+31:30
+have a on the x we have the day of the month. Each point represents a separate
+31:37
+model trained on the baseline and all anomaly data up until that day
+31:44
+inclusive. The red dash line represents baseline performance.
+31:50
+We see the full scale and all reduced scale anomaly detection methods beat the
+31:56
+baseline. So that means we're getting big improvements on that hard production
+32:03
+data. Furthermore, we see performance saturates quickly. All it takes is a few
+32:10
+days to get most of the performance gains. Staying on the aggregated baseline, but
+32:17
+now looking at performance on the time split test set, pay close attention to
+32:23
+the uh limits of the y-axis. We're going from 0.99 to 1.0. So small differences
+32:30
+here. We see that over the course of the month, all methods either meet or exceed
+32:37
+the baseline. So by folding in this diverse benign anomalous data we are not
+32:44
+hurting performance on the original distribution. Jumping over now to the regx baseline
+32:52
+first evaluated on the manual labels test set.
+32:57
+Here we see that the full scale method is comparatively better. So if you are
+33:04
+starting from a very rudimentary labeling schema then it would benefit
+33:09
+you to go ahead and try the full scale method first. Similarly we see
+33:16
+performance saturate quickly over the course of a few days.
+33:23
+Staying on the reg x baseline but now looking at the time split test set
+33:29
+once again we see over the course of the entire month all configurations either
+33:35
+meet or exceed the baseline. So by adding in this these diverse anomalies
+33:41
+we are in no way affecting performance on the original distribution in a negative way. If anything we're
+33:48
+improving upon it. Now, I'm gonna hand it over to Ben to
+33:54
+close us out. Thank you, Sean. We're reaching the end
+33:59
+here, so I just want to leave you with some closing thoughts. Let's talk about what you can get out of this briefing
+34:06
+right now. Can you apply our method?
+34:11
+Do you have a ton of data and you can't even use it all? Or maybe you have new
+34:17
+data coming in every day. and you own a cyber security model or
+34:23
+maybe you want one. If you just have these things, then you've been approved
+34:29
+for anomaly based performance gains. Now look, let's pretend that we actually
+34:34
+work together on the same team and we're brainstorming next steps for our ML
+34:40
+models. Here's our research plan for the Monday morning after Black Hat when you get back to your companies.
+34:47
+Pick a machine learning model that needs updating. Dig up some recent data for it.
+34:54
+Start with the easiest anomaly implementation and just run isolation forest.
+35:00
+Send the anomalies to a small reasoning LLM. And if you have an analyst on hand,
+35:06
+have them confirm the benign labels are correct. And then retrain the model we picked earlier. That's it. That's enough to get
+35:14
+you started with an end toend pipeline for our benign anomaly method and then
+35:19
+you can explore all the different scales and anomaly techniques and ablations from there.
+35:27
+Okay, to close this out for real, I just want to share some of the main takeaways of our research and we found that
+35:34
+anomaly detection excels at locating benign data in the long tail.
+35:41
+Modern LLMs have enabled automated pipelines for benign data labeling that
+35:48
+were not possible before. And finally, training set augmentation
+35:53
+with benign anomalies is a generalizable method for improving cyber security models.
+36:01
+That's it. Thank you all for attending. Thanks for listening. And we're open for questions at the microphones or feel
+36:07
+free to find us on LinkedIn or after the talk in the rap room. Thank you. Thank you very much.
+36:13
+[applause]

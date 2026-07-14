@@ -1,0 +1,335 @@
+0:00
+So one day I was scrolling through  twitter and I stumbled over this tweet. 
+0:04
+“If you try html tag 22, then  opening <22> gets treated as  
+0:09
+text whereas the closing tag   gets wrapped inside a html comment.”. 
+0:13
+Huh… And look at the screenshot.  How does that make sense? 
+0:17
+Let’s verify this claim. We simply create a  html file, enter the HTML code “test”. Save it,  
+0:23
+copy the path to the file and open it  in the browser. And yep… looks weird.  
+0:28
+And when we inspect the document, we can  see how the browser transformed this. 
+0:32
+So the opening tag was HTML encoded. The  pointy brackets were turned into lt and  
+0:38
+gt. While the closing tag got turned into  an HTML comment??? That is so interesting. 
+0:44
+So I shared this with my  colleagues. “Is this expected?”  
+0:47
+and “is this interesting for Sanitizer bypass?” As you can see it was already 9:30 pm. So maybe  
+0:53
+not the best time to start researching something,  but I’m nerdsniped. So I put my other work aside,  
+0:59
+like working on creating more courses  for hextree.io and I started tinkering.
+1:04
+1:07
+So how could we use this behavior to  bypass HTML sanitizers? To do that,  
+Sanitizing vs. Encoding
+1:15
+first it’s important to understand the difference  between HTML sanitizing and HTML encoding.
+1:21
+If you have malicious user input and  want to make sure you don’t get XSS,  
+1:25
+you simply have to HTML encode it. Meaning  turn any special HTML characters into  
+1:31
+their HTML encoded variant. So for example  opening brackets should be turned into < 
+1:37
+Or double quotes, if you want  to place user input into an HTML  
+1:40
+tag attribute, should be turned into ". I know, people still get that wrong, but if you  
+1:46
+know about it, HTML encoding is pretty simple. Now the other side, HTML sanitization, that is  
+1:53
+actually a lot more difficult. Because in HTML  sanitization you WANT to allow some HTML. For  
+1:59
+example when you have a rich text editor. That  gets turned into basic HTML tags like bold,  
+2:04
+image tags or href for links. But as you  know you can get XSS through javascript:  
+2:10
+URI links. So sanitizing HTML code is a bit more  complex. But still maybe your first reaction is,  
+2:17
+“yeah maybe HTML sanitization requires  a bit more coding, but should be doable,  
+2:21
+right?”. It’s easy to make sure the href  link doesn’t start with javascript:.
+2:26
+Buuut… then you see this example.  Browsers doing weird stuff. 
+2:31
+Let me show you what I mean. So let’s add an attribute to  
+Developing HTML Sanitizer Bypass
+2:34
+our opening html tag. Foo bar. And we reload  the page. With document.body.innerHTML we can  
+2:40
+look at the HTML code how the browser sees  it. And the browser converted the opening  
+2:45
+tag into lt;. And our attribute is right there. What happens if we add an HTML tag inside the  
+2:52
+attribute? Refresh the page. And look at  that. We get a large h1 heading. And you  
+2:58
+can clearly see in the elements that the  browser indeed added a real HTML h1 tag. 
+3:04
+We can also change our test environment a little  bit. Instead of creating an html file we can also  
+3:09
+directly in the console assign our test HTML  string to the innerHTML. That will then force  
+3:15
+the browser to render the HTML. And afterwards  we can look at how the browser transformed or  
+3:21
+MUTATED this HTML, turning it into an actual  DOM tree. And then get the HTML of that one. 
+3:27
+So basically, this is our input, and  this is how the browser mutated it. 
+3:30
+And you can also see here, the  h1 is the only actual HTML tag. 
+3:35
+If we instead use an image tag,  
+3:37
+we can see that it really tries to  render an image. And with an onerror  
+3:42
+event handler we obviously also get javascript  execution. And that is very very interesting. 
+3:48
+Just for completeness sake, let’s change  the <22> tag to a tag. You can see,  
+3:55
+the output is different. no broken  image shows up in the document. 
+3:59
+And look here at the element tree.  Inside the body there is a div tag  
+4:03
+with the text “test”, and an attribute. Totally fine, this is what I guess we all  
+4:08
+expected. But if we change the div back  to 22, you know the output is different.  
+4:13
+Somehow the tag gets replaced and thus our  fake attribute is actually rendered as HTML. 
+4:19
+And this is basically the whole problem, or  the cool behavior that we can maybe abuse.
+4:24
+So if you use an HTML sanitizer, maybe it  parses the HTML code, and sees a harmless  
+4:30
+22 tag. The attribute looks fine as well. Just  some text inside quotes. And it considers it safe,  
+4:35
+like if it were a div tag. So it allows  this input to be placed into the page,  
+4:40
+BUT then the browser goes crazy  and we actually get XSS. Mhhh…
+4:45
+This must be a pretty generic  HTML sanitizer bypass, right?  
+4:49
+So I decided to share my finding with my  colleagues. Since discovering the tweet,  
+4:55
+20 minutes have passed and I proudly  present my proof of concept input that  
+5:00
+should bypass any basic html sanitizer! Woow! Now we just have to use it against a real  
+Attacking DOMPurify
+5:05
+target! And I immediately went  for the big endboss. DOMPurify. 
+5:10
+“DOMPurify - a DOM-only, super-fast, uber-tolerant  XSS sanitizer for HTML, MathML and SVG. DOMPurify  
+5:18
+works with a secure default, but offers  a lot of configurability and hooks.”. 
+5:22
+I went for that because it’s a very good and  maintained library AND because it’s actually  
+5:27
+maintained by my colleagues at cure53. If I  can bypass DomPurify I would be really cool!
+5:33
+So I clone the repository and in the demo  folder I find a basic demo html file. I add  
+5:40
+our XSS test input being the dirty input. This  is then passed to dompurify to sanatize it,  
+5:46
+and we can print the clean output. The clean  output is then also assigned to the innerHTML. 
+5:51
+So can we smuggle our malicious  XSS payloud through DOMpurify? 
+5:56
+We open it in the browser. And? Well.. we see an  image tag, but if we look at the actual DOM tree,  
+6:02
+we can see that the onerror is missing.  So DOMPurify successfully sanatized it. 
+6:07
+Damn. But to be honest, that also makes sense.  
+6:10
+I could have guesses that. You see, DOMPurify is  a client-side library. It’s used in the browser,  
+6:16
+NOT on the server. And that has very good reasons.  I talked about this before in the videos I made  
+6:21
+about the XSS in Google search. So checkout those  videos. But basically DOMPurify wants to be in  
+6:27
+the client so it can exactly do what the browser  does. It uses the browser’s HTML parser. This way  
+6:34
+DOMPurify will understand the HTML code exactly  like the browser understands it, because, well, it  
+6:40
+is the browser’s parser. This is a huge difference  to when you have server-side HTML sanitization,  
+6:46
+because on the server you need to implement your  own HTML parsing. And if you do not perfectly  
+6:51
+replicate the browser’s behavior, then you can  run into mismatches. And to make matters worse,  
+6:56
+you have different browser engines, so maybe you  implement the perfectly same behavior as firefox,  
+7:02
+but then a user uses chrome and maybe  chrome has a super small difference,  
+7:06
+and that might be enough to abuse. So… maybe instead of looking at  
+Attacking Server-side Sanitizer
+7:10
+client-side sanitizers, we should  look at server-side sanitizers. 
+7:14
+There are of course lots of them, so where  do we start? Well, recently I audited a ruby  
+7:19
+project that used an html sanitizer, so  I thought about starting with that one. 
+7:22
+Here is the repository of it and luckily it comes  with an online demo. So we don’t even have to  
+7:28
+setup a test environment. Let’s enter our HTML  code! And? Ohw… it seems to handle it properly. 
+7:34
+We can also play with it a bit and see  what happens if we try the div tag,  
+7:38
+or a p tag. And change the config. when  you now compare our 22tag with a p tag  
+7:44
+you can see it seems to be aware of this weird  HTML behavior and handles it correctly. Damn…
+7:49
+Also… I noticed something else. When I edit a  proper HTML document in vscode. You can see the  
+7:56
+tag and attribute nicely color highlighted.  But see what happens when we change the div  
+8:01
+to a number. Suddenly even VSCode parses it  differently. It seems to recognizes, that  
+8:07
+this is not valid HTML, it treats this as text.  And this in the attribute is actually HTML code.
+8:14
+So maybe it’s time to change my language. Because  calling this an attribute is wrong. We just think  
+8:22
+it is, but obviously it’s not. It is just  text. And then the image is the HTML tag. 
+8:28
+I know this because after a bit of digging, I  found the answer. Here is the HTML specification.
+HTML Parse Error Specification
+8:34
+in 13.2.2 Parse errors we can read: 
+8:37
+“This specification defines the parsing  rules for HTML documents, whether they are  
+8:42
+syntactically correct or not. [...] The error  handling for parse errors is well-defined”
+8:48
+And here we can find the parser error  “invalid-first-character-of-tag-name”. 
+8:54
+With exactly our example - a tag with a number,  here 42. The description also describes that a  
+9:01
+start tag MUST start with ascii alpha, NOT  alphanumeric. So only a letter is allowed.  
+9:08
+following characters, so for example h1, there  can be a number. It just cannot start with one. 
+9:14
+And you can see here how the error handling  is well-defined. If you encounter this,  
+9:19
+this is how you have to treat it. the opening  tag is then turned into just text. Which means  
+9:24
+the opening point bracket is HTML encoded,  and the closing tag is turned into an HTML  
+9:29
+comment. So this was never actually an HTML  tag, this is HTML text. And this was never an  
+9:36
+HTML attribute, this was just literally HTML code. So turns out, this behavior is not actually weird.  
+9:43
+It’s just how HTML works. And I assume, most HTML  sanitizers that try to implemented sanitization  
+9:50
+correctly, they will follow this spec and handle  the case just fine. Like the ruby sanitizer did.
+9:56
+Damn… defeated, and maybe a little bit  embarrassed, I share my finding with my  
+10:01
+colleagues. ”nvm. Totally HTML spec”. I  should have known that a HTML sanitizer  
+10:06
+bypass cannot be that easy. Another hour of  my life “wasted”. This is how long it took me  
+Potential Impact
+10:11
+from seeing the tweet until my realization  that this was “failed security research”.
+10:16
+But of course you know there is no such  thing as wasted time. Because actually we  
+10:21
+learned again new stuff about HTML parsers  and HTML sanitizers. And now we actually  
+10:26
+know about a weird HTML input that we could use  against very naiv HTML parser implementations. 
+10:32
+For example if we look up html parsing with regex,  we find this very famous stackoverflow question  
+10:39
+with this funny answer, explaining why you cannot  actually parse HTML with regular expressions.  
+10:45
+Besides this funny response there are also other  answers for example this one explaining why it’s  
+10:51
+impossible due to the chomsky hierarchy. So  if you study computer science at university,  
+10:55
+now your theoretical formal language  knowledge can be applied. Anyway,  
+10:59
+if you read on, there is also an  answer offering a basic HTML tag regex. 
+11:04
+“This is the regex I use (!) to  match HTML tags”. “To downvoters:  
+11:09
+This is working code from an actual product.”. And if we take this snippet and go to grep.app,  
+11:15
+we can see that this regex is somewhat commonly  used. For example here in a markdown editor. And  
+11:22
+if we look at this regex in a regex debugger  like debuggex, we can see that it matches any  
+11:27
+character that is not those characters.  So clearly it will happily match <22>.
+11:34
+So eventhough we didn’t find an  actual HTML sanitizer bypass,  
+11:37
+and let’s be fair, it seems like  this is something well known already,  
+11:41
+and we just didn’t know about it. I still  think there is potential for bugs in some  
+11:45
+implementations. Certainly it won’t be  a common thing, but it’s handy to know  
+11:49
+about. And If you find a security bug based on  this, make sure to let us know in the comments.
+11:54
+If you are interested to  learn more about web hacking,  
+11:54
+checkout our courses on hextree.io. We  are covering various IT security topics,  
+11:54
+including web hacking, but also hardware  hacking and reverse engineering. Especially  
+11:54
+if you are a developer, we hope we can teach  you the skills so that you write secure code  
+11:54
+and design secure applications. Hextree.io.  Also of course we are on twitter, hextreeio. 
+11:54
+And if you want to support my  videos on YouTube specifically,  
+11:54
+checkout my patreon or youtube membership. Also  you can purchase my shitty handwritten font on  
+hextree.io
+11:55
+shop.liveoverflow.com. I use the font for making  these videos and you can use the font to spice  
+11:55
+up your presentations or make videos like me  as well. I love to see the font being used.
+11:55
+as you know we are working on an online training  platform to learn hacking called hextree.io and  
+12:00
+one big challenge about creating courses for  hextree is that we don't know what you know  
+12:05
+and what you don't know for example do you  already have coding experience and if you  
+12:10
+have coding experience is it in C or in Python  and how transferable is that knowledge and so  
+12:16
+when we do some courses about python will you  be able to understand that code or do you need  
+12:20
+an introductory course to Python and of course  this translates to all the other topics as well  
+12:26
+do you already have some basic understanding of  xss csrf do you understand HTTP requests there's  
+12:32
+just so much to cover and that's very difficult to  design those courses and there are two different  
+12:37
+solutions to this problem the first one is you  have to do something the first thing is that you  
+12:42
+need to embrace courses that you don't understand  and you need to embrace topics that you don't  
+12:46
+understand and try to understand as much as you  can and once you encounter something you don't  
+12:51
+understand you ignore it and just move on or you  start researching the topic yourself this is just  
+12:57
+reality you need to be comfortable to research  topics on your own and the second part of this  
+13:01
+solution is hopefully what we do because we try  to create micro courses so not massive courses and  
+13:07
+we try to organize it on the hexagon map and the  idea is that you can then also stop in the middle  
+13:13
+of a hexagon and move to a different hexagon and  learn that topic and if you encounter something  
+13:17
+you don't understand then jump to another hexagon  and we want to really encourage you to jump around  
+13:22
+between different topics and it might sound  weird but sometimes learning something about  
+13:27
+Hardware hacking makes something click and  suddenly you understand something about web  
+13:31
+hacking and so hopefully by you researching  topics yourself and the way how we organize  
+13:37
+courses we hope we can build a great training  platform for you so go check out hextree.io
+

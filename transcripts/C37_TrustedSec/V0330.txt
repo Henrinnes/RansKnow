@@ -1,0 +1,621 @@
+0:00
+[Music]
+0:07
+Well, hello and welcome to our latest episode of Security Noise, the podcast where we cut through the static and get to what really matters in information
+0:13
+security. On today's episode, navigating authorization with a co-pilot. We're diving into the evolving aspects of
+0:20
+Microsoft Office C-Pilot BI environment and the security and social consequences around that. Who in your organization
+0:26
+has access to data? Who can publish it? Whose credentials will interface those existing systems and what implications
+0:31
+are there around there? And are there any other surprises as far as the reliability of results with Helm's
+0:37
+filling in the blanks? Does it impact other security controls such as policies and DLP? All that and more on today's
+0:43
+show. But of course, first we've got to do a little information uh security in case you missed it. Cloudflare CEO
+0:49
+Matthew Prince has threatened to withdraw free cyber security services from Italy's Milano Winter Olympics and
+0:56
+potentially exit the country after Italy's telecommuners regulator fined the company approximately 14 million
+1:02
+euros for failing to comply with antipiracy blocking orders. This penalty equals about 1% of CloudFay's global
+1:08
+annual revenue but exceeds twice what the company has earned from Italy in 2024. Prince called the quasi judicial
+1:14
+body administering the scheme to censor the internet on behalf of a shadowy cabal of European media elites. The
+1:20
+fines stems from Cloudflare's refusal to comply with Italy's piracy shield law which requires internet service
+1:26
+providers and DNS operators to block sites within 30 minutes of receiving blocking requests from copyright
+1:32
+holders. Of course, uh everyone's probably familiar with 1.1.1.1, the uh
+1:37
+anycast DNS resolver that that Cloudflare operates. So this is kind of a big deal for a lot of configurations
+1:44
+out there. And I think this will be really interesting uh one to watch because how this ultimately plays out in
+1:50
+terms of the winners and losers and who backs down or blinks first is probably going to have a big impact on crossber
+1:57
+internet legislation and the uh legal environment going forward. Drew have any thoughts on that? I think it's interesting. I mean cloud
+2:03
+lawyers pretty consistently said they don't want to be the judge of content, right? They just want to be the dumb bite that people go through. here Italy
+2:10
+is coming to them with here is our law, here is the judgment on what is and is not legal content and Cloudfare is
+2:16
+saying like I don't like your process. Like I I I don't like the way you're judging the content. So I it's an
+2:22
+interesting pers perspective that they don't want to judge the content but they want to judge the quality of someone
+2:27
+else judging the content. I understand their perspective but it seems a little strange to me that um they've got their
+2:33
+out right. Italy is mandating to them to do it and they're pushing back. So at the end of the day, Cloudflare is going
+2:40
+to operate in Italy, they need to follow Italian laws. And if you know, if they don't want to do business there, that's that's their call to make. So
+2:46
+or or do they? I mean, if if they decide not to operate in Italy, I mean, it's not like they need to take
+2:53
+responsibility for denying traffic to 1.1.1 and and stuff like that. That would seem to be then the responsibility
+2:59
+of the Italian ISPs and stuff to do or the Italian government to figure out how to pull off. I mean, it it's
+3:06
+not quite as simple as them just taking their ball and going home and saying, you know, we're not going to sell our services in Italy. We're not going to
+3:12
+have, you know, Italian clients. But, you know, it's also a major piece of infra internet infrastructure. I mean,
+3:17
+what isn't behind Cloudflare? And so, for Italian companies, I imagine that's
+3:23
+going to be a significant thing to have to adapt to and and deal with and and find a suitable replacement for that may
+3:30
+not be really easy either. So with that, we will move on to our main topics, but
+3:35
+let me introduce our guest today. We've got uh Drew Kirkpatrick. He is one of our principal security consultants at Trusted Sec. And Drew, you want to give
+3:42
+your give the world a quick rundown on your on your background as far as what you've been doing at Trusted Tech lately and and maybe what you've been working
+3:48
+on specifically in the machine learning LLM co-pilot type space. Yeah, so uh actually I worked in
+3:54
+aerospace longer than than cyber security. I guess I moved over to cyber security about 12 years ago. So I used
+4:00
+to be in engineering, psychology and computer science. Kind of studied all those things and did that for a long
+4:05
+time. And then in grad school I spent a huge amount of time doing AI research. That that was that was my thesis. So
+4:11
+I've been working with with neural networks, recurrent neural networks for decades at this point. So I'm well well
+4:16
+familiar with AI. Uh used to use a bunch of the Navy where I used to work and uh you know circling around back to that
+4:22
+now in cyber security. When I moved over, I was a defense contractor in cyber security doing research and and
+4:28
+ultimately moved more and more into offensive tooling uh development on contracts for the government and then
+4:35
+from that I I pivoted into pin testing full-time which I've now been doing for about eight years. Really love it. Uh
+4:41
+it's great team here. I've been here about seven so uh most of it my hacking career has been at trusted sec. So um
+4:48
+yeah and the LLM stuff has has really popped up the past couple years. It's creeping into almost every app we see
+4:54
+has some kind of LLM portion of it. And of course, Copilot is being integrated into everything. Everything for
+5:01
+Microsoft. So, we're seeing a bunch of it. Yeah. I mean, uh, you and I were talking about before the show how, you know,
+5:06
+this stuff is going to be in one way or another integrated into pretty much every application we test. So, it it's
+5:12
+long past time to make sure the whole group is totally proficient at it and, you know, to spend some real time
+5:18
+talking about it in public and and building a strategy around it. So, it's exciting to have you around to work with that. But with that, uh, we're going to
+5:24
+look at Copilot today, especially some of the natural processing, machine learning features it has, as well as the
+5:31
+MCP services and and integrations and BI tools that that Microsoft's presenting. Drew, you want to just at a really high
+5:37
+level tell people kind of what that is, especially in the 03 space and and kind of give us a little view of how that's
+5:43
+intended to work. Sure. So, Microsoft seems to be driven by a couple of key points these days. Uh, one is mass layoffs. got a ton of
+5:49
+friends that have been laid off for Microsoft changing the name of a product every developer sprint. You can't put a pin in the name of any Microsoft
+5:56
+product. And the other is putting co-pilot into literally everything. Uh they are
+6:01
+or at least calling it co-pilot or at least calling it co-pilot, but it's it's they're just trying to can we
+6:06
+call it slopration? You know, just like just jam it into everything you possibly can. Um but you start playing with it
+6:13
+and there is a massive feature set there. you know, it's not just something tagged in in a lot of these products
+6:18
+that there is quite a bit going on with it. So, some of it's impressive, some of it's not, but it's there and it's going
+6:24
+to keep growing. So, that's definitely something we have to to keep an eye on. It definitely expands some of the issues
+6:30
+our clients have to be concerned with, right? So if you're looking at data in general, people are concerned about
+6:36
+where where their data is going. And certainly there's a concern of their users copying and pasting, you know,
+6:42
+potentially sensitive data into some chat, you know, and where does that go? It's it's now duplicated into some other
+6:47
+cloud that they no longer control. But with the automatic integration, that can happen at scale and automated. And so
+6:54
+it's it's much faster um much more breath of what can be exposed that way.
+6:59
+Some of the data security in an organization simply comes from from obscurity. You know, people don't know
+7:05
+where it is. It's hard to find. Throwing these tools into access to everything really um makes rapid data discovery
+7:12
+possible, which is can be a very good thing, but it can also be a very bad thing. You might be able to find some
+7:17
+skeletons in the closet much more easily that you didn't know were there. So, are you looking for that? You know, you got to keep an eye on that. So, um it
+7:24
+definitely for the data exfiltration, it concerns me tremendously. Yeah. And I mean having looked at a couple of these assessments now, I think
+7:30
+one big piece of it and you sort of touched on it was that the old advice of have a really sound data classification
+7:37
+policy, know what everything is and make sure everybody knows how to actually handle that according to those rules.
+7:43
+Having that in place before you turn this stuff on is going to go a long way.
+7:48
+I would say that that's, you know, would be if you take nothing else from this podcast today and you're thinking about letting your users begin to experiment
+7:54
+with some of these features, make sure you have the data classification in place, the policies and the catalog
+7:59
+because because that's going to be huge for your ability to manage this going forward, however you decide to go about that. Yeah, I I think there's a lot of upfront
+8:05
+work to do it well. Um, I think trying to fix that after the fact is is a recipe for disaster. So, I I know it'd
+8:12
+be very easy for a company to just turn this on and try it out, but I I Microsoft makes it very easy to do that. They make it very easy. It just shows up
+8:19
+magically. Um, and you know, another thing that concerns me is that all these feature sets, I mean, Microsoft products
+8:25
+in general, their whole cloud services is a moving target. It's constantly shifting, constantly evolving and that
+8:30
+component is going to be there. These are already non-deterministic systems. You add in the fact that the service
+8:36
+offerings, the integrations are constantly going to be changing. There's some not insignificant amount of risk to an organization they really need to
+8:41
+think about before they start down this path. So, my two cents? Yeah. And I mean, I don't want to scare
+8:47
+people because I think there is a there's nothing new under the sun element to this as well. You know, a lot of some of the stuff that I've done so
+8:54
+far on these assessments that I've seen Drew do on some of these assessments and some of the reporting he's been working on recently. You know, it it has been
+9:01
+things that we've seen before. Twists on social engineering, you know, twists on encoding stuff and stuffing it into
+9:07
+parameter values where, you know, people didn't really intend it to be a side channel and and things like that. So,
+9:13
+it's not like it's an entirely new world of of how to do things, but it's just
+9:19
+this whole new attack surface. I mean, would would you kind of agree with that, Drew? I do. And I think it's it's and a lot of
+9:25
+my work recently has been looking at this from the the agents perspective. You know, if if there's a creator of
+9:30
+agents in my organization, they're malicious. What can they do? And the answer, they could do quite a bit, but the agent is now their standin. You
+9:37
+know, it's like their proxy to be performing these attacks. It can perform social engineering attacks on your
+9:42
+behalf. It can steal data on your behalf. It's it's a very useful way of of getting sort sort of kind of code
+9:49
+execution uh with access to their credentials. And it it is very interesting when you build these you you
+9:54
+can see in the studio designer what it's doing, but once you publish it and someone's using it, all of that under
+10:01
+the hood operation is hidden away. So, you know, that that's really concerning, but yeah, it's very very very potent
+10:08
+platform. So what are there in terms of authorization and access controls on
+10:14
+co-pilot in this environment? I mean at a very high level if you're, you know, an IT manager and people are asking you,
+10:21
+hey, can we, you know, turn on some of the stuff? I I, you know, my my buddy over at Acme Corp's been using it. He
+10:26
+says it's great. How come we don't have that turned on yet? What are some of the first kind of things you should look at? First terms you should Google.
+10:33
+First of all, you want to make sure you really do you need this feature? you know, do you need to be generating agents um that have access to all this
+10:40
+data? It does make it very easy to develop that, but is your demand for custom agent-based applications so great
+10:47
+that you can't have a small trusted set of developers to do this? Uh if you want to go the agent studio creator copilot
+10:55
+route, um it does make it very easy to scale out those teams because it it does not take a tremendous amount of skill to
+11:01
+use these tools, right? These these are low code, no code tools. low code tools but with access
+11:08
+potentially to radical amounts of data um in the organization. So I would strongly consider first of all do you
+11:15
+really need this and who are you allowing to do it because there's going to be a trust element there. If you get into this Microsoft has provided the
+11:22
+most incredible huge collection of connectors and these are like almost API
+11:28
+connections that provide authentication into some data source. They could be Outlook, it could be Salesforce, it
+11:34
+could be Teams, it could be SharePoint, it could be database. I mean just the list goes on forever. They've built
+11:39
+Sure. And then there's an infinite library of third party connectors too. Salesforce, workday, what, whatever you
+11:46
+want to plug it into. They should be allow listed. You should not turn them on. You should very carefully select which ones you want to
+11:52
+provide access to because this just list goes on forever. So that's a huge attack surface. So I would be very carefully
+11:59
+whittle down your list of connectors. So use case is going to be a big part of this. What is it you want your agent
+12:04
+developers to be able to create? What do you want those things to be able to do? So access controls for what they can get
+12:10
+to is very important. One of the big things that I see is when you configure connectors in an agent and you can
+12:16
+configure multiple connectors. I think by default it allows you to add different authentication for these
+12:22
+different connectors. So you can send out an agent as a creator and an end user is using your agent and it's using
+12:28
+their credentials for a lot of this. So it's accessing data performing actions that they can perform that the agent
+12:34
+creator may not be able to. By default, it allows the user to the maker of the agent to use their credentials for some
+12:40
+of the connectors and this is completely invisible to the end user. So it can be retrieving actions or getting tasks from
+12:46
+some part of the makers session. So some of our proof of concepts is you know
+12:52
+retrieve data and then send it to my my one my oneote right so I don't have access to that data but once I trick
+12:58
+someone into using my agent and it gets that data it then exfiltrates it to my window where I can get it. Um, and
+13:03
+that's and then of course you could also just exfiltrate it um, you know, outside of the environment, but I I've actually
+13:12
+been pretty impressed with DLP controls. Saying impressed with DLP controls is not words I usually put together. Um,
+13:19
+but I had a lot of my December really frustrated by how strong the DLP
+13:25
+controls can be in this environment, which really surprises me. how strongly it's implemented throughout that entire
+13:31
+environment is pretty impressive and can really throw monkey wrenches in. But if you're able to get in a connector with
+13:37
+your authentication there, there's your exfiltration channel right there. So it may still be within the control of the
+13:42
+organization, but they've now moved it into a part of the corporate network that they have access to. And that's for
+13:48
+exfiltration. Of course, you could use that as a C2 channel too to make changes with the users credentials if they're
+13:53
+they happen to be running your agent. So tying together those different connectors really makes it a very powerful platform but also a very
+13:58
+dangerous one. Do you think from a policy standpoint it would be even remotely practical for an
+14:04
+organization to say look we're only going to allow agents to be deployed with pass through authentication or we
+14:10
+are only going to allow agents to be deployed with fixed credentials just as a strategy there because to me the big
+14:17
+thing that I see that that really kind of scares me when I think about this is the mixed nature of that. You've got all
+14:22
+these agents out there and all these people that have permissions to access the given agent, but you don't really
+14:29
+know what that agent does behind that level. There are tools like Purview and Security Copilot who can probably run
+14:34
+some of that analysis for you. I say who by me I really mean it already anthropomorphicizing bots. This is not
+14:41
+good. But it makes it hard to understand the
+14:47
+actual access controls and authorization that is in place. the effective of it. You know, years ago, you'd run the
+14:54
+result set of policy, right, to figure out how your how your group policy actually applied and things like that.
+14:59
+And and that that doesn't scale if you have hundreds of agents out there. But it would be a lot easier if you knew
+15:05
+that there was only one kind of model of authentication being used within your organization, I think. But I also don't
+15:11
+know when it comes to the third party connectors if some are just designed to only work one way or the other. and you're going to run into the well this
+15:18
+doesn't work for me you know and now I have 50 bazillion exceptions problem right so I mean there 100% are controls
+15:25
+to turn off maker provided credentials for connectors and that is a recommendation because I I see that as the
+15:31
+the easiest way to exfiltrate data or get that that side channel C2 going is
+15:38
+is by having that mixed set of credentials. Now, as you said with third party connectors, you know, it may not
+15:43
+be one offset. You may have to throw in, you know, static API keys or something. And I think that comes back to um, you
+15:51
+know, really maintaining your allow list very carefully. And I think you could do that, you know, per user, too. I don't
+15:57
+think it would have to be a blanket, well, everybody now has access to Salesforce. You can you can be much more
+16:02
+nuanced about it than that. So, I think you got to just vet it very carefully. I I'm not sure what capability you have
+16:08
+for flagging agents that use mixed authentication for third party review. I'm sure there's a way in there.
+16:14
+Microsoft, we were talking about this earlier. There is a mountain of built-in platform tools for monitoring these for
+16:20
+managing them for, you know, checking the logs on them. So, I'm sure somewhere in there there's a way to look this up
+16:26
+and then maybe review them as a third party because once you tear these agents apart in the developer console, it's
+16:32
+very easy to see what's going on. It's it's the end user where this is very invisible. Kind of the most under the
+16:38
+hood things I've seen as an end user is when I go to use a connector and it prompts me do do you want to use you
+16:43
+know your authentication to connect to one drive or um Outlook. So it is
+16:48
+prompting you for that but that also makes some of the social engineering tax a lot easier because they're now used to
+16:54
+providing credentials right. So which may not be going to any service. It could just be going into the agent for
+16:59
+me to exfiltrate. Yeah. I I I I I'd say that you probably can't completely get rid of mixed authentication, but I
+17:07
+struggle to think why you would need you the creator's credentials. I I see static credentials are third party app,
+17:13
+but well, I mean, off the top of my head, I mean, just just because, you know, I I
+17:18
+see a lot of client applications and stuff like that. does it continues to surprise me actually how much data there
+17:25
+still is sitting in Excel sheets sitting in things like access databases and stuff that you know it gets used almost
+17:31
+every day even if it's just only reference data it might just be a you know a product catalog or you know lists
+17:37
+of replacement parts for you know a machine that they made 10 years ago and stuff like that and so because that's a
+17:43
+single file and stuff like that that ends up having to use those maker credentials usually now generally maybe
+17:49
+that information usually isn't as proprietary and isn't as secret and controlled. So, it may not be a huge
+17:56
+footprint in terms of things to be concerned about for most orgs. But that that is a clear use case for that that I
+18:02
+am aware of off the top of my head immediately. Yeah. And the other problem is you can connect agents to agents. So even if you
+18:07
+say well you know this agent is only using maker providing credentials and this agent but you can integrate them.
+18:14
+So you know there's you know there's always a way to string string it together. So yeah, that's and that's
+18:19
+where I get back to, you know, using C-pilot for security and stuff like that is kind of interesting, too, because it
+18:24
+can actually can dig through some of that logic and and some of those things and get you an answer to a question. Can
+18:30
+Andrew access this document via this agent? It's, you know, I don't know how
+18:35
+you scale that yet. And maybe there's a way and and I just don't know. But yeah, I think we we probably need to set
+18:42
+this up and start start doing some simulated scenarios and start trying to go through the logs and figure out how
+18:48
+to sleuth out those behaviors, right? Yep. I mean, at least AI now can build a
+18:53
+you know, lab environment for us. So, makes it a little bit little bit more
+18:59
+approachable. I do want to pivot a little bit to um I guess the red team angle on this uh you know since you you
+19:06
+mentioned social engineering and and prompting users for things like that. We've both done a couple of tests in in
+19:12
+this world now and and kind of gotten a feel for this in some different size organizations. How effective have the
+19:19
+data leak protection controls been? I mean you said it made your December miserable. I did hear that. I I also
+19:26
+read the report and I know you had you enjoyed some successes. So, you know, what were some things that you did that
+19:31
+did work and some things that maybe the blue teamers should be watching for the red teamers to try to do?
+19:36
+So, I think probably the closest I got to getting outside of the environment was action URLs and that is uh you know
+19:44
+so the proof of concept was user goes to use the agent and says I need you to provide credentials. I made
+19:50
+a nice little card that pops up that you know looks like a login and I was doing that. I was prompting for credentials,
+19:55
+not cuz I wanted to really simulate the um social engineering tax because we didn't have good fake data set up yet
+20:02
+for me to steal from my my clients, people I was working with, right? So, I
+20:07
+didn't want to actually steal real data, right? So, they were in the process of setting up fake data. In the meantime, I was prompting for fake credentials as a
+20:13
+standin because we knew retrieving data with the user's credentials works. Like that's the whole point. So, I was doing
+20:19
+the fake credentials as as just a way to have something to excel treat. And what you can do is pass those variables on to
+20:25
+the next card in the chat that pops up in in the chatbot. And in this case, it constructed a button that says, "Oh, I
+20:32
+need you to accept the the terms and conditions." Well, what it does is when you click that button, it then tries to
+20:37
+open a URL. And we've packed those credentials into parameters, right? That request will now open in their browser.
+20:44
+So, it's not super stealthy. Of course, you you could have it land on some JavaScript that closes or redirects to
+20:49
+something else that kind of hide what happened. I only tried a couple of sites. Granted, the VPS's that we have
+20:55
+for infrastructure are generally fairly sketchy. The domains, the hosting providers, you know, we're penters,
+21:01
+right? We're not red teams. Well, and especially, I mean, in in the application security world, we're not
+21:06
+usually trying for stealth. We're just going for proofs of concepts. So everything I tried that was really easy
+21:12
+was blocked, but DP for simple opening git URLs is there's going to be a
+21:18
+weakness somewhere where I'm going to be able to log those parameters and that data got out. So I did not spend a huge
+21:23
+amount of time trying to find something like that, but I'm sure it's there. That's one of the areas that DLP is
+21:28
+always going to fail somewhere unless you've allowed like three websites, right? So
+21:33
+yeah. Well, that and I mean DLP kind of falls down with a lot of encoding and and encryption too unless unless the
+21:39
+default policy becomes blocked which makes life hard in a lot of situations. Right. Right. So obviously the the
+21:44
+easier way is using credentialed access in a connector but that also keeps it generally within the organization's kind
+21:51
+of perimeter. Right. It may have breached authorization controls within the organization. I still have to get it
+21:57
+out from there. But you know you know the client I'm talking about outside of these environments. You and I know a
+22:03
+couple of DLP bypasses. Yeah. And and I mean I would say that, you know, this client's approaching this in an extremely responsible way and and
+22:09
+testing this in a lab world and and stuff like that. So they're not live with this stuff yet. And I think it's it's really healthy attitude they
+22:16
+they've demonstrating. Absolutely. And some of the conversations have been great because you know some of the issues there's not
+22:21
+a real good technical solution around and and you know it might just come down to a policy but then they they explain
+22:27
+to me the scale at which they're going to deploy this and at that scale a policy isn't isn't
+22:32
+going to fly it's going to fail for some user somewhere. So I mean you need a policy that's backed by strong technical controls that
+22:39
+exactly you know make sure those guardrails are in place. You're not you people to trust that you trust
+22:44
+right? I I guess as an aside, it would be worth saying that, you know, if
+22:50
+you're a Entra ID administrator, you should probably customize your login just to make it that much harder for,
+22:57
+you know, someone to make some mock dialogues and stuff. Yeah. Yeah. I I I think a review process
+23:04
+for agents before they're published would be absolutely critical because I struggle to think how you would how you
+23:10
+could obuscate some of this stuff. That hasn't been a big push for me yet in
+23:15
+trying to get in there and offiscate malicious functionality that that actually might be something we want to look at in the next month or two. But a
+23:21
+review process is is probably more given the power of these especially if if you are going to allow mix authentication or
+23:27
+things like that or integration with other agents where you know you may block mix authentication within an agent
+23:32
+but if I could just plug it into a second agent that has the off I need then you know it's not an effective
+23:38
+security control right so and I I know implementing a manual review process is
+23:43
+more labor intensive but if you're using this to cut down on the amount of effort for custom software development there's
+23:49
+a good chance you're still probably in the wind size of the balance sheet as far as labor to deployment. So, it's
+23:56
+probably not going to you're still probably looking at net net efficiency gains.
+24:01
+Yeah, it's such an interesting thing to have to explore though as an organization because you may have this
+24:06
+big team of I don't know health care professionals or finance people that are very smart people and more than capable
+24:13
+of using this low code no code solution to turn out a lot of agents. But if you as soon as you start implementing that
+24:19
+manual review process now you shift that reviewing task to a very narrow skill
+24:24
+set that you may not have again if you're that healthcare provider or something like that you've got a lot of
+24:30
+doctors on staff you don't necessarily have a lot of IT people so that that becomes almost a bottleneck and a
+24:35
+problem in of itself that that you have to to deal with and and work around. I mean, the old Kogan in me, Jeff, wants
+24:41
+to say, "Look, software is supposed to be hard and it's supposed to take time." But now I'm starting to sound like like
+24:47
+I'm really outdated. Yes. Leave it to the programmers in the sisops and the other building on the raised floor and
+24:54
+the very brightly lit room, the air conditioning. Don't the rest of you stay away.
+25:00
+With that said though, a lot of this stuff, a lot of these agents are intended to kind of smooth the business
+25:06
+process, reduce friction and stuff like that. How about playing with, you know, misleading information and and generally
+25:13
+kind of manipulating the way people have started to work, especially with remote access tools and stuff. I know both of
+25:18
+us have played some games with teams and some of its responses, but how about some of the implications there in your
+25:24
+eyes? Well, I mean, you do make a good point in, you know, executives needing data to make informed decisions within
+25:30
+an organization, right? These can be incredibly powerful tools for that. It can also be very incredible, incredibly
+25:36
+powerful tools for misleading them, to force a decision a certain way. The teams I think is the team's integration
+25:42
+with co-pilot is actually really slick in my opinion because I like the idea that oh, I I showed up late to the meeting and I could say just give me a
+25:48
+summary and it works really well, right? The thing is, do you trust that output? you know, some of the things we've seen
+25:54
+um is that it it will attribute certain parts of the meeting to people who were
+25:59
+never there. Like you can trick it into doing that. If I joined the meeting early and I played the right script with
+26:05
+the same with different audio vocal tracks uh playing the different roles and the everyone else joins later, it
+26:12
+will say yes, so and so was on the medium. They said this even though they never were. Right now I understand that
+26:18
+you know if you're looking at teams obviously people are logging with their credentials and there that metadata is
+26:24
+there but a lot of people are joining from shared conference rooms and it may be a conference room account and there's
+26:29
+five voices on it and you know teams can't co-pilot for teams can't really necessarily rely 100% on the metadata
+26:37
+but if it's going to say yes you know Jeff was on this meeting and he said give Skyler a 180% raise next next
+26:46
+paycheck does sound like something I'd say, you know, and and if you're if the metadata says Jeff was not actually
+26:51
+logged into this account and it's assuming you were there based on what it heard through some other account, there
+26:57
+probably needs to be an indicator that look, yeah, I'm saying Jeff was in this meeting, but I don't actually have the
+27:03
+metadata to back that up. You should probably go verify this, right? It needs it needs to kind of come along with that
+27:09
+without taking away from the really cool functionality it does provide. this comes into, you know, there's a policy
+27:14
+maybe that don't actually trust what you're hearing from co-pilot teams, right? Don't trust the data. It's a
+27:21
+useful summary, but if you're going to take action on that, verify it. And for that particular client, that that was
+27:26
+actually not an acceptable approach based on how they were going to use it. Um, uh, they were going to have a
+27:32
+meeting with Microsoft to to look at maybe some of that labeling of metadata. You know, this is verified by their
+27:37
+account joining or we're assuming they were here based on what we heard. critical information that isn't there
+27:44
+yet. I'm hoping Microsoft can add. Yeah, it'll be interesting to see how Microsoft reacts to some of the stuff
+27:49
+because I mean they have a history of saying won't fix. No, but not an issue.
+27:56
+So sometimes that's the great thing is some of our clients are big enough to to bash giant vendors over the head hard
+28:03
+enough that things happen. So this might be one of those. This could that particular client could
+28:08
+be one of them. Yeah. Certainly probably the client I think that's taking the most forethought in their deployment of
+28:13
+this. Yeah. Versus other clients we've seen. So they've got a lot of planning behind it.
+28:18
+A couple of the smaller clients that I've worked on so far, I have to say just the fact that they were doing some of this testing and asking certain
+28:25
+questions suggests to me that they're putting a lot of similar thought into it as well. So I actually think at least
+28:31
+looking at trusted sex client pool which is you know probably heavy selection bias it does seem like a lot of careful
+28:36
+analysis is going into the decision to deploy this stuff as it should as it should. Yep. Was there any particular like tools
+28:43
+or resources that you would uh recommend people immediately look at before we wrap up? Um, you know, I started looking
+28:49
+at that and uh, as as tempted as I am to start writing code for new tools, um,
+28:55
+which is usually my reaction to anything new, um, it really looks like the Microsoft platform itself provides a
+29:01
+huge selection of tools. Um, so I think it's probably worth really digging into that and that's something Jeeoff and I have been talking about, but we need to
+29:07
+stand up our own labs to start getting more familiar with these. Uh, you know, the the Purview AIHub I think was one of
+29:12
+them we we talked about. um uh there's a Microsoft agent 365 something like you
+29:18
+know by the time you see this podcast they will have renamed the tool so I don't know what to say but check the platform there's tooling
+29:25
+involved that will help you kind of investigate who has authorization for what pieces it looks like there's
+29:31
+tooling in there that's going to help you say identify uh agents that are hitting certain files
+29:38
+at a certain frequency so you can look for outliers there maybe indication that some sensitive data is being accessed in
+29:44
+an unexpected way if you're starting to see, you know, spikes. So, that would probably be the first place I look is is
+29:49
+the platform tooling itself. And that's high on my to-do list for us to get familiar with that, too. Yeah. And I mean, I would think again,
+29:55
+you know, having been down a lot of the Microsoft learn paths there. I I think your the big tools that you're probably
+30:00
+going to be looking at are, you know, Purview, Defender, and C-pilot for
+30:05
+security or security copilot. I forget what they're calling it this week, but especially that last one cuz that does
+30:10
+actually is able to connect to those other tools and and pull most of that data in and and kind of give you a
+30:16
+experience of question answers, ask and get a response type approach to solving that problem and and I think especially
+30:23
+when you're kind of in that neopight stage, how do I deal with all these agents? That's at least a way to understand what's happening right now.
+30:30
+But uh with that, that was our episode of Security Noise today. Thank you all for tuning in. Thank you, Drew, for
+30:36
+joining us. And as usual, we will be back with another show probably in a couple of weeks. One thing I didn't
+30:42
+mention at the beginning of the show that I usually do, if you'd like to discuss the show or uh contribute ideas,
+30:47
+you can go to discord.gg/trustack to join. And with that, have a good week
+30:52
+everybody. Bye. Thanks.
+31:01
+[Music]
+31:07
+[Music]
+

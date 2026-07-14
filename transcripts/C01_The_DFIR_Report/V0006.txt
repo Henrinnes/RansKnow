@@ -1,0 +1,732 @@
+0:02
+[Music]
+0:08
+welcome everyone to another episode of the dfir podcast we are here with Pete
+0:14
+and Zach this time around to have some nice DFI discussions and talk about one
+0:21
+of our latest reports do you want to start by introducing yourselves a little bit Pete and zag yeah um so yeah so my
+0:29
+named Pete I've been with the DFI report as a volunteer analyst for several years
+0:34
+now uh uh me and cush just joined around around the same time uh a bunch of other
+0:41
+great guys um so I've been working with Zach on this case
+0:47
+um and so this started off with a private report where Zach um a initial
+0:55
+summary did all the initial triage uh and then I was brought in to support the
+1:01
+uh transform inter report yeah so this report just to add
+1:07
+some subtext here this report has started as a thread brief and we made it available for our customers for the
+1:15
+thread brief service where we have a private reports and we make them available and some of those reports make
+1:22
+their way into our public reports so yeah this is how they started and uh
+1:28
+Zach how about yourself hey I'm Zach um by day I'm a dfr
+1:33
+consultant um and obviously I assist with the dfr report uh on a few things
+1:40
+in the background as well so very happy to be here nice great thank you very much Sak
+1:47
+um yeah I thought we can start a little bit here with uh discussing some of the
+1:52
+interesting points of the report right of the bat here with the initial entry I
+1:58
+found the malware morx that they used for the initial Vector very interesting
+2:03
+so does anybody want to go through the initial infection and uh some of the
+2:09
+techniques that the mod were used that I found very interesting but I want to hear from you what you found interested
+2:16
+about it um yeah I I could take that one so and again just to kind of title
+2:21
+together initially it was delivered by um basically a fake fake resume that's
+2:27
+kind of the whole point of the the initial delivery vector and it really was kind of most effective because it
+2:33
+was targeting people that deal with resumés all the time and you know click and open them all the time um and it
+2:40
+seems to be very successful and that happens uh when you target someone that clicks and opens things as part of their
+2:46
+their job this campaign has had minimal changes over about three or about since
+2:53
+2023 but essentially the first I guess part or execution chain uh is to trick
+2:59
+someone into opening uh a zip file that had um basically the initial payload in
+3:04
+it and the initial payload was quite interesting because I actually used a a documented Lin kind of side load um
+3:13
+using something called uh a4u in it uh and when that executes uh it loads uh uh
+3:22
+this file called a in it.in uh and that is essentially um what
+3:28
+the actor um uh modified uh to load the
+3:34
+first kind of more X payload they actually copied that LOL bin to an app
+3:39
+data directory so it was you know away from the original place that it's supposed to be in and then uh that
+3:46
+initial side load or basically a s side load uh creates that first morx DL and
+3:52
+then triggers the next a load from that point of view it then creates a a
+3:58
+process uh yeah using wmi to kind of kick off that dll that it downloaded uh
+4:04
+uses things like scheduled task to just do the initial execution uh and also uses MSX sl.exe which was something I
+4:13
+hadn't seen before another lobin to do the initial execution so to while it's a
+4:19
+little bit convoluted we always see these malware have kind of a bit of a weird flow when it starts off and it can
+4:25
+get a bit complicated but overall I had a pretty nice change of executions
+4:30
+before it started the actual uh more malware yeah before it detonates
+4:37
+like the main payload it went through a lot of different stages and what I found
+4:43
+interesting as well was the initial LJ file and it had some um if I remember
+4:49
+correctly had some arguments over there like overation it was a nice way to uh I
+4:57
+guess use use OB fication and variables um by just making a whole bunch of arguments that were basically word-based
+5:04
+so it's almost like a dictionary and then they kind of use those those words to slowly create those arguments before
+5:10
+they actually execute the command and all those methods that they used and you just mentioned here are
+5:17
+very well documented yeah however they still kept using ways to avoid detection
+5:24
+a lot of these techniques would trigger an alert maybe if someone has uh
+5:30
+a a good DDR or another method with a good detection rule set to be able to
+5:35
+detect those because they are very well documented but uh it might slip through
+5:40
+you know I found very interesting the whole attack chain here and uh as you
+5:46
+said the I4 you in it thee it's still a
+5:51
+documented method but um you don't see it very often side loading you see every day nowadays right yeah yeah no this was
+6:00
+nice to see it was kind of refreshing um to see kind of not necessar like not
+6:05
+technically side loing but uh I guess uh execution hijacking um which was kind of
+6:11
+nice as well um as far as evidence goes for this I did want to point out uh that
+6:17
+prefet is really useful um to figure out those side loadings or or hijacking um
+6:23
+obviously if you have magic EDR locks and and you know system on them you you probably don't need to do this but um a
+6:30
+lot of the time as you know DFI people know you don't get that luxury and um it
+6:36
+was really nice to see that prefetch caught that initial um you know it records about that first 10 seconds of
+6:43
+of execution uh and we could easily see that you know malicious files being loaded by that that first execution
+6:49
+which I thought was a cool little uh I guess technical tip how long did it take
+6:54
+for them to drop Cobble strike which I see here this is the main Sor framework
+7:01
+that they used what was the time frame here yeah so so on on what we call I
+7:07
+guess just day one it was really more just that initial setup of of the Morag it kind of sat there it didn't do
+7:12
+anything too much by day three was when hands on keyboard kind of happened you know they they were act actively running
+7:20
+commands uh which then actually ended up uh deploying Cobalt strike so there was a bit of a I guess a lag there which we
+7:27
+commonly see between you know that that first first execution of the payload versus hands on
+7:33
+keyboard and another technique that they used before we move from morx here is
+7:38
+the msxl binary that they used it is not a
+7:43
+very common method to establish execution and after that reach out to the command control server that they had
+7:50
+established but yeah I don't see this being used every day uh interestingly as
+7:56
+well they used uh the directory data Microsoft to run some of those payloads
+8:05
+from just you know everything that they did to me it just seems like they try to
+8:11
+uh evade detection you don't see that every day uh from different type of
+8:17
+malware you don't see that from info Stealers but you also don't see it from initial access type of malware morx has
+8:25
+always been that way from what I can remember yeah yeah and the other bit
+8:30
+just on the morx before we move off that was the tight per which Pete I think you
+8:36
+had a bit of a look into what did they do with that yeah so
+8:41
+you're talking about the mar of X XSL where out loaded the offc JavaScript
+8:49
+which was part of the the main warx mware it's part of that sleep routine
+8:56
+they use um type birth which is a Microsoft utility for collecting
+9:03
+performance data I've never seen it used this way before but they use that and they
+9:10
+specified 180 seconds is their sleep period and then from that they could
+9:17
+execute the the MOX again and so on its own it didn't look that suspicious it
+9:23
+looked okay um but then when you look at the calling process the number of re see
+9:30
+them I put like a time chart in there you see them 20 events
+9:36
+um like every 180 seconds so you see
+9:41
+quite a lot of activity just Ur and type prayer all the time and then around that
+9:47
+time about one and a half days later the the Cobble strike kicked in then using the the r Sur for
+9:54
+32 um start a fairly unusual uh
+10:00
+path as well it was using program data and I was also trying to use like a ocx
+10:06
+file extension again another technique just trying to avoid detections um just trying to pull it in
+10:13
+legitimate paths and so on yeah that's right I want to go back a little bit to the type turf. exe
+10:21
+binary are there any guesses from your pits why do you think they might have used this binary I know the purpose that
+10:29
+you explained was to collect information related the processors according to you
+10:35
+do you think this might be because they are looking to see if this is currently used by the user if the host that they
+10:42
+have infected is currently used by the uh by the user that time or they were
+10:48
+trying to make sure that they haven't infected hanot or why do you think they
+10:56
+have that task running yeah my initial I thought this was like
+11:02
+oh they must be using that possibly to inject into it but uh actually the the
+11:09
+process itself didn't appear to be used in any way shape or form like the parameters that were p is used for
+11:17
+performance Benchmark and mainly uh when you work with like database systems and
+11:22
+so on so you thought I create a snapshot of the system performance but when I looked at the
+11:29
+code of the the morx and there's been quite a lot of analysis by other individuals it is like a loop in the
+11:36
+morx and then once it gets an output from that type bir it then there's a
+11:43
+like an F4 else type statement and then continues and if it didn't get a
+11:49
+response it then tried to do something else I don't know if you observed anything else
+11:56
+Zach yeah the only other I guess theory is that it's it's using it to sleep like that that's it is is is using an inbuilt
+12:04
+uh Windows function to to basically sleep and then um uh I guess execute
+12:10
+again once once that time period is has ticked off as well right so it's just
+12:17
+mostly for execution purposes to make sure it executes it executes at certain
+12:23
+intervals rather than anything else yeah that's interesting when I saw
+12:28
+that um I couldn't figure out why because I didn't read as much as you guys did uh
+12:36
+but yeah that was very interesting and um using red svr 32. exe as you
+12:42
+mentioned pit was that to load Cobble strike or or was that as part of a
+12:48
+different type of execution from Mor that that was TR command sorry yeah
+12:57
+okay yeah the created as well many uh tasks for
+13:03
+persistence but yeah related to the lateral movement you said around 3 days after
+13:12
+the initial execution we saw them come in and execute some commands this is
+13:18
+what we saw in the logs what do you think um was that the first time they
+13:23
+moved laterally as well around the third day mark
+13:29
+uh yeah yeah so there was a pretty distinct or the the initial kind of Discovery commands that were running you
+13:35
+know typical things to discover um what was happening in the network but the
+13:40
+most interesting thing was that they specifically targeted a beam server a backup server um as their first I guess
+13:48
+goal uh they did throughout the campaign create a local group local accounts as
+13:55
+well on this on on each box they got to but um the first I guess Target was a VH
+14:02
+server and quite interestingly uh they used a a vulnerability so um to to
+14:09
+basically get pesque as well as laterally move to this at the same time um so the code that they used to do that
+14:18
+is actually a modified Hawk code that was uh created by a um uh rapid 7
+14:26
+employee um and uh when we used uh like something like DNS uh DN spy to actually
+14:33
+look at the code it actually been just slightly ever so slightly modified from the actual pop code itself so it wasn't
+14:40
+it wasn't a oneto one that they just kind of ran um they had actually modified it quite uh to give it a little
+14:46
+bit more um I guess capability um that they I guess they they wanted in their
+14:51
+in their code uh which is really interesting and we could line it up to be you know to kind of really even see
+14:57
+what uh they had added in the code as well which we Tred to include into the report yeah um yeah I want I want to get
+15:07
+back to that as well uh because um they modified it but they
+15:13
+didn't modify it uh as much because we saw that they didn't see
+15:19
+some of the main components of uh what the script was supposed to be doing what
+15:24
+not the script but sorry the binary that they compiled was supposed to be doing which is running from mons yeah upon
+15:32
+successful exploitation right yeah yeah so the initial Park was really about uh
+15:38
+exploring the vulnerability and then creating a command and and what they had added was uh the function to run uh SQL
+15:46
+on on the server um so um there's you know quite a lot of ways to if you can
+15:51
+run SQL on a server to to execute as well as that but um they chose to
+15:57
+basically enable module called XP command shell which is super common
+16:02
+thing that we see when people are targeting SQL servers or mssql servers
+16:07
+uh and then use that to create an actual new process which actually created a new
+16:12
+um account and after they created the account they use that account to uh RP
+16:18
+directly to that that com that beam server what was interesting about b b
+16:25
+itself is that even though they adapted like you said they left a lot of the strings in there including the the cve
+16:33
+numbers so it's quite easy to fingerprint the binary so we created a Ule looking for that and the um the
+16:42
+binary itself there wasn't much eror Hing involved so there was if you looked
+16:47
+at the the application lock you could see the exploit when they were running it crushing and it created a Windows
+16:55
+eror and so every time they run it they were running it quite a lot and they
+17:00
+were passing like various parameters like notepad they were literally copying same um parameters from the the G of
+17:09
+Reaper um so it was Hally put together I think not a huge amount of testing on it
+17:15
+but it did its purpose uh which is for them to do their lateral movement and privileg
+17:22
+escalation so this is the part that I was not very sure about because I see
+17:30
+that I use that binary to exploit uh the SPL server but they in the command they
+17:37
+use notepad.exe and the notepad.exe would not do anything uh other
+17:46
+than basically nothing it those commands that they try to execute would not
+17:53
+result in anything right right um they try to do anything after that so to me
+17:59
+it doesn't seem like they did they took advantage of that exploit at all because
+18:04
+they messed up or they didn't mess up but maybe they forgot to change the notep dxc from not DXE to Commando DXE
+18:13
+CMD the DXE right or something else or parel did they manage to take advantage
+18:18
+of that binary at all yeah so that that notepad argument that you see in the
+18:24
+report is essentially redundant it's it's like a hangover effect from then taking someone else's code and not
+18:31
+getting rid of it the the the key parts of it I guess so what they did use this for and it was successful was at least
+18:37
+creating a new uh local user and adding it to the administrator group and then
+18:43
+they were able to basically RDP as a as an admin to This Server so it they did
+18:48
+get something out of it um and uh they kind of progressed from there yeah okay
+18:55
+so to anyone that is looking at this on the report when you see the CMD calling
+19:03
+not pxc this was just that because they haven't removed it yes when you see next
+19:09
+to it what you see next to it is the SQL command which actually worked and at the
+19:14
+end of the of the lines that we have on the report there you can see that they are adding a new user to the local
+19:21
+administrators group called esfeld backup and this is what they actually
+19:27
+use to later on yeah and we we were able to I guess
+19:32
+validate that with you know a security event saying hey this new user was created at the same time so we were able
+19:39
+to kind of confirm that that's right someone that is just looking at this would just be okay well
+19:47
+a ccmt not pxc I can verify this is not pxc so I'm leaving uh but you know you
+19:54
+need to pay attention at the rest of the arguments as well and make sure you read the code and understand what that PC is
+20:01
+supposed to do and if you search for it a little bit you will be able to find it on GitHub and you the link to it as well
+20:09
+yeah the other thing to look out for is account creation from like system um so
+20:15
+that would be very unusual um so the fact tried to blend in um their account
+20:21
+names so they look like legitimate um service accounts or admins so there's a
+20:27
+lot of backup accounts being created um so yeah system creating SQL backup defin
+20:37
+red plug and so read looked up um they tried to blend in for sure and
+20:45
+after creating those accounts did they favor RDP connections over the use of
+20:52
+the C framework that they had on the systems cobal strike I think it was they
+20:57
+still using IDP to kind of do the initial tribet but once they went to a new server they would then
+21:04
+install uh cobal strike kind of maintain that that access going forward
+21:11
+yeah and one thing I think that we missed it is how they used Cloud flirt
+21:19
+which is legitimate binary that they used it to proxy traffic and
+21:24
+Connect using RDP oh yeah yeah so um so we we do see a couple of these tools
+21:31
+going around like enar and and Cloud flare um that provide that that
+21:36
+functionality of of of proxying traffic out to the internet commonly over htps
+21:42
+as well so it looks pretty normal from a networking point of view um but we saw
+21:48
+that uh being established on a couple of those hosts as well and uh one of the giveaways uh was was I think we did see
+21:55
+an IDP connection with like local hosts which is always kind of a give away that someone's doing something weird uh with
+22:01
+proxying as well uh accessing it through a tunnel yeah the clo flare creates its
+22:08
+own audit U events as well so they appear in the application logs so if you
+22:13
+start to see new types of logs appearing from different vendors and somewh else
+22:19
+to look out for and the the software was installed by MSI binaries which we
+22:26
+dropped in a few places so looking for or unusual installs of that kind of activities to take
+22:33
+giveway looking into the execution of MSI payloads it becomes a little bit
+22:40
+difficult to detect those as well from personal experience I I don't think that
+22:45
+you can very easily find a way to behaviorally adjust create a detection
+22:52
+around those type of executions using MSI exec and uh
+22:59
+executing MSI payloads that was interesting so at the moment we have so many different ways of
+23:05
+then maintaining their access we have cobal strike Cloud flare that they used this
+23:13
+proxy and as we will see in a second here they try to use pyramid C2 as well
+23:20
+which is a python based C2 framework I haven't seen this being used before this
+23:26
+report uh I try to play around a little bit but I found that it was quite
+23:31
+difficult to install and I don't know how they managed to use it uh and I
+23:38
+think they used it for a little bit but yeah that was a third method for them to
+23:43
+maintain access what do you think of the pyramid C2 framework so they had great
+23:49
+difficulty uh like you uh so they brought the framework in but they have
+23:55
+to get a lot of a dependency work in and it's based on Python and they were using various tools
+24:06
+to uncompress the zip fil the to files um you can sense the the
+24:13
+frustrations that were having um so they tried one approach using par shell to
+24:18
+try several different commands to expand the archive so they gave up on that and
+24:24
+then they started moving on to using light T um and using seven zip I believe um but
+24:31
+what they forgot to do is pass the parameter where they wanted the extracted files to go to so they ended
+24:39
+up extracting the files into like the windows folder window system
+24:45
+32 um in total there was like 700 files being extracted out in different places
+24:52
+and they were trying to find out where they extract this pyramid framework and
+24:57
+all the other bits and pieces uh when they did eventually get it to work and they did the initial execution
+25:06
+of him but then they didn't utilize it at all any context they tried to use one
+25:13
+of the Buffs I think built in but they pretty much fell back to just using
+25:18
+pball strike again there's a lot of Bak in credentials and configuration that Zach
+25:24
+managed to pull out uh which gave a bit of insight into the attacker infrastructure is
+25:29
+[Music] wrong to stay a little bit on the python
+25:36
+uh side of the execution you mentioned they brought all these files uh was
+25:42
+these files necessary for the execution of the Python payload so was there any
+25:48
+Alliance of those different type of libraries that they brought in uh for
+25:55
+the python.exe binary to execute the main essentially like a portable version of
+26:01
+python um so it had you know the exe they didn't install it as like an actual
+26:07
+uh program on on the host um so it was just in this kind of contained portable
+26:12
+folder which also had a whole bunch of dlls and and pretty much anything that
+26:18
+you could think of um that was required for the execution yeah the actual payload itself is just simply called
+26:25
+cradle. py that that's it that's all it actually was um which was actually really easy to analyze is much nicer
+26:32
+than you know binary binary analysis or anything like that it was it was quite nice to just see everything there there
+26:39
+was no fation involved when was and CR by okay yeah interesting and if you
+26:46
+bring and correct me if I'm wrong here even if they would have to compile the
+26:51
+binary on their own horse and bring it over to the infected environment and
+26:56
+they try to execute it and I think because of how python comile
+27:02
+binaries work it is still extracting all the necessary uh files to the user uh
+27:10
+update directory and yeah I think there's a couple of different ways to to
+27:15
+create a python like compile binary at least I'm not aware of the the creating extra
+27:22
+libraries in that data though that's interesting yeah I think when you're compiling that binary and you executing
+27:28
+it on the target environment it's decompressing all these files that it
+27:35
+relies upon to run and that is just another detection opportunity I guess
+27:41
+yeah you find a lot of files under the update related to python um but yeah
+27:47
+it's very noisy it's very noisy for sure and that's why I'm mentioning it here potentially detection
+27:53
+opportunity but yeah they didn't bother with that anyway in this case that brought the whole
+28:00
+python uh all the libraries and everything that uh makes up this
+28:05
+portable version of python and execute the bu file here called cloud
+28:12
+cloud they they had a big zip file and it just wasn't the C2 framework they
+28:18
+also there they had all the tools that they bought in as well so it was quite
+28:24
+quite a big package that they downloaded so um stealth definitely wasn't of their
+28:30
+goals really if they want to get him do the job but it was interesting that
+28:35
+they were looking at an alternative C2 framework especially when they were
+28:41
+using cobal strike perfectly fine so but that's a trend that we're seeing across
+28:46
+all the other cases well where cob stri has been quite dominant for several years but now there's been a
+28:54
+lot of takedowns and so on like clamp down like packed version of cobein maybe
+29:01
+they're experimenting see what works I don't know but it was quite a risky move what they did because if it
+29:09
+was detected someone could have responded to it and shut down all their accessies potentially but as we saw I
+29:17
+think one of the things that they tried was detected and they were trying to make
+29:24
+sure that it is executed I think will see it later on I think it was on the backup
+29:30
+server where we saw evidence of Windows Defender being
+29:36
+disabled um I guess did they have any issues with having the payloads being executed on
+29:43
+that server uh they didn't seem to they seem to be pretty happy I think it was more
+29:50
+of a uh Play Book you know do it yeah yeah this thing is great they
+30:00
+literally me the m strike payload _ c. dll that was
+30:08
+the name of their file so they made no attempt to blend in further down the
+30:14
+line um so they yeah they compromised the environment quite well actually uh
+30:21
+but but a consequence that they did expose their attack boxes so could see them
+30:28
+when they were proxy we could see their workstation names so you can see those
+30:34
+in the um uh an event 4624 when they're doing electrial
+30:40
+movement so they had machine Nam such uh CI so rich is welln um Linux
+30:48
+distribution based on pantes really and then I another name uh Packa Das
+30:58
+than a random name so again that's a good Baseline if you understand their
+31:04
+environment and you have machine names that are structured in a way that they follow
+31:11
+a standard naming convention so let's say workstation like WS Follow by number
+31:17
+or if you got your service like svr and then you got something like color you or sticks out that would be a good way of
+31:24
+detecting that gets overlooked and we've seen it before other cases attacker
+31:30
+machined random names that don't fit in with the environment machines normally
+31:35
+we do see things like desktop War win or or you know workstation this the kind of
+31:41
+default Windows installations but this one was a little bit more interesting because was a little bit more unique and
+31:47
+it actually was even uh uh cited in an arctic fox case for fog fog ransomware
+31:55
+so take that for whatever like um it is I thought it was really
+32:01
+interesting that um you know there's the potential that um this might have turned
+32:06
+into Ransom where potentially or you know the only other explanation that we commonly see is VPS boxes uh having the
+32:14
+same names and kind of being copied around uh which kind of dilutes uh that
+32:19
+that IC pretty quickly yeah it's very difficult to tell
+32:25
+in this case that you read um from that vendor that you just
+32:30
+mentioned did they highlight the same ttps that we highlighted in the report
+32:37
+there's a few common threads like uh I know we haven't talked about it yet but the the the get uh V password which is a
+32:45
+super super common Powershell script that we see in pretty much every randomware event evolving them which
+32:52
+essentially dumps the stored credentials out of the uh V database and it did use
+32:58
+a couple other things like sharp shares which we uh haven't talked about yet either here but there there's a few
+33:04
+comparisons um uh it was just more interesting because that was a slightly more unique uh like net bias name than
+33:11
+you know like win or workstation or something that's kind of that we
+33:16
+normally see yeah yeah yeah for sure it's turns out more it's a little bit more unique yeah it's interesting to to see
+33:23
+those type of things even if it's even if we're not saying that it might the same threat actor even if it's the same
+33:30
+infrastructure I think this is very interesting yeah fing very nice and then
+33:39
+towards the end for this intrution um we didn't see them deploying around
+33:48
+somewhere no so they did do typical discovery of file shares so um uh there
+33:57
+was uh some I guess interesting uh files or folders that
+34:03
+they open and just from the I guess technical side shell bags is is one of the easiest ways to to tell that um uh
+34:10
+so we use that pretty much all the time in Ransom way cases to figure out you know what they've been accessing if if
+34:16
+they have a GUI session at least but uh so we definitely knew that they were rumaging through files and looking the
+34:23
+certain things it wasn't a clear I guess uh indication of what they were looking
+34:29
+for so like they didn't do any kind of explor searches or we're only looking in folders that had certain I guess
+34:35
+material um but this is where we get to kind of uh uh the end of this intrusion
+34:42
+which uh kind of ended abruptly um uh and it even involved uh this reactor
+34:49
+actually deleting more eggs from the beach host as well so they they did a bit of a cleanup at the end um and
+34:57
+seemed to align with when they had already kind of gone through all of the the the data essentially so maybe they
+35:05
+found what they wanted or found that this uh victim organization didn't have
+35:10
+the data that that they wanted it wasn't worth their effort
+35:16
+continue yeah yeah yeah whatever the criteria the criteria that they had was
+35:22
+but yeah deleting the mor payload and deleting some of those scheduled tasks I
+35:30
+think that they had running then more xay load is interesting um they don't
+35:37
+want they don't want to get to keep getting call backs I guess from that Mal
+35:43
+I don't think they would CL yeah exactly I don't think they it's a matter of you
+35:48
+know trying to protect uh their MW in Casey falls into their own cons so sort
+35:54
+of say it's just look we we have enough call backs from other victims we don't
+36:02
+want call backs from victims that we have gone through their systems and we decided that we don't want to pursue it
+36:10
+yeah just on the victims and one of the tools they brought in with some with net
+36:16
+scam uh in there it was discovered that when they brought it brought the tool in
+36:22
+they brought the configuration file for it inside that configuration we could
+36:28
+see the names of other victim organizations so obviously they compromise multiple victims and they
+36:35
+were just being quite selective but that's another risk when attackers are bringing their tools there there's a lot
+36:41
+of copy and pasting there in on or there's a a lot of changes in configuration there's a lot of ruse and
+36:47
+that's a way of tracking them about who they're targeting what type of victims as
+36:53
+well yeah they obviously have some good documentation on what to run
+37:00
+and what things they're looking for they did spend whole day I guess looking for
+37:07
+things trying to exploit moving lxly to other systems they spend a good trunk of
+37:13
+time doing all this activity and then in the at the end of the day they decided that we are not
+37:21
+going to continue yeah that that brings quite an interesting perspective because
+37:27
+if they they're in a position where they can choose what victims to use and they
+37:32
+compromise a lot of them then that is quite quite scary really because they're
+37:38
+not desperate there there's always someone out there they can compromise and run somewhere um for better return of
+37:46
+investment so yeah run somewhere is going to be there for quite a
+37:52
+while yeah yeah if that's the case I guess there is no shortage of customers
+37:58
+and uh this is going to carry on and our
+38:04
+work here I think is very important at highlighting those ttps sewing them to the world try to educate people on how
+38:12
+these red tors use their tools to compromise environments and I think it's
+38:18
+very important creating detections and highlighting the malicious infrastructure that they're using and
+38:25
+hopefully burn some of that down and uh cause some disturbance to
+38:31
+their operation a lot of detection opportunities uh at the buck of the report there's a lot of Sigma we've got
+38:38
+some private ones the your rule as well so it was an interesting case yeah
+38:45
+absolutely and thank you very much for highlighting everything in the report
+38:51
+and for all your work for putting this together it takes a lot of time a lot of
+38:57
+effort as well to put all these out the all the graphs all the information right
+39:02
+down to the commands that the threat actors used and all their techniques and infrastructure that they used I'm sure
+39:09
+uh our listeners and people who read the report appreciate that and thank you very much for coming into the podcast to
+39:17
+talk about it uh a lot of the things that I asked you uh I wasn't sure about
+39:22
+and you clarified it very well and uh I hope AR listeners learned something from
+39:28
+it but yeah uh I think we covered a tone on this episode thank you very much Pete
+39:34
+and zck for coming in and hopefully we can do it again soon with the next
+39:39
+report no worries thanks very much thank you everyone
+39:47
+[Music]

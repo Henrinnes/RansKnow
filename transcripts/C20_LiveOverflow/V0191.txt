@@ -1,0 +1,390 @@
+0:00
+On this channel I haven't  covered mobile app security much.  
+0:04
+For me the app sandbox restrictions are so  good, that finding good security issues seems  
+0:10
+rare. But then Google approached me and asked  if I wanted to make a video about A bughunter  
+0:15
+who is looking for bugs in Google android apps Meet Sergey Toshin, also known as Oversecured. 
+0:23
+From him I learned that there are very interesting  bug classes that I wasn’t really aware of. 
+0:29
+And in this video he will show us how  he found a vulnerability in the Google  
+0:34
+“Snapseed” Android App. And this was not a  super simple bug, but also not a crazy bug,  
+0:40
+it’s a bug that you could also find. But his  process is very interesting and I think we  
+0:46
+can learn a lot from him, and maybe it’s  a good starting point for you as well.
+Meet Sergey Toshin (Oversecured)
+0:57
+Sergey, or Oversecured is an interesting  bug hunter for various reasons. 
+1:02
+1. First of all he is one of the  most successful Google bug hunters,  
+1:06
+targeting Android apps. But to be fair, most  hunters focus on web security, so there is  
+1:13
+definitely enough room for you to join the top. 2. A lot of successful and full-time bughunters  
+1:20
+do not share their exact methodology or  the kind of bugs they report, because  
+1:26
+“revealing the tricks'' could lead to less income.  Which is totally understandable. But Sergey shares  
+1:33
+so much. His blog over at oversecured is probably  one of the best android app security blogs.  
+1:40
+There are of course a lot of android  security resources out there,  
+1:44
+including the official developer Android security  documentation. But a lot of them are rather basic.  
+1:51
+Sergey on the other hand has a lot of  practical examples from his bug bounty work. 
+1:57
+3. And lastly, his methodology is interesting,  because he is automating a lot. I assume most  
+2:06
+successful bug hunters heavily rely on automation,  but not many share their setup, but oversecured is  
+2:13
+showing us how he does it. And not only that. he  is sharing his automation tool as a paid service  
+2:20
+over at oversecured.com. Just a little disclaimer.  
+2:24
+Google is not endorsing that tool. I’m  just here to share with you Sergeys work,  
+2:29
+and it just happens to involve his own scanner.  It should go without saying this is not a magic  
+2:36
+tool that makes you rich without skill, and it’s  not the only tool out there. This tool is like  
+2:43
+a pen - in the hands of a skilled artist they can  draw something amazing. In my hands, you get this.
+How Oversecured Started
+2:51
+Anyway let’s hear from Oversecured  how he got where he is today.
+2:56
+“I think it was 2018 when I developed multiple  scripts to research different security issues  
+3:06
+on android, and I also participated in  Google Play rewards program and also started  
+3:13
+developing a single big tool, that  searches for different security issues.”
+3:21
+But then in 2019 Google announced that  they would expand their bug bounty program  
+3:27
+to ANY app in the playstore with more than a  100 million downloads. This means Google pays  
+3:35
+for vulnerabilities in apps not from Google!  Crazy, right? It’s all in the effort to secure  
+3:43
+the wider Android ecosystem. Anyway. When this was  announced, Sergey was at a bar and heard the news.
+3:51
+“And then they told that we are allowing  you to report bugs in any apps that  
+3:58
+have 100 million of installations.  And at that moment I was in a bar and  
+4:05
+thought, “WOW, like there are hundreds of  such apps, I’m gonna become a millionaire.  
+4:12
+And right after this bar I came home and scanned  like 20 apps and found 40 potential issues. Next  
+4:22
+day I woke up with alarm. Because I never wake  up with alarm and started reporting the bugs like  
+4:32
+every day. I think I reported them within like 6  months, like every day a few bugs. I think my best  
+4:40
+day is 15 issues reported. And in total Google  paid me out, I think almost 900.000$. yeah.”
+Verify The Output of Tools!
+4:52
+And pay close attention to what he says here. His  scanner found “POTENTIAL” issues. Not confirmed  
+5:00
+issues. His automation does not automatically  submit any bugs the scanner finds. They are  
+5:05
+just potential bugs that he has to manually review  to determine if they are actually vulnerabilities  
+5:13
+or not. And that of course requires experience  and skills. I have seen bug hunters just blindly  
+5:19
+report anything they see. And that is really bad.  When you do that, you won't become a valued bug  
+5:24
+hunter like Sergey. So please never trust  any automatic scanner and always verify the  
+5:29
+output. Google also has an article and video about  blindly reporting scanner results. Of course the  
+5:36
+manual confirmation is still labor intensive,  but at least his tooling provided a list of  
+5:42
+potential issues, which significantly reduced the  overall time needed to find valid vulnerabilities.
+5:50
+Anyway. Let’s go through his process. Here is the  scan report for the snapseed app. And as you can  
+5:58
+see it found a lot of potential issues. But to  understand those numbers you need to understand  
+6:04
+how the tool works. It basically tries to identify  all “sources”, so places in the code where  
+6:11
+attacker data could enter into the application,  and “sinks”, so places that are critical  
+6:18
+if attacker data gets there. I made a video  about these terms before, you can find it here.  
+6:23
+So if there are multiple sources leading to  the same sink, or a single input source leading  
+6:30
+to multiple sinks, then the tool will track  each option, “inflating” the numbers a bit.  
+6:36
+So while he scrolled over the long list I  asked him, did you go over all of them now?
+6:42
+“I think I checked them, but it uses a lot of  code. I think those vulnerabilities could be  
+6:48
+valid too actually, but the dataflow is long and  I need to realize what is going on in this code.  
+6:56
+Yeah it could be valid too. But the  verification would take a lot of time.”
+7:03
+Yeah, some of these potential findings were  too annoying for him to actually verify.  
+7:09
+But still, he knows he has to verify them  and cannot simply copy the scan result.  
+7:13
+So he started looking at potential  findings, with very little code.
+First Look at Vulnerability
+7:18
+“But then I thought, what’s  in the other categories.  
+7:21
+Maybe there are easier bugs. And I checked this.  This is super easy. Just look at this. Like  
+7:28
+only two blocks of code. Only activity  and setResult. Yeah that’s super easy.”  
+7:37
+Alright. Now let’s confirm the bug. His goto  choice for looking at the android app code  
+7:42
+is the java decompiler jadx. Loading the apk in  it and then going to the function that his tool  
+7:48
+flagged for being a potential issue. So what  are the actual conditions for triggering it?
+7:55
+“You see main activity. Vulnerable line of  code. And we need to find where it’s used..  
+8:03
+We can see it’s invoked in main activity.  In that catch block. So when some error  
+8:10
+happens, it displays an alert dialog. And  when user clicks on the positive button,  
+8:18
+this code is triggered. And returns attacker  controlled intent back to the attacker.  
+8:25
+Leading to gaining access to arbitrary content  provider. So all we need to do is triggering this  
+8:36
+ClassCastException. We need to  realize how can we can trigger it.”
+8:40
+So we have the two pieces of code. Here we have  the onClick button handler for an alert dialog,  
+8:48
+which attempts to return a result  back to the sender of an intent. This  
+8:54
+is vulnerable code. But this dialog is only  triggered if we have a ClassCastException.  
+9:01
+So now Sergey has to figure out, is there a  way to trigger that? If this code is maybe  
+9:08
+never reached it would not be exploitable.  And this is really important to understand.  
+9:14
+You always need to verify if you even can  reach the vulnerable code. Another example  
+9:20
+where you might not be able to find an attack is  for example when you have an if-case that checks  
+9:25
+if the app is in debug mode. But the debug mode is  never enabled in the production app, so you could  
+9:30
+never reach it. I cannot stress it enough how  important it is to verify the bug in the code. 
+9:37
+to do that Sergey pulls up the android studio  and starts developing a malicious app. Yes!  
+9:44
+For Android bugs you probably need a basic  understanding of how android apps are developed.  
+9:50
+In web bug hunting you often  don’t need to know programming,  
+9:54
+but here you often have to write a  bit of code to exploit a bug you find. 
+1. Explained: Android Intents
+9:58
+Anyway, You probably ask yourself “I don’t  understand, what is the vulnerability here”.  
+10:04
+And I’m glad you asked, so let me  explain what he actually found here. 
+10:08
+We need to explain three concepts. Android Intents 
+10:12
+Content Providers And Android permissions
+10:15
+1. Android Intents. In the android ecosystem you  
+10:18
+have the concept of Intents. Intent is a weird  word to you, maybe? So try to not get confused  
+10:24
+by new terminology. It’s very basic when I replace  the word “intent” with the word “data”.. Android  
+10:30
+apps can send and receive data. So one app can  send data to another. For example when you want  
+10:37
+to share a website. You open up this share view  and you can click on another app. For example  
+10:43
+Message. This then opens the message app  and it has the link I wanted to share.  
+10:48
+Under the hood, the browser app sent this data,  so an “intent”, to the message app with the data,  
+10:56
+the URL. That is a very basic example and of  course you can send a lot more than just text.  
+11:01
+Intents have a ton of features. You will  see in just a moment. But for now, intents  
+11:06
+are simply used to pass data to other apps. As you can see, Intents are a very typical  
+11:13
+attack surface for android apps. A malicious app  could send any kind of intents to other apps.  
+11:19
+And if the app handles the intent badly, it  could lead to all kinds of security issues.
+2. Explained: Content Providers
+11:26
+2. Content Providers Another important android feature  
+11:30
+and threat surface to understand here is, the  concept of ContentProviders. Apps can define  
+11:37
+content providers and it does what the name says.  Provide content. They try to abstract away how  
+11:44
+data is really stored. Content providers work  through “URIs”. So if you have your notes stored  
+11:50
+in a SQL database, you could create a content  provider to access notes instead. Then no SQL  
+11:57
+queries are needed and you can just use a URI  like this. So now that your app stores notes and  
+12:04
+has a content provider for them, your app could  expose this content provider to allow other apps  
+12:10
+to access those notes. But of course it’s a bad  idea to just have the content provider publicly  
+12:16
+accessible. It would be much better if another app  has to request access, and then the user has to  
+12:22
+confirm this first. This can be implemented again  with Intents. An external app could ask your app,  
+12:26
+can I get access to the notes, you display a  dialog to the user and if the user hits okay,  
+12:32
+you send back an intent with the flag,  FLAG_GRANT_READ_URI_PERMISSION. Adding  
+12:38
+this flag to the intent you send back to  the requesting app grants the other app  
+12:44
+to access the content via the notes URL. So you  shared the content provider with another app.
+3. Explained: App Permissions
+12:51
+3. Android Permissions And now one last concept we need  
+12:55
+to understand, android permissions. In this case  the snapseed app has read and write permission  
+13:02
+to external storage. And by requesting these  permissions, the app will actually has access  
+13:07
+to the “hidden” or rather “internal” content  provider for files on the external storage.  
+13:14
+The URL for that looks for example like  this content://media/external/video/media.  
+13:20
+That’s it. Snapseed can now use this content  provider to access files on the external storage. 
+13:26
+Also it’s important to note, that our attacker app  
+13:29
+does not have these permissions.  It cannot access the file storage.
+Exploit Walkthrough
+13:34
+Okay. Now we have all three concepts we need.  And we can come back to the vulnerability Sergey  
+13:40
+found. In the meantime he has written up his  malicious attack app, so let’s checkout his code. 
+13:46
+When the malicious app starts, he creates a  new Intent object. And sets various values.  
+13:51
+But ignore these for now, important is  only the setClassName and this putExtra.  
+13:57
+With setClassName you can specify  exactly the receiver of the intent.  
+14:03
+In this case it’s the snapseed app bundle  as well as the vulnerable activity class.  
+14:09
+When he now starts this activity, he sends  this intent, it will launch the main activity  
+14:14
+from snapseed with this extra stream data. Now let’s go to the receiving side. Here the  
+14:20
+MainActivity now tries to access this STREAM data  and CAST it to an android.net.Uri. But the intent  
+14:28
+did not contain a URI. it’s this wow string. So this triggers the required ClassCastException!  
+14:36
+which causes this alert dialog to be created. So now that the app has the dialog, there is this  
+14:43
+OK button to confirm you read the error. And we  know what this button does from the onClickHander.  
+14:50
+It returns a result back to the app with.  setResult. it sets the result value to 0,  
+14:57
+probably to tell the other app that it  didn’t work. 0. false. Fail. But additionally  
+15:04
+it also adds the original intent that was sent  to the app from sergey. Probably to give the  
+15:10
+receiving app a bit of context, what was the  intent that didn’t work. But this is dangerous. 
+15:17
+We know how android passes data between apps.  So of course this result is sent back as an  
+15:23
+intent to the malicious app. And now think about  how the intent looks like that it sends here.  
+15:29
+It’s the intent that sergey created, and now  the other fields become important. This intent  
+15:36
+contains the EXTERNAL_CONTENT_URI, as well  as the flag FLAG_GRANT_READ_URI_PERMISSION.  
+15:43
+Do you see where this is going? By snapseed  sending such an intent to the malicious app,  
+15:50
+it tells the android operating system, “snapseed  would like to give the attacker app the permission  
+15:55
+to access my internal file content provider”. Which means, the malicious app has now  
+16:01
+the permission to use the snapseeds  content provider for external files. 
+16:07
+here in the result handler, so where  the attacker app receives the intent,  
+16:13
+in there Sergey can now access the media storage.
+Proof of Concept and Report
+16:17
+let’s run the full exploit. Sergey used  android studio to develop his malicious app,  
+16:22
+then installs it on his phone  and launches the malicious app.  
+16:26
+“So we have okay. Only one file is  here. And we click on okay. We see that  
+16:34
+two files are here. So it’s working. And  I think we can report it now to google.”
+16:42
+So this attack showed that snapseed was  vulnerable to hijacking a content provider.  
+16:48
+It essentially allowed a malicious app without  permissions to access external storage.
+16:54
+And that is a valid bug. As you can see, Sergey  then went on bughunters.google.com website  
+17:01
+to create a writeup of the issue. Always  make sure to clearly state the issue,  
+17:06
+copy the important code snippets and add  your proof of concept attack code as well.  
+17:10
+Submit the report. And there we go. That was it. Now how much reward does a report like this get?  
+Android VRP Rewards
+17:18
+Here you have to differentiate if it’s an  app covered by the Google Play Security  
+17:23
+Reward Program, which means you found a  bug in a very very popular third-party app,  
+17:28
+or if you found a bug directly in a Google app.  If we look into the reward policy for third party  
+17:34
+android apps we can see here that we have “3)  User must install malicious app”. And then we have  
+17:40
+theft of sensitive data due to the access to the  apps content providers. So this issue should be a  
+17:47
+1000$ bounty, if the bug is in a popular third  party app. But in this case Sergey found the  
+17:53
+issue in a Google app. So the regular bug bounty  rewards apply. And in the table we can find here  
+18:00
+“Unrestricted file system or database access” or  “Logic flaw bugs leaking or bypassing significant  
+18:07
+security controls”. Both could apply here.  Also the app probably falls under the “lower  
+18:13
+priority applications”. A photo editing app is  probably not a critical google app like gmail.  
+18:21
+So either it’s 500$ or 1.33 7$. And he later  told me that he got the 1337$. Good job Sergey!
+Start Hunting for Bugs in Google Apps!
+18:32
+As you can see, Sergey used his tool  to find a valid bug in a google app.  
+18:38
+So google came up with a cool idea! Google  actually scanned multiple apps of theirs and  
+18:44
+made the results available to you. You  can find the links in the description.  
+18:49
+Please don’t just copy and paste the scan  result and report it, that makes no sense.  
+18:53
+Google has the scans as well. What is important  is, like Sergey showed you in this video,  
+18:59
+you have to actually verify the bugs. For example  by implementing a proof of concept attack.  
+19:05
+That is of course maybe not easy. But that’s why  you also have a good chance to find something.  
+19:10
+In android app bug bounty you don’t have a lot  of competition. So why don’t you give it a try? 
+19:17
+Also if you find a valid bug, send me a message  via email or twitter, so I can make sure to add  
+19:23
+notes in the description about what has already  been reported. I’m actually quite excited about  
+19:29
+the result of this little experiment. Maybe  I will make a followup video sometime about  
+19:34
+the results of all of this. I wonder  how much bounty falls out of this.
+19:39
+Cool I hope you enjoyed this introduction  to the world of android app security and  
+19:44
+android bug bounty hunting. And hopefully  you find some bugs in the future. bye!
+

@@ -1,0 +1,409 @@
+0:00
+On the 7th of September Citizenlab announced  the discovery of a new iOS zero-day getting  
+0:05
+actively exploited in the wild. Apparently  the entry point for this vulnerability was  
+0:09
+a PassKit attachment. These passkits  are basically these tickets you can  
+0:14
+add to your iPhone wallet, and so the  victim probably was sent an iMessage,  
+0:19
+iOS parses the passkit attachment, which can  include images. And the phone gets hacked.
+0:25
+Of course Citizenlab had immediately  contacted Apple to report their findings,  
+0:29
+and on the same day of the press  release we also got an iOS update.  
+0:33
+“Processing a maliciously crafted image  may lead to arbitrary code execution.”
+0:37
+A few days later we also got an update from  Chrome reporting that a critical heap buffer  
+0:42
+overflow was reported in the image format  webp. Reported by Apple and Ctizenlab. At the  
+0:46
+time the bug report details were still restricted,  
+0:49
+but it was clear that there was an  issue within the image format webp.
+0:53
+And finally it was confirmed here, when  looking at the webp commits there were  
+0:57
+changes related to “Fix out of bound write  (a buffer overflow), in BuildHuffmanTable.”.
+1:02
+So what we have here is a very critical  vulnerability, in an image file format used by  
+1:07
+iOS and Chromium. And with these two code bases we  basically already cover the world. But if you now  
+1:14
+think, you are safe because you use Android and  Firefox? Well. Obviously Firefox is also affected,  
+1:19
+and so is Android. Image parsing with imagemagick  on the web server? Vulnerable. Any software that  
+1:26
+supports webp, most likely uses the official webp  library, and that’s where the vulnerability lies.
+Most Valuable Vulnerability?
+1:32
+So I don’t think it’s exaggerated  to say, that this was one of the  
+1:35
+most valuable vulnerabilities that could  exist. Looking at the prices for 0days,  
+1:41
+of course, for a full chain this single  vulnerability is not enough, BUT this webp  
+1:45
+vulnerability could be the entrypoint for any of  these categories. This is an insane vulnerability  
+1:52
+that existed in the source code since 2014.  That alone makes it interesting to look at.
+1:57
+But this is not the only fascinating  thing about it. Because, if it’s a  
+2:01
+vulnerability that could be used to  exploit so many different projects.  
+2:05
+Why have we not yet seen any full example  exploits, for any target? Why is it that  
+2:10
+we only have some proof of concept .webp files  that trigger the overflow, but nothing more?!
+2:15
+This is the start of a small mini  series where I want to share with  
+2:18
+you everything I learned about this  vulnerability. And in this first video,  
+2:22
+I will try to explain the general concept  of webp and the cause for the overflow.
+2:27
+In the second video we will then  dive into the question of fuzzing.  
+2:30
+How can we setup fuzzing and could we have  found this holy grail of a vulnerability?
+2:36
+And then finally we look closer at the code  and try to reason about the discovery process.
+2:41
+So let’s start with the first video,  and I guess I'd have to summarize it:  
+2:45
+this video is about “why you should study computer  
+2:47
+science and pay attention in your data  structures and algorithms classes.”
+2:58
+Heap Overflow Related to Huffman Trees
+3:02
+Probably the best article written  about this vulnerability is by Ben  
+3:06
+Hawkes and this was obviously also  one of the main resources I started  
+3:10
+with. So let’s see what he was able to  learn from the publi security patch.
+3:14
+> The vulnerability is in the  "lossless compression" support  
+3:18
+for WebP. [...] To achieve this, WebP  uses an algorithm called Huffman coding.
+3:22
+> Although Huffman coding is conceptually  based on a tree data structure,  
+3:27
+modern implementations have been optimized to  use tables instead. The patch suggests that  
+3:31
+it was possible to overflow the Huffman  table when decoding an untrusted image.
+3:36
+> [...] the vulnerable versions use memory  allocations based on pre-calculated buffer  
+3:40
+sizes from a fixed table, and will then construct  the Huffman tables directly into that allocation
+3:46
+Okay. Sounds like, in order to  understand this vulnerability,  
+3:49
+we need to understand lossless compression  and specifically huffman codes. I guess we  
+3:53
+have to brush up on some computer science  algorithms and data structure knowledge.
+3:57
+When I want to learn something, the biggest  issue I face is the unknown unknowns. There  
+Learning about Huffman Codes
+4:02
+is just so much information hidden, that I  struggle to even pose the right question.  
+4:07
+So usually I try to get a broader understanding  of a topic first, because then hopefully I will  
+4:11
+also start tp recognize what I don’t know.  And I can specifically seek out the answers.  
+4:17
+So I went on YouTube and just typed in “huffman  codes” trying to understand the bigger picture. 
+4:23
+And we can quickly find a video by Tom Scott and  then also found these two videos by reducible  
+4:28
+“Huffman Codes: An Information Theory Perspective”  and “How PNG Works: Compromising Speed for  
+4:33
+Quality”. And specifically the latter one was very  helpful to me - while it’s about PNG, it’s not  
+4:39
+unreasonable to assume that webp, being newer,  built upon concepts from something like PNG.
+4:46
+Anyway. From the tom scott video we can  learn the basics how data can be compressed  
+4:51
+with huffman codes. And it’s kinda simple. You  first perform a frequency analysis of symbols,  
+4:56
+which means in the case of text we  can take each character as a symbol,  
+5:00
+and count how many times it is seen and create  an ordered list of them. And then we can start  
+5:06
+with the least common characters (or symbol) and  start building a tree structure. The character  
+5:10
+0 and 1 is only seen once, so together they make  up a small subtree with their sum 2. Then we have  
+5:17
+character M with two occurences, so we can combine  them into a new sub tree. Their sum being 4. And  
+5:24
+now we keep going until we get a complete tree. The tree can be used to compress data, but let’s  
+5:30
+talk about the decompression case. Let’s say we  transmit this tree, and the compressed bits 11000,  
+5:37
+then the receiver can decode it. We start  reading the bits and a 1 means right tree,  
+5:42
+and 0 left. So right right, left, left, left and  we reach the symbol W. Wich means, we successfully  
+5:50
+compressed the ascii character W, usually  encoded in ascii 8 bits, down to just 5 bits. 
+5:57
+So that’s huffman code and  huffman trees explained.
+6:00
+And then from watching Reducible’s videos, going  a bit more in depth and learning about some clever  
+6:05
+ideas how an image could be compressed, most  important to me was the fact that PNG compresses  
+6:11
+each color into its own separate huffman codes and  tree. Because I have seen read this about webp as  
+6:17
+well. So we might even talk about multiple trees,  a tree for the red, blue and green pixel values.
+6:23
+And well, after watching these videos, I felt  like I understood the basics of Huffman Codes  
+What are Huffman Tables?
+6:28
+and how this lossless compression relates to  an image file format, but I was still confused  
+6:33
+about the Huffman tables. All the resources just  talk about huffman trees, but the vulnerability  
+6:39
+is about overflowing the huffman tables. So I  was asking myself, where did I see “tables”? 
+6:46
+First I thought it must be  the symbol frequency table,  
+6:49
+how often a symbol appears? And looking  at some huffman code homework exercises,  
+6:54
+we see such a table often created. But that  didn’t make much sense to me, for two reasons.
+7:01
+First of all, a table with a list of symbols is  unlikely to overflow. We know how many symbols  
+7:08
+there are. Color values go from 0-255. 8 bit. So  we know this encoding table must always have 255  
+7:15
+entries. How would that overflow? And the second  reason I thought was weird was that, a table like  
+7:21
+this is not really efficient. Do you have to loop  through table for every bit to find the matching  
+7:26
+code? This is especially inefficient because the  codes can have different lengths. Depending on how  
+7:32
+deep the tree goes. Something didn’t add up. So I kept researching more.  
+7:36
+Maybe also asked ChatGPT. And eventually I stumbled over  
+7:40
+this stackoverflow article. This one cleared up  one confusion about the efficiency of the table.  
+7:46
+Let’s say we have these codes. Basically this  is how the tree would look like. A is straight  
+7:50
+to the left. B is right left. And so forth. If we want to put this into an efficient table,  
+7:55
+we just create a list of 3bit indices. 3 bit  because it’s the longest one. And now when we  
+8:01
+decode data, we always take 3 bits. Literally use  that as a number offset into the table. 010. This  
+8:09
+line. You can see the a is expanded to many rows,  because we know only 1 bit is required for the a.  
+8:16
+The 0. So we essentially ignore all the other  ones. Meaning we can slide it over by one bit,  
+8:21
+to the next 3 and we get 101. That's a  binary 5, so we can go straight to that  
+8:27
+table offset and it’s a b. Consuming two bits. And when I read that, I started to feel like I  
+8:33
+understand why this table could overflow. The  length of this table depends on the bits of  
+8:39
+the longest code. And so “a” in this table was not  just one entry, it got expanded to all 3 bit codes  
+8:46
+starting with 0. So if we could provide input  that leads to a huffman table with very long bits,  
+8:53
+the table could explode in size. That sounded  logically, and it’s kinda the idea of this  
+8:59
+vulnerability, but this cannot be the full story.  It would be easy to craft a tree so that the  
+9:05
+maximum code length gets longer and longer. They  would never be certain about a maximum table size.  
+9:12
+And when reading the vulnerability description,  this simple explanation didn’t explain it. There  
+9:17
+must be more complex logic behind it: “The  purported maximum size for a symbol size of  
+9:21
+40 with a root table of 8-bits and a maximum  code length of 15 is 410”. Or also the comment  
+9:27
+in the source code: “fixed table size values  computed for 8-bit first level lookup” What?  
+9:34
+How does that fit into our table understanding? I had to ask somebody, but eventually, after  
+9:39
+talking to @mistymountancop on twitter, it clicked  for me. I found the missing link. They wrote:  
+9:45
+“Each huffman lookup table can have 2nd level  table to prevent the table from becoming too  
+9:51
+big.”. So this links our understanding of these  tables growing, but also that the developers are  
+9:57
+aware of that, that’s why two layers of tables  are used in practice. they also shared this  
+10:03
+article explaining this more: “The gzip approach  is to introduce a special marker on these "too  
+10:08
+long" entries that tells the inflating code that  the entry is a pointer to another lookup table”. 
+10:13
+So you just split up the tables into two  tables. You prevent the size from exploding,  
+10:16
+and still get the speed of direct table  offsets. And that’s why it’s used in practice  
+10:20
+in various places, including webp huffman tables. And if we now go back to the webp source code,  
+Hardcoded Table Sizes (enough.c)
+10:27
+we can finally understand where the hardcoded  table sizes come from. Apparently it’s the result  
+10:33
+from running thiss tool called “enough.c”: “All  values computed for 8-bit first level lookup”.
+10:38
+Let’s run this tool with the parameters as  mentioned here. So the first table, used for  
+10:44
+example for the color red, will cover 256 symbols.  Those are our 256 different possible color values.  
+10:52
+Then question, how many bits for the root table?,  the first table?, this will be 8 bits. But can the  
+10:57
+second table still explode in size? No, we  only support a max code length of 15. These  
+11:04
+are our parameters and this tool now performs an  exhaustive search, so a bruteforce, to find the  
+11:09
+maximum possible table size when compressing  data. In this case we get the result, 630. 
+11:16
+So we have 630 as the table size for red, blue  and alpha pixel channels. 3 times. And then we  
+11:24
+also have a distance value, but that only has  40 symbols, which results in a size of 410. 
+11:31
+There is one color channel still  missing, the green channel is special,  
+11:35
+because it depends on some color cache size, no  clue what that means, but it’s a bit larger. 256  
+11:41
+symbols for the color + 24 length prefix + color  cache size. And that’ s how we get the 654 here. 
+11:48
+And the others are then respectively for  color_cahce_size 2, 4, 8, 16, and so forth.
+11:53
+Anyway. After seeing that I kinda  understood some core facts about the  
+11:57
+webp implementation of the huffman tables.  This fixed table size is not just the size  
+12:01
+of one huffman code table. It covers 5  different huffman trees: for Red, blue,  
+12:07
+alpha, distance and green plus color_cache. And  each of the five huffman code tables consists  
+12:12
+actually of two different tables - the root table  and the 2nd level table. And they are ALL managed  
+12:18
+and allocated in ONE big memory chunk. Let’s peek into the code. Here we can see  
+Code Walkthrough - BuildHuffmanTable()
+12:24
+that the kTableSize[] array is used based on  the color_cache_bits to determin the maximum  
+12:30
+table size. And then later this one huge table  is allocated. And passed into ReadHuffmanCode. 
+12:37
+Here a comment says that the “code_lengths[]”  array is used to create the huffman tree (or  
+12:41
+the huffman table), so keep that in mind,  that array will become important. But let’s  
+12:46
+first follow the path of the table buffer. This  table is then passed to VP8LBuildHuffmanTable(),  
+12:52
+along the code_lengths buffer, and then it  calls BuildHuffmanTable(). And in here is  
+12:58
+where the heap overflow finally happens.  But how is this table now constructed?
+The code_lengths[] and count[] Arrays
+13:04
+Let’s think about this. The table represents a  huffman tree, right? Each image that we compress  
+13:10
+will have different pixel values, or symbols. So  the huffman tree shape depends on the frequency  
+13:15
+of the symbols in the input. And the tree  shape then determines the huffman code bit  
+13:19
+lengths. And these bit lengths then determine  the table size. If we know there is one symbol  
+13:24
+with bit length 1, one with bit length 2. And two  with bit length 3. We know symbol one requires 4  
+13:31
+entries, symbol two requires 2 entries. And the  other require one. This means the code length  
+13:37
+information is all we need to construct the table!  And maybe you already guessed, this is exactly  
+13:43
+the role of the code_lengths array. This array  simply stores for each symbol the code lengths.
+13:50
+And if we look at where this data is actually  coming from, we see that it basically comes  
+13:54
+straight from the .webp file. here this array is  created, and we can see it’s using VP8LReadBits,  
+14:01
+which is the helper function to read  bits from the file. There is another  
+14:05
+huffman table involved I believe to compress  this array as well, but not that important. 
+14:10
+Let’s see how this array is used to build the  table. There is a first step where we we loop  
+14:15
+over all entries of it, constructing a new  array called count - which has 15 entries,  
+14:21
+that is the max allowed code length. As we know, each entry in the code_lengths  
+14:25
+array is representing a symbol and their huffman  code bit length. So if we for example look at  
+14:30
+the table with 40 symbols, it will be 40 entries  long. So this loop now goes through each symbol  
+14:36
+and looks at the length of the huffman code  for this symbol to increment a counter how  
+14:41
+many symbols we have of a certain length. Let’s  say symbol 1 has length 2, the huffman code has  
+14:48
+two bits, then we now increment the count array at  position 2. Symbol 2 maybe has 5 bit huffman code,  
+14:54
+so we increment the count[5]. You get the point.  The result is a count array with 15 entries,  
+14:59
+so it tells us how many symbols have  a certain bit length. And this count  
+15:05
+array is then used to construct the table. - At  least that’s what I think this algorithm does.  
+15:10
+To be honest I haven’t really tried to  understand this code. But I’m pretty sure.
+Difference Between Compression and Decompression!
+15:14
+And now, Pay attention. Because here  comes the mental AHA! moment for me.
+15:19
+I don’t think it’s obvious at first, but  after spending countless of hours trying  
+15:23
+to understand this, I realized something.  There is a huge difference between creating  
+15:28
+this table or array during compression, and  now creating it again during decompression. 
+15:34
+Hold my mate, let me show you. Let’s imagine an invalid table where 4  
+15:39
+symbols have bit length 1. The tree representation  of that makes no sense. You have one bit 0,  
+15:45
+and 1. You could encode two symbols, but  you cannot do the other two? Obviously  
+15:50
+such a tree does not exist, right?! BUT in  the code_length array, in the .webp file,  
+15:56
+we could encode that. We could say there is a  symbol 1, 2, 5, and 7 and they have bit length 1.  
+16:04
+Which is leading to a nonsensical count[] array.  According to this example, we have 4 symbols with  
+16:10
+length 1. And that can never exist. And yet, we  use this value to construct the tables in memory. 
+16:17
+And now you can get a feeling for the problem.  The precalculated, hardcoded table sizes,  
+16:22
+are based on input to be compressed, in that  case we always generate valid trees and thus  
+16:28
+nice tables. that’s why we can use the tool  enough.c to calculate the maximum table size that  
+16:34
+could ever happen. BUT on the decompression side,  when we try to create our table from this data,  
+16:39
+we can create nonsensical tables. And they might  be larger than expected? Mmhhh… Nice theory. But  
+16:45
+how can we figure out how to  craft the values for such a table?
+16:49
+Well, maybe your next question is. If  these tables are directly constructed  
+16:53
+from the image file. And I’m sure a fuzzer will  throw lots of invalid table information at the  
+16:58
+file. Could we find this vulnerability with  fuzzing? Let’s talk about that next video.
+Outro
+17:04
+If you liked this video, please  checkout hextree.io. This is an  
+17:09
+online training platform developed by  stacksmashing and me, and we are trying  
+17:12
+to create the best video tutorials to  learn hacking. It’s a ton of work and  
+17:17
+we are slow. So we are not fully public just  yet and still working on our catalogue, but  
+17:18
+we are getting there eventually. So I’d  appreciate it if you checkout hextree.io.
+17:23
+And if you would like to support  LiveOverflow videos directly,  
+17:26
+checkout my font at shop.liveoverflow.com.  It’s definitely a shitty present to yourself  
+17:31
+or people you hate! Besides that, maybe  consider becoming a patreon or YouTube  
+17:35
+member. The financial support is very  appreciated. Thanks and see you soon.
+

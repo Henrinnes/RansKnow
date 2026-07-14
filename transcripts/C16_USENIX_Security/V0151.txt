@@ -1,0 +1,988 @@
+0:18
+Good morning everybody. Um yeah, thanks
+0:21
+Andre for the introduction. So I'm SR so
+0:24
+um head of platform and uh that's what I
+0:27
+have to manage with my team. So we run
+0:29
+our infrastructure in AWS and Google
+0:32
+cloud across various regions and um
+0:35
+that's also what keeps me awake all the
+0:37
+time. That's kind of just a brief
+0:39
+overview what our infrastructure looks
+0:41
+like in the application that we need to
+0:43
+run and all the components. So we are an
+0:45
+obsibility platform. So we process open
+0:48
+telemetity logs, metrics, traces, web
+0:50
+events, that kind of stuff. And as you
+0:53
+can see, it's a nice mix of Golang,
+0:56
+Python for AI services, Java for some
+0:58
+business apps, NodeJS in there, and u
+1:02
+some NexJS frameworks, things like that.
+1:04
+So nice mix of applications and it just
+1:06
+keeps growing and growing and as a
+1:10
+startup so we are two and a half years
+1:11
+old now uh speed is really critical to
+1:13
+have a chance to compete with uh the
+1:16
+other other observability vendors out
+1:18
+there. So for us it's really important
+1:20
+that's one of our main f was our main
+1:23
+focus as well last year to release early
+1:25
+and often especially now that we move
+1:26
+more and more customers they have
+1:28
+feature requests they find bugs and we
+1:30
+want to get them polished out and
+1:31
+released as soon as possible. So we all
+1:34
+agreed within engineering that we need
+1:36
+fast deployments, we need reliable
+1:37
+platforms and yeah as an observability
+1:40
+vendor we also need to make sure
+1:42
+especially as an SRE that it's reliable.
+1:44
+You know you probably all know when
+1:46
+running things and deploying things
+1:48
+things can break right you deploy new
+1:50
+code. So our customers depend on the
+1:53
+platform. So it needs to be more
+1:54
+reliable than what our customers run.
+1:57
+And over the years at the various
+1:59
+companies I was before there was always
+2:01
+this gap between what's passing in CI
+2:04
+doesn't always mean that it's also
+2:05
+working in production.
+2:07
+And just a few examples uh as our back
+2:10
+end engineers now they typically have
+2:12
+unit test integration test they use test
+2:14
+containers. It all works nicely on their
+2:16
+notebooks. it works on the CI
+2:18
+environment but somehow in production
+2:20
+things still break then front end
+2:22
+engineers they have their test
+2:24
+frameworks they have their end to- end
+2:25
+tests
+2:27
+um you can run them all in CI but still
+2:29
+things break and as sRes now we have all
+2:32
+our alerts we have synthetic checks we
+2:34
+have all our tests in place but it
+2:37
+doesn't mean that things that worked in
+2:39
+development or that they carry over um
+2:42
+one to one to production so um that's uh
+2:46
+also what we interfacing. So that's just
+2:50
+uh what our CI pipeline looked like uh
+2:53
+last year um while we were still uh uh
+2:57
+how do you call it state with the design
+2:59
+customers. So we were just that's just
+3:02
+the GitHub pipeline, right? So we were
+3:04
+we are open API first. So all the
+3:06
+components they somehow always need to
+3:08
+talk with each other no matter if they
+3:09
+are Golang or our Java apps. So we API
+3:12
+open we have open API spec files where
+3:14
+we generate all the types then we build
+3:17
+and test all the components run all the
+3:19
+tests um we deploy everything using ham
+3:21
+chart so we have tests for that as well
+3:24
+then the containers are built push to
+3:25
+ECR we release the ham charts and then
+3:28
+last step is to always deploy to dev and
+3:31
+we have one monor repo so everything is
+3:33
+in there once you merge your PR to main
+3:36
+it automatically gets pushed to
+3:37
+development that was all fine
+3:41
+and front end engineers on the side. I
+3:43
+learned at some point they also had like
+3:45
+this uh playright end to end uh yeah
+3:49
+pipeline that was mostly red but it
+3:52
+existed. So uh just keep that in mind.
+3:56
+and then production deploying to
+3:58
+production. um as an S sur I love
+4:00
+automating things and since I don't know
+4:02
+Jenkins 20056
+4:04
+that was my go-to CI tool back then uh
+4:07
+now I switch more to GitHub actions for
+4:10
+convenience I was always automating
+4:12
+things right so production deployment we
+4:14
+had four reg three regions and versail
+4:16
+back then last year it was just a press
+4:18
+of a single button everything was
+4:20
+automated that was working nicely but
+4:23
+there was this release document that uh
+4:26
+people were supposed to go True.
+4:28
+Everybody could press that button, but
+4:30
+they had to they were supposed to check
+4:32
+that things were fine in development,
+4:34
+right? So check logs, traces, click
+4:37
+through the product, make sure that
+4:39
+nothing was broken. And the more and
+4:42
+more we developed new features, that
+4:44
+list got kept getting longer and longer.
+4:46
+And at some point we ended like it was
+4:48
+in September last year, we had like only
+4:50
+one or two deployments a week because
+4:52
+nobody wanted to press that button. and
+4:55
+uh it was kind of getting annoying. Um
+4:59
+so we had to change something and last
+5:02
+year at a different conference I heard a
+5:05
+talk
+5:06
+uh from a German government uh agency
+5:10
+hard um and they they had a very similar
+5:13
+setup. Uh I can sh after the talk I can
+5:16
+share you theirs is open source. um that
+5:19
+the same technology little bit smaller
+5:22
+product but the ideas carried over quite
+5:24
+nicely and I will show you what we did.
+5:27
+So the first step stays still the same
+5:29
+right now we have just the 24 components
+5:31
+so doubled since yeah a couple months
+5:34
+before all the initial steps are the
+5:37
+same um we also pushing now to Google
+5:40
+registry the container images that step
+5:43
+completely stayed the same but the
+5:46
+pipeline got longer you see that on top
+5:48
+so the first thing we did um so we
+5:49
+introduced these quality gates and that
+5:52
+means yeah there's one two three six
+5:55
+steps and if any of these steps fail the
+5:58
+production deployment is automatically
+5:59
+stopped. So what that means is the
+6:02
+moment you merge a PR to main it gets
+6:05
+automatically now built and also
+6:08
+deployed all the way through to
+6:09
+production if everything is green in
+6:11
+this pipeline.
+6:13
+And the first step uh so I mentioned we
+6:15
+use HAM to build to deploy everything
+6:18
+and we use Argo CD. So the first thing
+6:21
+we do is we have this little GitHub wait
+6:23
+timer. It's a feature in GitHub where
+6:26
+you can say wait for 15 minutes or 20
+6:28
+minutes before you trigger the next
+6:30
+step. And the first step is we have
+6:33
+three different Kubernetes clusters in
+6:35
+development. One in GCP and the other
+6:37
+two are in AWS. Make sure that this
+6:40
+version this tag that all components 25
+6:43
+30 components have are deployed with
+6:45
+this tag and up and running. So that's
+6:48
+the first check. So we know that the
+6:50
+code has been running has been deployed.
+6:51
+If you know AOCD, it takes a while for
+6:54
+it to pick up new configs like a minute
+6:56
+until the reconcile loop and the sync
+6:58
+completed. So this just makes sure the
+7:00
+code is running and has been running for
+7:02
+also a few minutes. So caches are
+7:04
+filling up and things like that. So
+7:07
+first step quite simple. The second step
+7:11
+um we use checkly
+7:13
+um as a I mean we use -0 to monitor
+7:15
+ourselves but it also makes sense to
+7:18
+check certain things from the outside um
+7:21
+because if your own alerting is broken
+7:22
+in development because somebody broke
+7:24
+something uh you will not find alerts
+7:27
+later on right so we use checkby for
+7:29
+that uh for the basic functionality we
+7:32
+have playright tests that go through the
+7:34
+main navigation items make sure that
+7:36
+they all work and we use heartbeats for
+7:38
+certain things that we expect to happen
+7:40
+in um a certain interval sync of certain
+7:44
+um billing data or some some other
+7:47
+things.
+7:50
+And the next step is actually the one
+7:51
+that uh has the most value for me uh and
+7:54
+for us. So this step is um pretty much
+7:58
+using our own monitoring and um our own
+8:01
+alerting to verify that nothing is
+8:03
+broken in development. So what that
+8:05
+means is all our alerts so we use
+8:08
+Prometheus alerts. Um all our alerts
+8:11
+that's roughly 150 I checked this
+8:13
+morning are always identical between
+8:16
+deaf and broadness. So as an SAT
+8:19
+platform team, we have a list of alerts
+8:21
+for all components, data stores, the
+8:23
+infrastructure, Kubernetes, um, whatever
+8:26
+we use and we sync them via
+8:28
+infrastructures code across production
+8:31
+and development across all environments.
+8:33
+So they're always identical and we make
+8:36
+sure that none of the alerts are
+8:37
+failing. So we and since we are using
+8:41
+open telemetry that means we can alert
+8:43
+on logs traces metrics web spans um
+8:47
+synthetic checks if any of these things
+8:50
+are failing um this would stop here and
+8:54
+since we have now been we deployed all
+8:56
+the latest code we've waited 50 minutes
+8:59
+all the components are running and if
+9:00
+they are crashing then all then the
+9:02
+alerts would have triggered by then and
+9:05
+uh all our alerts they have labels for
+9:08
+priority. So P1 2 3 4 and if P1 or P2
+9:13
+alerts these are ones are critical if
+9:15
+any of those are failing then it stops
+9:18
+here.
+9:20
+So and that also the nice thing here is
+9:22
+now when somebody develops a new
+9:24
+component new features and something is
+9:27
+crashing we update the alerts or we new
+9:31
+new component is added they also need to
+9:33
+add new alerts and we can test these
+9:35
+alerts in development then as well and
+9:37
+they automatically you know get carried
+9:39
+over to production. So we also the
+9:41
+quality of our alerts improved quite a
+9:43
+bit um using this approach as well.
+9:47
+Um the next thing that I really like um
+9:50
+so for open telemetry and the semantic
+9:52
+conventions there's now a CI/CD uh
+9:55
+section as well. It's still yeah I think
+9:58
+on stages development but it's
+10:01
+a lot of this keys and um are already
+10:04
+defined what they should look like. So
+10:07
+there's this GitHub action for example
+10:08
+that we use and what it does it exports
+10:11
+all the the uh GitHub action workflow
+10:14
+steps as traces. Yeah. So in our case,
+10:18
+we send them to two different
+10:19
+environments. Defon production. That's
+10:22
+how we do cross monitoring for some
+10:24
+things. So I have all the information
+10:27
+about the whole pipeline, all steps as a
+10:29
+trace. And that's what it looks like. So
+10:32
+you have each step, each build, this
+10:35
+whole pipeline is the root is the CI/CD
+10:38
+workflow name. And then every single
+10:41
+step now if you have a matrix build then
+10:43
+you will have a lot of steps is a span
+10:47
+and then you can see the duration of
+10:48
+each span you can see the error codes if
+10:50
+it's failing and a lot of the details
+10:53
+and that's also what we alert on. So
+10:55
+since we can do simple Prometheus alerts
+10:58
+based on traces, if any of these steps
+11:01
+fail, it triggers an alert. And then
+11:04
+there's a nice little side uh
+11:06
+improvement.
+11:08
+That's also what we use to to optimize
+11:11
+the the overall time of our builds and
+11:14
+deployments because as you can see here,
+11:16
+it's very easy to spot the steps that
+11:18
+take the longest and then you can check
+11:21
+if the check out action actually needs
+11:23
+to check out the whole repository or if
+11:25
+it just needs to get the latest tags,
+11:27
+for example, latest commits. So that's
+11:30
+actually quite useful. And there's
+11:32
+various GitHub actions out there. This
+11:34
+here on the top right, that's just the
+11:36
+one that we use. And we also updated a
+11:39
+bit um to comply with the semantic
+11:42
+conventions and um but there's others as
+11:45
+well that you can use.
+11:48
+Um the last quality gate and the one
+11:50
+that's the most fun is uh or end to- end
+11:52
+tests. So what we do here is the first
+11:55
+step generates open telemetry data
+11:58
+always the same data set so we know what
+12:01
+data to expect um later on when we run
+12:04
+the tests in uh through um playright
+12:09
+and yeah as you can see in the second
+12:11
+step we run against chromium firefox and
+12:14
+webkit test all the product features
+12:16
+this middle step everything is paralyzed
+12:18
+in there and then unfortunately we had
+12:21
+to for testing third party integrations,
+12:24
+we had to pull it out into a serial uh
+12:27
+separate step because of API rate
+12:29
+limits. So if you want to if you run
+12:32
+matrix builds or want to paralyze things
+12:34
+to improve the build times, it's nice,
+12:37
+but if uh rate limits uh keep you from
+12:41
+running things in parallel, then yeah,
+12:43
+that's kind of what you need to do or
+12:44
+what we had to do.
+12:47
+Yeah. And then the last bit is simply
+12:49
+just deploying everything to production.
+12:51
+So we do it stage. We deploy to the
+12:55
+smallest region first. Um and then we
+12:58
+rate between each one also verify then
+13:01
+the alerts in production if if any of
+13:03
+them start failing and we do a rolling
+13:06
+update automatically.
+13:08
+And then the last step is deploying the
+13:10
+front end. And the very last step is
+13:12
+just sending a nice message to Slack so
+13:14
+everybody knows the new version that
+13:16
+gets deployed.
+13:19
+Um since there are a lot of talks about
+13:21
+AI here, uh I also want to share quickly
+13:24
+how we deploy our AI services and how we
+13:26
+manage them because they are not in the
+13:28
+monor repo. Um and the main reason for
+13:32
+that is um the workflow is a bit
+13:34
+different there. There's the part where
+13:35
+you develop code but there's also a lot
+13:38
+of time spent on the experiments on the
+13:40
+testing on um yeah comparing the test
+13:44
+results and what we use there is so all
+13:47
+AI services on a separate GitHub GitHub
+13:50
+repo but flow is kind of the same we use
+13:53
+ML flow for managing all the uh the
+13:56
+whole machine learning life cycle so you
+13:58
+can think of it as a version control for
+14:00
+all the models and um so it logs all the
+14:04
+training runs, the hyperparameters, the
+14:07
+metrics, code versus artifacts. So the
+14:09
+things that we configure from the
+14:10
+outside to tune the models um and then
+14:14
+this now is an example for our AI lock
+14:16
+paser. So
+14:19
+um you can see in the screenshot you can
+14:22
+see how we compare three different runs
+14:24
+where different parameters and settings
+14:25
+were used or hyperparameters and then
+14:28
+there's three attributes or yeah KPIs I
+14:32
+don't know what you want to call it that
+14:34
+are most interesting for us. So high
+14:36
+specificity. So if it generates false
+14:38
+positives when enriching the data. Um
+14:41
+the accuracy. So if the result is
+14:43
+actually correct and the sensitivity
+14:45
+now. So if it catches um if it catches
+14:48
+all the logs um that have for example a
+14:52
+severity in them hardcoded somewhere and
+14:55
+extracts that correctly into open
+14:56
+telemetry semantic convention
+14:58
+attributes.
+15:01
+Yeah. So pipeline on top is similar. In
+15:04
+this case, it's a Python app,
+15:05
+unfortunately.
+15:07
+Um, it's just what you have to deal with
+15:10
+when you
+15:12
+use AI build a I think nowadays. Um,
+15:15
+yeah, we automatically deploy the latest
+15:17
+code and the model which is included um
+15:20
+or the model configuration to
+15:23
+development. Um, we also have quality
+15:25
+gate checks to verify that the code is
+15:27
+up and running, components up and
+15:29
+running, that nothing is crashing. And
+15:31
+then at this last last step, we then
+15:36
+have specific alerts for each AI service
+15:39
+or a yeah AI component that are running
+15:41
+and for the log pasa. The most critical
+15:44
+one is the patch coverage. So if it sees
+15:47
+logs that it is able to patch them and
+15:50
+um extract attributes, severity, time
+15:53
+stamp, messages, attributes and so on.
+15:55
+And uh our alerts currently unconfigured
+15:57
+to trigger. Yeah, the alert goes into
+16:01
+degraded with nine if it's less than 90%
+16:03
+and to critical if it's less than 85%.
+16:07
+So, and that's just PromQL there. It's
+16:09
+just a regular alert. And we have a few
+16:11
+of those for each service. And if that's
+16:13
+fine, then we deploy the new the new
+16:16
+code with a new models or new updated
+16:20
+model artifacts to production also um to
+16:24
+the different environments.
+16:28
+Um, yeah, lessons learned. Uh, so for
+16:31
+us, these production deployments, they
+16:33
+weren't as scary anymore. I mean, for
+16:35
+me, they weren't, but
+16:37
+like for the developers, they weren't
+16:39
+supposed to be scary anymore, so they
+16:40
+can now focus on building stuff. Um, we
+16:44
+used all the things we already had and
+16:47
+then also updated them to improve or to
+16:50
+make these deployment decisions now or
+16:52
+to stop deployments to production. And
+16:55
+our end to end tests are actually used
+16:57
+now in much more stable. So I'm not sure
+17:00
+if how many of you have to deal with
+17:03
+playright browser tests. They are a pain
+17:06
+and uh for various reasons and um now
+17:10
+actually once they fail people need to
+17:13
+fix them otherwise their features will
+17:15
+not go to production or their bug fixes
+17:17
+will not go to production. So the intern
+17:19
+test will not pile up more and more
+17:22
+errors inside but they will actually get
+17:23
+fixed quicker. And to do that we also
+17:26
+send a nice message now to the
+17:27
+engineering channel when they fail now
+17:29
+we say which browser failed and uh yeah
+17:33
+so they get pinged automatically.
+17:35
+Um all the platform and s tests that we
+17:40
+created that we were mostly running in
+17:41
+production only they are now also
+17:43
+completely run in development since the
+17:45
+environments are identical and
+17:46
+consistent. the quality of these tests
+17:49
+also became much better and we could
+17:52
+throw out things that weren't needed and
+17:55
+um so that was also good and right now
+17:58
+we do about five to 10 productions per
+18:01
+day um that also includes just small bug
+18:03
+fixes right but it just happens in the
+18:05
+background and nobody has to do anything
+18:08
+um the staged rollouts across
+18:11
+environments I think they just make
+18:13
+sense right you don't want to break
+18:14
+everything at once and Um yeah one also
+18:18
+small thing we did on the or step we did
+18:20
+on the side we migrated all our GitHub
+18:22
+runners to not sure if anyone of you
+18:25
+have have heard about that if you use
+18:27
+GitHub actions um you can just configure
+18:31
+as a runner they have the price they
+18:34
+don't charge you uh they don't charge
+18:37
+you um uh they don't run round up to the
+18:40
+next minute they only charge you by the
+18:42
+actual time that it run took so when you
+18:45
+do a lot of matrix builds in parallel
+18:46
+and they just run 5 seconds. GitHub
+18:49
+charges you full minute each time. Uh
+18:51
+depo doesn't so cost went down also
+18:54
+quite a bit. Yeah. This was from
+18:56
+yesterday morning. You just want to read
+18:59
+it. So that's an engineer asking quality
+19:02
+gate is failing. Uh is anybody taking
+19:04
+care of it? Yeah. Because he wants to
+19:07
+get his check rule sharing feature out.
+19:09
+Yeah. And then Yeah. Now Yoshi just
+19:12
+answer be the change you want to see in
+19:14
+the world. and he fixed it himself,
+19:16
+right? And the green check mark always
+19:19
+means it's done. And um and that's
+19:22
+actually that is perfect example what we
+19:25
+wanted to achieve. And um yeah, I have
+19:29
+40 seconds.
+19:32
+And here's an example why end to end
+19:34
+tests are so much fun. If you've ever
+19:36
+run them, you know, Chrome, Firefox, and
+19:38
+WebKit, sometimes they just troll you,
+19:41
+right? So Chrome and Firefox, they have
+19:43
+the most stable a the best APIs out of
+19:45
+the three. But WebKit was actually the
+19:48
+one that was not failing. That's like
+19:50
+the first time. That was last week.
+19:53
+Typically always WebKit fails for a
+19:55
+million reasons. So we we always have a
+19:58
+bunch of retries configured. Um for
+20:01
+WebKit, we have very generous timeouts.
+20:04
+um screen also taking screenshots is 60
+20:06
+seconds and we have a fixed viewport
+20:09
+across the browsers just for consistency
+20:12
+because otherwise they just break way
+20:14
+too often.
+20:16
+Okay, two more seconds. Um
+20:20
+that's uh my talk. Uh
+20:24
+yeah, key recommendations. I think I
+20:26
+mentioned them already. Um yeah, if you
+20:28
+have any questions and if you want to
+20:30
+talk about this a bit um come down. One
+20:33
+major thing we are working on now is
+20:35
+instead of deploying updating everything
+20:37
+because the platform has just grown is
+20:39
+looking into things like annex or turbo
+20:42
+repo. If anyone has experience here
+20:45
+please come to our booth and would be
+20:47
+nice to have a chat to share some
+20:49
+experiences. So we can only deploy and
+20:52
+update things per pipeline. Right. Um
+20:54
+that's the next improvement we're
+20:56
+working on. Okay. Thanks a lot. Okay.

@@ -1,0 +1,586 @@
+0:00
+permissions, active directory permissions, improper group nesting, over permission accounts, service
+0:05
+account access, kerros delegation, password vaults, and the backup process, how uh domain controllers are backed up.
+0:13
+And updating this for 2025, I noted that yes, it's pretty much the same things
+0:19
+that are that are common issues that we see uh on in our assessments as we do those with with customers across
+0:25
+industry vectors. And in 2019, I also talked about the state of security and I identified a
+0:31
+number of issues uh that were common and and concerning that we had identified it
+0:37
+across different issues. Um and in 2024 I updated this list. Really this is the
+0:43
+same for 2025 as well and we started seeing this going into 2026. So local
+0:49
+administrator passwords not managed on workstations or servers weak domain password policy uh service counts in
+0:56
+domain admins accounts with delegated rights to AD kerros delegation cross forest administration that's when you
+1:03
+have accounts from one forest and another forest uh modify rights to GPOS at the domain or DC level domain
+1:10
+permission delegation issues uh admin holder permission delegation issues and
+1:15
+admins using regular workstations for AD administration ation and finally DCS with minimal event auditing. So this is
+1:23
+basically the overview of what I'm going to be talking about uh because these are the most common issues that we see uh in
+1:28
+active directory today. So when we focus on active directory admins, we're looking at issues with uh old passwords,
+1:36
+Kerver Kerro service principle names, which basically means that those admin accounts, those user accounts or those
+1:42
+accounts associated with people have a Kerros service principle name, which means that they are uh used for Kerros
+1:48
+authentication, which is only used and should only be used for service accounts. So we see that there's service
+1:54
+accounts that are highly privileged and then of of course the account usage where these accounts are used and how they're used. One of the biggest issues
+2:01
+that we see with account usage is operating uh active directory admin
+2:06
+tasks from a standard user workstation. So the same workstation where you browse the web uh you do office tasks such as
+2:14
+using Microsoft Word, Excel, Outlook etc.
+2:19
+And when we talk about ED admins with old passwords, we're talking about potentially very old passwords. Uh and
+2:25
+the problem is that the older passwords are often very poor and easier to guess. I know passwords that I did probably
+2:31
+about 10 years ago uh were pretty horrible. Um 5 years ago probably a little bit better and today probably
+2:37
+much better. Uh and there are password attacks that are being used against uh
+2:42
+organizations on a regular basis. uh and attackers can leverage password attack techniques like password spraying and
+2:48
+kerberosting in order to compromise accounts. Uh the most popular method of attacking
+2:55
+AD passwords is called password spraying. Password spraying works by running through a list of potential
+3:00
+passwords and one by one attempting to authenticate as each user starting with the first password on this list. If it's
+3:08
+successful, the attacker notes this and continues. The attacker pauses after completing password spraying of each
+3:13
+password for all users before attempting the next one. This mitigates the password lockout policy since the
+3:18
+attacker can limit the number of bad password attempts over time.
+3:24
+Another popular method for attackers to gain knowledge of an account password is called kerarost or kerosting. An
+3:30
+attacker can easily identify service counts in an environment uh in active directory through a technique I call
+3:37
+spin scanning which finds all service counts in the environment with associated kerros service principle
+3:42
+names or spins. The service accounts with spins are configured for kerros
+3:48
+authentication and the spin includes information about the server hosting the service with which the service count is
+3:54
+associated. In normal Kerros authentication, the user gets a Kerros ticket called a TGT, which is their
+4:00
+proof of identity in active directory and is used to request a Kerros TGS
+4:05
+service ticket for a specific service on a server. The domain controller checks AD for that spin and identifies the
+4:13
+associated service count that has that spin configured on it. The DC then leverages the password hash for the
+4:19
+service account to encrypt the user service ticket which the user will provide to the service in order to
+4:24
+authenticate to it. And this process happens anywhere from a few to a dozen or more times per user on an average
+4:30
+day. As you can see in the graphic um that communication is only between the
+4:36
+user workstation and the domain controller. there is no communication on the network with the with the targeted
+4:41
+application server and the action slide. So what do you
+4:47
+need to do in order to protect against this? So for limiting password attack capability, it breaks down the
+4:52
+mitigation uh for each attack I've described. For password spraying, one of the best mitigations is to increase the
+4:58
+password length to 12 to 15 characters. Anything less than this is too easy for attackers. What we've seen in
+5:04
+assessments is very often the uh password required minimum length is
+5:09
+seven characters which is actually the default for active directory. Sometimes it's even eight characters.
+5:15
+But combining this approach with a password filter like Azure ID or enter password protection restricts users from
+5:22
+setting known bad passwords. If increasing the password length is not something that be done soon, uh you can
+5:28
+implement fine grain password policies for admin and service accounts to improve protection for them because they
+5:33
+are going to be the most targeted. For mitigating keraros, the best method is to ensure service count passwords are 25
+5:40
+characters or more. Even better, uh, shift service counts to GMSAs or group
+5:45
+managed service counts where possible since AD manages and automatically rotates the GMSA passwords every 30 days
+5:53
+by default. And uh we posted an article on how to detect curb roasting uh which
+5:58
+is linked to the bottom of the slide. Uh the slides will be available afterwards uh after this uh presentation.
+6:07
+So the default domain administrator account uh is the backup account. It should only be used as an emergency
+6:13
+admin or break glass account when the other ADIA admin accounts are in inaccessible. Uh it should not be logged
+6:20
+on to otherwise. So there should be loud alerting for when uh lo on does occur.
+6:26
+This account should never have a spin since that means it's being used as a service account for a service on a
+6:31
+server on the network. If there is a spin on this account, an attacker could compromise that server to compromise AD.
+6:37
+Or they could ceraros the domain administrator account and get that password to compromise AD. If this
+6:43
+account is disabled, that's great, but are you monitoring for it being reenabled? So, this is one of those
+6:50
+special accounts that needs special controls and special monitoring of of it.
+6:56
+So the PowerShell command at the top of the slide should provide you with a good list of uh who the 80 admins are in your
+7:03
+environment. Uh or you can use the link at the bottom of the slide. I also have
+7:08
+uh some links uh with active directory security tips later on uh at the end of the slide deck.
+7:14
+Well, AD admins matter because these accounts have full AD rights and require careful protection. Uh the definition of
+7:21
+an AD admin is a member of the administrators group, domain admins or enterprise admins. Uh those are the the
+7:28
+core groups to look at. Uh and the most important checks are shown here. Make
+7:34
+sure that these passwords change regularly. Uh disable any inactive accounts. Remove disabled accounts after
+7:40
+they've been inactive for a while. Uh no spins on accounts associated with people. Members of protected users
+7:46
+group. It they should be members of that group. uh there should be no computer accounts that are privileged at this level and really you need to scrutinize
+7:53
+service accounts. What do they do? What do they where do they run? Uh what do they authenticate to and what rights are
+8:00
+actually required for them. So improving ADA admin account security
+8:06
+boils down to a number of things. Limiting the accounts and privilege AD admin groups. Ensuring AD admin accounts
+8:11
+have passwords change annually. You'll hear me say that a lot that they need to change on a regular basis. uh assume
+8:18
+that no passwords need to be in AD admin groups. If you start with the approach of why does this need to be an AD admin
+8:24
+or in this domain admins group, what are the requirements of this uh service count? Then you can actually start
+8:31
+pulling back and removing service accounts from having highly privileged rights.
+8:36
+Uh and you want to make sure that the sensitive bit is set and that they're member of the protected users group.
+8:41
+This helps protect against uh delegation style attacks. Uh we want to make sure that there's no AD admin accounts
+8:48
+associated with people that have spins. Like I said, uh disabled accounts are no longer in use. You can think of this as
+8:54
+your action for improving admin account security. Uh the action slide that you want to take f take focus of and look
+9:02
+at. So reducing service count rights, we want to make sure that we understand
+9:07
+what rights are required. Delegate only those rights. Um remove from the AD admin groups when possible. um and
+9:14
+ultimately leverage group managed service accounts because these are the ones that have the ability uh that those
+9:20
+accounts can have their account password automatically managed by active directory. Uh we want to limit the
+9:25
+service account access and location. Uh so we want to also make sure that they can't log into the console uh like a
+9:32
+regular user account or admin account can. So Kerros delegation solves an issue
+9:39
+known as the double hop issue. The double hop issue occurs when you have a user connecting to a web server which
+9:45
+then connects to a back-end database server. The web server updates records on the backend database on behalf of the
+9:51
+user. The problem is that the Kerros tgs service ticket the user provides to the
+9:56
+web server is only good for the web server and authentication to it. The web server can't then authenticate to the
+10:03
+database server as the user to make the updates as the user. So all those
+10:08
+database updates are performed under the context of the web server in its service account. So enter delegation. Kerros
+10:15
+delegation enables the web server to impersonate the user to the database server in order to perform the updates
+10:20
+the user requested. So as you can see in this graphic, the user authenticates from the workstation to the web server.
+10:27
+If that web server can get a delegation ticket for that user, then it can go ahead and provide that delegation ticket
+10:33
+to the database server and perform those updates as the user. And that way the database server knows that uh the user
+10:39
+has has done those updates. Uh this is a common situation with SharePoint um and anything else where there's a front-end
+10:45
+web server and a backend database server. Put simply, Kerros delegation is
+10:52
+impersonation. Starting with the release of Active Directory in the year 2000, the only Kerros delegation option was
+10:57
+unconstrained delegation. Uh which is likely why there are so many systems configured with this today. uh well that
+11:04
+and the fact that configuring it as easily as click click done. Unconstrained delegation enables
+11:09
+delegation of an account to any Kerros service in AD. This means that when an a user authenticates to a system with
+11:15
+unconstrained delegation, the system can impersonate that user to any other Kerro service on the network. If the user
+11:22
+account that authenticates to the system service was a member of domain admins, then the system can impersonate the
+11:28
+account with domain admin rights to the domain controller. Another issue involves a vulnerability uh scanning
+11:35
+account in in domain admins. Uh and this occurs when the vulnerability scanning
+11:41
+system scans a computer with unconstrained delegation uh because it has to authenticate to it first. If this
+11:47
+authentication is kerarose, then the system can impersonate that vulnerability scanning account.
+11:53
+And if an attacker compromises systems with unconstrained delegation, it's often just a matter of time before a
+11:58
+highly privileged account authenticates to it. Or that the attacker could influence a highly privileged account to
+12:04
+authenticate to any Kerros service on the system like a fileshare.
+12:10
+Constrained delegation limits the impersonation capability to only specific services on specific servers,
+12:16
+or at least that's how it's supposed to work. In practice, constrained delegation only really limits delegation
+12:21
+to specific servers. and the services they host. This is better than unconstrained since the system with this
+12:27
+uh type of delegation can't get a delegation ticket that works just any server in AD like unconstrained
+12:33
+delegation. The user has to authenticate to the system first and then the system requests a delegation ticket to the
+12:40
+service and server which the domain controller compares to the delegation list for that system and if it matches
+12:46
+provides a delegation ticket. Then we have constrain delegation with protocol transition. This is what I call
+12:52
+Keraros magic. The user doesn't have to authenticate first to the system since this type of delegation is meant to
+12:58
+support authentication that doesn't easily translate to AD authentication protocols like client certificates. The
+13:06
+system configured this way is just uh requesting delegation tickets for the delegated services on servers and we'll
+13:13
+receive them from a DC. So basically constrained uh with protocol hand transition basically means that that web
+13:19
+server can just say hey domain controller this user authenticated to me I need a delegation ticket uh so there's
+13:25
+no proof that actually happens and the last mention here is resource-based constraint delegation
+13:32
+which changes the delegation path where instead of the delegation is configured on the web server from the previous
+13:38
+slide it would be configured on the database server. This type of delegation was meant to provide the resource more
+13:43
+control over delegation to it. So I have an action slide here uh which
+13:49
+covers uh keros delegation and protection of it. It starts with protecting the 80 admin accounts from
+13:55
+delegation attacks with the sensitive flag. Identify what systems are configured with delegation and if they
+14:00
+don't have keraros spins, you can remove that delegation since they aren't talking kerros anymore. Uh then the best
+14:06
+mitigation methods include getting all 80 admin accounts in the protected users group and converting unconstrained
+14:12
+delegation to constrained.
+14:20
+So we see a lot of issues with custom permissions in active directory when we're doing assessments.
+14:25
+These custom permissions can be set at the domain at the U level on group policy objects on sensitive objects um
+14:33
+site like domain controllers. Uh so we go through and look at these very carefully
+14:39
+and here's a lab example of what this looks like. Uh we have an identity
+14:45
+reference which is domain computers. uh full control is what uh the active
+14:50
+directory rights are configured and then we have user all which is all the user objects which means that compromise of a
+14:57
+domain computer any computer would result in compromise of users in that environment.
+15:03
+We also have a configuration here where server admins, this is fairly common, server admins get delegated uh rights
+15:10
+and full control on computer objects in the domain instead of the OU which uh they should be configured on. Uh in the
+15:17
+example which I mentioned where all the domain computers have full control on the users. This was a big mistake. It
+15:23
+should never be configured that way. um with the server admins. This is something that often gets configured on
+15:29
+purpose because the server admins often need to manage server computer objects.
+15:34
+So the problem here is it's delegated at the domain route and not delegated at
+15:39
+the U level. So moving on to group policy. Uh group
+15:44
+policy has a number of permissions. These are typically full control or modify. Modify is typically edit
+15:50
+settings is what that uh is is configured as. Uh then we have user rights assignments which are the users
+15:57
+user rights that it can be configured uh to delegate out uh control of objects uh
+16:03
+through group policy. And then there's also concerning configurations within group policy.
+16:09
+So in this example we have a uh group policy called server baseline policy.
+16:15
+It's linked to the domain controllers OU but it's also linked to the servers OU.
+16:20
+And so the problem here is we have a server admin, Nick Fury, which has the ability to edit settings, delete, and
+16:27
+modify security. So basically full control. Uh Nick is a member of the
+16:32
+server admins group. So he typically manages the servers, but he's not a domain admin. He's not an enterprise
+16:38
+admin. He's not a domain administrator. So he should not have these rights on a
+16:43
+on a group policy that's linked to the domain controllers OU. Uh a better way to do this is to copy that group policy
+16:51
+and make a custom one just for domain controllers and ensure that only domain admins have rights on that uh group
+16:58
+policy. The other configuration that could be done here is a delegation at the domain
+17:03
+route. At this example, we have na.trd.com trd.com and delegation on
+17:09
+that uh uh configuration on one of the group policies that's linked to the uh
+17:15
+root of the domain like computer policy that might be something that's managed by the server admins or it might be
+17:21
+something that's managed by workstation admins. The problem with that is since that group policy is linked to the
+17:26
+domain route, um those admins that are delegated access to that group policy have the ability to install or run code
+17:34
+on uh all the computers in the in the environment. They can also change the uh the security settings. They can add
+17:41
+local administrators to that uh to those computers that that policy applies to. And in this case, it'd be all of them in
+17:48
+the domain including domain controllers. So domain controller security is very
+17:53
+important. Uh we see often issues with principool or service running. Uh all
+17:59
+sorts of installed applications and agents. Event auditing not configured fully. Old versions of VMware tools. Uh
+18:06
+still running a Windows server 2012 or older on the DCs. Uh user rights assignments applied to DCS via group
+18:12
+policy and insecure remote access tools. When it comes to print spool or service,
+18:19
+uh there's no reason to have the principle or service on running on domain controllers anymore. Uh it's too
+18:24
+much of a vulnerability. Uh printer bug spool sample is a no fix vulnerability in the principle or notification um that
+18:31
+can coers authentication that can be captured or relayed. Uh there's attack surface still left over for print
+18:37
+nightmare. Security researchers are still actively looking into principle or service um because of legacy issues and
+18:44
+other things. So really the principal or service should be disabled on all DCs and any servers that don't actually use
+18:50
+it or or have are operating as a print server.
+18:55
+So here are the most important DC auditing settings. I'm not going to cover all of these. Um pretty much all
+19:01
+of these are configured to log success and failure. And I'm not going to spend too much time on the slide except to point out audit kerarose service ticket
+19:09
+operations. uh success. This is how you can detect ker roasting um which is the
+19:14
+event ID 4769 and then audit uh special loon on the
+19:19
+right side. Uh this is interesting because with audit special loon uh typically if you want to monitor uh loon
+19:27
+events you would go ahead and audit loon success and failure and uh that would
+19:34
+result in uh getting logs for everyone who logs on. Well, maybe you're in an environment where you just can't do
+19:40
+that. Um, what you can do is audit special loon by creating a group, adding
+19:46
+accounts into that group, and having that group configured for audit special loon, and then you're going to get a
+19:53
+certain a specific event ID 4964 whenever someone uh in that group
+19:59
+actually logs on to the environment, which can be very useful for monitoring admins or even for insider threat
+20:05
+scenarios. And so I mentioned user rights assignment especially when it comes to domain controller security. Um there's
+20:12
+these user rights assignments which are very important and need to be configured appropriately. Uh add workstations to
+20:19
+domain only 80 admins and specific groups or accounts should have this right. Uh allow log on locally and allow
+20:25
+log on uh log on through terminal services or RDP. Only domain admins or
+20:30
+administrators should have that right. Uh debug programs administrators typically has this. It's really not
+20:36
+required for anything and it can add an extra hop and step for anyone running
+20:41
+mimikats because when they set de debug permissions on mimikats it's not actually going to work even if they're
+20:47
+an admin. Enable computer and user accounts to be trusted for delegation for keraros only
+20:53
+domain admins or administrators should have this right. This enables the ability for anyone delegated this right
+21:00
+to be able to configure delegation. Uh delegation should be something only configured by AD admins. Uh load and
+21:07
+unload device drivers. Uh this right can be used to compromise the DC. So um
+21:13
+don't have this configured but for any uh grouper
+23:15
+2022 or newer uh since 2012 2012 R2 left extended support a couple years ago. Uh
+23:22
+we want to ensure that our DCs are regularly patched. And here are the action items for DC
+23:28
+security. And I'm not going to go through all these u but let's talk about active directory certificate services.
+23:34
+So this is something that attackers are targeting and going after on a regular basis. So we want to make sure that we
+23:39
+cover this um and have some good ideas on how to fix this. So with ADCS there
+23:44
+are common issues in just about every environment uh relating to auditing misconfigured certificate templates. So
+23:51
+this could be subject alternate name without management approver. Uh this could be a subca certificate without a
+23:57
+manager approval. Basically, you can create your own CA that's subordinate to the main one. Over permissive AD object
+24:04
+uh ales uh so authenticated users with generic all would be an example of this vulnerable PI object access control so
+24:11
+the AD permissions themselves or um something set like edit if or edit F uh
+24:17
+attribute subject alt name too which I'm going to cover in just a minute or HTTP ROM enrollment enabled.
+24:25
+So with a Microsoft PKI environment, a ADCS environment when you create the CA,
+24:31
+this is the auditing that's actually configured and this is the auditing that really should be configured. So
+24:37
+everything should be all the auditing options should be turned on and they're not.
+24:42
+When we talk about templates with dangerous configurations, uh what we mean is that a template is a set of
+24:47
+configurations that makes creating and assigning certificates to entities more efficient and consistent. uh an ADCS
+24:54
+template configured uh where a user can set the certificate subject. Uh in that case the user can request a certificate
+25:01
+for the AD user including AD admins. So we perform active directory security
+25:06
+assessments that include review of ADCS environment and during the assessments
+25:11
+that include ADCS we have found this dangerous configuration most of the time
+25:17
+and so edit f attribute subject alt name two. Uh so this is a situation where the
+25:23
+user themselves can actually specify the subject alternate name and can u those
+25:29
+user defined values enable the user to request a CA a CA certificate for anyone
+25:36
+that they want to. So this can be an admin. It could actually be a domain controller.
+25:42
+And Microsoft says don't configure this on an enterprise CA. Don't use this.
+25:49
+So secure your HTTP endpoints. Uh we want to enforce HTTPS and enable extended protection for authentication
+25:56
+EPA. Uh disable NTM NTLM off on IIS on your uh ADCS servers. Disable NT off on
+26:03
+your ADCS servers and remove all ADCS HTTP endpoints.
+26:09
+And so our action slide here uh there's lots of areas and default configs for attackers to take advantage of. Again,
+26:16
+uh when it when we were working at Trrimark, we found uh these critical issues in 99% of environments with ADCS.
+26:23
+Now at trusted sec, we still see those same issues. Uh and we want to perform the following to improve ADCS security.
+26:30
+We want to check these items. One of the best ways to do this is the free PowerShell tool called Locksmith. What
+26:37
+the great the great thing about locksmith compared to a lot of the other tools that are out there that will identify issues with ADCS is that it
+26:44
+will actually identify how to fix that issue um by identifying and showing uh
+26:51
+commands that you can run using util to go ahead and configure this the system the way it should be set. So this
+26:57
+example has identified that auditing is not fully enabled and will pro if you
+27:04
+run this fix it will go ahead and turn on auditing on your CA servers.
+27:09
+And yes, this is a default configuration. I stood up ADCS in my lab and this was the issue that I identified
+27:16
+um with ADCS. Now how can we make sure that we have AD in a pretty good place? Uh I have a
+27:23
+whole bunch of sec 80 security tips that I put together over the past six months plus. Uh they're all linked on this
+27:29
+page. Again, the slides are going to be available after this. Um and you can click on any of them to get information
+27:36
+on how to better secure these areas. And one of the better ways to do this is to
+27:42
+actually run PowerShell that helps you identify uh what the issues are and how they're configured. So uh you can go
+27:49
+ahead and click through this. You could also go to adcurity.org or and go to the tag active directory security tip which
+27:55
+provides the information on all 16 of these. So it wouldn't be a uh stream without
+28:01
+some information about what we do. Uh we do proactive security assessments um in order to help in you identify the
+28:08
+security in your environment and uh level it up. Uh we have proactive security
+28:13
+assessments. Uh the the ADCS or ADSA and the MCSA are very much like what we did
+28:20
+with Trrimark. Now over at trusses sec we've added things like a specific ADCS
+28:25
+uh hardening envir environments uh check we have endpoints and in tune backup
+28:30
+infrastructure Azure infrastructure AWS and other professional services. So to
+28:36
+conclude these are typical security issues in most enterprise AD environments. Identifying the common
+28:42
+security issues and resolving them improves system security and fixing these issues improves your breach
+28:48
+resilience. Um, I recently published an article um about password spraying and
+28:53
+how to detect uh that with a honeypot account. So, uh that's a great thing to check out on the trusted sec blog.
+29:01
+So, now we'll go into the AMA portion of this presentation. So, um Kelsey, if you
+29:06
+can highlight any questions that people have, I would help I would appreciate that. Yeah, absolutely. Yeah, if you have any
+29:13
+questions, feel free to send them in now on Discord or on YouTube. Um, but yeah,
+29:18
+thanks so much Sean for that presentation. Um, and everyone, if you have questions after the fact, uh,
+29:24
+Sean's, uh, on the Discord, you're feel free to send him a message in general or something like that. We have a couple
+29:31
+people typing, so I'll I'll let you do your thing.
+29:37
+Okay, I'm looking to see.
+29:46
+Okay. Um, we don't have any questions yet. So, uh, if you have a question, please feel free to to chime in, um, and
+29:53
+give us a question. Um, SFD asks, "How does ADCS security
+29:59
+uh, buffed up with patches that went live in May 2025 concerning ESC1 and
+30:05
+strong enforcement mode?
+30:18
+Sean, I think you might be muted. All right. Just waiting for some questions here. Oh, sorry. I just read one out. Um, I'll
+30:26
+re I'll read it again for you. Um, Steph asks, "How does ADCS Security um, how
+30:33
+was it buffed up with the patches that went live on May 2025 concerning EC
+30:39
+uh, sorry, ESC 1 and strong enforcement mode?
+31:04
+Okay, we have a question here. How does ADCS security um get m messed up with
+31:10
+the patches that went live in May uh 2025 concerning ES1 and strong enforcement mode? That is a good
+31:16
+question. I don't know that specific uh answer about how those changes were made uh last year. Um, but I'll look that up
+31:23
+and and see if we can provide some of that information.
+31:34
+All right. If anyone else has any questions in chat, feel free to send them in.
+31:54
+All right, I think we're uh all set. Doesn't look like we have any questions on the YouTube either. Um
+32:01
+but thanks everyone for joining today. Um and does uh the next question is and does enabling EDF uh for SCS6
+32:10
+still work on server 2022? Did not get it to work in my lab? Uh no, I'm not sure about the changes that were done
+32:16
+with 2022. um if Microsoft had tightened those up yet.
+32:28
+All right, any other questions or um Thorrent, we'll close this up then.
+32:34
+Yep, Sean, I think there might be something going on with your audio. Um but yeah, thanks everyone for joining
+32:39
+today. Um, and uh, our next chat is at the uh, end
+32:46
+of March, so keep an eye out for that. And uh, yeah, thanks everyone. Feel free
+32:52
+to send any uh, lingering questions in in general if something comes up after the fact. And uh, have a great rest of
+32:58
+your Thursday.

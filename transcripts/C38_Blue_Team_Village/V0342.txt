@@ -1,0 +1,945 @@
+0:02
+hello welcome to blue team village we are so happy to see you tune in i'm excited and pumped to be part of ptv as
+0:09
+this is my first time at btv thanks for all the btb team for making this happen and providing the feedback
+0:15
+of the stock that said welcome to my talk this talk is about hunting adversary
+0:22
+schedule once an adversary gained a foothold they typically would like to keep their
+0:27
+access this is called persistence and those who you speak miter it's called ta003
+0:35
+we will take a look at one such persistence technique or method called scheduled task
+0:42
+schedule task is one of the most observed techniques across three different miter tactics
+0:49
+according to mandy and trent's 2022 report please go check that out it's a pretty interesting report that you can
+0:54
+find we will focus on this talk we will focus mostly on this on threat hunting for
+0:59
+this talk and uh how to perform it as well though scheduled task is one of the 385
+1:06
+sub techniques that mentioned in mitre you can follow the process discussed here for any of them
+1:13
+before we move further a little bit about myself my name is sai malike and i go by cyber
+1:19
+hawk too i'm an avid lover of death that is detection engineering and threat hunting
+1:24
+not the actual one currently i work as a stock late for a company called sisif recently acquired by for scout
+1:30
+apart from work i love to travel especially road trips i volunteered for any security conferences
+1:36
+and non-profit organizations focusing on cyber and its journey so if you have anything
+1:43
+i would love to be part of it last night but not least
+1:48
+i'm a student of everything so uh if you want to teach me something i'm all for it
+1:54
+enough about me let's see what we have on the schedule today
+1:59
+we'll go over what schedule task is and its basics we will see quirks and features of
+2:05
+threat hunting process of data gathering and getting to know it
+2:10
+we'll see detection engineering uh not all portions of it just the basics or how to proceed it with the threat
+2:17
+hunting finally we will recap everything together what we learned together right
+2:22
+perfect a very important note before we dive deep into the weeds is note taking
+2:28
+i know it sounds boring for some but if you are anything like me
+2:34
+i don't remember what i did 15 minutes before uh you know when i'm into a case
+2:39
+or a of any kind of data and sometimes you will have this crazy thoughts and ideas on how to progress on
+2:46
+another investigation when you're doing an investigation for something else if you don't jog it
+2:52
+down you will lose it right finally your notes should be your guide and for others who want to follow
+2:59
+or reproduce your steps so be sure to take notes while we are going at and i'll mention it whenever i whenever
+3:05
+possible good let's get to it scheduled task
+3:11
+this is the definition microsoft gave to schedule task on one of its stocks it's a scheduled task is basically a code
+3:18
+unit that runs logic in a background session at a specific time
+3:23
+basically you know you want to do something in the future or just one time you can use schedule desk do it but it's
+3:29
+more than that schedule tasks help operating system programs to run at a defined time it helps administrators to
+3:36
+take action when a certain event happens it helps update your anti-virus software
+3:42
+at a defined interval you get the idea right we'll go over some of the main
+3:47
+components that make scheduled task aerial tasks uh among them the first one
+3:53
+is triggers so we will see these components of in in
+3:58
+terms of what is necessary for us if you are more interested in it you can go ahead and you know look at microsoft
+4:04
+docs they do a good job in documenting most of their most of their products and services how they do it
+4:10
+so triggers triggers is one of the component of schedule task which starts a schedule
+4:16
+task it answers when a certain indicator or indicators are met
+4:21
+like i want to schedule a task or start a task every day at 9 00 am that's your trigger then
+4:28
+actions this is the main thing that be as a threat hunter or
+4:33
+your detection engineering folks or forensics is interested in because it answers when or sorry it answers what a
+4:41
+task is actually doing for example a program will execute when the about
+4:47
+trigger is met that program is what principles this answers who is allowed
+4:53
+to run the task the other components are settings which answers where the task
+4:59
+should look if there is any error there is a detailed documentation on these component
+5:04
+if you check the microsoft doc and then we will have other two things called
+5:10
+registration in uh registration information and uh data answers how to look for data related to
+5:17
+schedule tasks like there is a help information for schedule task or metadata info you can find all
+5:23
+those things uh in in these two components we will see how they will help us and uh
+5:30
+we will refer back if necessary so why are scheduled tasks important right
+5:37
+after successfully getting their foothold into their desired enterprise
+5:42
+do you think an adversary will uh want to lose their access or afford to lose their access because they accidentally
+5:49
+control seeing their terminal all right they want to keep access as long as possible or they want to keep their
+5:56
+access to figure it out what to do with it or until they achieve their objectives
+6:02
+so and it is also interesting for especially for scheduled tasks because it can be used in different stages of
+6:09
+attacker life cycle like persistence privilege escalation and execution
+6:15
+but in this talk we will only talk about persistence and who can create schedule tasks
+6:20
+administrators or members in the administrators group can create schedule tasks and also administrators can create
+6:27
+uh can give certain permissions for users in order for them to view or perform actions on scheduled tasks
+6:34
+okay that's all good finally we came here uh we come to the topic we came here for
+6:40
+threat hunting but let's see what it is threat hunting is a process of being
+6:47
+proactive to unveil unknown loans and unknown unknowns to better our security posture
+6:55
+the main keywords are process because it is not set and done but rather a
+7:00
+continuous thing it is proactive as we are not working
+7:06
+for something to happen but taking charge before it happens
+7:12
+unknown not knowns and unknown unknowns are a topic on its own but in a nutshell
+7:18
+there are things we don't know and we want to know we are doing all these things to better
+7:24
+our security posture this is a process but what is it what is the process
+7:30
+this is the process we are talking about or we are following in this this is not the only one but this is the one we are
+7:36
+following today first we will create our hypothesis then we will find what data we need and
+7:43
+what artifacts are related to our hypothesis then we need to know what we are working
+7:49
+with exactly familiarizing ourselves with the data from it we will create queries to search
+7:54
+for the data we gathered i'm familiarized with finally interpreting the results and
+8:01
+documenting it all you can follow this process with detection engineering too but we will not go there yet but this is
+8:08
+the process that we can follow but there's a lot to unveil here let's break it down by each component
+8:14
+first thing is hypothesis a possible or one of the definitions i found pretty interesting is this
+8:21
+you can read the hypothesis but the main things are research interest
+8:27
+most important questions and decision because in order to be proactive we need
+8:32
+to know what our interests are what questions we need to ask to create
+8:38
+a structure to our hunt and lastly decision because we need to know what we will do with it after all this hunting
+8:44
+and whatever came out of it what we will do with it that's the decision process
+8:50
+in thread hunting we will typically have broad hypothesis and narrow hypothesis
+8:55
+uh that's not a law or you know you could you need to follow but it gives a a a kind of structure a possible
+9:02
+structure to your hands broad hypothesis is just an overall
+9:09
+statement which can serve us to start a whole lot of hunts like our broad hypothesis could be
+9:16
+adversaries use persistence mechanisms to stay connected as you see it is broad
+9:23
+and can lead to n number of things you can use this broad hypothesis to schedule multiple hunts the reason it's
+9:30
+bored is is just give you a glimpse of what you want but not exactly
+9:36
+how you can do it or you know what what uh detailed what information right
+9:43
+then narrow hypothesis for narrow hypothesis is specific
+9:48
+applicable and actionable today to form the narrow hypothesis we will
+9:54
+answer some questions from one of plug stock on silver sparrow in shellcon 2021
+9:59
+if you didn't check that talk please go ahead it has awesome information not only just the
+10:05
+singular sparrow but the threat handling process itself we will answer some of the questions from it right the first question is who who are we
+10:12
+trying to hunt what we want to hunt and why we are doing all this
+10:19
+where answers what data we want to hunt for
+10:26
+when is the time frame uh related to the hunts every hunt should have a time frame so that's the where when portion
+10:33
+of it and how is how are we querying the data uh in our
+10:40
+sim or analytical platform and how we want the platform to present the data to
+10:46
+us so let's fill them up we want to hunt for adversaries you can
+10:52
+add insider threads to it if you are if you want to include that in your hands
+10:58
+we want to hunt for specifically scheduled tasks and we would like to check this data uh
+11:05
+for endpoints because that's one of the data points you can check for scheduled tasks
+11:11
+we are doing this to unveil persistence mechanisms achieved by scheduled tasks
+11:17
+and if you fill them all of them we can find this here we are saying adversaries might
+11:22
+create or change schedule tasks on local or remote endpoints using gui or command
+11:28
+line tools to execute additional or new executables files for maintaining
+11:33
+persistence in our environment and we are doing for as long as the data exists in our analytical platform and we are
+11:39
+using some of the mechanisms like searching grouping and stacking but as you see this is very specific
+11:47
+we can hunt for this today and our hypothesis will guide us through what we will search for in our analytical
+11:53
+platform great we have our broad and narrow hypothesis
+11:59
+but what we can do with it where we will use it
+12:04
+i like this meme a lot because most of the threat hunting is about
+12:10
+pre-hunt preparation if you remember our threat hunting process this is our second step data
+12:17
+gathering and what artifacts are related to what portion of it
+12:22
+if you are performing threat hands most of your time will be going at this portion of it because this will define
+12:28
+what you can do in the next sections so let's get that data
+12:33
+here when you say data it's data coming from our point products are different mechanisms where you can gather or
+12:40
+achieve the data in this case endpoint
+12:45
+for things we don't know we will google it the first thing i googled is monitor schedule tasks miter is
+12:54
+you know our dear friends where they have a beautiful website where they document most of the
+13:00
+techniques sub techniques i spoke about before so when i googled this the first link came out to be mitre attack miter
+13:07
+enterprise techniques and then when i when you go there check at the detections portion of it
+13:14
+under it we can find data related to scheduled tasks
+13:20
+so this is specific to technique so each second will have the section so when you go there this is important to see our
+13:26
+how to interpret it is data source is what data you are collecting or you can search for and detect is some of the
+13:33
+artifacts they have observed using a first schedule task which was
+13:39
+used in attacks in the past so we will take a note of all this so
+13:45
+first data is command file process scheduled job lack of data is also important to us we
+13:52
+will discuss that in the in the coming slides but uh please take a note of all these data sources we will check from
+13:58
+the bottom the scheduled job just get your job creation in specific
+14:03
+in that we will see some of the event ids uh like specifically we went id four six nine eight
+14:10
+okay so we will start with that event id let's check that in google again here
+14:17
+i'm saying i want uh scheduled task event ids but i want only from
+14:22
+microsoft sites that's the site notation when i do it the first link came from
+14:27
+from microsoft documentation and when i went in there you can search for scheduled uh task in
+14:34
+the left because it has all the events necessary and we will see all these events that are produced
+14:40
+by or when action is performed on schedule task here you see 4698s
+14:47
+s is a security channel uh so one thing is event ids are specific are
+14:53
+unique to a channel but not unique overall okay so let's take a note of all
+14:59
+this like four six nine eight four six nine and everything perfect and we go back to mitra again in the
+15:06
+same section i see another one microsoft windows task scheduler operational this one
+15:13
+is related to a specific channel which has all the information related to schedule tasks but if you read on it it
+15:18
+says enable the channel that means in my mind it says it's not enabled by default uh so we
+15:26
+will check what if it is enabled or not but we will take a note of that particular channel too
+15:32
+the second thing we will see is the file modifications specifically file creation
+15:37
+events in this it says uh it will be done in the system 32 tasks folder uh which
+15:44
+whichever is not related to a software or path cycle or etc so we will search for it
+15:50
+but unlike before we will search for sysmond data right because why not
+15:55
+because that is being rolled out in current enterprises as a cheap version of edr uh
+16:01
+sorts but we will search versus mod data when i search for file creation sysmon i
+16:08
+have seen that event id 11 is related to it you can see some description related to the event and also from mitre and
+16:15
+some blogs we see that they happen in tasks folder and under spc host.exe
+16:21
+process specifically okay pure we will take it out of it
+16:27
+again we go back to mitre you can see other things like command execution and process creations for
+16:33
+command executions there are several types you can do it schedule scs tasks
+16:39
+exe powershell wmi and many more so i will uh take a note of that too uh
+16:46
+because i want to search for this as this one of the data points that i want to search for
+16:52
+in mitre there is an interesting section called procedure examples this is interesting because here is
+16:59
+where mitre documents all the previous attacks that had
+17:04
+happened uh using scheduled tasks or where attacks a schedule task is used in
+17:10
+such uh attacks okay so
+17:15
+we while searching for one of those blocks i have seen that there is a new data point
+17:22
+that data point is registry keys so it says that registry keys are also
+17:27
+important in searching for scheduled tasks specifically registry events 12 13 14 according to sysmon and
+17:35
+some of the registry like create key delete key and search if you ever performed registry analysis and or
+17:42
+checked the registry it is messy and ugly but it could be a lot of fun if you
+17:48
+are into that source i'll show you why here we will just check what we want i know
+17:54
+this is scary but we will just check only the things that we want for the registry so if you go to the registry
+18:00
+path mentioned above specifically till the tree portion of it uh
+18:06
+you can see all these scheduled tasks that are there these some of the scheduled tasks are under microsoft
+18:11
+which are operating system specific and the the task which is highlighted here is
+18:16
+daily task is the name of the sample skill test that we created in this
+18:21
+there are many four sub keys the interesting words are id and sd
+18:27
+id is a gibriq kud that is unique to our scheduled desk
+18:32
+here id is correlated with the daily task name of it and sd is where our
+18:38
+principal or security context under which schedule task is created sd is also important because it acts as
+18:45
+a bond between what you can see versus what schedule task is there and it's one used in one of the
+18:52
+cases recently with aphnium microsoft has a great documentation on it if you uh are interested please check that out
+18:59
+we will see that uh case if we have some time so all right but
+19:05
+if you see all this we don't see the things that we checked for the components right
+19:10
+the trigger action data components and stuff we don't see it for that to see id
+19:16
+we'll take a note of the good and paste it here it's just the same path but
+19:23
+one above uh instead of trees we are doing tasks and the keyword that we have here you see a lot of information and
+19:29
+all the information which is familiar to us we will not discuss the whole things but
+19:34
+the basic ones uh like actions which is the thing which we should be interested
+19:40
+in what uh which answers what like uh the here it is running dnspy.exe from
+19:46
+the downloads folder um you can see author information who created it you can see date information
+19:54
+like what date the scheduled task is created you can see the triggers or the conditions when the
+20:00
+scheduled task will be triggered it's binary you have to convert it and dynamic info if you are into forensics some of the interesting timestamps are
+20:06
+here but we will not go to it but this is the registry structure i'll we will see how
+20:12
+it is important to us or while you're searching for your data all right you better be taking all those
+20:18
+notes which we spoke about so this is what i have
+20:24
+for my notes so it says i have windows events
+20:30
+task scheduler operational channels file creation events registry keys iron command line arguments all those things
+20:36
+that we see perfect that's a lot about scheduled tasks and how what artifacts like i said most of
+20:42
+our time will be in getting those artifacts ready and seeing what artifacts are generated for a
+20:50
+specific technique or a tactic but enough said let's see let's put that
+20:55
+into practice and see how it can give us some information
+21:03
+all right here let me split this one up
+21:16
+all right here we are using splunk as our sim uh but you can use any any sim
+21:21
+and you can convert the queries which we are using here using sites like uncoder uh dot io and stuff uh but we will not
+21:28
+be doing it we will using splunk uh and we will explain some of the queries that uh whenever we are searching for it
+21:35
+right so let's see it zoom in
+21:40
+so the first thing we will do is in our threat hunting process in our in data gathering process is data sources if you
+21:47
+remember that we did with using miter so here i want to do the same i want to
+21:53
+get what data sources is available let me run it and see what i have before that
+21:59
+uh here the we we want to answer the question where in our narrow hypothesis uh that we said
+22:06
+we want to search for all the data that is available to us so that's why i changed the time to all time i and
+22:12
+schedule tasks are you know time frame based so you can sorry threat hunting
+22:17
+can be time frame based so you can check for those right
+22:22
+the query says that index which is the splunk way of saying a
+22:28
+data that we ingested from a point product or somewhere else then we will with the help of splunk command ddip
+22:35
+which exactly says deduplication we get unique instances of uh indexes and
+22:41
+finally we are saying they uh give us in a table or follow uh so if you
+22:47
+think back this to our narrow hypothesis this and the table answers how like how i want to get the
+22:54
+data uh and the index and the other the time frame answers where the
+23:02
+question okay among these the first one is zeke which is network based logs we didn't
+23:07
+see anything according to our hypothesis so we'll skip that os query which is important uh it's which is endpoint uh
+23:15
+data uh but in our research we didn't come across we can maybe use it in the future
+23:21
+or we can use it in for this technique in a different way but we will keep that in place uh sysmon uh
+23:28
+which is the data source that we are we searched for uh if you remember this file creation events and registry events
+23:35
+so we will use them wind log events is also important we check that that's
+23:41
+our first step actually to check some of the windows events using microsoft site so
+23:46
+let's start with it and we have other things like hmail and velociraptor and stuff let's start with
+23:52
+the bin log beats
+23:58
+so if i search for wind lock beads the first thing we should do is the second uh once the data gathering has happened
+24:05
+the third step in our thing is data familiarization this is important because this is also one which
+24:12
+narrates how we will search the data or what fields that we search for data i just threw a
+24:18
+term called fields let's see what it is so if you see the left hand the red column they are
+24:25
+called fields and the green ones are the values associated with that fields
+24:32
+here we have some basic information uh about uh this is a sample log that we just picked out of uh you know seeing
+24:39
+all the windows event logs and in that we see some host information we see the
+24:44
+agent information like here winlockbit how we get the data from the endpoint we
+24:49
+used the winlogbeat in this word in this scenario event.code this if you remember is
+24:56
+equivalent to event id that we are interested in uh and event provider uh like i said event ids are
+25:04
+specific to a provider and there are a channel they are not specific they are
+25:09
+not unique uh to the whole windows environment so here it says the provider
+25:14
+is microsoft windows time service think about it how we can use this one we have host information like ip and mac
+25:21
+addresses we have os specific information we have a message field which
+25:26
+how it looks for uh how it how we if we see this in the windows event logs this
+25:31
+is how you see it we have again the other information to it user information also all right
+25:37
+perfect so according to our research what we saw is we want specific event ids so let's search for them
+25:45
+so here i'm saying i want instead of all indexes i only want windows event logs and i'm using
+25:53
+event.code which you remember is event id and i'm searching for specific event ids
+25:59
+but i did not see anything i don't get anything why is that the case
+26:06
+so let's see
+26:15
+all right let's see what it is so here i'm using in operator that means you can do
+26:20
+uh i want to search something some data in a specific field here i want to search
+26:27
+4698 in event code and the rest of them instead of this you can also use even
+26:32
+dot code is equal to [Music] four six nine eight
+26:39
+um our event dot code equal to
+26:45
+four six nine nine you can do it this way too but this is a concise way to
+26:51
+search for data but we didn't find anything like i mentioned lack of data back of
+26:57
+written of results is also an interesting part in threat hunting and we will see why in our recap okay let's
+27:04
+take a note of that we didn't find anything right okay let's search for other data in our
+27:11
+little notes that we took in other things we saw that we have another channel called microsoft
+27:18
+task scheduler operational channel that we can check even data logs related to
+27:23
+so let's check if it if it is there uh that we are collecting them because if you remember
+27:29
+miter said that if you enable it right so here what i'm doing is i'm again saying that
+27:35
+i want uh specifically logs from wind log events and i'm using the operator
+27:41
+even dot provider that we checked in our example uh before to getting familiarized with the data in
+27:47
+there i think it's i believe it's uh related to prime provider uh here i'm
+27:53
+saying that i want any provider that has a name task in it the has to sphere you
+27:58
+see they are related to a wild cards so you can use them to find
+28:03
+any key what you want uh and using the dupe exact detail command i'm wanting
+28:09
+only unique instances of event provider and i'm asking to give me
+28:14
+in the tabler form and all this if you observe we are using all time so we are searching for all the data that is there
+28:21
+perfect i see one hit which is better than the last one so what i will do is i'll take
+28:28
+all this and just search for it so this one here i'm specifically saying same windows event logs but i want only from
+28:35
+this uh event provider let's see how the data goes let's unv
+28:40
+control all the things okay here you see similar information
+28:48
+like agent information event code uh here it says event code is 719. but in
+28:53
+event action it says something like scheduled task operational log was disabled and if you also see the
+29:01
+number of events that we see we only have five which doesn't seem right right
+29:06
+so that means i cannot use any of the first two
+29:13
+data points that we have searched for or we took note from miter and other things
+29:20
+okay not an issue let's go move forward with it let's see file creation events
+29:26
+let's see what we have there for file creation events if you remember
+29:31
+we checked for sysmon events so let's see what sysmon looks like
+29:36
+so for that if you remember we have different indices and in that's this one is one of them
+29:42
+we will check for smart data i'll just pause this to see what sample looks like so i will do the same that we
+29:50
+did for the windows event logs let's unroll everything and see what data we have so that we can use
+29:57
+we can see if we can use any of these fields in our search uh creation
+30:03
+so let's see here i'm seeing most of the data that
+30:10
+we seen in windows event logs like the agent version event category event action event code
+30:17
+um but event category is uh kind of interesting because event category says
+30:22
+the bulk or the grouping sysmon does uh for a specific event uh action like in
+30:29
+this case file and event action is specific to this particular category like category
+30:36
+here is file and action is file created in the same way you might have actions for other things too
+30:43
+in other categories the first the next thing is event code which is
+30:48
+the system on event id that we gathered provider is the same and then file
+30:56
+information we have it because this is related to the file category and file creation events we have file information
+31:02
+associated with it like file directory name extension path if you think about it this will come
+31:09
+handy to us because we are checking for a specific path according to our research
+31:14
+and hosts information we have it as we see before we have what else we have
+31:22
+we have this rule name this is interesting we have process information because what process creates that file
+31:28
+we have rule name it specifically says technique id technique name which resembles two
+31:33
+monitor techniques and their names this comes very handy too
+31:38
+this is coming from the sysmon config file when you are configuring
+31:45
+your sysmon events we will not go into details but from there you can get this
+31:50
+okay good so as we are familiarized with our data set uh we know what category
+31:56
+fields we need we need the event category or even the action field we need the because we are searching for
+32:02
+file creation events we need event code field uh we need the file path because we are
+32:08
+looking for a specific path and also we can use the process information because we are looking also looking for a specific process
+32:15
+so that said let's check what we have here
+32:24
+so let me paste that okay mac this is a mac issue sorry
+32:31
+uh yeah let me paste that so here i'm saying that i want things from sysmon
+32:37
+only and i want specific to event id 11 which is equivalent to the file creation
+32:44
+events like we see before i want process executable to be svchost.exe
+32:49
+because if you think our notes we have seen that this one exists from it uh sorry the
+32:56
+file creation events happen from svchost.exe and it happens in a specific
+33:02
+folder or a path and that's what we are mentioning here and i'm using a thing called transaction
+33:09
+it's a way to group events together and i'm asking splunk to give me in tabular form
+33:17
+you get 75 results but this is where the true threat hunting begins
+33:22
+because one of your uh if in our third handing process if you remember after querying is interpreting
+33:29
+the results and filtering them interpreting results is uh difficult it
+33:35
+based on your normal of the environment it based on the os behavior is based on
+33:43
+the process behavior that we are checking so there are different things that can
+33:50
+influence how you interpret your results uh while performing the threat hunt for
+33:56
+this we will use a simple methodology i don't know where i heard this from uh but i heard in one of the conferences or
+34:02
+talks but it goes like commonly observed events across multiple end points could be
+34:08
+common or something really bad is happening that means if you see something in
+34:14
+different endpoints like this one office microsoft office office performance monitor you're seeing in
+34:20
+most of the endpoints that we have that means this might be common for a os
+34:26
+behavior or our environment or something has already happened and we are in a
+34:31
+doodle but let's go with the first happy thought that it is common in the environment right
+34:38
+by doing that we are getting to this monstrous query
+34:46
+oh we'll get to this monstrous query let me run it and i'll tell you what we are
+34:52
+doing here we are doing the exact same thing sysmon event id11 svc host and
+34:58
+task folder but we are removing or filtering out certain things
+35:04
+that filtering happens because of os behavior like this one create exploration and elevated task this could
+35:11
+happen because of software updates or software related to operating system
+35:17
+like in this case microsoft something uh or a specific program that we have like here google
+35:24
+update so let's say this filtering in our environment ccleaner is not
+35:31
+a genuine process or not an allowed process you can find those things here
+35:36
+too so it's a catch-22 threat hunting can be
+35:42
+can help you in finding your no normal but also if you know you're no normal
+35:47
+then only you can find threshold you can get more software for your thread hunting so you know
+35:53
+you can figure it out how you want to use it or in threat hunting but most of
+35:58
+the time if you have a solid no normal then it is easier for you to hunt for different things which are abnormal or
+36:05
+anomaly in the in circumstances okay a by filtering it and by the way a good
+36:12
+task for you is you can check for all these events and think of ways why we filtered it because
+36:19
+the reason we filtered it like we mentioned is operating system and stuff but just
+36:24
+see what they do so that if you see this bef anytime in your hunts you can say
+36:29
+that huh i know what that is and it's common i can filter it out or uh
+36:35
+i can filter these out and if i don't find anything i can see for edge cases on might be an attacker using or a
+36:42
+perpetrator using legitimate functions in order to do it which happens in a lot of ways so
+36:48
+anyways after filtering we have one task happening on two end points interesting
+36:55
+this is not to say suspicious uh yet but it is interesting to see that we have a
+37:02
+certain process that is running on uh two things so let's search for what it
+37:08
+is doing so let's take this and do a blind search
+37:15
+for that uh book
+37:20
+so we will we will do a blind search on what it is doing in this we are seeing uh some of the
+37:26
+things like registry value sets this is interesting because we have seen that uh registry events will be created when a
+37:33
+scheduled task is created we are seeing most of them are yeah most of them are related to
+37:39
+registry but easier way instead of going through each log easier way to find about what we have is
+37:46
+this uh let me put epic query
+37:55
+so here i'm using the exact command but transactions i'm trying to see what
+38:00
+hosts are there and grouping things by the host name and i'm saying the event category field which we
+38:07
+saw for sysmon uh to see what exact actions or even category and event actions to see what exactly it is doing
+38:13
+so here we see file creation events registry uh events on both the endpoints this is
+38:19
+interesting because we seen the exact same things that we have checked in our artifacts whenever a schedule task is
+38:25
+created this is what will happen okay perfect but
+38:31
+any time you see these interesting things taken out of it and wait until it
+38:36
+becomes uh suspicious so here we are doing the exact same thing so as we see there are
+38:43
+several ways to create command line arguments for scheduled tasks i'm checking for some of the
+38:49
+keywords that can happen while performing schedule tasks like here
+38:55
+i'm checking for different things but you can you can filter out all this
+39:01
+let's see just plain
+39:07
+so let's check this oh
+39:12
+i okay this if i type properly it will make sense okay so here we are checking that i want
+39:20
+the i want to check for a parent powershell.exe and a child cmd.exe
+39:28
+to see some of the key line arguments for scheduled task creations
+39:34
+so this one i found it in different ways i can find it in different ways one is you can see in
+39:41
+microsoft documentation like you can go to microsoft
+39:49
+sch tasks in here you can check uh what are the
+39:56
+commands that you can use using microsoft like change create and stuff uh you can use powershell documentation
+40:03
+similarly you can use wmi these are basic keywords that you are using in order to find a particular scheduled
+40:11
+task or what it is what a schedule task is doing right
+40:16
+perfect let's say with our previous things if we're using registry and file creations we determined that
+40:23
+particular schedule task daily magnus task is uh there is a suspicious one and
+40:29
+in order to check what it is doing we saw that process creation events in that process
+40:36
+creation events we see a command line which matches our
+40:42
+the command that we are saying here c slash c start that means command.txt
+40:48
+is used to start cleanup.exe and we don't know what cleanup.exe is or we don't know anything
+40:55
+about but we just search for the keywords and this is what we found in it and we saw powershell.exe and if you
+41:02
+think about it think of a general things like temp folder cleanup.exe it is using powershell.exe
+41:09
+to spin up command.exe and starting something from a cleanup folder
+41:16
+okay let's see what cleanup folder is doing sorry cleanup.ex is doing so for
+41:21
+that we will do the basic thing if i type it so cleanup.exe we have 113 events again
+41:29
+the best way to do what actions it is performing is using the
+41:34
+specific command that we have checked like tdp and here we are seeing different things file created process
+41:40
+terminated process accessed blah blah blah this is a good task now we have searched
+41:45
+for the scheduled task which is needed we found something which looks suspicious and
+41:51
+we have seen several things that we can do it so take any of your things like
+41:56
+network creation events or any network detected events image loaded events
+42:02
+here we are checking for so let's go back to the presentation
+42:12
+so here i we are just checking for one such events process creation and we have seen
+42:19
+this particular thing that we have seen before that something is starting from a temp folder
+42:25
+so think of it cleanup.txt starting with cmd.exe using powershell from a temp
+42:32
+folder on the host that we have checked a suspicious or an interesting scheduled
+42:38
+task is present this starts your haunt again most of the time hunting is chasing that cruise but
+42:45
+uh with a solid data backing up like if one data says something is suspicious pack
+42:51
+it up with another data which produces similar artifacts and that's it but there is more than
+42:59
+that to threat hunting we only checked one such events so you can go ahead and check what else is present in all the
+43:06
+data or all the artifacts that we gathered all right let's recap everything with a
+43:13
+small template we are using a template for that uh the
+43:19
+title of our hunt is hunting for adversary schedule uh we created this on the date
+43:26
+we are notifying noting our hypothesis uh this is our uh
+43:32
+this is our hypothesis in in the narrow hypothesis that we got we are mentioning some of the miter techniques
+43:39
+and tactics we are using simulation techniques like this is very important if you are simulating something to in
+43:44
+order to perform threat hunting or detections this is interesting you can note what simulation has performed
+43:51
+and then we are using a proposed search query here this query could be anything i just mentioned the last search query
+43:57
+but if you can mention all your search queries in it it helps if someone wants to take this template and wants to
+44:04
+reproduce these steps it helps them a lot and here i'm noting some of the
+44:10
+limitations of my third hunting like i mentioned if something didn't turn up in thread hunting it's also interesting if
+44:16
+you remember in our case we haven't seen any logs related to windows event logs and also task scheduler operational
+44:23
+which says it got disabled because there was no space or something so this is important because
+44:29
+this helps in getting that visibility of where how and why i'm not getting this
+44:36
+particular data if i'm not getting how can i get it and we also observed when using this uh our methodology for
+44:42
+command.exe where you where we run through different artifacts only we saw workstation one has
+44:49
+cleanup.exe but if you remember our scheduled task it is running on two workstations why that's the case these
+44:56
+questions helps you answer a lot of other things which direct doesn't always mean that you want to find this
+45:03
+grand apt that you're seeing but these are also byproducts of your threat running it helps you achieve that
+45:12
+on to know unknown unknowns and unknown knowns to help secure internet products good
+45:19
+and the last what we did we find we found a particular task called magnum tempest id cleanup on a couple of
+45:28
+computers and a cleanup.exe is also launched from a
+45:33
+you know a strange location like temp and also has some interesting artifacts even related to network artifacts
+45:41
+perfect like i mentioned uh the detection coverage and visibility uh here through our hands we have mentioned
+45:48
+we have noted that event logs are not there or at least specific to schedule tasks
+45:53
+are not there so we want to see a way we can get that data we are
+45:59
+by the looks of it we have not enabled that operational channel so we want to enable it so that
+46:05
+we can get more data and weigh the benefits and risks of enabling it we
+46:10
+also seen that workstation one only produced the cleanup.exe process creation we didn't see the works other
+46:17
+workstation uh performing it so that's our visibility coming to our
+46:23
+detection coverage like i said you can stop your hunts at the findings and
+46:29
+documentation using the template that we have [Music] we did here but we can also move it a
+46:36
+little further we can use it for our detection coverage here we are saying that
+46:44
+we can use our query whichever we used for the thread hunting uh queries like our process creation events uh from uh
+46:53
+or we can use our based on our no normal our filtering capabilities we have seen
+47:00
+we have filtered everything and only one event was left we can use that as our detection query you can use a
+47:07
+combination of them right but that is only one portion of what
+47:13
+we did there are several other use cases in this schedule thus making unusual
+47:18
+communications uh it is downloading powershell cradles and several other things you can either
+47:24
+create hunts for each of each and every of these or you can hunt for the behaviors like we we can do let's say
+47:32
+scheduled test how it is based on the artifacts that we gathered so you can you can use either
+47:38
+one of them right these are all the uh detections that we can create uh if we
+47:46
+have gathered all the tasks and if we can do this information and if you see here hidden scheduled tasks if you
+47:53
+remember uh i i said if you have some time we will talk about haphnium
+47:59
+this is what it did it hide hid its scheduled tasks from
+48:05
+viewing it it does using that sd key that we spoke about in registry where it
+48:10
+automatically removed that free using com i guess uh but it removed
+48:17
+it and when when you remove that you don't have the connection between what you see
+48:23
+versus what is what scheduled task is running so you cannot uh it gives a
+48:29
+a nice behavior to evade uh the regular hunts that you have so you
+48:34
+can also check for that particular behavior something uh like let's say sd
+48:42
+registry sub key is deleted uh using cis1 or any other etr that you have so
+48:47
+these queries that you use are specific to ed uh splunk here but you can convert
+48:53
+them into and use it like we said to any others finally
+48:59
+that's our talk uh all the differences uh i have followed is mentioned here
+49:05
+and thank you so much for everyone for being patiently watching this uh we ran
+49:10
+through some of the artifacts uh but please go through those artifacts one by
+49:15
+one you can find your own rhythm in uh find in
+49:21
+searching for those artifacts we will be releasing a blog post which has detailed information on everything so
+49:27
+please go ahead and check please join our discord channel if possible so thank
+49:32
+you
+

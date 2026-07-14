@@ -1,0 +1,1528 @@
+0:18
+Hello folks. Um, thank you so much for coming on this last day of the conference. Uh, super pumped to talk
+0:24
+about STPA. Um, so truly welcome uh to this talk about uh, illuminating the
+0:30
+unknown unknowns. Uh, my name is Teao. I'm a site reliability engineer on Google Maps and I'm here with Ruben and
+0:36
+Garrett. Reuben. Hi, I'm Ruben. Can you hear me? Yeah. I'm Ruben. I'm an SR working in Google Maps. I'm based in
+0:43
+New York. I'm Garrett. I'm a technical writer. I work on SR documentation at Google.
+0:49
+Awesome. Okay. And with that, let's dive right into it. So, um, this talk is
+0:56
+going to be interactive. Okay. So, we want your help with this talk. Now, when
+1:02
+you see this um gray box with a question mark in it, please open up Slack and
+1:07
+respond to the pinned thread. I've added a comment there where you there's like a speaking head emoji. Um so, please use
+1:13
+that for answers to the questions that we ask you. Um and feel free to join that specific Slack channel. Okay?
+1:20
+Hopefully, it won't be super chaotic. Sup, I'm reading your threads right now. Okay? So, um let's get right into it. So
+1:28
+let me clarify what we hope that you take away from this. Our goals are that after this talk, you can describe what
+1:36
+STPA is, how it works at a high level, and you can give some examples of how it
+1:43
+can even be applied to systems, both human and software, and it can even
+1:48
+anticipate incidents. Great. So, let's open up with a story about how I was recently paged for a
+1:55
+system that I'm on call for called the road disruption system. Now, the goal of
+2:00
+this system is to process road disruptions from thirdparty providers and serve those road disruptions to end
+2:07
+users. So, when a third party tells us that a road is closed, like here is 25th
+2:12
+Street, we should ensure that that road is closed on Google Maps. Likewise for when a road is reopened.
+2:20
+Um, so here we can see it was deleted from the third party database. It should also be deleted from Google Maps. So
+2:27
+this is a super straightforward responsibility. Synchronize road closures between two different systems.
+2:34
+Great. It's the middle of the morning and I have been manually paged because a
+2:39
+bunch of our users are being routed through a street that is closed due to a parade. This should have never happened.
+2:47
+I look at our dashboards and I see no SLOs's were violated. All of our services show green and every service
+2:54
+worked as expected. How could this happen? Now, after extensive
+3:00
+investigation, we discovered that in spite of everything working as designed, it was the interactions between the
+3:07
+services that were misconfigured. Key services made incorrect assumptions
+3:12
+about how other parts of the system behaved. Now, in order to fix this, the
+3:17
+developers and I now need to spend two months rejigging and redesigning the system. How could this have happened?
+3:24
+How is it possible that we had an incident that was based on a system design flaw?
+3:31
+Well, what I just described is a pretty common story in software development and in general, the life cycle of a product.
+3:37
+So, this should be pretty familiar. Of course, the the life of a product goes like this. You know, you write your
+3:42
+design docs, you get it reviewed, and you get it approved. Then you build your product and launch it with a gradual roll out making sure everything works.
+3:48
+You continue by monitoring it to make sure that the product meets the SLOs's you've defined and maybe you make more
+3:54
+improvements and new features until at one point boom incident. You send a
+4:01
+bunch of people down a parade route that's supposed to be closed on Google Maps. So of course you triage, you mitigate your resolve and you follow up
+4:08
+with a postmortem. After understanding the postmortem and figuring out what happened, you actually realize that
+4:14
+there was a design issue. So, of course, you apply the fixes, you redesign part
+4:19
+of the system, you create new rules or guidance to prevent other teams from hitting this exact same problem, and the
+4:26
+cycle continues until you have the next incident. But what if I told you there existed a
+4:32
+process where you could methodically anticipate the ways your system could break at the design stage when your
+4:40
+system existed on paper only. And this process could help you come up
+4:46
+with a thorough list of all of the ways your system might have an incident along with the causal factors that would lead
+4:52
+to those incidents. And with that list, you could essentially fix those design
+4:58
+issues before they blow up as an incident, effectively preventing it from ever happening. Well, let's look at the
+5:04
+cost implications of that process. So, the traditional life cycle super costly.
+5:10
+We don't really realize this, but it actually is super costly. A study um at the software engineering institute at
+5:16
+Carnegie Melon found that most failures are introduced at the design stage of a
+5:21
+product. However, they're found in the testing and production stages where the
+5:27
+cost to fix those defects is way higher. Now, these boxes, you know, they're they
+5:32
+don't have any uh percentages on them, but the source down below when you get the slides later, that's the uh that has
+5:38
+the actual numbers there. Now what I was describing about this mysterious process, what it does is it
+5:45
+moves the detection of failure modes to the earlier stages of the product where it is way less costly to fix because
+5:52
+it's much easier to change a few sentences in a design doc than it is to rework something that's in production.
+5:58
+This is super intuitive, right? So you might be wondering uh what is this
+6:03
+process and does it really work? Are you like a you know snake oil salesperson? And um well I'll answer the first
+6:09
+question. So spoiler alert the process is STPA and hopefully you expected that
+6:14
+to be the response bases off based off of our talk title. Um now STPA stands
+6:20
+for systems theoretic process analysis. Now even though it's an acronym I will
+6:26
+be using STPA as a noun throughout this talk. Okay. So just think of STPA as
+6:31
+this um entity. Great. So, our claim is that STPA can
+6:37
+anticipate incidents. Now, before we show you what STPA is or how it works,
+6:44
+let's do a warm-up activity together so that we can feel uh for what it is like
+6:49
+to anticipate what might go wrong with a system without the use of any specific
+6:55
+method. Okay. So, let's put on our thinking caps. Let's brainstorm together, okay, with a a system that
+7:02
+we're all familiar with. the incident response system. So, quick raise of hands. How many of you have ever been on
+7:08
+call for a system? Amazing. So, you're all experts, right, in the system of incident response.
+7:14
+Perfect. Okay. So, let me present you with a hypothetical scenario that has probably not been hypothetical for any
+7:20
+of you. I'm sure that most of you have gone through this scenario before. So your production service starts returning
+7:27
+errors and then you kick off the incident response and there exists some correlation between a roll out that just
+7:35
+started and an increase in server errors. Now
+7:41
+your on caller does not roll back the service to a previous version. Okay,
+7:46
+that's the key thing. And as a result your customers experience a prolonged incident.
+7:52
+Now this is your time to answer the question. Why would the production
+7:59
+service not be rolled back? Now I want you to think about this question and write down some ideas in
+8:05
+Slack. So we see a correlation between
+8:11
+errors and the rollout starting and in spite of that the on caller does not
+8:16
+roll back the service and because of that you have a prolonged incident.
+8:27
+I'm seeing backwards incompatibility. Yep. Schema change ripped. Totally. Percentage of affected traffic was too
+8:33
+low. 100%. The on caller was not confident. On call isn't aware of. Yep.
+8:39
+Totally. I mean, sure. Yeah. Important clients. They just want that now. And 10% of the users don't matter. uh
+8:46
+compliance fix business impact confusion by the numbers on the y- axis. Yep.
+8:52
+Yeah. I mean 800% error rates. Thank you Gemini for that. Um okay. Okay. You guys
+8:59
+are going crazy. Okay. Yeah. Not proven that the rollout was a root cause. So confusion for sure. No roll back already
+9:05
+exists. Yeah. Dependencies for sure. Okay. This is awesome. Thank you guys so
+9:11
+much. Okay. So these are all great reasons. Now, one other reason I think
+9:17
+we might have stated here, you know, an on caller might have misread the dashboard that shows service errors. I mean, they might have seen 800% and been
+9:23
+like, "What the heck?" You know, and talked to the person who designed the dashboard instead. Um, so these are all great examples. Um, now what we're going
+9:30
+to do today is show you how we would have applied STPA to the situation and
+9:36
+then we'll come back to this exact question to figure out whether or not we can generate new insights using this
+9:41
+methodology. As we're going to see later today, STPA provides a structured method to do what
+9:48
+we just did with our warm-up activity. You see, the thing is all of these
+9:53
+questions here or all of these answers rather heavily depended on our intuition and our lived experience. So, it's kind
+10:00
+of like an artisal craft. STPA provides this structure that allows us to methodically find all of those scenarios
+10:07
+and it typically results in deeper insights and enables us to find more of these scenarios than we would have done
+10:13
+otherwise. Okay, now raise of hands. Who has heard of STPA before this talk?
+10:21
+Oh my god, that's amazing. I gave a talk on this last April uh at Scon and there were fewer hands than this. So, I'm
+10:26
+excited about that. Okay, so let's go through what STPA is. Now, STPA is a
+10:32
+paper and pencil method that involves modeling the behavior of a system and then analyzing how that behavior can be
+10:39
+unsafe. The output of STPA is a comprehensive list of all of the ways that we can have
+10:46
+a loss. Now, STPA uses the word loss to mean an unacceptable outcome for all of
+10:53
+our stakeholders. So, our stakeholders could be vice presidents, our customers, our engineering organization. Okay, so
+10:59
+these are unacceptable outcomes and this might be the impact of an incident. So an incident itself might not be a loss
+11:05
+but the outcome of that incident might result in a loss. Now STPA has been in
+11:10
+use for many years by safety engineers in other industries like aerospace, nuclear, medical and Google applied it
+11:18
+for the first time in 2020 and since then uh we've run several analyses uh within Google. We're not the first
+11:25
+software engineering company to apply SCPA, but we really are pioneering the application of it to software design.
+11:32
+And I really want to highlight that point about software design. As I mentioned earlier, you can use this methodology to to find design flaws when
+11:41
+all you have is a design document. Okay. How many times can you predict
+11:48
+methodically all of the ways your system's going to break when you don't even have the system at all?
+11:53
+So the question now is I'm sure you guys are thinking this does this actually work and our answer is yes it does work
+11:59
+of course otherwise we wouldn't be giving this talk now Google maps was one of the earliest adopters of STPA and so
+12:05
+we're going to demonstrate some examples that come from Google Maps and we've been able to find and fix the issues
+12:12
+that um uh before that they they caused those incidents both on designs on paper
+12:17
+and on mature systems within Google Maps. Now, even when SCPA finds an incident
+12:24
+scenario that has already happened, it often reveals additional factors that
+12:30
+might have only been partially addressed in the previous postmortem. And as a result, you know, we've done
+12:36
+some good work within Google and people have started coming to us and started asking us for more STPAs. And there are
+12:42
+a few of us facil facilitators. We don't have too much bandwidth to do it. Um and so we have a huge backlog now with STPA
+12:49
+analyses that we want to run. Okay. Now the real proof that STPA works. So we
+12:54
+actually ran STPA on this road disruption system. And this particular incident that I'm showing here actually
+13:02
+never happened. And this is because we identified the design flaws that would
+13:07
+have led to this incident and fixed them before our system even launched. Great.
+13:12
+So we're going to see exactly how we did that later in this talk. So why did we name this talk illuminate
+13:19
+the unknown unknowns? Well, as SRRES, sometimes we know that there are areas in our system that are
+13:26
+risky, but we don't know the specific risks and those are the known unknowns, right? And we can allocate bandwidth to
+13:32
+help find those risks in those areas. But what really keeps us up at night is
+13:38
+the hidden risks that no one has considered, that no one is even looking for really. And those are the unknown
+13:44
+unknowns. However, now we have a method for illuminating that space. Okay, STPA
+13:52
+is kind of like having a flashlight and being told where to point that flashlight in order to illuminate the
+13:57
+space of unknown unknowns so that you can start reducing your risk exposure.
+14:03
+Wow, that was a pretty extensive sales pitch on SCPA. So, I'm going to take a quick breather and then I'll present you
+14:09
+with the agenda for the rest of the talk. So, first we're going to walk you through
+14:16
+the four steps of STPA. Then, like we did in our warm-up activity, we're going to use our new
+14:22
+understanding of STPA to analyze that system of rolling back uh of of an
+14:27
+incident responder rolling back a binary. And we're going to try to find flaws in the system that might worsen an
+14:33
+incident in progress. Then, because this is a long talk, we're going to take approximately a 5m minute break halfway
+14:39
+through. And then finally, we're going to show you how we ran STPA on the road disruption system.
+14:46
+Now, quick disclaimer, STPA cannot be taught in only 90
+14:51
+minutes. What we hope you learn from this talk is how you can describe sorry,
+14:58
+how you um so what we hope you can you can learn really is the ability to describe how
+15:05
+systems theory can help you anticipate your incidents. before they happen.
+15:12
+So with that, I'm going to hand it over to Ruben to start describing the STPA methodology.
+15:18
+Great. Thank you.
+15:24
+We like to say that STPA is methodical and teachable. And as just mentioned, STPA has four official steps. And let's
+15:32
+go through those steps together. So we'll start with a quick overview of
+15:37
+STPA and then we'll dive into the specifics of each of those steps. Step
+15:43
+one is about scoping the analysis. We define the losses that as the mentions are the things that the stakeholders in
+15:50
+the system want to avoid. Then we define the unsafe system states that could
+15:56
+could lead to those losses. In step two, we model our system. We use
+16:03
+control feedback loops which are a very different model from uh standard data
+16:08
+flow diagrams that we are uh that we use uh often and we are modeling here
+16:13
+behavior and control happening in our system not just data flowing through the components of the system
+16:21
+and in step three we will list the control actions that could put the system into one of those unsafe states
+16:29
+that we've identified in step one and lastly step four is where we build
+16:36
+the loss scenarios. This explain how these unsafe control actions that we defined in the previous step could
+16:42
+actually happen. And the great thing is that we can now trace all of these
+16:48
+scenarios straight back to where the losses that they can lead to. And this is a key for later prioritization.
+16:57
+Finally, we get to an extra step. Step five, mitigations. STPA is not
+17:04
+prescriptive about what to do with all the things that we discover all those scenarios. Now, we have to engineer the
+17:11
+solutions to address those scenarios and the questions are of the form like which scenarios uh do we prioritize for
+17:18
+mitigations? How do we implement those mitigations? Those are purely engineering questions.
+17:26
+Now let's walk through the steps of STPA using a familiar scenario. The basic
+17:32
+incident response protocol. You might recall recall that Teo asked you earlier
+17:37
+why might the bad version of a production service not be rollback. You all have great answers. And now we are
+17:44
+going to take that exact question and we'll apply STPA to find out all the
+17:49
+ways in in which that can happen. And once we've identified the hazards, we'll
+17:56
+then find concrete ways to reduce or eliminate those unsafe actions surrounding the this incident response
+18:03
+protocol. So step one, scoping our analysis.
+18:09
+The first thing we do in STPA is to define the losses. So these are the unacceptable outcomes for our
+18:16
+stakeholders in the system. And at Google, we found that the losses tend to be of similar nature for most of our
+18:22
+internal software systems. But in general, common losses that you can find in an STPA may include
+18:29
+loss of revenue, loss of brand trust, loss of legal compliance,
+18:37
+and sometimes depending on the application, depending on the system, injury or loss of life.
+18:43
+And here is a key rule of thumb to defining losses. Your losses should not
+18:49
+reference low-level system details or specific causes that lead to them like
+18:55
+networking errors and and others.
+19:01
+But we are not done with step one yet. The other thing to do in step one is to
+19:06
+define the hazards. STPA is a hazard analysis technique. That's a bit of a
+19:13
+mouthful, but all it means is that we systematically look for all the things that could cause any of the losses that
+19:19
+we just identified. Specifically, a hazard is defined as a system state
+19:26
+that will lead to a loss under worst case environmental conditions.
+19:32
+And throughout the analysis, we label these hazards and reference them throughout uh throughout the steps.
+19:40
+For our incident response example, a simple hazard might be our production
+19:46
+service is returning errors. Now, question for the audience. I have a
+19:54
+good question. I just said that a hazard leads to a loss only under worst case
+19:59
+environmental conditions. Can you think of a reason why this particular hazard production services returning errors
+20:06
+might not lead to a loss? Feel free to type your your answers on the the Slack
+20:12
+channel.
+20:23
+Error rate expending error budget at acceptable rate. Mitigating or compensating conditions. retries
+20:30
+mitigate the errors. The errors are not visible to users or other systems.
+20:35
+Product is not yet launched. Yeah, all those great answers. So, exactly. So,
+20:41
+for example, it's possible that our service is returning errors, but the
+20:46
+this happens late at night when there is very little demand. The impact to our
+20:52
+users is so small, so small that we have no loss of revenue or brand trust.
+20:58
+But if the incident occurs during peak demand, the loss happens. So defining
+21:05
+these hazards is critical because they guide our reasoning in the later steps of the method. And if we can determine
+21:13
+all the ways in which the system can enter this hazard state, we get a complete complete picture of the overall
+21:20
+safety of our system. And then we can redesign the system to prevent those
+21:25
+unsafe actions. And that's the engineering part.
+21:31
+Finally, we often say that hazards give you time. So why is that? Remember the
+21:36
+low demand scenario. So the hazard state production services returning errors
+21:42
+existed but the loss did not occur. So that hazard state might exist for hours
+21:49
+or even days before the worst case conditions come up. And if we can
+21:55
+prevent the hazardous state entirely, we can at least make sure that we detect
+22:00
+the hazard and that we have the means in place, the means in the system in place to move the system back to a safe
+22:08
+operation state.
+22:14
+Now let's move to step two which is about modeling our system.
+22:20
+So we do this by drawing a control structure which is composed of control
+22:26
+feedback loops. Quick poll for the audience raise your hand if uh you have
+22:31
+heard of control theory. Well quite a lot of people. Nice. Uh for
+22:37
+those of you who have heard of that or used that anyone has used control feedback loops to reason about a
+22:44
+software system before? a few still quite a a few hands. Nice.
+22:51
+That is great. Now I'm going to quickly build a basic control feedback loop on
+22:56
+the slide and explain the parts as we go. So we start by identifying the
+23:01
+control processes at the bottom. These are the parts of our system whose
+23:07
+behavior we have to constrain. Next we identify the controllers above.
+23:13
+Controllers can be hardware, they can be software or even humans. In fact, in any
+23:19
+non-trivial control structure, you will always have human controllers involved.
+23:25
+And these controllers decide on what actions to take. I mentioned earlier
+23:30
+that STPA models component behavior happening in the system. Well, what is behavior if not a series of decisions?
+23:38
+STPA calls these decisions control actions. And here's the very important part.
+23:44
+Controllers don't make decisions out of the blue in a vacuum. They base their
+23:50
+decisions on feedback coming from other parts of the system, often directly from
+23:56
+the control process that they are controlling. And with this simple control structure built, we now have the
+24:02
+framework to reason about how our controllers might make decisions that result in a system hazard. And we'll do
+24:10
+that in the next part of the of the analysis which is step three. Again remember our motivation here. We are
+24:18
+modeling all of these because hazard states can lead to losses and we are trying to anticipate and prevent the
+24:25
+system entering those hazard states. Now to make sense of all this theory,
+24:33
+let's model our roll back example as a basic control feedback loop. We could add more controllers to expand the scope
+24:39
+of the analysis, but for today we'll keep it to this single loop. And we are
+24:44
+going to analyze the key decision to roll back or to not to roll back the
+24:50
+production service to a previous version. And at the top of the loop, we have indicating higher authority we have
+24:56
+the controller. In this case, an SR it could be you.
+25:02
+And all controllers have a control algorithm. All right. For a human, we
+25:08
+call this decision- making process. And this process determines exactly what control actions the controller takes to
+25:15
+constrain the behavior of the control process. For this example, our key control action
+25:21
+is roll back to a previous version of production. Remember that a controller
+25:26
+can have multiple control actions, but we are focusing only on this particular one.
+25:32
+The control process at the bottom is the production service and we want the S sur
+25:37
+at the top to constrain its behavior to keep it safe. And we know what safe
+25:42
+means for us now because we defined our hazards and losses back in step one. For
+25:48
+instance, SR must prevent the production service from entering the hazard state
+25:54
+where it is serving errors or like in this case the SR must detect when the
+25:59
+system enters that hazard state which is when the production service starts to return errors so that they can decide to
+26:07
+roll the service back to a good version. The controller receives feedback from
+26:13
+that control process. In our example, that is the response errors, the rollout
+26:19
+timeline, and possibly customer escalations that arrive to the SR team. Again, there can be multiple pieces of
+26:26
+feedback flowing into a controller. All controllers also maintain an
+26:33
+internal model of the control process state. For humans, we call this a mental
+26:39
+model. For a software or automation, it's a process model. And critically the
+26:45
+controller's belief about the state of production might be wrong. And this can
+26:50
+happen due to missing feedback, bad data simp or simply an incorrect
+26:56
+interpretation of what they are seeing. And based on that mental model and their
+27:01
+decision- making process, the controller decides whether to take another action
+27:07
+and the cycle continues as a dynamic process. And we've seen that modeling systems in this way has a significant
+27:15
+effect on how our engineers at Google and SRS think. For one thing, product developers tend to be excellent at
+27:22
+designing the control path. However, feedback paths are rarely formally
+27:29
+designed and we often uncover incorrect assumptions about the feedback coming
+27:34
+from another system. Other times we discover that critical feedback is completely missing in the system.
+27:42
+And once we have our control structure, we start to actively looking for system
+27:47
+issues. And that starts with figuring out exactly how those control actions might
+27:55
+put the system into a hash state.
+28:00
+Now I'm going to foreshadow the next steps of STPA a little bit here. Let's
+28:05
+see how this model of a controller can help us reason about what goes into the
+28:10
+decision make the decision to to roll back or not roll back the production service and we'll examine the mental
+28:17
+model first. So one question for you all feel free to to type your answers in the the Slack
+28:24
+channel. As an S sur, what do you need to know about the service in order to
+28:30
+safely decide whether to roll the service back to a previous version of production? What what's inside that
+28:37
+mental model?
+28:47
+Do I lose data? Error rates.
+28:56
+Potential fixed bugs reverted. Yeah. Fixing other issues.
+29:08
+Roll back path exist. Speed of rollbacks. Great. We're all great analysts. Um, so great discussion. So we
+29:15
+have two examples on this slide of important factors for an SR's mental model.
+29:21
+One might be whether the production service is returning errors
+29:27
+and another might be that the SR's belief on whether or not the issue correlates to a recent rollout. We
+29:34
+simplified the mental model here. There might be other other mental model variables but for the sake of discussion
+29:41
+let's move forward. So now let's examine the SR's decision
+29:46
+making process. So question for the audience. How do you decide whether to
+29:53
+roll back the production service? We are looking for something like sudo code here. Very simple like an if then
+30:00
+statement inside the decision making. Feel free to to add the the question the
+30:05
+the the answers in the in the Slack channel.
+30:18
+If simple feature flag change then roll back. If errors come from new version only then roll back. If stateless then
+30:26
+roll back. Correct. Uh if previous version worked and current one does not then roll back. Good. All those are
+30:35
+great. So our decision might be that if service
+30:42
+errors correlate to a recent rollout then we roll back. Another decision might be that if the
+30:50
+incident is big enough for example the rate of errors rate is large like 800%.
+30:57
+Then we immediately roll back even if we have a lower confidence level that the errors correlate to our recent rollout.
+31:04
+We often find that when we run STPA and ask people how they form their beliefs
+31:10
+about the state of the system, the assumptions they typically make and the decision making they follow. We are the
+31:17
+first ones to ever ask these questions in such detail during the analysis and
+31:22
+this frequently leads to interesting discoveries about assumptions and how decisions are made. again in talking
+31:30
+about the SR's model, mental model and decision- making process. I am foreshadowing foreshadowing the next two
+31:37
+steps of STPA. And now I'm going to turn it over to Garrett so he can walk you
+31:42
+through these other steps in more detail.
+31:52
+All right, thank you Ruben. So on to step three.
+31:57
+So, we've scoped our analysis. We've defined losses and hazards, and we've modeled the system. In the next two
+32:03
+steps, we're going to use this model to reason about all the ways that unsafe system behavior, both from humans and
+32:10
+from complex software interactions might lead to losses. So, in step three of
+32:15
+SCPA, we list out all the unsafe control actions or I'm just going to use the abbreviation UCAs.
+32:22
+So a UCA is a control action that in a particular context will lead to a
+32:29
+hazard. And as we'll discuss that context or the circumstances surrounding the control action is really key to
+32:36
+whether that control action is going to be safe or unsafe.
+32:41
+Now my favorite sequence of slides. How do we determine whether a control action is safe or unsafe? So for example,
+32:51
+I have a butter knife here. What about the action use butter knife?
+32:56
+Is that action safe or unsafe? You can give me a response in Slack
+33:02
+here. Okay. The first answer is it depends.
+33:07
+Okay. All right. Some people have seen the slide before. Yes. Depends on what you're using it
+33:14
+for. Safe always. Okay. So, I think people have the point
+33:20
+here. Context, context, context. So,
+33:25
+use butter knife to spread butter on toast. That seems pretty safe.
+33:31
+Use butter knife in electrical outlet is definitely not safe. And my first career
+33:37
+was in electrical engineering and I still enjoy restoring vintage electronics. I've been shocked several times. I can definitely confirm that
+33:45
+knives and electricity do not mix. So by itself,
+33:51
+a control action such as roll back to previous version, it's neither safe nor unsafe. You need to know the context.
+33:58
+Context is key. So let's add some context and list out
+34:04
+some UCA's unsafe control actions for our S sur who is deciding whether to roll back production to a previous
+34:09
+version. One UCA is that it's unsafe for the SRE
+34:15
+to roll back to the previous version when the service is not returning errors. I mean that roll back is unnecessary. It's unsafe. You might be
+34:22
+taking away features or even reverting a critical fix and then putting the system in that hazard state as Ruben was
+34:28
+describing earlier. What might be some other contexts where
+34:34
+it's unsafe to roll back to a previous version of production? Go ahead and put your answers in Slack.
+34:46
+Okay. Security issues. If there's a security issue with rolling back dependencies, yes, that's come up.
+35:02
+Ah, data schemas. If the data schema has changed irreversibly
+35:08
+release had a one-way database migration, maybe a scaling issue with a peak hours
+35:13
+roll back if you don't have a playbook. I like that one. I'm a technical writer. I can
+35:18
+relate to that. Data loss. The rollout system is broken. The rollout mechanism wasn't tested or
+35:25
+was tested a long time ago. Excellent. All great answers about context.
+35:32
+So here's two that we came up with. Simply invert the thing. It's unsafe to
+35:38
+roll back to the previous version if the previous version has a production issue. And somebody called it.
+35:45
+Our example was it's unsafe to roll back if the previous version is no longer compatible with production. For example, if there's been a database schema
+35:52
+change. Great. And uh in one of my previous careers, I was a high school physics
+35:57
+teacher. I very much appreciate audience participation. So please keep it coming. There's nothing more boring than somebody just talking for hours.
+36:05
+All right. You can also have a UCA where the controller doesn't take a control action. So here's our example UCA from
+36:11
+the previous slide. SR rolls back to previous version when the production version is not returning errors.
+36:20
+Looking at this UCA, is there a similar UCA where the SRE does not roll back? So
+36:27
+it would start like SRE does not roll back to previous version when blank and go ahead and type your IDs in
+36:33
+Slack.
+36:49
+When is it unsafe to not roll back?
+37:02
+Okay, we got a few answers coming in. New version is actively damaging stored data. System design is not clear and the
+37:08
+blast radius. Ah, when the new version is genuinely broken and the old version is safe.
+37:13
+These all might be reasons to roll back though. I'm thinking what about not rolling back? When is not rolling back unsafe?
+37:26
+Or you're saying if you roll back then you will get data corruption. I think that's what it is. Got it.
+37:33
+Roll back is mitigating a high impact incident. Yes. Problems with a different component. Okay.
+37:39
+Great.
+37:45
+All right. So again, we just did a really simple one inversion. It's unsafe to not roll back to the previous version when the production service is returning
+37:52
+errors and you know that that's correlated to the roll back that just happened.
+37:58
+All right, so our theme for this talk is that SCPA guides you on where to look, where to shine your flashlight. Unsafe
+38:03
+control actions is an example of this mathematically and you'll see this if you look up the MIT information. There's
+38:09
+four different ways in which rolling back can be unsafe. So sometimes it's unsafe to actually
+38:15
+roll back. Sometimes it's unsafe when you don't roll back.
+38:20
+It could also be unsafe to roll back at the wrong time. So maybe too early, too late, or out of order in a sequence that
+38:28
+includes some other actions. And if we consider that the roll back action itself has some duration,
+38:35
+it could be unsafe if you stop the roll back too soon or if you allow it to proceed for too long.
+38:41
+So for example, just as you might have incremental rollouts, so you can see the effect of a new version on production,
+38:47
+you might also have incremental roll backs. So if you initiate the roll back and you immediately start seeing a lot
+38:52
+of new errors, it's unsafe to let that roll back continue, potentially affecting more and more users. So by
+38:59
+brainstorming context for all four of those cases, we know we've shown our flashlight, our STPA flashlight on all
+39:06
+the possible ways that this action or lack of action or maybe even the timing
+39:11
+of the action can be unsafe. If we only think of ways for that first case where
+39:17
+performing the roll back is unsafe, then we've left three4s of the cases in the dark essentially.
+39:25
+So now we've illuminated the four different kinds of UCAs. Let's see some examples of each.
+39:30
+We've talked about UCAs where you take an action. It's unsafe to roll back when the current production service isn't
+39:36
+returning errors. We've talked about UCAs where you don't take an action. It's unsafe if you don't
+39:43
+roll back when the current production service is returning errors.
+39:50
+Does anybody want to take a guess at a UCA where the SR rolls back too late?
+39:56
+Maybe type your answer here.
+40:16
+Ah, okay. So, you got lost trying to recos it. Okay.
+40:22
+Roll back too late when the VP has already been paged. I like that one.
+40:28
+Roll back too late after you start getting a lot of customer calls. Okay, it's all good context. Yep. Company is out of business. That would be far too
+40:35
+late, I think. Yes. Maybe you took too long to identify the
+40:41
+correct binary to roll back. you've already had some data changes or some losses of data that have happened.
+40:50
+Great. Excellent. Thank you.
+40:56
+Okay, here's our example. Maybe it would be unsafe to roll back too late after the errors have started
+41:02
+impacting users. Maybe another one.
+41:08
+As I mentioned previously, it's unsafe to continue the roll back for too long. Actually this is one of the next kind.
+41:14
+So with duration it might be unsafe to continue the roll back for too long when the roll back itself is resulting in new
+41:20
+errors. So remember we've done all this for a single control action which is the S sur
+41:26
+rolling back to a previous version of production trying to decide whether to do that or not to do that. In a larger
+41:32
+and more exhaustive analysis we would have multiple control actions and possibly multiple unsafe control actions
+41:38
+for each of them. all of them with different contexts that make that action unsafe and different types as we've
+41:44
+listed on the screen here. The good thing and something that we do
+41:50
+a lot at Google is that you can tailor your analysis to your available bandwidth. You can decide which areas of
+41:56
+the controller structure and which UCAs you want to prioritize. So you can sort of decide based on the time that you
+42:02
+have available where you want to focus your efforts in SCPA.
+42:08
+Okay, we're at step four now. This is where we're going to use what we've done in the previous steps to start
+42:14
+anticipating possible incidents that might occur in our system. And again, SDPA calls those loss scenarios.
+42:23
+So, we have our list of unsafe control actions. With that list in hand, we can now start going through them one by one
+42:30
+and reason about why that controller would issue that unsafe control action or in other words why part of the system
+42:36
+would behave in an unsafe manner. We know that UCA's lead to hazard states
+42:42
+and hazard states are going to lead to a loss under worst case conditions. So at the end of this step, we're going to
+42:48
+have really a comprehensive list of scenarios basically how unsafe behavior in our system can lead to hazards and
+42:54
+losses. We're going to use our model of the system again that control feedback loop
+43:00
+to guide this reasoning. So we're going to pick a UCA, look at its control loop, and then ask the system experts a series
+43:07
+of questions based on the different parts of the control loop. So unsafe behavior can really happen at any part
+43:13
+in this loop here. that includes the decision- making of the controller, the feedback, the control path and also even
+43:21
+the control process itself. So something about the roll back in the production service.
+43:28
+Okay, here we see our stick figure pointing the flashlight showing that once again SCP is going to guide us on where to look. I've drawn a line
+43:36
+splitting this control loop into two parts and so far we've mostly been talking about controller issues. So in
+43:42
+this case, how does the S SR decide whether to roll back? What is the SRE's mental model of production health? Is it
+43:48
+accurate? You could also have issues with feedback to the SR.
+43:55
+Now, no slack here. Just shout it out. I think it's a small enough room. What is the feedback that the SR is using to
+44:00
+determine whether to roll back to a previous version? Monitoring dashboards. Yes, exactly.
+44:08
+Time stamp of the roll out. Time stamp of the rollout. Okay. I I didn't catch that one. Alerting. Alerting. Yes. Okay. Excellent.
+44:15
+This is a teacher's favorite moment when people have been paying attention, getting great answers. Yes. Excellent.
+44:24
+Okay. So, if there's something wrong with this feedback, then the S sur is likely going to have the wrong mental
+44:30
+model about production health, and that makes it likely that they're going to take an unsafe action. So again, STPA is
+44:36
+guiding us to cover the entire control loop when we're coming up with scenarios that could lead to an incident.
+44:43
+Now, in the upper part of the diagram, we have controller and feedback issues. But at this point, we've only
+44:49
+brainstormed half of the possible scenario space. On the lower part of the diagram, we
+44:55
+also have control path and control process issues. Those can get really interesting. Ruben's going to show you
+45:01
+some of those in a bit. First, let's take a look at controller and feedback scenarios.
+45:10
+So, I'm going to show you STPA's method for building loss scenarios. And this is a really powerful aspect of STPA. Again,
+45:17
+this method is going to involve asking your system experts a series of guided questions to make sure that you shine
+45:22
+your light on all the areas of the control structure where there could be issues. So, let's revisit this roll back
+45:28
+example and consider that first category, which is going to be controller and feedback issues.
+45:34
+So again, we start by picking a UCA. S SRE does not roll back to a previous
+45:39
+version when we're serving errors. And in our diagram, we might have multiple types of feedback coming to our
+45:46
+controller. But in order to build our question, we're going to pick one feedback. And for this example, we'll
+45:51
+use the feedback that's present in the context, which is response errors.
+45:58
+Now, there's two possibilities here. either that feedback is safe or that feedback is unsafe.
+46:04
+Now you might be wondering why didn't I say correct incorrect. Well, there's a reason for that. Safe feedback means
+46:10
+that the correct feedback exists somewhere in the system. This is the case that we've been
+46:15
+discussing in our rollback examples and the initial activity. And in a minute, I'm going to tell you
+46:21
+why I'm using the terms safe and unsafe here. So first I'm going to show you how STPA guides us to build the actual
+46:27
+questions for the system experts. So again this is just putting this out
+46:33
+in text. We pick a UCA pick a piece of feedback. Do this twice. Once for the case where feedback is safe, once for
+46:39
+it's unsafe. And then finally we ask our question. For the case where feedback is safe, the question would look like this.
+46:46
+Why would the production service not be rolled back in spite of feedback existing that shows service errors? Now,
+46:53
+this should look familiar. This is the same question that we asked in the initial warm-up. Only here, we're
+46:59
+explicitly specifying that feedback exists, showing server errors. And of course, we did this on purpose so we can
+47:05
+get a better comparison here. Now, maybe we have a different perspective after talking about how FTPA models the system
+47:12
+and what can go wrong in that control feedback loop. So, let's review this and see if we have any additional insights
+47:18
+here. So again, looking at the control structure to get a picture of what we're doing. If the feedback is safe,
+47:25
+but the controller does something unsafe and no slack here, just shout it out.
+47:30
+Where's the problem?
+47:36
+Decision. Okay, decision- making. It could be the feedback. Could be the
+47:43
+decision making. Could be the feedback decision- making side. Okay, feedback going in is safe. the SR is getting the right feedback but
+47:49
+the SE does something unsafe. Where's the issue lie?
+47:56
+Maybe the SR doesn't understand the feedback. I think the actuation of the decision, not just the decision, too.
+48:02
+Actuation decision. Yeah. Yeah. So, I also think that this is a crowd that believes very strongly in blameless culture. So, nobody wants to say it's
+48:08
+the SR, but yes, like something is going on there. And it's not necessarily blame
+48:13
+here. It's the system, right? you get safe feedback and safe action. There could be many reasons for that. Maybe
+48:19
+there's a learned process that the SR is using. Maybe it's something about training. I work in training a lot. You
+48:24
+know, we're going to try to uncover that, right? Great. All right. So, we want to understand
+48:31
+could there be flawed decision-m could there be a flawed mental model? Could there be both?
+48:38
+So through many SCP analyses, people have come up with a list of general causes for this type of scenario
+48:43
+involving a problem with the controller. Maybe it's easier to think of a software controller here doing something. And
+48:48
+this expands on the scenario question that we built earlier. So we found that sometimes we ask this scenario question,
+48:56
+you know, why would the SR decide to not roll back in spite of receiving feedback showing server areas? uh but the system
+49:03
+experts have trouble thinking of specific scenarios. So here are some questions you can ask given your new
+49:09
+understanding of the system through SCPA to help the system experts think of possible causes.
+49:15
+So you can ask about responsibilities who's making the decision to roll back or maybe some end state that the SR is
+49:22
+trying to achieve. You can ask about the decision-making rationale. How does the SR decide
+49:28
+whether to roll back? You can ask about a mental model or the
+49:34
+state of the control process. You know, what dashboards of signals are you looking at? How do you interpret them? I
+49:39
+heard some people talking about that to determine production health.
+49:46
+And although we didn't show one in our control structure, you could have a higher authority controller ordering the
+49:51
+S sur to perform a roll back. So also a case we want to consider. Now that would
+49:57
+actually be an unsafe control action for that higher level controller and we would analyze that UCA in the course of
+50:03
+going through our STP analysis. Now very importantly I'm adding etc at
+50:09
+the end of this list because I want to make it clear this list is not an exhaustive list of questions to ask. However, this is going to give you a
+50:15
+good start when you're asking your system experts these questions.
+50:23
+Okay, now it's time for audience participation. So the question is why would the SR decide to not roll back in
+50:31
+spite of receiving feedback showing that there's some correlation between rollouts and server server errors and
+50:37
+take a look at these questions that reflect how we model the system. Think about unsafe behavior when we're running
+50:43
+SCPA. See if you have any new insights to share in Slack.
+50:59
+Oh, there's been a lot of stuff going on while I'm talking here. Great.
+51:05
+Okay. Okay. The SR knows it's a false positive. Uh, again, incorrect assumptions. Okay. Human factors,
+51:11
+misinterpretation of the feedback. You're not quickly depleting the error
+51:16
+budget. Okay. Um, the SR did not realize this particular binary recently had a roll out. I like that one. Low trust in
+51:23
+the feedback. All right. Roll out was a critical security patch.
+51:28
+You don't want to roll that back. Maybe. Ah, yes. People yell at me when I roll back. Okay. Yes, it's a good one.
+51:36
+I mean, that's all learned decision- making, right? Goes into your mental mental model and your thinking. You
+51:42
+might fear that the situation gets even worse. Ah, maybe you get shouted at because it
+51:49
+looked bad to the company that you rolled something back. Okay, those are all you're learning this process for
+51:55
+making decisions. No runbook culture of fix forward. Oh, these are great. Cash
+52:00
+warming up permissions. Yes, two people at the same time. The SR has no permissions to
+52:06
+perform the action. Excellent. I love it. Okay.
+52:12
+All right. So I think your your examples are better than ours, but here's the examples that we came up with. You might
+52:17
+have a situation where the dev and the SR team share on call responsibilities. Each of them expects the other one to
+52:22
+handle the alerts. Ends up that nobody handles the alert, right? Uh or I think
+52:27
+somebody mentioned similar to this. It could be that a bug was introduced in a rollout that happened some time ago, but
+52:33
+the buggy code path doesn't get executed until a new client on boards and you start serving our traffic. So to the on
+52:38
+caller, maybe it looks like the start of errors correlates with the new traffic shape, not with the rollout containing the bug.
+52:46
+Or maybe the on caller considers this particular alert to be oversensitive. I think we had some of those like they don't trust feedback. They expect to see
+52:52
+these errors. So maybe they decide not to roll back.
+53:00
+All right, we've introduced a lot of terminology. We're almost getting to our break here. Now that we've seen a few scenarios, I want to take a minute to
+53:06
+really call out the difference between a UCA and a scenario. The UCA, the unsafe
+53:11
+control action, is simply the action in the context that makes it unsafe. The scenario goes a step further and it
+53:18
+explains what system behavior would lead to that UCA. So the SRE does not roll
+53:24
+back to the previous version when the production service is returning errors. And this is because the dev and SR team
+53:29
+share on call responsibility and the SR incolctly believes that the dev is on duty. So now you're giving an
+53:35
+explanation for why that unsafe behavior might occur. Now notice the phrase incorrectly
+53:43
+believes in the scenario. Does that remind you of part of the control structure?
+53:50
+Something in the controller mental model. Yes.
+53:57
+So that points to the SR's mental model and in this case the mental model would be incorrect leading to unsafe behavior.
+54:08
+All right, almost to the break. As I mentioned before, so far we've mostly been talking about controller and feedback issues where the feedback is
+54:13
+safe. You see that here feedback coming in is safe, but the controller still does something unsafe. In this case, the
+54:19
+SR does not roll back when production health is impacted. And as with exhaustively exploring the
+54:26
+UCAs or the ways in which an action can be safe, you do the action, you don't do the action, you do it too early or too
+54:32
+late, you do it too long or too short. We can also explore the ways in which
+54:37
+the behavior in the control loop can be unsafe. And we're really only just getting started with scenarios here. So
+54:44
+in addition to cases where the controller does something unsafe, as we mentioned, there's another class of scenarios where the feedback is unsafe.
+54:51
+And here's our stick figure illuminating that unsafe feedback. And again, that feedback could be wrong,
+54:58
+delayed, incomplete, or missing altogether.
+55:03
+Of course, if the feedback is bad, then it's likely that the controller, in this case, the SR is going to do something unsafe.
+55:12
+So, building our question for SEMmes is going to be similar to what we did before only we're going to assume that
+55:17
+the feedback is unsafe. And also when we generate the questions to ask our system experts, we're going
+55:23
+to specify the true state of the system in question. So this is something that's
+55:28
+a little bit different here. We assume the feedback is unsafe, but we give the true state of the actual system, the control process.
+55:37
+So for instance, why would feedback not indicate that the service is returning
+55:42
+errors even though it is? Notice that this question is phrased so
+55:48
+that the feedback is totally missing is a possible answer. And this class of
+55:54
+scenarios has the potential for some really interesting discoveries since, as Ruben mentioned earlier, software
+55:59
+developers are very good at designing control paths. Formal design of feedback paths is less common. Now, if you look
+56:06
+at some of the published SCPA results from all industries and not just software, there are really compelling stories of people drawing control
+56:14
+structures for complicated systems, airplanes, autonomous vehicles, factories, manufacturing, and they
+56:20
+immediately notice places where there are no feedback errors. So, crucial feedback necessary for a controller to
+56:25
+make safe decisions is completely missing.
+56:31
+All right, I think it's like two slides to the break. Let's come up with some scenarios where the feedback is unsafe. So why would feedback not indicate that
+56:40
+the service is returning errors even though it is?
+56:45
+And before I read our examples, does anybody have an idea for an unsafe
+56:51
+feedback scenario here? System being monitored is your monitoring system.
+56:56
+The system being monitored is your monitoring system. Okay. I like it.
+57:06
+JSON blob with an HTTP 2000. Poor monitoring. Monitoring is down. Incorrectly configured monitoring.
+57:13
+The errors are upstream. Synthetic traffic. You haven't reached some threshold.
+57:22
+All right. Excellent.
+57:29
+So here's our examples. You might have no alerts set up for those types of errors. There's a case
+57:35
+where feedback is missing completely. Maybe the collection of telemetry is
+57:40
+delayed. So that might be a case of rolling back too late.
+57:46
+Maybe there are alerts but they get sent to the wrong group destination.
+57:53
+How about an alert storm? the back end makes signaling out the errors for the production service very
+57:59
+difficult. All those scenarios could make the SR incorrectly believe that the production
+58:05
+service in our theoretical incident is healthy or at least doesn't have an issue. And given that belief, the SR is
+58:11
+not going to roll back. Why would they? Right?
+58:17
+Okay. We've shown you examples of scenario questions for controller and feedback issues. With those questions, you can work with the system experts to
+58:24
+anticipate loss scenarios. But again, we've only covered half the control structure. And to make sure we've
+58:30
+captured all the possible types of scenarios, we need to analyze control path and control process issues. I'm
+58:37
+going to hand it over to Ruben to do that. So, Garrett just talked before the break about controller and feedback
+58:43
+issues. Now, but we haven't spoken yet about control path and control process
+58:49
+issues. Let's focus on on these ones now. Um as with control and feedback
+58:54
+ethos, there are two scenario classes involving the control path and the control process. In a control path
+59:01
+scenario, the controller does the right thing. It rolls back when the production service is returning error. So there is
+59:07
+no UCA. However, something happens along the control path. Someone was mentioning
+59:12
+earlier that this can happen and the control process still gets the UCA. We'll talk about how that might happen
+59:19
+in a minute. And finally, in a control process scenario, the controller does the right
+59:26
+thing rolling back the service when it's uh returning errors. So there is no UCA
+59:32
+and the control process does not get the UCA. However, the control process
+59:37
+behaves as if it got the UCA. The production service is not rolled back.
+59:43
+So sometimes this can be tricky to reason about. So let's build our scenario questions and think of a few
+59:49
+examples. So to build our scenario question, let's first review the UCI. We are analyzing
+59:57
+our UCA is SR does not roll back to previous version when the production service is returning errors.
+1:00:05
+So question the question is how could it ever be the case that the SR initiates a
+1:00:11
+roll back but the roll back doesn't reach production? No question for you all. Type your
+1:00:19
+answers in in the chat. So before we give a specific example, does anyone
+1:00:25
+have any ideas about a possible control path scenario
+1:00:34
+production freeze? Failure to find the previous artifact
+1:00:40
+deployment gates do not allow old version anymore. That's great. failure to specify the correct version to roll
+1:00:46
+back to pipeline fails because we lack a further feedback loop that tells the SR
+1:00:52
+what versions are in prod all those great answers. Well, I cannot keep up with the flow. Um
+1:01:00
+let's refine the control path scenario question. We have a few examples. There could be more as as you are proposing.
+1:01:07
+So the release system receives the roll back action but it runs with limited
+1:01:12
+resources and so it serializes the roll back along other release requests and it happens it happens that it does not
+1:01:19
+prioritize the emergency roll back or the on caller does not have permissions.
+1:01:25
+This was mentioned multiple times to roll back but the release system only reports the permission error in the UI
+1:01:32
+when attempting to start the roll back and the on caller doesn't happen to go to the UI and check the status of the of
+1:01:39
+the roll back or an ongoing roll out for the same production service blocks the
+1:01:46
+roll back. There will be more control path scenarios and that is the goal to find as many as possible.
+1:01:53
+Finally, we have the control process scenarios where the controller does not take an unsafe control action and the
+1:02:00
+control process does not receive an unsafe control action. However, the control process at the bottom acts as if
+1:02:06
+it received the unsafe control action. Remember our UCA S does not roll back to
+1:02:12
+previous version when production services returning errors. The question here is why would the roll
+1:02:19
+back reach the production service but the production service is not rolled
+1:02:24
+back to the previous version. Again before we give a specific example
+1:02:30
+does anyone have any idea about a possible control process scenario
+1:02:37
+orchestration control plane board upstream change
+1:02:42
+container stateful set it's broken control process is a zombie okay that's
+1:02:47
+scary um backlog yeah all those great answers
+1:02:53
+we have a few examples here so let's refine the control process scenario question. Why would the roll back reach
+1:02:59
+production but the production service is not rolled back to the previous version? It could happen that the roll back
+1:03:05
+action arrives to the production service but someone with permission cancels the roll
+1:03:11
+back when they hit a global stop button on the rollout system or this has been
+1:03:17
+discussed in a different form but the new version of the ser of the service was released which removed a dependency
+1:03:23
+on a backend system. After the release, this now unused obsolute back end was
+1:03:29
+turned down. When a critical bug in the new version forces us to do the roll
+1:03:34
+back, the process fails because the previous version of the service cannot start now without the back end that has
+1:03:41
+just been turned down. An analogous example is with the database schema
+1:03:46
+migration change. Again, the idea is to find as many of these uh control process scenarios as possible.
+1:03:53
+And congratulations, we finished all the four official steps of STPA. And at this
+1:03:58
+point, we sometimes hear people talking about how scary it is to see a list of
+1:04:03
+all the ways or scenarios the system might might have an incident. We address we address these concerns in this last
+1:04:11
+step. If we've done our job right, we have all the information that we need to appi to to apply pure engineering to
+1:04:18
+make decisions on which scenarios require priority fixes, which scenarios
+1:04:23
+can be addressed simply with better detection and which scenarios we can
+1:04:28
+live with. We accept the risk. Often we find that there are patterns in these
+1:04:33
+scenarios where a single mitigation will have a huge return on investment preventing an entire class of incidents.
+1:04:41
+And there are many many ways of prioritizing the mitigations. And this is a just an example in which we plot
+1:04:48
+the mitigation across four quadrants according to the impact they have on on
+1:04:54
+addressing or reducing the severity of the scenarios and the the cost of implementing those mitigations. And it
+1:05:01
+it can help to show leadership a graph like this one to make better for them to
+1:05:07
+make better decisions during planning. for example. And now I'm handing it back
+1:05:12
+to Teo for his story time. All right.
+1:05:21
+Wow. Okay. Well, that was a lot of new material um and technical detail about STPA. Thank you both to Ruben and
+1:05:27
+Garrett for giving us a window into that process. So, from here on out um you can
+1:05:33
+relax. Okay, take a deep breath. I may ask some questions in this next part of the presentation, but they should be
+1:05:39
+considered rhetorical. You're free to um chat and comment in the Slack, but I won't be uh reading them out loud. So,
+1:05:46
+please sit back, relax, and enjoy the show. Now, I'm going to tell you a story
+1:05:52
+about how we applied STPA to the road disruption system in Google Maps. And if you saw the presentation that I gave at
+1:05:58
+SRCON Americas or at the stamp conference earlier this um uh this fall, this is the same system.
+1:06:06
+So here's a friendly reminder of the incident that I presented earlier where we designed a system that was supposed
+1:06:11
+to ingest and publish live road closures on Google Maps, but it had a key design flaw that we ultimately found with STPA.
+1:06:19
+So let's dive into how this system was designed. If you can recall from earlier, the goal of the system is to
+1:06:25
+process road disruptions from thirdparty uh providers onto Google Maps. And so
+1:06:30
+when a road is closed, we should close it on Google Maps. And likewise, when it's opened, it should be opened on
+1:06:36
+Google Maps. Super straightforward responsibility. Synchronize the road closures between those two databases.
+1:06:42
+Now, it would be bad if for some reason this syncing failed and we didn't
+1:06:49
+display a road closure when a provider told us about it. So,
+1:06:55
+our users are sad. Now, is this possible? And if so, how come?
+1:07:01
+You're right. It is possible. Okay. Well, under the hood, the road disruption system receives snapshots of
+1:07:07
+the closures held by thirdparty providers. So we see a snapshot here and that represents the state you know of of
+1:07:13
+the road closures at a given time and every 5 minutes we get a new snapshot and so what the system does is it diffs
+1:07:21
+the two. So here it figures out that the difference between these two snapshots is this new closure 25th street and so
+1:07:28
+what it then does it says okay well let me just apply that new road closure onto Google Maps. Wow that's such a simple
+1:07:36
+system. So, now that I've sufficiently explained how this system works, um,
+1:07:41
+quick raise of hands. Uh, how many of you see the glaring issue or how many, you know, do you think that there's a
+1:07:47
+glaring issue? It's like pretty simple, right? Like you just d the two snapshots. All right, I count three
+1:07:53
+hands. So, that's good. Um, nothing jumps out to me from this uh specific
+1:07:58
+design. And I'll tell you that this design uh was reviewed and approved by
+1:08:03
+tech leads of each part of the system. So obviously the system is safe as a
+1:08:09
+whole, right? Well, did they use STPA to design and review this system? I don't think so. So
+1:08:16
+all of us together, we're going to model this system now using STPA. So as a
+1:08:22
+reminder, there are four steps to STPA. One, define the purpose of the analysis.
+1:08:28
+Two, model the control structure as you know with the control and feedback loops. Three, analyze those control
+1:08:35
+structures to identify the unsafe control actions. And then four, identify the loss
+1:08:43
+scenarios, which essentially is figuring out how those unsafe control actions could possibly occur. And of course, the
+1:08:51
+optional fifth step of redesigning our system to apply our mitigations.
+1:08:58
+Let's dive right into it. So the first step when running an STPA is to define the purpose of the analysis. And so
+1:09:05
+specifically for this analysis, we state the goal. So um our goal of this system
+1:09:11
+is to uh sync the state of Google maps to that of the third party road
+1:09:17
+closures. Next, we define the losses. Remember the losses are the unacceptable
+1:09:22
+outcomes for our stakeholders. So that's going to be, you know, the the the VP of Google Maps, the uh engineering teams,
+1:09:29
+our users that are driving on uh you know, and using our product. And so we
+1:09:34
+have three losses. One, loss of user trust. So our users no longer trust that
+1:09:39
+we're going to tell them which roads are closed. Two, loss of mission. And then of course, three, a negative PR event.
+1:09:48
+Then we define our hazard states. So the hazard state as uh either I forget if it
+1:09:54
+was Garrett or Rubin who described this um it's a it's a set it's a system state or a set of conditions that when
+1:10:01
+together with a uh set of worst case environmental conditions will lead to
+1:10:07
+one of the losses that we just defined. Now for the road disruption system our
+1:10:13
+hazard state is that Google Maps is out of sync with third party road closures.
+1:10:18
+Now, those of you who are paying close attention might realize that we're almost always in the hazard state in the
+1:10:24
+way that we've designed our system, right? That database is, you know, updating all the time, but we sync every
+1:10:30
+5 minutes. So, we're almost always in our hazard state. So, that's pretty interesting. Okay, next step. The next
+1:10:38
+step is to build our control structure now that we've defined our purpose of
+1:10:43
+the analysis. So, let's model our system. As we can recall, the overarching goal of the road disruption
+1:10:49
+system is to ensure that Google maps contains the latest state of all thirdparty closures. So at the very
+1:10:55
+bottom, we have the state of road closures on Google maps. Now the controller above Google maps is the road
+1:11:01
+disruption processor who is responsible for synchronizing that state and it does so by sending create actions or delete
+1:11:08
+actions, right? You see at the right there and it receives feedback from Google Maps specifically the road
+1:11:14
+closures of it. However, how does the processor know how to change the state of Google Maps?
+1:11:20
+Well, let's add another controller. And this controller owns the responsibility for telling that processor which
+1:11:26
+closures to open or close. And finally, we have the engineering
+1:11:32
+team. So, what's really interesting about STPA is that it doesn't just model the technical parts of the system, but
+1:11:40
+also the human parts. Okay? So it allows you to model the humans that interact
+1:11:45
+with your technical systems. So this engineering team, they own the logic of the snapshot differ and they
+1:11:52
+also own the logic of the processor and they're also the ones who should be paged when Google Maps is out of sync.
+1:12:01
+All right, step three, unsafe control actions. Let's look at this one in particular.
+1:12:07
+Now, it would be unsafe for the snapshot differ to not create a road closure when
+1:12:14
+that road closure exists in new in a new snapshot, but it doesn't exist in Google
+1:12:19
+Maps. In other words, when there's a new road closure, it should be applied onto Google Maps and so it should provide
+1:12:25
+that create action and it would be unsafe for it to not do that. And if this if it if this particular UCA does
+1:12:32
+not happen rather if it does happen then um Google maps will be out of sync with the snapshot.
+1:12:38
+So how can this actually happen? Well let's start looking at the feedback. Um
+1:12:46
+so what feedback does this controller receive here? Well it receives third party snapshots.
+1:12:53
+But hold on, the UCA refers to the state of Google Maps and the state of Google
+1:13:00
+Maps is not at all provided as feedback to the diff. So how on earth does the
+1:13:06
+diff know when Google maps is out of sync with a snapshot? Now as we can
+1:13:12
+recall earlier when I was describing the underlying system, the differs mental model assumes that the previous snapshot
+1:13:20
+is equivalent to the state of Google maps. But is that assumption always true?
+1:13:28
+What happens if the previous snapshot does not equal the state of Google maps?
+1:13:33
+Can that happen? Well, let's dive in deeper. Okay, so we're trying to figure out whether or not its mental model can
+1:13:40
+be wrong. The mental model of you know essentially the snapshot, the prior snapshot always representing the state
+1:13:46
+of Google maps. So the snapshot differ what does it do? Okay, it generates road
+1:13:52
+closures by comparing the two previous snapshots. And in this case, it sends a create for a 25th Street closed. But
+1:13:58
+what if our command to create that road closure doesn't work for some reason? Perhaps the database update failed or we
+1:14:07
+never sent the create message or there was some race condition between the snapshots or some problem exists in the
+1:14:12
+road disruption system or Google Maps. And any of those could result in 25th
+1:14:17
+Street closure not being applied onto Google Maps. Now we're in the hazard state. So what happens next? Can the
+1:14:25
+system actually recover from this incident? Well, let's add a third snapshot to see what happens. So in the
+1:14:32
+third snapshot, the road disruption compares uh snapshot 3 against snapshot 2, and it sees no diff for 25th Street
+1:14:40
+closed. And what that means is that it'll never reattempt to publish that closure. Aha. So now we can see how this
+1:14:47
+assumption can be incorrect. Well, what happens? Our system will happily chug along and update other
+1:14:54
+closures without ever retrying that 25th Street closure and the end result is
+1:14:59
+that we're now completely out of sync with the state of the worlds. Days or
+1:15:04
+weeks later, the missing road closure on 25th Street is what results in all of our users being upset and me getting
+1:15:11
+paged. Now, we're in a lost state. You see, the road closure could have gone
+1:15:16
+missing days or weeks prior to users navigating on this road. The key problem here is that the road disruption system
+1:15:24
+had the wrong belief about which closures were on Google Maps. All right, rhetorical questions though you can
+1:15:31
+answer on Slack if you're feeling compelled. Which component reliability tools would
+1:15:36
+you use to fix this? Add redundancy, improve component quality, would you add
+1:15:43
+better testing, finer grain monitoring? Would you limit damage with failure isolation?
+1:15:49
+You see, it's unclear to me whether any of those component reliability strategies would actually work well to
+1:15:57
+account for this design flaw. In this outage, no component necessarily
+1:16:03
+failed. You see, every component operated as designed.
+1:16:08
+The key problem here is that the system had a design flaw. Okay, so let's take a
+1:16:15
+quick recap of what I shared with you. This design has a serious flaw that resulted in missing road closures and
+1:16:21
+this results in our loss scenario. You see, our missing road closure results in users being routed across a parade,
+1:16:28
+which causes negative PR. And then, of course, we spend, you know, 20 weeks trying to figure out what happened, then
+1:16:34
+redesigning our system, and then relaunching it. Okay, 20 weeks, right?
+1:16:40
+However, here's what actually happened. What actually happened is that we discovered this design flaw by using
+1:16:47
+STPA. Sorry, this is I missed a slide. Okay, so this is our new design of course which is to just read from the
+1:16:53
+database. You know you might have been crying from the pina gallery of course just read from the DB. Well um we
+1:16:58
+actually discovered this design flaw using STPA and as I stated earlier this incident never actually happened because
+1:17:05
+we used STPA to analyze the system before we built it. So this problem was
+1:17:11
+actually fixed by rearranging or rewriting paragraphs in our design doc. So our new design reads from the
+1:17:18
+database instead of comparing against the previous snapshot. And when we illustrate that in our control
+1:17:23
+structure, this new design essentially just adds feedback from Google Maps to
+1:17:29
+the snapshot differ. You might say, great. Okay. Wow, you found this one thing. Um, so what? Well,
+1:17:37
+not only did we find this specific design flaw, we actually found six other
+1:17:42
+design flaws, too, including invalid ordering of operations, feed processing race conditions, insufficient feedback
+1:17:48
+about sync state, errorprone onboarding, inadequate change management support, and limited observability into the
+1:17:54
+processing of road disruptions. I'm a little winded. That was a pretty long list of design gaps for a design
+1:18:01
+that had been approved by tech leads. So you might be asking yourself, how is it possible that these design flaws were
+1:18:07
+missed using our traditional review methods? Well, let's think about it. Often times
+1:18:14
+we build software and we design it that's in in a way that's um focusing specifically around the happy path,
+1:18:20
+right? And by definition on that happy path, you assume that the state of the
+1:18:25
+system is always safe. And when we do think about the unhappy path, we don't
+1:18:31
+have the tools to methodically interrogate the safety of our system. And the intuitive methods that we use at
+1:18:37
+the beginning of this talk are actually super time consuming and they're not methodical, right? Because we we rely on
+1:18:43
+some random walk of this entire system state space which in systems like these
+1:18:49
+are often way too large to even pretend to do properly. Someone in the slack
+1:18:54
+earlier was talking about you know computational uh um complexity and then like the the combinatorial explosions.
+1:19:00
+This is why our intuitive methods are very timeconuming and ultimately ineffective and as a result we choose
+1:19:07
+mostly to ignore it. Now the benefit of STPA is that we can abstract away a lot
+1:19:13
+of that complexity using these hierarchical uh control and feedback loops.
+1:19:18
+So without STPA we would have spent five you know weeks or or months to to fix
+1:19:25
+these failure modes because we would have found them in the testing or production stage. So big o of months
+1:19:31
+with STPA we shifted the identification of those failure modes to the design
+1:19:37
+stage which vastly reduced the cost to fix them. Now, for this specific system
+1:19:43
+that I showed you, the road disruption system, the cost of identifying and fixing those seven design flaws, was
+1:19:50
+incredibly cheap. It cost us 26 engineering hours total to run STPA. And
+1:19:56
+the per fix cost was under four hours per flaw, which otherwise would have taken us months or weeks per flaw. Now,
+1:20:05
+that's not a 10x engineer. Um, that's a 10,00x engineer. So I put that on my PF, you know, hi, I'm a 1000X engineer. Um,
+1:20:12
+now the cost of fixing this problem increases exponentially, right, as as your product becomes more mature. So
+1:20:18
+engaging with your sweet teams early when they're designing a new service or system is most effective. Now, it's not
+1:20:25
+like we were doing it wrong before. We really just didn't have the tools to identify this whole other class of
+1:20:31
+outages. Now when we applied STPA to mature systems at Google, we still find tons of
+1:20:37
+safety gaps, but we face more significant resistance from the engineering organization because we
+1:20:43
+effectively ask our engineers to unlaunch the system and then rebuild it from scratch all for a bunch of quote
+1:20:48
+unquote hypothetical safety issues. However, when we applied STPA to the
+1:20:54
+designs of our systems, our product engineering partners are way more interested in engaging with us because
+1:21:01
+we're coming to them with fixes for the design and we're working together to improve their designs, right? So, this
+1:21:08
+helps them have fewer outages in the future. And as a result, now we're
+1:21:14
+getting a huge inbound of requests for new analyses from our partner teams.
+1:21:20
+Great. So, what did we learn? Well, when we apply STPA to designs before we
+1:21:28
+implement our systems, we have the opportunity to fix our problems at a fraction of the cost. STPA enables us to
+1:21:36
+methodically explore the entire space of unsafe system behavior. Now, you too can
+1:21:43
+learn how to do STPA on your systems with some help, of course. Now, what help you might be asking? Well, here are
+1:21:50
+some great resources for you to look at. Um, unfortunately, these are actually not URLs. These are blue links. I
+1:21:56
+realize that right now. When the slides come out, please uh click those links. Um, there, you know, uh, Google has some
+1:22:03
+STPA resources. Um, the, um, uh, the folks at MIT also have some great
+1:22:09
+resources and there are also several conferences that they host per year. One virtual in September and one in person
+1:22:15
+in March. Those are free conferences. Um, so I would highly recommend you check it out. Um, okay. And with that,
+1:22:21
+uh, thank you so much and we're super happy to take some questions with the remaining time that we have.

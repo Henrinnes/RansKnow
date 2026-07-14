@@ -1,0 +1,1332 @@
+0:00
+cuz you don't need to see me while we're doing this because the slides are far more interesting than me. And yes, welcome to
+0:07
+Fireside Friday. Um, in this week's adventure, we're going to be talking about authentication and password
+0:13
+cracking. Yay. Thanks to our sponsors. Um, as I
+0:18
+mentioned, I put uh instructions in the Fireside content channel on how to get
+0:25
+the Docker instance up and running that we're going to be using for the labs. Uh, we're going to be doing a lab with John the Ripper. And John the Ripper is
+0:33
+like very specific about what libraries it wants to use. It's a very fussy
+0:38
+application. So I figured, okay, rather than try to put people through getting that running on their
+0:45
+system, hey, let's just go ahead and run it as a Docker instance. So that's basically what you're going to uh go
+0:50
+through and do here. So just you can follow the instructions here or over in the content channel. Uh, but that'll get
+0:56
+you up and ready for the labs that we're going to do at the end. And hopefully that'll be kind of fun because hey, it's cracking passwords. How can cracking
+1:02
+passwords not be fun, right? So, yeah, authentication. So,
+1:08
+we've we've kind of talked when we talked about VPNs, we talked about the importance of initial authentication,
+1:16
+and we talked about how that's still probably our biggest challenge. you
+1:21
+know, dealing with that whole, hey, you know, when you don't know who the other end of the connection is, how do you
+1:28
+properly validate them to know for sure they are in fact who you who they think you are? You know, it's kind of like,
+1:34
+you know, and I I kind of gave this explanation to a couple of people yesterday where um let's see, Ratus was
+1:41
+asking, oh, linkb was asking, is there a Docker fire side? So, I didn't do a
+1:46
+Docker fireside, but if you go to our blog, I did do a blog on uh Docker and
+1:55
+it has a cheat sheet. There's a video in there. There's slides. So, it's basically everything that would normally
+2:02
+be part of a presentation. Um I just didn't do it as part of the fireside for some reason. I don't know why, but any
+2:09
+event. So, you know, imagine you've got to meet somebody, right? and you're supposed to meet Jim Jones and you walk
+2:16
+into a room and there's a person standing there. How do you know that's Jim Jones? Right? That's kind of what we deal with at a computer level a lot of
+2:23
+times. How do you know this entity is in fact who they think they are? And you know, we talked about digital
+2:28
+certificates and how that means we kind of work through a trusted third party. So, you know, that's kind of the
+2:34
+equivalent to like let's say Keith. We all trust Keith because Keith is a good dude. You know, Keith walking in the
+2:39
+room and saying, "Hey, that's Jim Jones." Oh well, I trust Keith. Therefore, now I will, you know, trust
+2:44
+that's Jim Jones. Um, so yeah, getting the initial authentication thing right is hard. And we for the longest time
+2:52
+have relied on passwords to go through and do this. And passwords are horrible.
+2:58
+And you know, and I kind of like, you know, got the list here. Um
+3:03
+but yeah, year after year after year after year, a major part of our cyber security
+3:12
+issues basically revolve around the fact that people are using weak passwords and we just don't or can't do enough to go
+3:19
+through and do something about that. And quite honestly, a lot of times when we try, I honestly think we kind of
+3:27
+make it worse. And you know, my favorite example is PCI, right? So PCI up until
+3:34
+the last spec required that you have at least an 8 character password and you
+3:39
+change it four times a year. Well, from a human perspective, changing your password four times a year is kind of a
+3:46
+lot, right? Because it's easy to kind of get into that, wait a minute, this password I'm remembering, was that the
+3:52
+last one or the one before that? So as humans, we're going to generate patterns
+3:57
+to go through and try and remember that easier. So, you know, I So, in the slide
+4:03
+before this one, I kind of gave the example spring 2025. I see that I used to see that a
+4:09
+lot in PCI environments because think about it, it needs to be eight characters. Well, the shortest season
+4:16
+name is fall and that's four letters. So, if I combine those four letters with a four-lettered year, that's my eight
+4:23
+character mass minimum. No problem. And now I got to change it once a quarter.
+4:28
+Well, once a quarter the season changes. So, I just go through and do it this way. And it used to blow me
+4:34
+away how many accounts I could crack simply by going in and saying, "Hey, try
+4:41
+the current season. Try the current year and how many, you know, and now try last season with this year because some
+4:47
+people may not have had to change the passwords yet." So, a lot of times we'll kind of create these policies that
+4:54
+basically kind of drive people to do bad things. you know, we we kind of force them to go in and and and do bad
+5:01
+changes. You know, one of them to me is um adding special characters. You know,
+5:06
+forcing some people to use special characters. I've got a chart we'll look at later, but adding a special
+5:15
+character doesn't do nearly as much to add to the complexity and add to the
+5:22
+difficulty of cracking a password versus just adding on one additional character.
+5:28
+Right? In other words, nine charact, you know, a 9 character minimum without
+5:34
+special characters is far more secure than an 8 character minimum where you're forcing people to use something, you
+5:40
+know, use some sort of uh special character because at the end of the day, you know, most people are going to use
+5:45
+and, right? because they're going to come up with a word maybe with some numbers and they're going to say this
+5:52
+word and that word and you know so the special character is going to be an and symbol and it's going to end up in the middle between the two words. Um and you
+5:59
+know in a lot of tools you can tune them to specifically go in and look for those types of patterns. So yeah, so we kind
+6:04
+of end up in this boat where we're forcing people to go through and
+6:10
+oversimplify their passwords, possibly write them down and use the same password everywhere because that way
+6:17
+they only need to go through and remember one password. Uh XKCD is most awesome. Yeah. You know, and here's a
+6:23
+great example of that. You know, it's a if you've never read XKCD, oh, go check
+6:29
+this site out. He's got some really funny geeky comics he runs and this is
+6:34
+one of my favorites where he basically goes through and kind of talks about, you know, what we force people to do for
+6:41
+passwords and why it makes it really hard to remember but easy to crack
+6:46
+versus how we could easily do longer passwords and make them easy to remember
+6:51
+while making them more difficult to crack. And yeah, we just we don't do it that way. You know, people just don't
+6:57
+really think it through. So when we talk about cracking
+7:02
+passwords, what does that mean? Right? When someone says, "Oh, hey, you know, we're going to crack some passwords."
+7:08
+What does that mean? The methodology is probably going to fall into one of three
+7:13
+car categories, possibly two combined, right? like I might go after
+7:19
+implementation weaknesses over the wire or offline in which case you know we're kind of combining two of these but it's
+7:26
+always going to be at least at least one of these. The one to me that kind of says you know this is a real flaw in the
+7:33
+algorithm is implementation weaknesses. You know, these are things that are part of the
+7:41
+implementation that make it easier to crack the password and without
+7:46
+completely changing the al uh the um the implementation, you can't fix it, right?
+7:52
+Like if the problem is, hey, we have an 8 character password policy and people can crack that in less than a minute
+7:58
+now. So, you know, we should change that to being a 12 character policy. Well, that's policy based. So that's easy to
+8:05
+go through and fix, right? We just require a longer password. But you get then you get into things like LAN man
+8:11
+hashes, right? So LAN man would take a 16, you know, would take your password
+8:18
+and if it was um only eight characters or less, it would be a single hash. If
+8:24
+it was more than eight characters, it would be two hashes. and it doesn't add a random C to it which means that
+8:30
+they're vulnerable to like Rainbow Tables attacks which makes them really easy to go through and crack.
+8:37
+Um, Windows has a number of vulnerabilities. You know, another one being there's an attack called pass the
+8:42
+hash where basically I can and extract someone's hash from uh from a backup
+8:49
+domain controller and now I can use that to authenticate to be able to get access to systems.
+8:55
+So, proper authentication isn't supposed to allow replay attacks. Replay attacks
+9:01
+is, hey, I don't crack what you're doing. I can just replay it. I can just copy it and spit it on the wire again
+9:08
+and do whatever evil stuff that I'm that I want to be able to do. That's what password h uh pass the hash attack is.
+9:14
+And Windows is still vulnerable to it and Windows has no interest in fixing it. So, yeah, that's something that's
+9:21
+still a problem today. So to me, these are implementation weaknesses. These are
+9:26
+the really important ones because it's really hard for us as end users to be able to go through and fix. The fact
+9:32
+that Windows has said, "Yeah, we're not going to fix the path the hash problem basically means
+9:39
+we're screwed." you know, you you can try and mitigate that risk some a little
+9:45
+bit somehow with how you petition your network and what you let people have access to and stuff like that, but at
+9:50
+the end of the day, your host can't do anything because the vendor won't won't uh let you. The other common method you'll see
+9:57
+is over the wire. So, the concept might be, let's say, uh I want to try to log into your Gmail account and I know what
+10:05
+your Gmail address is. Well, that would be an overthe-wire attack. So, I would
+10:10
+try a password, see if it works, and if that doesn't work, try the next password and see if it works. And if that doesn't
+10:16
+work, try the next password and see if that works. But I can't do the one right after the other because if I do, I'll
+10:22
+end up locking the account and now I can't try anything. Um, typically what you'll see during
+10:29
+pentest or attackers if they like let's say breach an environment and then they start they enumerate the end users
+10:35
+within the uh domain controller and now they go in and start doing brute force password guessing. One of the things
+10:41
+they'll do is they'll try the same password for everybody all the way through because uh that way by the time
+10:49
+they get back to the first account again, a period of time has gone by and they're less likely to be able to go
+10:54
+through and lock it out. So over the wire is possible, but over the wire is pretty easy to defeat so long as you're
+11:01
+using some pretty decent passwords. Offline cracking, this this is where the money is. This is the one
+11:08
+where you can um do all sorts of tries very very quickly. There's a couple of
+11:14
+different variations off of this. Uh I mentioned rainbow tables. So with
+11:20
+rainbow tables, what I do is I go in, I take all the possible um passwords that
+11:27
+people might use and then I hash them and then I store the plain text password
+11:33
+and the hash into a database table. So now if I want to try and crack an
+11:38
+account, all I need to do is index those hashes and see if my the the hash
+11:44
+they're using matches the hash that I have in that table. And if it does, I got a match. And now I know what their
+11:50
+password is. The way to defeat rainbow table attacks is to use a random seed,
+11:55
+which is just random information that's added at the time things get hashed. And I'll talk a little bit more about that in just a little bit. But anything that
+12:03
+doesn't use a random seed is vulnerable to a rainbow tables attack. Um, so that
+12:08
+one's kind of a nasty dictionary is fast, but it's not very complete. You
+12:13
+know, we may go through and try all the words in a dictionary, and so long as people haven't used a dictionary word,
+12:19
+we're in pretty good shape. Uh, one of the things pentesters will do if they're worth their salt is they will kind of
+12:25
+preede their dictionary files. So, in other words, let's say I'm going to do
+12:30
+uh some password cracking against the company, you know, Acme Corp, who's in Houston, Texas. Well, I'll go to my
+12:39
+dictionary file and I'll add in, you know, Acme, Houston, Texas. You know,
+12:45
+any word, any words that are kind of specific to that organization that I think people might pick as passwords in
+12:51
+order to be able to uh remember them. The most insidious attack though
+12:56
+quite honestly is rule-based attack because with rulebased attack I get to kind of change and manipulate the way I
+13:03
+go through and do the brute force guessing. So for example I may say yeah go to that dictionary file and try all
+13:10
+those passwords and if that doesn't work try it again but this time put one
+13:17
+word after another. So go through every word in there every possibility and combine them into groups of two. If that
+13:24
+doesn't work, try converting the word the words to elite speak, right? So L's
+13:31
+become ones, you know, O's become zeros, that type of thing, and then go in and try it again. If that doesn't work, try
+13:38
+it as elite speak with two words. If that doesn't work, try it as, you know, two dictionary words with an amperand in
+13:44
+the middle between. You get the idea. You can set up a set of rules to identify how to try cracking the
+13:51
+passwords um in the order you want to try different techniques and rule-based
+13:57
+attacks tend to be very effective that this is what most folks use when they go in and they do password cracking. Brute
+14:05
+force is hey let's just try everything. And quite honestly brute force can be part of a rulebased attack. So, I can go
+14:12
+through all those possible variations of elite speak and special characters and combining words together and, you know,
+14:18
+whatever other techniques I want to use. But my last rule can say if none of that other stuff has worked, try a lowercase
+14:25
+A. If that doesn't work, try a capital A. If that doesn't work, try lowerase A, lowerase A. If that doesn't work, try,
+14:32
+you know, lowercase A, uppercase A. You get the idea. I can go through all the different possibilities and do a full-blown brute force attack.
+14:44
+So, I keep mentioning this random seed and I see a lot of misunderstandings
+14:50
+about what a random seed is and what it does. I've seen a number of people say it improves the integrity of the hash
+14:57
+algorithm and that is actually not a true statement. A random seed doesn't do
+15:03
+anything to improve, fix, or whatever a hashing algorithm. All a random seed is
+15:11
+is it's just random information that's generated at the time that the password is created. And in fact, it gets saved
+15:18
+as plain text wherever the password hash gets saved. And I'll show you an example of that in just a little bit. And the
+15:25
+only purpose of a random seed is to make passwords look different. So imagine I
+15:31
+go through and I have an account on a system and my password is money. and Bill goes through and he has a password
+15:37
+on the system and his password is mine. So we're both using the same password. Well, if you run that through shot
+15:44
+256, clearly both of our passwords are going to generate the same hash. So now
+15:50
+if I happen to be in looking at the hashes and I notice Bill's hash is the same same as mine. Well, now I know,
+15:57
+hey, I could log into Bill's account using my password and I haven't had to do any cracking or any type of magic.
+16:03
+It's just by looking at the hash and seeing that they mash. I can figure that out. You know, when an attacker is going
+16:08
+through and trying to brute force a bunch of passwords, anytime they see that, they know, oh, hey, break this one
+16:13
+account and these other ones immediately fall as well. So, with a random seed, what we do is when my G account gets
+16:21
+created, um, it'll generate a random number. Let's say that number is 1, two, three. So it'll take my password of
+16:29
+money, add that random seed of 1 2 3 to the password, and then it'll run that
+16:34
+through shot 256. And now when Bill's account gets created, it generates a random seed
+16:41
+number of 456. So now 456 gets added to his password. And then that gets run through
+16:47
+shot 256. Well, as you can see, the random seed is making our passwords
+16:53
+different now. So that'll that means that if someone goes in and looks at our
+16:58
+password hashes, even though our passwords are the same, it's going to make them look different from one to the
+17:03
+next. So that is the only job of random seed. It does not improve crypto with a
+17:10
+hash or any of this other weird stuff you might hear. The only thing it's good for make make it look different when two
+17:18
+people pick the same password.
+17:25
+So, Kraken tools you can use. There's a bunch of them out there. Um, and it kind
+17:31
+of depends a lot of times on what technique you want to use and what type of hashes you're working with, assuming
+17:36
+they're hashes. Um, I still occasionally run across products that think it's okay
+17:43
+to save passwords and clear text within their BA database. Uh, spoiler alert,
+17:49
+no. No, it is not. No, it is not. Under any conditions, any at all, is it okay
+17:56
+to save passwords and plain text with inside of your database? You don't do that. You got to hash it. You got to add
+18:02
+a random seed. But probably one of the better tools out there is John the Ripper. And we're going to go through
+18:08
+and we'll actually be using that in our labs. This says parallel and distributed support. What does that mean?
+18:14
+That means that if you run John the Ripper on a system that has multiple
+18:19
+processes, you can tell John the Ripper, I want you to use all those processors,
+18:25
+you know. So, if I have four CPUs installed, I can go in and I can, you know, tell it, hey, use three of the
+18:31
+four or whatever it is I want to have it go through and do. If I install multiple video cards into that computer, I can
+18:38
+tell John the Ripper, "Hey, go use those five GPUs that I've installed in the
+18:44
+system and add that to your capability to be able to go through and crack passwords." And that'll make things run
+18:50
+uh quicker. The other thing you can do is something like DJ John. So with DJ John,
+18:56
+what I do is I go onto a system and I say, "Hey, here's my word list. here's the rules I want to use and here's the
+19:02
+passwords I'm trying to crack and I want to, you know, run the rule-based attack against it. Well, John the Ripper looks
+19:08
+at that and says, "Okay, and you kind of have to pre-program this." I can then go
+19:14
+through and load John the Ripper up on, let's say, six different systems, and I got to pre preconfigure the master to
+19:19
+know, "Hey, there's six of them out there, and here's where they're located." So now when you submit a job
+19:24
+to the master, it says, "Okay, let me take the amount of work that needs to be done, break it up into six even parts
+19:32
+and submit one portion of it to each of those six systems." Well, now that
+19:38
+cracking is running six times faster than it could on a single system, right? So it's got some really cool
+19:43
+capabilities to it like that. extracting password hashes. This really
+19:51
+varies depending upon the operating system you're working with. You know, with Linux Unix, they're just stored in
+19:57
+a file. So, if you go to the Etsy shadow file, that is that stores everybody's
+20:02
+password hashes in it. You can see them in the clear. They're right there. Um, so that's, you know, so that's a thing.
+20:10
+Um, with Windows, you know, they they're typically either stored locally in the
+20:16
+registry or if you're using Active Directory, they're going to get stored on a domain controller. But, you know, Mimi Catz is kind of the tool of choice.
+20:23
+There's a bunch of other tools out there. I saw somebody mention like PS Exec or something like that. And, yeah,
+20:29
+there's a bunch of tools out there. Um, but Mimi Catz is kind of the one that everybody gravitates to. uh not just
+20:36
+because it's good at extracting Windows hashes, but it's good at actually doing that on a bunch of different platforms
+20:42
+as well. So, it's a very good universal tool. It's one of these things that Yep.
+20:47
+bad guys use it and the red teamers use it. You know, everybody uses it because it's so good. So, you know, that's kind
+20:54
+of your option when you get in on the Windows side. Uh the database one, like I said, it kind of comes down to the
+20:59
+application. How they going to go about saving that? Uh maybe no need to crack wester is enabled equals clear text.
+21:09
+Um yeah I don't know the answer to that. So how long to brute force
+21:15
+passwords? Okay this is going to vary based upon the algorithm used. Right? So
+21:22
+if I use SHA 256, it's going to be a little bit quicker to try and crack passwords than
+21:29
+if I use Shaw 512 to create those hashes just because Shaw 512 is a little more
+21:36
+mathematically complex. And that additional time it takes to generate a
+21:41
+hash is going to add up over time as I go through and literally try millions and millions of different password
+21:47
+combinations. So, you know, that's one of the, you know, that's uh one of the things we can
+21:53
+kind of be dealing with here. Um, the other is, you know, CPU speed and stuff
+21:59
+like that, but I kind of wanted to give you some general numbers just to kind of see where we're at here. So, you know,
+22:06
+here's the study from Hive Systems, and this is based on, you know, using MD5 as
+22:11
+a hash, which I don't think there's many systems out there, maybe a couple of database apps, that's about it. But most
+22:18
+oss aren't using MD5 anymore. It's too old. So, they've moved on to SH or something else. Uh, you know, two crypt,
+22:24
+whatever the case may be. Uh, but it is based on MD5. And, you know, average
+22:30
+single system, right? So like I you know think about like buying a gaming computer for your house and you know
+22:35
+that's about the level of hardware they were using when they went through and came up with these numbers. But I think it is good for just kind of overall
+22:43
+metrics. You know I talked about you know complexity versus just adding an
+22:49
+additional character. So if you look at number of characters eight if it's you know letters and numbers it's going to
+22:56
+go through and take two minutes. If we add a special character to the mix, that extends it out to 5 minutes. But if I
+23:04
+say I'm going to use nine characters, letters and numbers only versus eight with a special character. Well, now I'm
+23:11
+up to 2 hours. 2 hours is much longer than 5 minutes. So the complexity, like
+23:17
+I said, doesn't really improve on crackability. It just makes it harder for people to go through and remember
+23:22
+it. you know, oh, hey, I did it in elite speak, but was, you know, did I change the zero the o to a zero? Did I remember
+23:30
+that or not? Or, you know, it's hard for people. Whereas, if we just say we're going to stop using special characters,
+23:37
+but we'll just make the passwords we use when we have to use them a little bit longer, we're actually going to end up
+23:42
+being in a lot better shape. So, dictionary
+23:49
+files, where can you get some good ones? Hashmob is an awesome resource for this.
+23:56
+So, when you go up to this link, and you can kind of see it in the slide, there's a there's many different dictionaries
+24:02
+you can choose to download. And they mostly vary in size. So, you can go after like small, medium, or large. And,
+24:09
+you know, obviously the larger you pick, the bigger the file, the longer it's
+24:15
+going to take to download, the longer it's going to take to move around if you needed to. But, you know, it does have
+24:21
+more dictionary words in it, which means it's more likely to get hits. So, you know, you need to kind of do a balance
+24:27
+with the whole thing. Uh, for the labs that we're doing today, we're going to end up using Hashmob's mediumsiz
+24:34
+uh dictionary file. So, we're grabbing the one right in the
+24:39
+middle. So, I mentioned this. I mentioned kind of going through and, you
+24:44
+know, we're going to do some hands-on stuff. So hopefully everybody's had a chance to go through and go through the
+24:51
+instructions to go through and kind of get things loaded up. So uh let me make a few changes on my screen here and I'm
+24:57
+just going to go into the terminal and we'll go through and we'll kind of walk through on a lot of this
+25:03
+stuff. Um let me see that goes there.
+25:08
+This goes here. And
+25:14
+then this goes here.
+25:19
+Okay. So, I've got an Ubuntu system running here and I want to go through
+25:24
+and I want to run that Docker instance that I gave you as a download. And so, this this command here was actually part
+25:32
+of the steps I gave you, but I'm going to go through and I'm going to throw it into the Discord chat just in case
+25:37
+somebody needs it handy. Going to end up being right there for you in Discord. So
+25:42
+what are we doing? We're using Docker to run this image file and we're saying
+25:50
+when you run it, turn on an interactive terminal. Meaning we'll immediately get
+25:55
+terminal access to this Docker instance once it starts. So I want you to notice the prompt right here's the prompt on
+26:02
+the main virtual machine that I'm running on. But when I go through and I run this Docker command, you'll see it
+26:09
+changed to something like this. So notice now I went from being in my account to being in the root account.
+26:14
+And now I'm on a completely different system. Well, actually what I'm in is I'm in my Docker instance. So when you
+26:21
+go and you log into Docker, you know, this is what you should see. You should see it go through and uh you should see
+26:27
+this prompt change go through and take place. Now when you log into this thing,
+26:32
+if you kind of take a look at where you are, you're right up at the root of this uh file system. So, we're way up at the
+26:40
+top and all of our files is actually in roots home directory right here. So, one
+26:48
+of the first things we going to want to go through and do is we're going to want to cd into that root directory. So, I'm
+26:53
+just going to say cdroot. Um, that's one possibility. And that'll put me in in
+26:58
+roots home directory. The other thing I can do is since I'm logged in as root, uh, let's see, I'm back up at the root
+27:04
+of everything. I can just say cd utility and that'll put me in roots home
+27:10
+directory as well. So, whatever is your favorite method of navigation, just get you yourself into the uh home directory.
+27:17
+Now, if I list out the files that are here, notice I've got a directory named
+27:24
+period. John, so it has the period on it so that if you do just like a regular ls
+27:29
+command, it isn't going to show up for you, right? So, that's what we refer to as a hidden directory. It's just not
+27:34
+that hidden, right? But we've got two files in this directory as well. We have
+27:41
+password.list and we've also got u the shadow file. So let's go in and kind of
+27:48
+take a look at both of these. I'm going to start with the shadow file. So I'm going to say less and I'm going to have
+27:53
+to yeah, there we go. Less shadow. And when I run
+28:00
+that, I can see that. Okay, here's all the different accounts on this system.
+28:06
+Anytime you see a So, the first column is the loon name. So, Rub Damon, Ben,
+28:14
+whatever the account name is, that's what shows up in this first column. The second column is going to go through and
+28:21
+identify the password that's associated with that account. Anytime you see a star, that means there's no password
+28:29
+associated with that. um associated with this account. So, no one can log into
+28:35
+it. So, I could never SSH to this box and log in as root. I couldn't log in as
+28:40
+Damon. I couldn't log in as Ben because they got the little star here. That makes them a log a locked account. I
+28:47
+would have to log in as one of these down the bottom here, right? Because you'll notice they don't have a star in
+28:54
+the second column. They have some other information there instead. So what's what's the information that we have here
+29:00
+to go through and work with? Well, we're the separators we're using
+29:06
+is the colons. So these are the separators between the different uh
+29:12
+columns. And then for the second column, we have you know subsparators that kind
+29:19
+of break out different components that are that are part of that element. So notice we have dollar sign Y dollar
+29:25
+sign. So, we've got a Y inside of two dollar signs. What does that mean? Y is
+29:31
+identifying what hashing algorithm was used to generate this password. Cuz
+29:36
+think about this. I go through and I create a password for an account and there's four or five different ways that
+29:43
+are supported by the operating system to hash these passwords. Well, when someone
+29:48
+goes to log in with that account, how does the system know which password hash was used? Well, this is how. because
+29:55
+it's recorded right within the shadow file and Y means that it's a uh that yes
+30:00
+crypt was used to go through and create that. So that's the first component that we get into. Then after that we
+30:10
+have this. So this does this column doesn't show up
+30:18
+all the time. Actually I'm missing a letter. There we go. It's these three characters. J9 capital T. This column
+30:25
+doesn't show up all the time. It's specific to yes crypt. So if I'm
+30:30
+using I don't know you know shot two f shaw 512 to generate my hashes this
+30:36
+column won't appear. This is here specifically because the different implementations of
+30:42
+escript. So I got to go through and give it a parameter parameter information so it knows which variation to go through
+30:48
+and use. And as you can see this is the same for all of the accounts. So an
+30:53
+operating system is going to use the same implementation consistently as it goes through. Hopefully that makes sense to
+31:00
+you. And then our next section between the dollar signs. So from here to here, that's my
+31:09
+random seed. So that's that value that gets generated at the time the account gets
+31:15
+generated and gets added to that account's password. So if this user and
+31:20
+somebody else just happen to pick the same password, the hashes are not going to look identical anymore. So that's its
+31:27
+job in life is just to be in random information that gets injected in with the hash. So now when you go to log in,
+31:34
+here's what happens. You type in something, money, whatever it is. You type in what you feel is your password.
+31:40
+The operating system takes a copy of what you typed and then it goes and looks at this file and it says what hash
+31:47
+hashing algorithm was used and in this case here it sees oh okay that's ESC with the J9T parameter great now I know
+31:55
+what algorithm I need to use and then it'll go through and say okay let me take what Chris typed in let me add this
+32:02
+value to it and then I'm going to look to see does that
+32:08
+combination create this string of characters. If it does, it's assumed I
+32:15
+typed in the right password. If it doesn't match, it's assumed. I typed in the wrong password. Now, I I I threw in
+32:23
+assumed there. Why am I saying assumed? I'm saying assume because one of the
+32:29
+things we could run to into is collisions in the hash space. when we talked about that uh during class number
+32:35
+two of talking about VPNs and we looked at those two image files that we as humans could see were drastically
+32:42
+different but MD5 sum the hashing algorithm looked at them and said no
+32:47
+these are identical don't worry about it and they clearly were not that's what's referred to as a collision in the hash
+32:54
+space excuse me so that's why I say it's assumed you typed in the right password
+33:00
+so it goes through and uh tries to match in against that.
+33:05
+Um, hasher with MD5 do 5,000 rounds in Windows systems by default. Um, I
+33:12
+honestly forget what Windows using for a hashing algorithm these days, although I'm sure somebody knows and would be
+33:17
+more than happy to go ahead and toss that into the chat channel. Um, but quite honestly, I don't do as much with
+33:22
+Windows as I used to. Um, it's just too much of a hassle quite honestly.
+33:30
+So yeah, I basically use it for like running presentations because Zoom is happier with it versus, you know, Apple
+33:36
+or something else and I just don't do a whole lot with it with that. No, I take that back. I have a couple of games that
+33:41
+are run on it. Windows is good for running games. Beyond that, I tend to kind of stick on the Linux side. But in
+33:47
+any event, so we were looking at our uh Come on. We were looking at our home
+33:55
+directory and one of the things we saw was that shadow file. So, this is where the accounts and the password hashes are
+34:01
+that we're going to want to go through and try and crack. The other file in here is this. Let's take a quick look at
+34:07
+that. So, I'm going to say less password list.ext. And what this is is this is
+34:13
+our dictionary file. So, this is that medium-siz file that I was talking about that has a bunch of different
+34:19
+possibilities. Now, notice they're not in alphabetic or alpha numeric or anything like that
+34:25
+order. these you uh a technique you can use is to reorder this file and take the
+34:32
+stuff that you think is most likely to match and move it up to the top of the file because now it'll match quicker
+34:39
+because it does linearly go through these one at a time, one at a time, one at a time. So if I can take what's going
+34:44
+to match and put that up towards the front, I'll get a match quicker. And we'll actually see an example of that as
+34:49
+we go through when we get into doing password cracking. So that's our dictionary file. That's what's going on with that one there.
+34:56
+So, um, the other file that, yeah, I'll show you this real quick. The other file
+35:02
+we have here is, uh, John
+35:09
+John. And this is our configuration file. So, this is where we can go in and
+35:15
+set things like, you know, hey, when should I, you know, if we get a crash, when should we back things up? Hey, if
+35:20
+you crack something, should you beep the computer speaker? you know, so there's a bunch of different uh rules we can go in
+35:27
+here and configure. So, by default, this is the configuration file that John's going to use to go through and figure
+35:33
+out, all right, how do you want me to go about cracking these passwords? What resources are available to me? What
+35:39
+should I be going through and using? Um, so that's that one. The other uh let's
+35:45
+see, what haven't we looked at? Yeah. Oh, I Oh, I know what we haven't looked at yet. So, the other thing we have not looked at yet is that
+35:52
+period.j directory. But let's CD into that. So I'm going to say cd space
+35:57
+period John and hit enter on that. And now I'm going to type ls to see all the
+36:03
+files are in here. And there's really only two files in here you kind of care
+36:09
+about. The first and both of them are a zero length right now. We'll come back and look at it again later. The first
+36:15
+one is john.log. john.log is just an activity log. So everything you do with
+36:20
+John, whatever John is doing, it's going to write some sort of an entry in there to tell you what it's up to and what
+36:25
+it's been doing. John.pot is where we're going to save
+36:31
+any accounts where we've gone in and cracked the password hashes on. So I'll
+36:36
+show you that in a little bit and how that works. So the next thing we're going to want to go through and do is
+36:43
+we're going to want to go through and actually run John. So John is in our path. you know, we don't have to address
+36:48
+it directly. It's in like user bin or something like that. So, uh, the command we want to go through and use is
+36:57
+this. I'll throw it into this directory. Now, you'll notice it, uh, when I pasted it, I didn't mean to have an enter at
+37:04
+the end of it, uh, but it said, you know, hey, you know, the file you want to crack can't be found. Well, that's
+37:11
+because right now I'm in that period John directory and that file doesn't exist here, right? I got to say cd do go
+37:19
+up one level. So I'm now sitting in my home directory. And now if I go
+37:26
+through, excuse me, and look at the files that are in this directory. Now I see that shadow file. So let's kind of
+37:33
+talk about the command we're going to run here. So I'm saying I'm invoking John John the ripper. So I'm saying,
+37:39
+"Hey, John, go through and run." And I'm saying the password file, the word list, however
+37:46
+you want to refer to it, but you know, the dictionary, you know, file, however you want to refer to it, is this file
+37:54
+that's located in the current directory. If it's located somebody someplace else, I get to give it a full path statement
+38:01
+in front of it. But if it's in this directory, I can just specify the name of the file and then call it done. The
+38:07
+next thing is telling it, I want you to do a rulebased attack against these
+38:12
+accounts. And then the next thing we're specifying is we're saying this is where
+38:17
+the account information is that I want you to go through and try and crack. Now I'm saying
+38:23
+period/shadow. That's how you reference the local directory. Well, wait a minute, Chris. We didn't have to do that
+38:28
+with password list. Yeah, I know. There's some there's some inconsistencies in the implementation,
+38:34
+right? you know, I I if if one of those switches expects a certain format, they
+38:39
+all should, not just one of them. So, this was a little mini burp that was done when the software was created, but
+38:45
+it's minor and it's easy to kind of work so long as, you know, there's a difference between the two, it's easy to
+38:51
+go through and kind of deal with. And now that I have that command typed out, I'm just going to hit enter on it. And
+38:57
+you can see that John the Ripper starts up and it says loaded five password
+39:03
+hashes. Well, wait a minute. There was a bunch of accounts in that shadow file, right? We saw many different accounts in
+39:09
+there. There was, you know, rude and, you know, and all all sorts of other stuff that we don't really care about because if you remember, those accounts
+39:17
+were locked. So, those aren't actually accounts that you can go through and use
+39:23
+um that you can go through and you can use passwords on. So, or you can log
+39:28
+into. So, it's only loading going to load up the accounts where there's a password that actually has the potential
+39:34
+for being cracked. So, that's the one it went through and it grabbed there. It's giving me some information about, you
+39:40
+know, hey, what's going to take to go through and kind of process this stuff. And then, as you can see, it's already
+39:46
+cracked two passwords. It cracked password one, two, three, and then it cracked password test. Now, it looks
+39:53
+like it's stopped. It's not doing anything right now, right? So, I can always hit spacebar. And when I hit
+40:00
+spacebar, it's going to give me a status check on where it is right now and what it's doing. So, this is telling me,
+40:07
+okay, I've been running for a little over a minute. And these are the passwords I'm currently trying against
+40:12
+the accounts. So, yeah. Okay, now I know it's actually still up and running. And
+40:18
+these are the two accounts that we've gone in and we've cracked so far. Now password one two three is longer than
+40:25
+tech test. So why did it crack that one first? Remember our dictionary file? I
+40:32
+mentioned that it wasn't in alpha numeric order. This is why. Because password 123 shows up earlier in that
+40:40
+dictionary file than test does. Therefore, anything using password 123
+40:46
+is going to get cracked faster. you know, and as we saw, there was a little bit of a difference between the two. Not
+40:51
+a huge one, but it did go through and um identify, you know, each of these
+40:56
+passwords in the order that they end up getting listed in within the uh excuse me, uh they get listed in
+41:04
+within the dictionary file itself. Now, like I said, if I hit
+41:11
+spacebar, that'll go through and just give me a quick oneline summary of what's going on. This is kind of my
+41:19
+important number right here. This is identifying how many characters per
+41:24
+second is John the Ripper actually trying. Right? And you know the concept is the bigger that number, the faster
+41:31
+John the Ripper is running. Now you may look at my screen look at my screen and say, "Wow, Chris, my number is much
+41:37
+bigger than that." Yeah, it may very well be and that's okay. I have I have
+41:43
+this Docker instance running inside of a virtual machine that's running on
+41:49
+Proxmox that has other VMs running right now as well. So that's why my cracking
+41:55
+speed for this system is down so low. But it's not hard to get that number up
+42:00
+into the thousands. And in fact, it's not that hard to get it up into the 10,000s. um if you got the right
+42:07
+hardware, you know, millions of tries per second is not out of the realm of possibility. You know, we mentioned
+42:13
+there's ways to distribute it and stuff like that. So, you know, John gives you a lot of ways to go through and scale if you need to. So, this gives me a nice
+42:19
+little summary of what's going on. If I press the letter S as in SAM, I get this more verbose summary of
+42:28
+what's going on. So, it's giving me some of the same information I got before.
+42:34
+It's giving me a little bit more information. Personally, to me, um, that
+42:40
+this S switch is only really useful if I'm trying to do troubleshooting. If something's wrong, yeah, okay, now, you
+42:47
+know, I may go through and do this, but outside of that, you know, I don't really need it. I, you know, I can hit
+42:54
+the space bar and that gives me enough information to kind of figure out a status check on it, what it's
+42:59
+doing. Cool. So, we've had this running for a little bit. I'm actually going to keep it running in the background,
+43:07
+right? So, if I hit spacebar, you can see, yep, it's still running in the background. And what I'm going to do now
+43:12
+is I'm going to open up a new terminal to that same system. And then I'm going
+43:17
+to cd into roots home directory
+43:23
+dot
+43:28
+john.pot. Uh, why isn't it taking that? Oh, I know why. Because I'm
+43:37
+not douress. I'm not logged into the Docker instance in this window. Now I am. Now I can go to
+43:50
+root.j and then take a look at the files that are in there. Okay, there's still zero file length. So basically what
+43:57
+that's telling me is that I've had John the Ripper running. Um but it isn't
+44:03
+done. So it hasn't written this information out yet. It's just sitting in cache. So one of the things I can do
+44:08
+if I want to is I can hit Q for quit. And you'll see John the Ripper shuts
+44:13
+down. And then it when I restart this command, John the Ripper doesn't go back
+44:20
+to the beginning. It when I quit, it will save its state information. and it
+44:25
+will say here's where I was in my password checks. I'm going to save this state so that if I get started back up
+44:32
+again, I can just pick up where I left off and kept going from there. So notice this crack two password hashes out of
+44:40
+the five. So what it's telling us is, hey, I found five password hashes, but I
+44:45
+already know the answers to two of them based on earlier password cracking you did. So I'm only going to focus on the
+44:52
+three that's left, and that's it. And if we go back to the terminal here and we
+44:58
+look at those files again. Sure. Make a liar out of me.
+45:08
+Did you start a new Docker container with that second command? Oh, thank you,
+45:13
+dude. You're right. I did not reconnect up to the same one. You are absolutely
+45:18
+right. Okay, so yeah, let's go here instead. That's just the easiest way to
+45:24
+go about doing it. Thank you, dude. So, yeah, I'm going to go into the
+45:30
+Docker into the John directory from the Docker instance where I actually went
+45:36
+through and run this. And as you can see now, John.log and John.pod have information in it. And if I say
+45:43
+less [Music] John. Here's a running of what I've done
+45:50
+so far. you know, it started a new session, went through, did all of this, and then you'll remember I uh, you know,
+45:56
+it cracked these two passwords, and then I had boarded the session, and then I
+46:02
+started up a new one after that, and then it loaded five, and it only had
+46:07
+three remaining to actually work on because two of them were already cracked. So again, all that information
+46:13
+we got as feedback when we were running John the Ripper, that all shows up in this log. And now, if I go in and I look
+46:18
+at Um, the John.pot
+46:28
+file. Come on. There we go. Spelling matters,
+46:33
+Chris. There's my crack stuff. So, it's popping up and saying, "Hey, the
+46:41
+uh the Y crypt they used um excuse me, they used this hash and
+46:49
+then this password information that account is you can log into it is
+46:54
+password 123." It didn't it's not showing us the
+47:01
+um the username though, right? It's not showing us what was the login name
+47:06
+that's associated with these. That's actually a feature. What John's doing is
+47:12
+John's saying, "Hey, that this password combination might have different login
+47:18
+names associated with it, maybe on different systems." So, I'm not going to bother saving that information. I'm just
+47:24
+going to save, hey, this hash and seed goes with this particular plain text password. Now, what if I actually want
+47:31
+to see, you know, what log account was it used because it popped up when it was cracking it? But, you know, what if I've
+47:38
+already like killed that session, logged out, logged in type of thing, and it's not available on my screen anymore. How
+47:43
+do I get that to show up? I can use the John dash dash, no, not equals, not
+47:50
+equals, Chris, dash, show command to go through and figure this out. So, I'm
+47:56
+saying um John, I want to use the show command and I want to run it against
+48:02
+um let's see, I'm down in the John directory. So, I'm going to have to say slashroot
+48:09
+slash shadow. God, I am like having so much trouble spelling today. There we go. So,
+48:17
+I'm saying John-chow and I'm putting pushing it at the account of the uh the file with the
+48:24
+account information in it that I want to go through and verify. And notice this comes back and says, "Oh, test one,
+48:32
+here's the password. Test six, here's the password." So, I have two different
+48:39
+ways I can go in and kind of access this information if I need to.
+48:45
+Um, yeah. Uh, yeah. Someone was asking, "Doesn't it only try to crack it the first time?" Yeah, that's what I was
+48:50
+show that's what I was showing. You know, when it f did a first pass the first time, it found five. If it uh when
+48:57
+it did the second pass, or excuse me, when it did the first pass, it found five, but then it cracked two. So, when
+49:02
+I went back to try and crack that same file again, it said, "Hey, I only got three to work with." Because it went
+49:07
+through and remembered its work, and it kind of picks up where it left off, type of thing. Um, so yeah, that makes it a little bit
+49:14
+easier. Uh, so we've cracked two of them. If you leave John the Ripper running within this Docker instance for
+49:21
+a for longer period of time, you know, if you leave it running for like 25 30
+49:27
+minutes, there'll be another password that falls. If there's other there's two more after that that you'll have to run
+49:34
+it longer and longer because they're more complex passwords in order for John to be able to crack it. But all of the
+49:41
+accounts that are on that system, John can crack all of them. It's just a matter of time. You know, it's how much
+49:47
+time do you want to go through and throw at it type of thing. Okay, so that's the hands-on lab.
+49:55
+So, let's go back to our slides and let's see if I missed
+50:01
+anything. So, yeah, I gave you this command to run it. It told you what you should see in the roots home directory.
+50:08
+uh mentioned, yep, that's a dictionary file. That's the uh file that has the account information in it that we
+50:14
+actually want to go through and crack. Uh we looked at a breakdown of what that shadow file looked like. So that shadow
+50:21
+file was from a um from an Iuntu system, but any Linux system is going to look
+50:26
+like this. And in fact, most Unix systems are going to use this type of format as well. So the only thing that'll really
+50:33
+be different is Windows. talked about John's files, you know, what information is stored inside them.
+50:40
+Uh, we looked at the config file, you know, we talked about how it's rulebased. This was a little bit further
+50:45
+down than what we what I kind of popped up on the screen. This is where it's actually getting into this is how you
+50:51
+write the rules to identify what do you want to try in what
+50:57
+order. Um, and like I said, two of them fall pretty quickly.
+51:03
+Um, oh, we didn't crack this one yet. We had test one and test six that
+51:09
+showed up. We hadn't tested uh cracked test four yet. So, again, let it run
+51:14
+longer. Uh, let's see. This was running for 18 minutes when I cracked it this
+51:21
+time. So, at the And this is about the same tries per second that I was just doing when we were doing the hands-on
+51:27
+lab. So, yeah, I didn't let it run long enough. If I let it run for, you know, 20 minutes or so, it would have cracked
+51:34
+a third password as well. Why isn't test six showing up? Because I added that in
+51:39
+after I went through and created these slots. Um, use an S for the for the
+51:45
+detailed status. We talked about that. Um, why is it so low? I mentioned that
+51:50
+on my system, I've got Docker running on a VM that's running on Prox. So, there's
+51:56
+not a whole lot of available CPU time on it. That's why it's running so slowly. But if you run it on like your desktop
+52:03
+system, right, that is just dedicated to one operating system, you'll see that number go up exponentially. If you add
+52:11
+in video cards and then tell John to go use those uh GPUs, it will run even
+52:17
+faster than that. So, there's a lot of ways you can go through and tweak this if you need
+52:22
+to. Uh look at the Kraken results. So how do we how do you perform uh
+52:28
+improve performance? So the good news is John has a lot of different ways you can go through and leverage to improve its
+52:35
+performance to be able to crack things faster. Um one of our sister companies is Black Hills information security. One
+52:42
+of the services that Black Hills offers is uh red teaming. They'll go in and they'll do vulnerability assessments uh
+52:49
+you know actual you know compromise attempts and things of that nature.
+52:56
+And as part of that work, they have a dedicated piece of hardware for going in
+53:02
+and trying to crack passwords. And it's a not only is it a high-end computer,
+53:09
+but I think it has like eight video cards in it. And those eight video cards
+53:14
+aren't hooked up to monitors. Those eight video cards are there so that they configure John the Ripper to say, "Hey,
+53:20
+go use those GPUs." GPUs are more efficient for cracking passwords than
+53:26
+CPUs. That's why we go through and we use the video cards for that type of activity. So, yeah, I mentioned there's
+53:32
+a lot of different ways we can make John the Ripper run faster. So, the good news is those options are there. The bad news
+53:38
+is you typically have to rebuild it from source. So, what that means is that where we've been able to get away with
+53:45
+running it in a Docker instance, and I did this because it just makes sure it runs for everybody. you know, you can be
+53:50
+on Windows and you can run this Docker instance and it it should work for you just fine. Um, you can't you can't do
+53:58
+that when you start trying to expand the performance of John. You have to kind of compile it to run on the system that you
+54:05
+want to actually run it on and deal with it that way. But like I said, there is options. It's just going to take you a
+54:11
+little bit of time to get John the Ripper up and running. And you know, my experience with John the Ripper has
+54:16
+always been it's kind of touchy about uh what libraries are there and what
+54:24
+specific versions of the libraries are there. You know, again, that's why I just said screw it. I'm just going to
+54:29
+run it in Docker instance and then everybody won't have this problem. You know, one of the things I always hate is when you go to run software and it says,
+54:37
+"Oh, you're using version five of this library, but I expected to see version,
+54:44
+you know, 2.0." Well, I don't want to backdate my library, three major
+54:50
+versions just to run this one application. So, that kind of stinks. With Docker, that becomes a
+54:58
+non-issue. If there's anything I want you to take out of this is that
+55:04
+passwords are important. Cracking passwords is easy. So, we got to get in
+55:10
+the habit of using at the very least longer password
+55:15
+strings. Ideally, we're using what's referred to as password phrases. Something that's much much longer.
+55:22
+Something that, you know, might still be easy to remember to some extent, but at least it's longer. So that gives you
+55:28
+some semblance of security. But even then, using something that is easy for
+55:34
+us to remember means that there's some pattern to it. You know, it's five words
+55:40
+combined together instead of two. Okay. Well, it's still five dictionary words
+55:45
+that are combined together. If someone can figure out what dictionary words and in what order, they're going to be able
+55:50
+to crack that account. So um so using passwords effectively
+55:59
+without actually having a password manager not such a good idea. So I'm a
+56:05
+real big proponent on um using password managers. Uh let's see. TB Blum was
+56:12
+asking uh what are your thoughts on phto USF keys like UB key? I love UB key. Um,
+56:18
+and in fact, I'm gonna not say too much about UB Key because that's like one of
+56:25
+Bill Sterns's Jones's thing. Jones uh uh gems. Um, one of the first
+56:32
+authentication tools Bill ever wrote used UB keys. Um, and you know, we we've
+56:38
+we've used them for a lot of different things. Um, yeah, it's a physical device
+56:43
+you can lose, but it's easy to go through and, you know, kind of resolve that if you run that into an issue. But
+56:49
+yeah, Bill, you know, whatever you want to tell folks about UB Key, go for it. Uh, one of the things I love about them
+56:55
+is they're dirt cheap. They came out at a time when RSA was charging hundreds of
+57:00
+dollars for a similar type of device. Uh, you know, RSA had these little credit card things that would pop up a
+57:08
+number once per minute and you had to look at the card and look at the number and that was your, you know, second
+57:13
+factor of authentication. And then UB Keys came out and they said, "Well, actually, you don't need to see the
+57:18
+number. Just plug this key in, hit the button, and we'll pretend to be a keyboard, and we'll just type that
+57:24
+information in for you. That way, you don't have to worry about typing out some big long, you know, authentication
+57:29
+string." So, uh, yeah, pretty cool devices. Yeah. And Bill has a blog on weaponizing
+57:37
+UB keys. Of course he does because Bill is awesome. So yeah, like I said, the
+57:43
+big thing I want you to take out of this week is it's real easy to create crummy
+57:49
+passwords. It's real easy. And sometimes when we think we're creating good passwords, we're still making them
+57:57
+crummy sometimes worse. So today, if you need to use passwords, you need to use a
+58:04
+password manager. You need to use something that will generate like a random, you know, we recommend 24
+58:10
+characters or more. You know, 24 characters or more is kind of minimum for today's standards for passwords. Um,
+58:17
+good luck remembering that, especially if you're making it different for each of your systems. But if you got a
+58:23
+password manager, it'll go through and it'll take care of uh saving all of that information for you.
+58:30
+you know, two-factor authentication. Yeah, I just kind of threw this slide in for completeness. Everybody knows
+58:36
+this. And this is going to be the last Fireside Friday for a while. Um, so this
+58:44
+is number 17. So, we've done, you know, as of right now, we've done 17 of these
+58:51
+this year. I'm not sure how many weeks into the year it is, but it's not much more than 17. Um, it takes a lot of work
+58:59
+to get a decent presentation together every single week. And one of the things we're kind of getting into now is we've
+59:06
+got some marketing programs coming up. Uh, we've got a new we've been we've been berering our software, but damn it,
+59:13
+we've got to get it out as production, and I I need the brain space to be able to kind of help focus in on that. Uh, we
+59:20
+also we haven't run our intro to threat hunting class for a while. So, I want to
+59:25
+get that going again. So, with that in mind, this is going to be the last fireside Friday for now. Um, we're going
+59:31
+to leave these channels on Discord and if there's stuff that you want to see, go ahead and throw it into the Discord
+59:37
+channel because I am thinking, you know, come the end of the year, maybe when we get into like September, October, that
+59:43
+time frame there, it might be kind of cool to bring this back and turn it into a regular thing again. Uh, but like I
+59:49
+said, just, you know, for bandwidth reasons, for right now, I need to be able to kind of step back. But we're
+59:56
+going to have the intro class coming out. We'll have some other cool stuff going on instead. It just won't be every Friday like it's been. And this has been
+1:00:02
+a it has been a lot of fun for me getting to kind of hang out with everybody every Friday. But wow, there's
+1:00:07
+a lot of work behind this. So, with that said, um, thank you for attending. So,
+1:00:15
+uh, if you attended today, we'll send you out a, uh, certificate, but it
+1:00:20
+probably won't go out until Monday. So, what I'm going to ask, and the video usually gets posted within a couple of
+1:00:26
+hours to YouTube. But what I'm going to ask you is wait till Monday for both of
+1:00:32
+those. If you if you're looking for the s looking for the video and you don't find either or both by let's say Friday
+1:00:40
+afternoon uh you know United States time go ahead and drop us a note but usually all this
+1:00:48
+stuff is done by early Friday morning. And with that uh Bill Keith if you guys
+1:00:54
+want to jump back in again. Yeah glad to. Um, Chris was talking
+1:01:00
+about the UB key and you get these at www.ubcode.com. This happens to be a
+1:01:06
+USBA version and it works on any operating system, any language. It doesn't need a driver. It just generates
+1:01:13
+keys and they also come in lightning and USBC formats and they're inexpensive.
+1:01:19
+It's great for second factor. Um, I would also, if you don't mind, Chris,
+1:01:25
+I'm going to just point out that uh you should when you're doing password cracking, please get permission first.
+1:01:34
+Chris is giving a presentation on some uh a password hash file that he
+1:01:39
+generated that is not part of a company, that is not something that somebody could use to break in somewhere. Thus,
+1:01:46
+the test names and the really horrible passwords. Yes, there you go. And uh
+1:01:52
+Randall Schwarz, the uh designer of Pearl, got him a lot of trouble. That poor dude for what was probably and I
+1:02:00
+firmly believe it was with all the right intentions of showing. Yeah. Actually, I I knew the guy I I completely agree with
+1:02:07
+your uh assessment, Bill. Yep. And it just happened that he was password
+1:02:13
+cracking something from his employer and got in a lot of trouble for it. Yeah. Get permission. get permission of
+1:02:20
+writing. Yeah, please. Yeah. So, if you're not familiar with it uh with with
+1:02:26
+Schwarz, um you've probably heard of the work he's done. It was called Pearl.
+1:02:33
+Yep. Pathologically eclectic rubbish listister, which I used to program in. Yep. Yeah. Really? Yeah. Fantastic.
+1:02:41
+Yeah. And that was he wasn't trying to be a bad guy. He had found what he thought was some weak passwords and he
+1:02:48
+had told his employer, "Hey, you've got weak passwords. This is a bad thing."
+1:02:53
+And they said, "Gee, that's nice. You're only a contractor. We hired you to write Pearl scripts. Write Pearl scripts." And
+1:02:59
+he came back and said, "No, no, no. You don't understand. That makes these accounts way too easy to log into. You
+1:03:05
+could have information stolen. People could take over the systems. You really need to address these passwords." And
+1:03:11
+they said, "Gee, that's nice. Don't worry about it. write us some pearl scripts. So we he kind of got a little
+1:03:17
+too OCD about it and said, "Well, if I just cracked the passwords, then they would see how easy it is." And they
+1:03:25
+caught him walking out with password hashes on his on his physical uh person.
+1:03:31
+Um, so you know, to Bill's comment, um, you know, I I know R I, you know, I
+1:03:38
+don't hang out with him all the time type of thing, but I think I know Randall well enough to be able to do a good read on his personality, and I
+1:03:45
+honestly don't think he had any type of malicious intent. I do honest personally feel that he was really, no, no, no. I'm
+1:03:53
+really trying to make your environment more secure. But he pissed off his
+1:03:59
+employer and they decided he were going to take him to court. And if I remember correctly, he did some jail time over
+1:04:04
+that. Yeah. Which got expuned, but he was a felon for a while. Yep. Yeah. Yeah. He did jail time. He had a record.
+1:04:12
+Yeah. It's I think it's been long enough that he could probably get away with getting that expuned now. But yeah, it
+1:04:18
+all for trying to do the right thing, but for the wrong reasons and the wrong
+1:04:24
+implementation. So to go back to Bill's original comment, you don't do this unless you
+1:04:31
+know for certain you have permission. So it's a you're doing it on a VM you spun
+1:04:37
+up at home. Hey, that's fine, you know. But if it's well, I don't know how good my p my employer's passwords are. I
+1:04:45
+could help them lock it down if I crack them. No, not unless something in your job
+1:04:53
+description says we're hiring you to crack our passwords and make sure they're secure. If that line item is in
+1:05:00
+your job description, you're good to go. If you don't have that, no, don't do
+1:05:05
+that unless you get some sort of written agreement. Yep.
+1:05:10
+Uh just take a look at the website. There's more detail on what they do. Y
+1:05:16
+cool. Uh Keith, I'm going to give this one to you. U and you may not have the answer, but you may know know who we
+1:05:22
+need to talk to. Kavgar was asking, can a cumulative C be sent? I do seem to
+1:05:28
+remember at one point we were kind of talking about, you know, oneert to rule them all if they've attended all of the
+1:05:34
+uh all of the different fire sites. Do you know anything about that? Yeah. Well, I've seen those before. I'm not
+1:05:41
+sure if the platform that we use we can do that. Okay. That's something I'd have to look
+1:05:47
+into. Yeah, that's something May maybe Shelby knows the answer to that too.
+1:05:53
+Yeah, the way it's been throughout really cool. Well, the way it's been throughout all these sessions is they're
+1:05:59
+individually issued for each individual session. So, yeah, which quite honestly
+1:06:05
+I personally I think in some ways that is a little bit more impressive, right?
+1:06:10
+You know, it's not oh I got a I got a C. It's I got 17s.
+1:06:15
+Yes, exactly. And and the other thing is to do a cumulative
+1:06:21
+uhert uh there just wouldn't be enough room to fit the titles or of 17 of them
+1:06:28
+in one search. So it would basically just be a blanket like fireside
+1:06:34
+Fridays the number that you attended and it I mean it's really wouldn't be as
+1:06:39
+descriptive as the individual ones. So yeah, Muffin was saying, "I haven't been getting the searchs at all." So, um,
+1:06:47
+Muffin, they get sent to whatever email address you used when you sign up for
+1:06:52
+the webcast. And if you show up, your login has a special tracking number with it.
+1:07:00
+And that's what allows us to see, okay, who signed up and actually attended. And
+1:07:05
+if you are, you know, if that's a logical yes to both of those or a logical and on both of those, uh, assert
+1:07:12
+goes out. So it, if you didn't attend, that's why. If that email address isn't
+1:07:18
+where you're checking, that might be why. Uh, a third possibility is sometimes it ends up in spam folders. So
+1:07:24
+you may want to take a look in your spam folder to see if it ended up there. If you check those three things and still
+1:07:30
+have no joy, um, DM Shelby and ask her about it because she's been kind of
+1:07:36
+managing the searchs on the back end and she can totally help you out. Yeah. Or
+1:07:41
+or myself because I actually took that role from Shelby. So now I handle all the searchs. So yeah, if there's a
+1:07:48
+problem, just reach out directly to me. Uh, but Chris is absolutely right. Whatever name and email address used to
+1:07:54
+register for Zoom, that's what the certificates key off of. And if I understand correctly, you don't get a
+1:08:01
+certificate if you watch it on YouTube. Correct. Correct. Yeah. You got to
+1:08:06
+attend the Zoom session for that to happen. Um, Nerf was recommending a uh
+1:08:12
+one of the C sites. I forget which one we specifically use, but there is a site
+1:08:18
+you can go to, you can sign up for, and you can log in and anyerts you've received that are associated with the
+1:08:24
+email address you use when you sign up at theert site, uh, they they archive a copy of that for you. And I know we
+1:08:31
+changed the one we were using at some point, so I don't remember which one we're using off the top of my head.
+1:08:37
+Yeah, I'm not sure if it matters, but we use a credible. The name is accredible.
+1:08:42
+There you go. That's the platform. Yeah, you guys, you certify. Yeah, Nerf,
+1:08:47
+I think that's what we used to use, but I believe we changed it. Yep. Correct.
+1:08:55
+Hey, thank you everybody. We really appreciate your time and your interest and your questions. Yeah. I feel like I
+1:09:01
+learn as much from from you guys as watching Chris some days. Not not to mention putting up with our pre-show
+1:09:07
+banter. There should be hazard pay for that because sometimes we get a little weird
+1:09:13
+talking about like you know original Darth Vader voices and stuff like that. So right right bug part seriously uh
+1:09:21
+thank you very much Chris for doing all of these. Uh of course really they've been fantastic and thank you all for
+1:09:27
+joining us uh both on Zoom and Discord. Uh I know I'll personally miss these and
+1:09:33
+I've seen a couple people on Discord also say that they're going to miss it. So definitely look forward to our
+1:09:39
+upcoming uh your intro to threat hunting. So, that'll be fun as well. So, and I haven't been able to update the in
+1:09:46
+uh intro to threat hunting one because I've been working on these. Yeah. So, you know, it's it's kind of that
+1:09:51
+something's going to give and that one is uh hadn't been updated in a while. So, I want to get that more up to date.
+1:09:57
+So, yeah, we'll come up with some good stuff. It'll just it's a couple weeks out before we hit that. So, yeah, that's
+1:10:03
+great. Thanks, guys. Y and thank you all. Thank you message. Appreciate your time today. Yep. Appreciate it. Happy
+1:10:11
+Friday everyone. Have a great weekend. Take care waving bear. Bye waving bear.
+1:10:16
+Thank you very much. Yes, exactly.

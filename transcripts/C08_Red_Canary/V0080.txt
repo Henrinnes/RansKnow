@@ -1,0 +1,717 @@
+0:00
+the part of Red Canary that I think, you know, if I had to pick and I've had a lot of jobs here over the years, but if I had to pick my favorite one, it would
+0:06
+be working in threat hunting and just going to figure out like how do we cover down on things that um we haven't or
+0:12
+can't perfectly mechanize, right? Where you can't just like emit a signal to an analyst and say this is probably bad
+0:19
+because and there's a whole bunch of reasons like why you can't do that. Um in some cases obviously like emerging
+0:26
+intelligence or we learn something and we need to look back in some cases. I think like the examples we'll go through
+0:31
+today um you know dealing with things like identity where it's like far less
+0:37
+deterministic and not subject to the laws of physics in the same way that like Mac OS, Windows, Linux are.
+0:49
+I want to welcome two folks today. Uh we got Britney and Tyler. Um so we're going
+Welcome to Red Canary Office Hours
+0:54
+to jump right in. We've got a pretty neat topic today. This is one uh based on, you know, like your requests from
+1:00
+the audience in the past. Uh and I'd say also u some of the feedback we've got, you know, we kind of been taking a look
+1:06
+at uh you know, what you've told us you enjoy, don't enjoy, and where we think we've kind of like hit or missed the mark in past episodes. And one of the
+1:12
+things that has been really consistent is that everyone wanted more time for Q&A. So, um, we're going to skip the
+1:19
+news this week because I want to make sure to give Tyler and Britney plenty of time, but also give like y'all here in
+1:25
+the chat, um, the audience plenty of time to ask questions. Like, as we're going through the material, I'll also
+1:32
+kind of take a peek at any questions you submitted on the way in. So, um, without further ado, uh, Tyler, Britney, would
+1:39
+you all like to just, uh, you know, let everyone know who you are, what you do? Britney, you first. Yeah, excited to get to talk to
+1:45
+everybody about threat hunting. I'm a threat hunter here at Red Canary and I've been here for about two years, but
+1:50
+I've been doing threat hunting for the last six. Tyler, if you want to share.
+1:56
+Yeah. Uh been here also about two years and been doing threat hunting, security
+2:02
+operations uh sock type work for uh probably the last also I guess six or
+2:09
+eight years as well. Sweet. All right. Well, uh, yeah, I think it's, uh, I feel like anything
+2:16
+over like five years is like at least one full lifetime in this image. Like blurred. I don't know. Like it's
+2:22
+I've been doing it I don't know how long. Well, uh, all right. So, today we're going to talk through um, you know, for
+2:28
+those of you who don't have context. So like one of the things that I think we've always done um really uniquely at Red Canary is have obviously like an
+2:35
+incredible scaled detection engineering like intelligence operations kind of like I'd say like um mechanical threat
+2:42
+detection component uh but the part of Red Canary that I think you know if I had to pick and I've had a lot of jobs
+2:49
+here over the years but if I had to pick my favorite one it would be working in threat hunting and just going to figure out like how do we cover down on things
+2:55
+that um we haven't or can't perfectly mechan ize, right? Where you can't just
+3:00
+like emit a signal to an analyst and say this is probably bad because and there's a whole bunch of reasons like why you
+3:07
+can't do that. Um, in some cases obviously like emerging intelligence or we learn something and we need to look
+3:14
+back in some cases I think like the examples we'll go through today. Um, you know dealing with things like identity
+3:21
+where it's like far less deterministic and not subject to the laws of physics in the same way that like Mac OS,
+3:27
+Windows, Linux are. Um, so, uh, I'm going to turn it over, uh, kind of let
+Naughty or nice? Decoding normal vs. anomalous behavior
+3:32
+them walk through this, but, um, I think that kind of concept of like how do we take, you know, baselining for normal
+3:38
+behavior, determine what's anomalous, and then figure out how to do that like at scale um, when we're dealing with
+3:45
+kind of a combination of like having to look across a thousand plus organizations, right? Like unlike being
+3:51
+a threat hunter for you know Pintoso Corporation like you know this team
+3:56
+doesn't have the benefit of like learning the ins and outs of every one of a thousand plus companies but we still do have to figure out how to do
+4:03
+this like well and quickly and with confidence and so um without further ado
+4:08
+I'll turn it over so like Tyler I'll kind of let you like lead us into this u I think you you all prepared like I
+4:14
+think is like a neat kind of case study or example here. So like what are we looking at and uh you know how do we
+4:20
+want to start talking through this today? Yeah, for sure. So this is the in the
+4:25
+realm of identity uh which which has been a as as Keith said a pretty hot topic with you know baselining and
+4:31
+trying to figure out how we hunt and detect things where we're just fundamentally a little less deterministic than we are on endpoint.
+4:38
+And so what we've got here are two login events uh shown side by side uh for two
+4:44
+different users. And the question at the top of the slide is are are we able to
+4:50
+tell from just this information whether or not this is either of these is normal
+4:57
+or anomalous activity. Excuse me. And
+5:03
+I think with identity uh you know we can look at some of the target applications you know we might be able to look at
+5:10
+some of the IP addresses or geolocations but it's it's it's a little different uh
+5:15
+in my in my opinion than you know looking at an endpoint and seeing like you know like mimic cats go right like
+5:22
+it's it's not quite the same approach. Uh and so we picked these two uh because
+5:27
+they're a good example of kind of the challenges that we face with identity. And so they both succeeded. They have
+5:34
+different target applications uh different geolocations. You know, they're looking at two different web
+5:39
+client or two different clients. Um so yeah, we can go to over to the next
+5:45
+slide where we will show the answer. Yeah. So for those examples,
+5:50
+definitely hard to tell without context as Tyler was was saying, but really the anomal anomalous one was this one for
+5:58
+bot humbug. And the reason why was because in a short amount of time there
+6:04
+was events from multiple hosting providers like signin attempts and other activity for the identity which helped
+6:11
+us make that determination of hey this is odd. This user doesn't usually exhibit this behavior. And also a lot of
+6:18
+times, you know, this hosting infrastructure is used for like adversary in the middle type attacks or
+6:23
+or fishing. So I'll let Tyler go to the next slide and share a little bit more about kind of what led us to this in
+6:31
+more of the hunt hypothesis um that helped us kind of find this behavior.
+6:37
+Yeah. And uh one one thing to emphasize with baselining and of course it's kind of built into it is like if you just
+6:42
+look at those login events as isolated events or atomic indicators
+6:47
+it's really it's really hard to tell right and uh a key part of a lot of this stuff is you're going to have to be able
+6:53
+to collect and analyze data over right over time and there's a lot of challenges associated with that. Uh but
+6:59
+so for this particular one, the hunt hypothesis was that you know we we suspected that identities compromised
+7:06
+via adversary in the middle fishing may authenticate from two distinct new
+7:11
+distinct data centers within a defined time frame. So in this case, we were looking at a 48 hour window uh which
+7:18
+likely represents what we seen and what we hypothesized was that one data center
+7:23
+was from the web server the fishing kit is hosted on and then the operator actually authenticating from a from a
+7:31
+different data center via commercial proxy. And so we gave ourselves a 48 hour window to kind of bucket and try to
+7:37
+capture that behavior. So in this case, we're not looking at a single loon event, but you know, are there multiple
+7:42
+events that line up with this? Uh, so we're not just looking at, you know, somebody authenticating from New Jersey
+7:47
+in this case. It might be somebody authenticating in 48 hours, you know, they they've never authenticated from New Jersey before and then prior to that
+7:54
+they authenticated, you know, from Zen layer or some other anomalous uh data
+7:59
+center. There's a there's a good question. the um so Andre just asked a question in the
+8:05
+chat uh and say and like I think this is probably a great lead in I think you're going to walk through this but like um I
+8:12
+know anybody who's dealt with like Entra ID octa anything like that you get like these kind of deluge of the dreaded
+8:18
+impossible travel alerts and so I think it you've got some kind of context here um I think that's like equal part
+8:25
+specific to the data sources but also like you maybe draw the distinction between like what we're looking for and
+8:31
+then something like impossible travel um if there's a distinction at all which like may be a good open question for
+8:37
+you. Yeah, I think in this case, uh, as as the slide says, we've got, you know,
+8:43
+some contributing intelligence that kind of scopes it down. You know, like, uh, you're exactly right, like the
+8:48
+impossible travel stuff shows up a ton. And you know, as much as we would like to say like
+8:55
+just use only authorized VPNs and then you know detect if you can get away with
+9:00
+that like yes like know what VPNs are authorized to be used know what the expected traffic is know what you're
+9:06
+supposed to you know you're supposed to see coming in there and then if you see you know if you're only using I don't
+9:11
+know like uh Global Protect or some other VPN or some other consumer grade VPN NordVPN what have you and you see
+9:18
+you know ProtonVPN right that's an automatic signal. But if you don't have that luxury, which a lot of folks don't
+9:25
+due the, you know, just lack of control BYOD, uh we're really looking at a little more activity uh than or we try
+9:33
+to look at a little more activity rather than, you know, two authentications coming from different uh different
+9:40
+locations. And so in this case, we did have some contributing intelligence that we used to identify like known abused
+9:46
+data center data centers. So, we kind of had to make some assumptions based off of intelligence to help scope that down.
+9:52
+Uh, but once we were able to once we're kind of able to make that assumption and work through that hypothesis, it allowed
+9:58
+us to filter out what we weren't looking for. Not that that information perhaps isn't
+10:03
+valuable or isn't relevant, but it just wasn't uh specific to the hypothesis here. I don't know, Britney, if you have
+10:09
+any thoughts on that as well. Yeah, I think in this case, like you said, it was really focused and sometimes going
+10:15
+in it from a hunting perspective, having it kind of defined what you're looking for helps. um from those like impossible
+10:23
+travel alerts. I think it's a lot of environments I've been in, they've always been a challenge just because you
+10:28
+have people traveling and VPN usage and just being able to align on what's
+10:35
+accepted in an environment can be very challenging from some organizations because like different vendors or if
+10:41
+you're a university or something, you know, a lot of users will have VPNs. Um,
+10:47
+so another thing we'll probably touch on a little bit later in the slide is also having just the baselining or context
+10:53
+about your organization that helps you kind of filter out those events that are more anomalous and learn where to focus.
+11:01
+Um, like this one, we use, you know, the intel to focus on ones that we have seen with adversary in the middle or kind of
+11:08
+just more hosting providers that are a little more suspicious. not necessarily an indicator on their own um but enough
+11:16
+of a like suspicious activity along with other contexts to make that determination.
+11:22
+So yeah, I think um I appreciate Yeah, thank you both for kind of breaking that down because I was admittedly like not
+11:28
+sure how to answer like Andre's question, but I think that is maybe that's it sounds like the like the big takeaway or the distinction there is
+11:34
+that um we are definitely talking about in this case something different or really distinct from impossible travel
+11:40
+and that this is really like when you say like hypothesis le right this is really focused on a pretty specific
+11:46
+hypothesis that like may also overlap with an impossible travel alert for
+11:51
+example. But in this case was not what you were hunting for, right? You were not hunting for like geographic disparity over time.
+11:58
+It's more of like ASN and kind of attribution to like a data center or an or something like that. Awesome. Um,
+12:05
+cool. All right. So now like yeah talk us through like this is just you know I think folks who are who have read
+12:10
+anything we've put out like we always try to like you know pseudo code kind of either like detection analytics but in
+12:15
+this case I think it's the first time you know we've kind of talked through pseudo code for like a hunt hypothesis
+12:20
+or methodology. So like take us take us through this briefly. Yeah so we've got two approaches here.
+12:26
+Uh we sometimes when we when we're hunting we like to try to maybe have a couple different approaches to tackle a
+12:33
+hypothesis. you know there's not always it's not always one for one right so there's multiple ways to perhaps get
+12:38
+better coverage of that hypothesis or disprove it prove it what have you uh so the first approach here uh you know the
+12:45
+as it says it's authentication from multiple unique data centers and what that pseudo code is basically saying is again looking at an organization in
+12:52
+those list of anomalous orgs that we've previously shown you know and looking have they authenticated you know less
+12:58
+than or equal to two days which is you know 48 hours and if they're distinct organizations authenticated was greater
+13:05
+than or equal to two. And so what we're looking for there is, you know, uh
+13:10
+that's kind of aligned with the what we kind of talked about previously, which was, you know, your fishing kit hitting
+13:16
+on one anomalous data center and then within 48 hours we see the we see the uh
+13:22
+the actual operator trying to authenticate from another anomalous data center. And the the second approach uh
+13:28
+this is a little more this is interesting. Uh the stuff that I I I find pretty pretty curious um and is
+13:35
+also a pretty good approach to baselining uh is when we see authentications into user management
+13:42
+apps from data centers. So in this case, we're kind of looking at a couple different again, not just like a single
+13:49
+necessarily indicator, right? It's uh we've got we got a list of assumed or
+13:54
+anomalous organizations, data centers, and we've got all these apps that they're trying to authenticate into
+14:00
+within three hours. Like generally like that either one of those in and of
+14:06
+itself is not necessarily suspicious or interesting. Uh but if you combine them together, you do kind of
+14:13
+see like all right, so we've got somebody from one of these suspect data centers authenticating to all the you
+14:19
+know user management apps that we've defined that maybe it's like Microsoft Graph API or some other what have you uh
+14:25
+from those data centers and in that case you know that would be kind of like two strikes against that particular loon
+14:31
+session. Awesome. And so I think you know these
+14:37
+I like this because I think it you know we've kind of talked through a little bit of the hypothesis and mechanics but I think like you know kind of pulling it
+14:43
+up a level like take us through I'd say like you know the principles or kind of like the things that you look for um in
+14:50
+terms of like you know quality context stuff like that for investigations like what do you find most helpful here?
+14:57
+Yeah, definitely having context is really helpful in hunting as well as like finding if something is malicious,
+15:03
+right? So, in this case, we used a lot of the surrounding identity activity. Um, but in general, depending on what
+15:09
+you're hunting for, you know, finding out what else is going on going on around that event that might be
+15:16
+suspicious or might be anomalous. Um so you know if you're looking more from endpoint uh you know you might look at
+15:22
+process trees or if you're looking at applications maybe other application
+15:28
+logs along with web traffic. Um but really having context around what is
+15:34
+going on not just that single event but being able to see what happened around it helps kind of make that
+15:40
+determination. So part of that is really understanding what data you need and you know maybe correlating it together. So
+15:46
+we looked at you know the identity events so like signins but also uh UL logs um if there's other things going on
+15:56
+and then the baselines also help right as you do more hunting or looking into
+16:02
+this activity or just get more familiar with your environment or have you know
+16:07
+some of these built up you can identify more quickly what's anomalous right like
+16:12
+as Tyler was kind of touching on if you know what VPNs are used in your environment. Maybe you don't have an
+16:17
+official list, but you know, seeing the ones that aren't commonly used might be something that draws your attention a
+16:24
+little bit more or if you know something's definitely not approved software, maybe that's something to kind
+16:30
+of look at or just if you have those kind of baselines uh using UIBA, kind of looking at some of that that context.
+16:38
+Um as well well as Intel um you know here we like a lot of Intel. We have a
+16:44
+really great Intel team. So having that context around, you know, what are adversaries doing? Is there information
+16:51
+that we can leverage and pivot on or incorporate into our hunting um to
+16:56
+better determine if something might be suspicious or anomalous? I know Tyler, if you have anything you want to add.
+17:04
+Yeah, I think one area of I I'll speak on I guess two things. So the first thing is I think I've I've definitely
+17:10
+made this mistake when I've tried to baseline stuff is it's unless you have unlimited resources.
+17:16
+It's really like a lot more than we're going to you have to be a lot more intentional and deliberate from the
+17:22
+planning stage than like we're going to collect all the you know VPN data. You know we're going to see all the VPNs
+17:27
+that authenticate and then we're just going to stack them. Like that might work. You might be able to get away with
+17:32
+that in you know like something like a VPN. But if you're looking at like process activity, uh you have to be more
+17:40
+deliberate about how you're going to approach that baselining. I know I've done that where it's like, you know, I'm
+17:45
+I'm going to baseline in Linux all the every time something reads the Etsy
+17:50
+password file. Like that sounds like a really good idea except when you actually get that data back, it's a
+17:56
+tremendous amount. And so you kind of get into the uh where's the filter problem is where I've usually described
+18:03
+it as like where are you going to put your filters in the baselining. Uh and so being deliberate and you know having
+18:10
+good planning around what your end state is from the baseline and then working backwards from there to figure out what
+18:16
+data you need to collect to establish that baseline can be really helpful. The second thing I wanted to talk about was
+18:22
+uh under the intelligence section we have internal intelligence. I think this is an area that gets uh
+18:29
+overlooked frequently. Uh and there's really in my mind a couple components to it. The first is when you have threats
+18:36
+or incidents or security events in your environment, uh you know, we we need to have those postmortems or we need to be
+18:42
+able to mine those for information, right? So if you if you start to see your users getting fished and you have
+18:48
+access to what data center they authenticated in or you have access to where what VPN that you start seeing are
+18:54
+associated with fishing that allows you to build up some like internal intelligence that's probably more directly related to your environment
+19:01
+than what you might see from a you know a generic open source list of bad. Second thing is uh
+19:09
+business logic the application of business logic to your organization when applying baselines like cannot be uh is a it's
+19:17
+like a cheat code. Uh you if you can get that information you know you can say you can use that to your advantage to
+19:24
+help a lot with baselining. An example is, you know, I think if you're looking at like baselining PowerShell activity
+19:31
+and, you know, that, you know, we're we're going to look at users that we think have been fished a lot in the past
+19:37
+or downloaded malicious things in the fa past, we'll just, you know, pick on, you know, like marketing or sales, right?
+19:44
+And if we look at okay we're going to look at all the sales people we have the assumption that no users should be
+19:49
+running PowerShell or running encoded commands you know like we can really
+19:55
+target that a little more and we can sort of weaponize the intelligence we have about how our own business should
+20:00
+function to assist with those baselines to kind of lay I guess uh trip wires
+20:06
+probably the best way I could think about it and then we wait for those to to pop. Yeah, I want to jump in for a second and
+20:13
+I know like you know we kind of talked about and I think we're gonna I think look at an example here in a second of like a baseline for an identity which I
+20:19
+do think is like uniquely challenging um to try to summarize you know like you as
+20:25
+an analyst if someone has to try to explain to me Tyler's pattern of life over the course of six months but I only
+20:32
+have you know 60 seconds or maybe a few minutes to kind of like to internalize or understand that that's challenging.
+20:39
+Um I like when we wrote surveyor, right? Like I think you know when you're kind of talking through you know yeah not
+20:44
+helpful to just see everyone who's read Etsy password but it you know what you do want to try to do is like you can't
+20:50
+look at all of the data from every endpoint for example like that's overwhelming but you also can't just
+20:56
+look at one attribute because that's not useful. And so um trying to figure out
+21:02
+like how to you know I like your kind of concept of filtering right which is like you know don't look at it all also don't
+21:07
+look too narrowly and like somewhere in between is kind of like the sweet spot in terms of aperture for just like
+21:13
+enough additional attributes that you can bucket those things and say all right cool like this set of things over
+21:19
+here is statistically rare then you can kind of dig in and figure out from there
+21:25
+you know like at that point now you're into like an investigation but Yeah, it's like a super thorny problem because
+21:30
+I when we were prepping for this I was like everyone loves to say go do a baseline activity in your environment and then everyone overlooks how how
+21:37
+difficult that can be. Um but you know like you're I think also like the takeaway about intelligence
+21:43
+which is like you know everybody here listening has really valuable organizational intelligence maybe in
+21:49
+their head maybe written down but you know it's like yeah the the thing you learned from every investigation whether
+21:55
+it was a false positive or a true positive like that's all useful intel. Um and figuring out how to like codify
+22:02
+that and make sure that's not lost is uh is is super difficult. So I think we got to we have a couple questions about that
+22:07
+but I might hold them for the end because some folks were asking questions about like you know how to get more mileage out of this stuff and like
+22:13
+really how to operationalize threat hunting. So um we will come back to that but I want to give youall an opportunity
+22:19
+to just kind of walk through this is an example of like a user behavioral baseline and when I mentioned you know
+22:24
+the challenge and kind of summarizing this stuff I think this is a like a good example of that in the context of this
+22:31
+identity investigation.
+22:39
+Yeah. So this contains a lot of good detail and it might I mean this is how Red Canary does it but I mean there's
+22:45
+probably other tools or other ways organizations would look at it but some of the things that are you know common
+22:50
+for the user how they typically log in or where they're logging in from. um you
+22:55
+know if they usually use VPN some of this context makes it really um easy to find the anomalies if you
+23:03
+already know this about a user right like there's you know one failed login from Russia that kind of stands out
+23:08
+because you know they're normally signing in from Arizona um so this kind
+23:14
+of a a good way of and just you know for us of understanding what's going on with
+23:20
+the user so if we do see some of those anomalies we have that additional context to, you know, make a better
+23:26
+determination. I don't know, Tyler, if you had anything
+23:31
+you wanted to add or if we should jump to the next slide. I think we can go to the next slide.
+23:36
+Cool. Yeah. So, this is the fun stuff. Um,
+23:43
+analyzing the data. So, I I think like Britney and I kind of think about baselining as there's there's two
+23:48
+challenges. There's how you collect it and then how do you analyze it? And there's a lot of ways to do both. Uh so
+23:55
+what we tried to do here was focus on the analysis piece and we really broke it down into three three different
+24:01
+categories. Focusing on relevant data, making data making that data meaningful uh and enriching that data with context
+24:09
+and we kind of already hit on hit on a couple of these. So I won't
+24:14
+burn through all of them, but like by focusing on the relevant data, like a lot of that is informed by your
+24:20
+hypothesis or your your bet, whatever you're you how you want to phrase that. Uh not everything can be relevant. And
+24:27
+so you have to kind of make some determinations uh ahead of time as to where you're you know where your signal
+24:32
+might be in the data and then think about what what we're looking for for correlation. And then with making data
+24:39
+meaningful, uh again really you want to try to tailor those to your original
+24:44
+hypothesis and it should be part of your like hypo part of your planning before baselining is how you're going to
+24:50
+actually analyze it. And then the last piece uh is enriching that with context is we've got we kind of covered this
+24:57
+already but you got your OENT your CTI and then you've got your business context and again just to reiterate you
+25:03
+know the business context can be really valuable if you're able to harness some of that and I will I think we are five minutes so I'll pause there.
+25:11
+Yeah I don't know Britney anything you want to kind of share you know your perspective related to this and then I'll we'll go into questions from there
+25:16
+because I think we've got some good ones. Yeah. So, I think to make sure we have plenty of time for questions, I'll
+25:21
+just call out one thing just for the making data meaningful. I know this is kind of vague and probably a challenge
+25:27
+lots of threat hunters have, but it's really going to be kind of dependent on your hypothesis and what you're you're
+25:32
+trying to prove, right? Kind of stacking data is useful. Um, you know, like counts to see what's maybe uncommon. Um,
+25:40
+but it also kind of has that like how do you stack it the best because maybe a user does this thing a thousand times
+25:47
+but that trend just started happening over the last you know day and was
+25:52
+related to something else. Um, so then maybe a time chart or you know stacking
+25:58
+by time and a count of events for a user. So just kind of keeping in mind
+26:03
+your hypothesis and what would actually help you prove or disprove that and
+26:09
+maybe taking different approaches too to how you make it meaningful, right? Like you might try and stack the data in
+26:14
+multiple ways um to get the right level of insight. So I I'm gonna ask one question um and
+26:20
+then we've got a handful here. So we'll try to get through I want to try to get through as many of these as we can uh because we've got some really great ones. Um, but Britney, you just
+26:27
+mentioned, you know, like stacking, grouping, time charts, like short list of tools you use to do that. Like what's
+26:34
+your go-to again? It's like, you know, like the concepts I think are understandable, but they're also kind of vague. Like how do you do it? Like where
+26:40
+do you spend your time? Yeah. So, our team likes to use a lot of
+26:45
+Jupyter notebooks just because it lets you kind of, you know, take that data frame and then stack it in different
+26:52
+ways and kind of overlap it. Um, so that's what I like to do just because
+26:57
+then I can see it in multiple multiple ways. Um I don't know Tyler, do you have a favorite way of doing it? I think I've
+27:04
+been mostly using Jupiter lately. Yeah, I mean I I uh I usually try not to get too attached to one particular tool.
+27:11
+I think there's times where Jupiter and some code can be really helpful, but uh also if you're a wizard with Excel or
+27:18
+Sheets, uh you can crush it with a CSV file and Microsoft Office uh for lack of
+27:24
+better, you know, uh for for those of you that are in environments where we can't get uh you know, not everybody can
+27:31
+access, you know, like Jupiter because you know, permissions or you know, lack of familiarity, you know, you could you
+27:36
+can make a lot of headway with a simple spreadsheet in a CSV file. Awesome. All right. Uh, I'm going to try
+27:42
+to burn through some questions, so let's do them rapid fire. Um, all right. First one from Alexis. Uh, what's the most
+27:48
+impactful thing customer can do to improve the quality of like detections or hunts in their environment?
+27:58
+I think communication is always helpful. Like if we see uh anomalies and we're not sure if they're like malicious from
+28:04
+a threat hunting side, we might reach out to customers and just like let them know, hey, we saw this. this is this is something that you know you expect um
+28:12
+you know so giving us some of the context that is relevant to their organization that we might not have
+28:17
+otherwise I think is is helpful and then you know it's nice to have the data
+28:23
+right like we have a lot of integrations so I'm I'm definitely greedy with data I don't know about you Tyler
+28:31
+yeah I think if you're I agree with what you said Britney and if you're looking like internally to you have like
+28:36
+internal detections I would say be intent. It's it's again it's really vague, but like an example is to is to
+28:42
+be intentional and think about the the life cycle of the detection. You know,
+28:47
+it's not just a set it and forget it, right? Like if if I'm making a detection, it's going to be tied to a
+28:53
+use case and that use case might be tied to, you know, a specific attack technique and then we're going to be
+28:58
+thoughtful and deliberate about how we implement it. We're going to, you know, check are we catching things? uh because I think a lot of times we we turn on all
+29:05
+these rules and there's no followup afterwards. So it gets hard to like filter them out and
+29:12
+understand what which is actually important, which is producing what. Uh so I I think being intentional and you
+29:19
+know thinking about the whole life cycle of a detection rule is is really how I would improve the impact and quality.
+29:25
+Awesome. And hey, I know everyone we're at time. We're going to keep going. So if anyone wants to hang on for a few minutes like we're just going to burn
+29:30
+through some more questions because I think some of these are great and I am going to give like a quick plug too. Uh so for like there's because there were a
+29:36
+couple questions from customers related to like interacting with us about hunts and things like that. And I will say
+29:42
+like one of the features we're launching I think in a week or two um is an ability for folks to give us like
+29:49
+organizational intelligence I guess for lack of a better term. So telling you know telling Red Canary explicitly we
+29:55
+will use these three authorized VPNs. Hey, like we are a Net Scope shop or a Zscaler shop. And so I think based, you
+30:02
+know, proactively giving our team some of that context so that when Britney and
+30:07
+Tyler and like their compadres are going through and doing these hunts, like they are fed with some of that information up
+30:13
+front which just saves a round trip, right? And uh and so like I think that's useful on the product side for context.
+30:20
+So um so there's another question here uh related to like this is an
+30:25
+interesting one from uh from Garrett. So like it says you know and I'm going to try to paraphrase but it's like I think
+30:30
+the concept here is hey uh I keep going in and I've got um you know alerts
+30:36
+coming through for thirdparty VPN usage. I'm marking them as false positives
+30:41
+because they are. But I'm worried that at some point that's going to come back to bite me. Effectively just like you
+30:47
+know what happens like when you have a whole bunch of legit false positives but for something like VPNs where we know
+30:53
+you know like that's a problematic kind of like you know entry point. Um I don't
+30:58
+know like that's a that's a good one. Uh how would you all think through that like the these types of situations? I
+31:05
+think probably similar to impossible travel, right? I think I know a lot of those our customers tell us are false positives but like we have to find the
+31:11
+needle in the stack of needles. Yeah, I'll take a stab at it. So I try
+31:18
+to think about these problems in terms of uh tradeoffs and where I have where I
+31:24
+am willing to make a bet that I you know like I don't want something. So, for example, I'm not saying that I don't
+31:30
+know if hopefully we don't have like privileged users being able to authenticate from random VPNs, but you
+31:36
+know, say for example, you did have high-risisk users. Um, you know, can we tailor that election or that alert a
+31:43
+little more to, you know, for low privilege or low-risisk users, you know, maybe not the CEO, but maybe just, you
+31:50
+know, you know, Tyler in sales, right? Can are we willing to turn off and eat
+31:56
+the potential risk or accept the potential risk of a false posit
+32:01
+right uh on on my VPN usage but maybe on like the CEO or the the chief finance
+32:08
+officer or somebody that has a lot more potential blast radius and impact you know that's that's the kind of thing
+32:13
+where we might look at like yeah I don't care I want all the right I want all the
+32:20
+alerts for the the chief financial officers VPN usage because if if that is bad, I need to investigate that right
+32:27
+away. And so I I think that's again where familiar business context comes in. And the second thing I'll say is uh
+32:35
+is looking at threats that occur from VPNs and trying to figure out it's
+32:42
+really the correlation. So thinking about when an actor might compromise a
+32:48
+VPN credentials, what what might the next steps look like from there? And uh that would perhaps allow you to
+32:57
+enrich some of those false positives uh or you know false positives in that sense and so that you're able to
+33:04
+target what you're looking at a little more broadly rather than just an atomic VPN. Got it. That Yeah, that's super helpful.
+33:10
+Um, yeah, I like that kind of taking, you know, just looking past the actual pathway in and figuring out like what's
+33:16
+the next thing and is that next thing normal? And that's a great way to think about that. All right, Britney, one for you. So, um, the this a question from
+33:24
+Michael, which is just, you know, do you know of any recommended sources like to help get started baselining activity on
+33:29
+specific operating systems. So, like this, I'd say like maybe a host hunting question here. Um, I don't know like
+33:35
+where what have you found useful for like reading, learning, who's doing interesting work here? like what you
+33:40
+got. Yeah. So, I think it's probably still around, but when I first started in threat hunting, the sands finding evil
+33:48
+uh was useful, but I think in general just knowing, you know, what's expected for end points and what's not is good.
+33:56
+And then also over time kind of tracking those things. Um, also if you have
+34:01
+information about your environment that you just you know know of um like
+34:07
+certain workflows or like maybe you know Tyler's example earlier of like PowerShell users like maybe you just
+34:14
+know only developers should be using PowerShell or certain tools. Um, so you know, kind of having that context and
+34:21
+then going and looking across your environment and seeing if that kind of aligns what your hypothesis is and like
+34:27
+tracking those things so you can keep building on it to like learn more and incorporate that into future hunts. So I
+34:34
+think a lot of it is in general knowing what's expected for like you know certain tools or operating systems but
+34:41
+also taking in that environmental context that you know and building it up over time and kind of looking at it and
+34:47
+tracking it whether that's like in a ticket or someplace centralized so your team can also have that context too when
+34:52
+it comes to like future hunts or detections. And I we mentioned it earlier but I'll give another shameless plug to surveyor
+34:58
+which is maintained like by this team by our threat hunting team. Um, and that is like you know like don't probably the
+35:06
+best way to do it is to actually just start looking at what's happening in your environment to your point like throw that stuff into Excel even if you
+35:12
+don't have like Jupyter notebooks and stuff handy. So like that is a it's a great way to dive right in. All right. Uh last question because it's quick and
+35:18
+it's fun. Uh this came in I think suspecting right out of the gate when we were prepping. Um so uh Tyler disaster
+35:26
+recovery plan for when your coffee grinder stops functioning. What do you do? Oh, I have uh I have multiple coffee
+35:33
+grinders. That's the I I I have uh I have like a a barza. I have a couple
+35:40
+hand grinders. And then if all else fails, uh I have pre-workout. So, I'm going to get my you know, I'm gonna get
+35:46
+my my fix one way or one way or the other. Um yeah. Love it. Britney,
+35:53
+what's your backup? I'm I'm gonna look terrible because I'm not even as fancy as Tyler and I buy the
+36:00
+K cups or already ground coffee to make my life easier in the morning.
+36:05
+Yeah, it's we've got the same. We uh it's like got a variety of coffee making mechanisms. So, I love it. Yeah, Chris
+36:12
+Chris said M plus one. That's exactly it. It's like uh just you can never it's like guitars and coffee grinders I think
+36:18
+are are coffee coffee making devices I guess the two things uh I've learned over the years that you can always
+36:24
+convince yourself to buy one more of. That's awesome. Hey, thank you all so much. Uh folks in the audience,
+36:30
+appreciate the questions. Sorry there were a couple we didn't get to. Um this was super fun. Tyler, Britney, really
+36:36
+really appreciate uh just all your expertise. Like great job taking us through this today. Thanks for being
+36:42
+here. Thank you all. Thank you. Cheers. Thanks everybody. And we'll see
+36:48
+you. Will we see you next week? I've lost all track of time. Maybe we'll see you next week. Maybe we won't. Have a
+36:54
+great day. Cheers.
+36:59
+[Music]
+

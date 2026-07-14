@@ -1,0 +1,322 @@
+0:00
+Hi, my name's Lee Kirkpatrick, and I'm an incident lead with the
+0:03
+Sophos Incident Response team.
+0:05
+And in today's video, we're going to be going through a visual
+0:07
+demonstration of a recent attack that we had been investigating regarding
+0:12
+the Mad Liberator ransomware group.
+0:15
+Now, in this instance, we already have AnyDesk that's installed on the victim
+0:19
+machine, and this is actually what was the case in the investigation that
+0:23
+we were brought in to investigate.
+0:25
+The attacker initially has to input an AnyDesk ID in order to connect.
+0:29
+This is often referred to as remote address.
+0:31
+That is the 10-digit unique ID for that AnyDesk instance so that
+0:35
+you can actually connect to it.
+0:37
+We're not 100 percent sure in this instance exactly how the attacker managed
+0:40
+to obtain that 10-digit unique ID.
+0:43
+Could be via phishing info stealers or it could be that they were just rotating
+0:47
+through those AnyDesk IDs to see if anyone was accepting a request at the other end.
+0:52
+So in this instance, obviously, we've got the two devices in the lab.
+0:55
+And we're going to know that AnyDesk ID and obviously connect to that
+0:58
+straight off of the bat, and we can do that by entering the remote address
+1:02
+in the AnyDesk application at the top.
+1:05
+Now, by default, you wouldn't typically start seeing these other
+1:08
+instances of AnyDesk when you just start typing that first character.
+1:12
+But of course, we have things set up a little bit differently to
+1:15
+how the actual attack took place.
+1:16
+Both of these devices are on the same network, so they're
+1:19
+able to discover each other.
+1:21
+But obviously, this 10-digit ID is what the attacker would have used
+1:23
+to connect to that remote system.
+1:26
+And then at this point they could have selected a console
+1:29
+session or a user account.
+1:30
+In this instance, they probably selected console because that's just going
+1:33
+to try and connect to that instance without them having to request or
+1:37
+input any information such as a user.
+Connecting
+1:40
+Now what you can see here is it states "Connecting" and it's
+1:42
+waiting for that remote side to accept the connection request.
+1:46
+And this is exactly what the user stated that they saw, that a pop-up occurred
+1:50
+on their system for an initiation of a connection request from AnyDesk.
+What the victim saw
+1:56
+So let's flip over to the victim side and see how they would have seen things
+2:00
+after this connection request was made.
+2:03
+So here we are on the victim's machine and we can actually see that there is
+2:07
+a connection request that's come in and it's from a user named Hemlock.
+2:12
+Here is the AnyDesk ID and we've obviously received a connection request, and we can
+2:17
+either choose to accept or dismiss that.
+2:20
+Now just to let you know that we haven't changed any of the settings in AnyDesk,
+2:23
+this is everything as it is by default.
+2:26
+In the article, there's going to be recommendations and links regarding the
+2:29
+best practices and security standards you can set up for AnyDesk to help
+2:33
+improve security and for stopping these sorts of things happening.
+2:37
+But this is exactly what the user would have seen in this attack.
+2:40
+Now, in this instance, the user actually believed that this was a
+2:43
+request from their internal IT team.
+2:45
+So went ahead and actually accepted that connection request and that therefore
+2:50
+accidentally gave the attacker access to that system to start performing
+2:54
+what it is that they want to perform.
+What the attacker saw
+2:56
+Now what we'll do is we'll flip back to the attacker side
+2:59
+and show what they did next.
+3:00
+So now that we're back on the attacker's machine, we can see that there's a session
+3:04
+started in the chat log there, which means that the end user has inadvertently
+3:08
+accepted our request, and we now have full access over that user's system.
+3:13
+What the attacker did next was to use a feature in AnyDesk called
+3:16
+Browse Files in order to upload a binary that they had created called
+3:20
+Microsoft_Windows_Update.exe, and they can upload that by
+3:23
+using this Browse Files feature.
+3:25
+Now, that application isn't necessarily malicious in itself.
+3:30
+You'll see that when we execute that file, just by going back over to the
+3:33
+AnyDesk console session, navigating to the directory where we uploaded
+3:37
+that, upon execution, it tricks the user into believing that there are
+3:42
+updates taking place on the system.
+Fake update, real lockout
+3:45
+So if we were to switch screens over to that victim's system, on their
+3:49
+endpoint, or their laptop, or whatever the AnyDesk instance is installed
+3:52
+on, this is what they would see.
+3:54
+And this is basically the attacker hiding what's happening on screen from the end
+3:59
+user and making the end user believe that updates are actually taking place.
+4:03
+Now at this point the end user still has control over their mouse and keyboard,
+4:07
+which means that they can move the mouse, they can exit out of this fake update
+4:10
+screen, and that would then destroy the ruse that the attacker has created.
+4:15
+So the attacker used another trick within AnyDesk, which is
+4:18
+to disable or block remote input.
+4:21
+So by ticking this option, this means that the end user no longer has control
+4:26
+over their mouse and keyboard, and now that I'm back on the victim machine,
+4:29
+I'm trying to hit escape, I'm trying to move the mouse, and it no longer works
+4:33
+because they've blocked that remote input.
+4:35
+So the user thinks that there's updates happening on their machine, and this
+4:39
+allows the attacker to then carry out their additional actions completely
+4:43
+uninhibited from that user's view.
+The attacker and the files
+4:46
+And this is what the attacker then ultimately did was use this Browse
+4:50
+Files function to browse the system looking for files that they could
+4:56
+ultimately exfiltrate from that system.
+4:58
+They were browsing OneDrive, a remote share, and then ultimately,
+5:01
+I think, roughly 30 gigabytes of data was exfiltrated over AnyDesk.
+5:06
+And that is how the attacker ultimately ended up infiltrating
+5:09
+the infrastructure and exfiltrating data from the environment.
+Blue Team: Queries and investigations
+5:15
+So what I want to do in this final part of the video is switch
+5:18
+over to being the blue team.
+5:20
+Now what I want to run through is just a really quick query that we've
+5:23
+developed that can help ascertain if there are any of these instances
+5:26
+of AnyDesk being used in malicious ways, or at least giving you some of
+5:30
+the key events as to what's happening with AnyDesk across your environment.
+5:34
+Now, of course, if you don't want AnyDesk installed in your estate, Sophos has
+5:38
+features such as Application Control that can help block this from even being
+5:41
+used or installed in the first place.
+5:43
+But if it is something that you use within your environment and you want to better
+5:47
+monitor that, or if you're investigating a potential misuse of AnyDesk, this
+5:51
+query can come in very beneficial for pulling out those key events and helping
+5:55
+you hone in on devices of interest.
+5:58
+So what we're going to do is navigate to Threat Analysis Center.
+6:01
+We're going to go to Live Discover.
+6:03
+We're going to select Designer Mode so that we can subsequently
+6:06
+create our own query.
+6:08
+And in this instance, we're going to paste that query into this SQL text box here.
+6:13
+Now, like I say, this is just going to grep through some of the interesting
+6:16
+AnyDesk log files, looking for items that may be of interest to us.
+6:21
+Now, in this instance in our lab, DC1 was the device that had AnyDesk installed,
+6:25
+and that was the machine that the attacker successfully got a connection to.
+6:29
+So we'll select that device and then click Run Query.
+6:32
+This query shouldn't take too long to complete.
+6:35
+It does depend obviously on the resources of the system and
+6:37
+how large those log files are.
+6:39
+But generally, 10 to 15 seconds should be enough for this query
+6:42
+to complete and return, which we can see that it has finished here.
+6:46
+Now, what this query will do is it will give you the endpoint name.
+6:49
+It would give you the date time that the event occurred.
+6:52
+It would also tell you the location of where it was extracting this information
+6:56
+from so that you can get a bit of a better idea maybe as to the user that was
+6:59
+associated with this activity as well.
+7:02
+What it will also do is have an Operation column, so it will tell you whether the
+7:06
+attacker or action was to disable mouse and keyboard, whether it was a login
+7:10
+event, whether it was a file transfer to help you hone in on those more interesting
+7:14
+operations with regards to AnyDesk.
+7:17
+And then what we can see here is there is an AnyDesk login operation.
+7:21
+And if we highlight over that, we can actually see here -- well, we would
+7:24
+be able to see the public IP address.
+7:25
+We've X'ed that out in this instance, but it says Logged In From, and then
+7:29
+you would have your IP address there.
+7:31
+You could obviously look up that IP, see if it's, you know, malicious or
+7:35
+known-bad IP or coming from somewhere that you typically wouldn't expect.
+7:39
+We obviously have additional information, such as the remote OS.
+7:42
+So this can give you information on the remote operating system
+7:45
+platform that's actually running.
+7:47
+And in this instance, that was Windows.
+7:49
+The Accepted Connection Request will show you the remote ID that was making
+7:53
+that request; the same with that Incoming Session Request here as well.
+7:57
+These can be really beneficial in identifying if lots of requests are
+8:01
+being made to an end user so that you can ultimately then maybe create or re-trigger
+8:05
+a new AnyDesk session ID, so that they're not getting constantly spammed with
+8:09
+these or using some of the features that AnyDesk comes with such as access control
+8:13
+lists to stop these users potentially getting spammed with connection requests.
+8:18
+There's also things such as, was there a file transferred to this host?
+8:22
+Now we don't know what file was transferred, but the fact that there was
+8:25
+a download started indicates that there was actually some files being transferred
+8:30
+from the remote system onto this device.
+8:32
+And then subsequently as well, we can also see this disabling user input,
+8:35
+which is removing the ability for that end user to use their mouse and keyboard
+8:40
+like we saw in that previous instance.
+Conclusion
+8:42
+So this gives us a really good, quick, easy way to hone in on those more
+8:45
+interesting events from the AnyDesk logging and hopefully can help you
+8:49
+identify those malicious instances.
+

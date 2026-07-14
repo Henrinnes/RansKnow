@@ -1,0 +1,657 @@
+0:00
+welcome back everyone if you're dealing
+0:01
+with linux forensic disk images then you
+0:04
+might run into something called logical
+0:06
+volume management and i'll show you what
+0:09
+an lvm looks like in a linux disk image
+0:12
+we have this
+0:13
+physical disk image copied from a normal
+0:16
+linux system and one of these partitions
+0:18
+has a logical volume management setup on
+0:20
+it so let's go ahead and take a look at
+0:23
+what that partition table looks like i'm
+Check the forensic image disk partition information
+0:25
+going to cd into the
+0:27
+directory with the image
+0:29
+we have our first disk001 e01 and then
+0:32
+it's a multi-part disk image so i'm
+0:34
+going to use the sluicekit tool mmls
+0:38
+let's do the clear mmls to look at the
+0:41
+partition of this disk image disk 1 ze01
+0:46
+and i only needed to give it the first
+0:47
+part because this kit is smart enough to
+0:49
+know this is a
+0:50
+multi-part disk image so if i hit enter
+0:54
+then we get the partition table and what
+0:56
+we're really interested in here is the
+0:58
+logical
+1:00
+volume manager partition so linux
+1:02
+logical volume manager and it looks like
+1:04
+the primary partition on this disk so
+Try to access LVM partition directly with fls (fail)
+1:07
+let's say i wanted to look in this file
+1:10
+system if we use also a sleuth kick tool
+1:12
+f l s
+1:14
+o
+1:15
+and then we give it the offset for the
+1:18
+starting partition
+1:19
+paste that in there
+1:21
+and then give it the disk image
+1:24
+then we get cannot determine file system
+1:26
+type and what will happen whether you're
+1:29
+looking at it in in
+1:30
+with a sleuth kit or in a tool like
+1:32
+autopsy if the tool does not understand
+LVM access procedure overview
+1:36
+the logical volume manager format of
+1:39
+partition you won't be able to get into
+1:42
+uh the logical data in here and this
+1:44
+isn't encrypted or anything basically
+1:46
+you just don't have direct access to the
+1:47
+file system first you have to rebuild
+1:50
+the logical volume and then
+1:52
+you can get access to what looks like a
+1:54
+partition on top of the logical volume
+1:56
+so there's kind of an extra step in
+1:58
+there we have the physical hard drive we
+2:00
+have the partition we have the logical
+2:02
+volume manager and then
+2:04
+a virtual essentially partition with a
+2:07
+file system and a lot of tools don't
+2:09
+seem to support logical volume manager
+2:11
+so let's go ahead and show how to
+2:13
+get access to this data directly from my
+2:16
+linux system now i am using a linux
+How to mount LVM partition in Linux
+2:19
+system as the forensics workstation i'm
+2:21
+in surugi linux right now and it's best
+2:24
+if you are in a for a linux system
+2:28
+that doesn't already have logical volume
+2:29
+management set up because you don't want
+2:31
+the
+2:32
+the names essentially to conflict with
+2:33
+each other and i'll show you that in a
+2:34
+second okay so just to check what we
+Check forensic workstation devices
+2:37
+have so far on this forensic workstation
+2:40
+we can look at the devices in uh dev
+2:43
+mapper so ls-l
+2:46
+and that's just listing the directory
+2:47
+and dev
+2:49
+mapper
+2:50
+okay so the only thing i have in here is
+2:52
+control basically in my local system the
+2:55
+forensic workstation i do not have
+2:57
+logical volumes set up so the next thing
+2:59
+i want to do is mount the disk image and
+3:01
+get access to the raw data inside so i
+Mount the image with ewfmount
+3:04
+can use a tool inside ewf tools package
+3:08
+called ewf mount so i'm going to do sudo
+3:11
+ewf mount and then i need to give it the
+3:15
+disk name
+3:16
+disk one disk zero zero one e01 in this
+3:19
+case and then my mount point and this is
+3:22
+going to be the mount point for
+3:24
+basically the physical
+3:25
+suspect disk so uh surugi linux already
+3:28
+has some mount points created inside
+3:31
+slash mnt if i do tab tab i can see all
+3:34
+of the different folders that have
+3:36
+already been created by default these
+3:38
+are just empty mount points so we can
+3:40
+pretty much use any of them if we
+3:41
+haven't already i'm going to use ewf1
+3:44
+because we have an expert witness format
+3:46
+type of image so i'm going to mount it
+3:48
+to ewf1 so slash mnt
+3:52
+ewf1
+3:55
+hit enter
+3:57
+okay now if uh you see this ewf mount
+4:00
+and the version number and doesn't say
+4:02
+anything else then it should be
+4:04
+successful we can check that by typing
+4:06
+mount so we do have dev fuse on mnt ewf1
+4:10
+all right
+4:11
+so
+4:12
+now
+4:13
+what ewf mount does is create a
+4:16
+type of physical
+4:18
+volume essentially so we can use sudo
+4:21
+mnt ewf1 that's the folder that we
+4:24
+mounted to and then ewf mount creates a
+4:27
+special type of file inside that folder
+4:30
+called ewf1 and this second ewf1 is the
+4:35
+physical
+4:36
+volume inside the disk image so this is
+4:39
+basically uncompressed
+4:41
+physical disk image essentially so we
+4:44
+can treat it exactly like a physical
+4:46
+disk so i'm going to go ahead and run
+4:49
+mmls
+4:50
+again from sleuthkit on that so sudo
+4:52
+mmls mnt ewf1 ewf1 this is our special
+4:56
+device
+4:57
+press enter and then we get the same
+4:59
+partition table again so we know that
+5:02
+this device is a representation of the
+5:04
+suspect's system all right
+5:07
+so now we have access to that we need to
+Create new partition mappings with kpartx
+5:09
+start
+5:10
+identifying and mounting up the logical
+5:14
+volume manager
+5:15
+partition all right so i'm going to
+5:17
+clear that
+5:18
+and i'm going to use a tool called k
+5:20
+part x so pseudo k part x and then dash
+5:25
+a dash v slash mnt
+5:28
+ewf1 ewf1 okay so basically i'm using k
+5:32
+part x to identify
+5:34
+all of the partitions inside our new
+5:36
+physical disk that we've now attached
+5:38
+press enter
+5:40
+and then we found uh looks like a couple
+5:42
+different devices right so now i can go
+5:45
+back and just to verify that my system
+5:47
+can see this logical volume i can use ls
+5:50
+dash l slash dev
+5:52
+mapper remember ls is just showing the
+5:55
+directory l is just a switch to control
+5:58
+what we can see essentially and then
+6:00
+slash dev mapper folder in our system
+6:03
+and now we have
+6:05
+three loopback devices as well as vgmint
+6:08
+root and vgmint swap
+6:10
+now these are interesting to us because
+6:13
+they're going to be related to the
+6:14
+logical volume and specifically we're
+6:17
+almost definitely interested in the
+6:19
+root vg mint root
+6:21
+drive
+6:22
+we could be interested in swap that's
+6:24
+going to give us
+6:25
+things like
+6:26
+any information that was available in
+6:28
+ram so that could be interesting to us
+6:30
+for now let's go ahead and mount root
+6:32
+that way we can get access to the
+6:33
+suspect's root
+6:35
+directory
+Scan volume groups for logical volumes with lvscan
+6:36
+all right so now that our system our
+6:38
+computer can actually see
+6:41
+what volumes are inside this logical
+6:43
+volume manager now we can use
+6:46
+sudo lv scan
+6:50
+okay now all we're doing is basically
+6:52
+scanning for logical volumes and then we
+6:55
+have those two logical volumes that were
+6:57
+detected because they were in our
+6:59
+mapper directory so now our computer can
+7:02
+actually see those logical volumes as
+7:04
+logical volumes and you can say that
+7:06
+logical volume or the group is the
+7:10
+vg mint and then one of the partitions
+7:13
+is root and that's an 18.5 gig partition
+7:16
+and then we have a one gig swap so again
+7:18
+we're probably interested in that root
+7:20
+there
+7:21
+okay so now we have access
+Mount the logical volume with mount
+7:24
+at dev vg mint slash root we can access
+7:28
+these directly as devices because our
+7:31
+computer understands the logical volume
+7:34
+and the volumes that are inside of there
+7:37
+okay so now we can just use this plain
+7:39
+old pseudo mount mount is just built
+7:42
+into our system and then we want to give
+7:43
+it the dev vg mint slash root and then i
+7:48
+need to mount this where i would
+7:49
+normally mount a partition right so
+7:52
+where am i going to mount the partition
+7:53
+again into the mnt folder let's look at
+7:56
+what we have available we've already
+7:57
+used ewf1
+7:59
+this root directory is actually probably
+8:02
+the
+8:03
+slash
+8:04
+directory in linux but in windows the
+8:06
+slash directory equivalent is c drive so
+8:10
+even though it's not a windows system
+8:11
+it's a linux system i'm just going to
+8:13
+mount it to mnt
+8:16
+c just because
+8:18
+it's uh normal okay we got an error it
+8:21
+says warning device right protected
+8:23
+which is good that's what we wanted and
+8:25
+mounted read only
+8:27
+ewf mount will mount these
+Access the file system directly via the mount point
+8:30
+read only inside m t
+8:32
+c
+8:33
+we've actually mounted up the logical
+8:35
+volume and specifically the root
+8:37
+partition in the logical volume so we
+8:39
+should be able to see all of the files
+8:42
+in that logical volume in
+8:44
+this directory so we can do cd
+8:47
+mnt
+8:48
+c
+8:49
+and what i would expect to see if i do
+8:52
+ls
+8:53
+or i'll do ll
+8:55
+is
+8:56
+all of the files that we would normally
+8:58
+see in a linux root directory so things
+9:01
+like root var etc opt things like that
+9:06
+okay so listing everything out
+9:09
+yeah so we have bin boot
+9:11
+dev etc home
+9:13
+um
+9:14
+media mount all of these are coming from
+9:17
+the
+9:18
+suspect logical volume all right so now
+9:21
+we have a root directory and
+9:24
+a couple weeks ago i posted a video
+9:26
+about linux forensics and how i
+9:28
+eventually used pseudo ch
+9:31
+ch root
+9:33
+and then the
+9:34
+what would be mnt
+9:36
+c and then you can actually change your
+9:38
+own root directory into the suspect's
+9:40
+root directory and search around just
+9:42
+like you're the suspect
+9:44
+but we don't need to do that today so
+9:45
+now once you have that mounted up i'll
+9:48
+show you what my mount points look like
+9:49
+we have dev fuse on mnt ewf1 and we have
+9:53
+dev mapper vgment root on mntc so this
+9:57
+is the
+9:59
+logical volume inside the
+10:03
+logical volume manager and then this
+10:05
+fuse device is our physical disk
+10:07
+essentially
+Use any forensic tool against the mounted logical volume
+10:08
+so we have our two mount points
+10:10
+inside we can see all of the files
+10:12
+inside the logical
+10:14
+volume
+10:15
+now we can throw any tool
+10:18
+if we're using forensics tools we can
+10:20
+throw any tool at this so i can even use
+10:21
+built-in forensic commands so for
+10:23
+example i could find let's do
+10:27
+bash history
+10:28
+something like that
+10:30
+okay oh we found bash completion so i
+10:33
+can even use my built-in linux
+10:35
+linux commands to
+10:37
+you know do keyword searching grep over
+10:39
+the entire file system uh we don't have
+10:41
+permission but if i would have used
+10:45
+sudo or if i would have ch routed into
+10:48
+this directory i would have had access
+10:49
+to all that
+10:50
+so now i can just basically use any tool
+10:52
+that i would normally use
+10:54
+to process this and if i want to use
+10:57
+something like autopsy now in my autopsy
+10:59
+case instead of just adding the forensic
+11:02
+disk image directly i can add a local
+11:05
+logical volume or
+11:07
+i think the option was called files so
+11:09
+add add files from a directory so now
+11:12
+the directory that i'm interested in to
+11:13
+process would be slash mnt
+11:15
+c
+11:16
+add all of those files to
+11:18
+autopsy and then it will process
+11:20
+everything just like a normal disk image
+11:22
+okay so this is how you can get access
+LVM observations
+11:25
+to a
+11:27
+logical volume
+11:29
+onsite inside a
+11:31
+forensic disk image logical volume or
+11:34
+lvm is normally set up like in in all of
+11:36
+the linux systems that i've used
+11:39
+in the last several years lvm was the
+11:41
+default and not only lvm but also lvm
+11:44
+with encryption so it's good to know if
+11:46
+you're not getting something out of a
+11:47
+linux system check and see if that
+11:49
+partition has logical volume management
+11:53
+and then if it does then you have to do
+11:54
+it usually an extra step now some of the
+11:56
+forensic tools especially the commercial
+11:58
+ones will support
+12:00
+lvm but for example autopsy didn't
+12:02
+support it by default so you just have
+12:04
+to mount
+12:05
+lvm first and then add it to autopsy
+12:08
+second i hope this helps if you ever
+12:09
+find lvm have a great day
+

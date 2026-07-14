@@ -1,0 +1,1620 @@
+0:18
+Hello everyone. My name is Tiarra Ortiz.
+0:21
+I am the cloud gaming SR manager at
+0:23
+Netflix and I'm really excited to be
+0:25
+talking to you today about managing
+0:27
+blackbox systems. In today's talk, I'm
+0:30
+looking to establish a foundational
+0:31
+model that helps you think through how
+0:33
+to manage these systems. And I'm also
+0:35
+going to be sharing three case studies
+0:37
+of observability wins that I've seen
+0:39
+throughout my career.
+0:41
+And we're here at Dublin for SRCON AMIA
+0:43
+2025. And I want to start our
+0:45
+conversation about managing black boxes
+0:48
+by going back 800 years to a castle that
+0:50
+you can visit and is just a few
+0:52
+kilometers from here. Dublin Castle was
+0:54
+founded in 1204 as a Norman stronghold.
+0:57
+It was built understood that something
+0:59
+so fundamental that no single line of
+1:02
+defense was going to be perfect. You
+1:04
+could have the moat be drained, the
+1:06
+walls could be breached, the gate house
+1:07
+could be broken, and towers could fall.
+1:10
+But they built it anyway with multiple
+1:12
+layers of defense because each layer
+1:13
+didn't have to be perfect. It just
+1:15
+allowed us to have additional time. It
+1:17
+provided visibility and gave defenders a
+1:20
+chance to respond. Ultimately, this is
+1:22
+very similar to the kinds of challenges
+1:24
+we face today as SRRES as we manage
+1:26
+these blackbox systems. We can't have
+1:28
+complete visibility into every single
+1:30
+component that we're responsible for,
+1:32
+but we can build layers that buy us
+1:34
+something invaluable, which is time. So
+1:36
+today, I'm hoping to share you a
+1:38
+framework that helps guide you through
+1:40
+these black boxes. So what is a
+1:42
+blackbox? A blackbox is a complex system
+1:45
+or device whose internal inner workings
+1:48
+are not readily understood. And here's a
+1:50
+few examples of black boxes that you may
+1:52
+be hearing about today. So you have LLMs
+1:55
+because these are large language models.
+1:57
+and you actually don't know what's
+1:58
+happening underneath the hood when
+1:59
+you're interacting with one of these
+2:01
+GPTs. There are general expectations
+2:03
+about what you have to be a good
+2:05
+response from interacting with one of
+2:07
+these models, but there's not anything
+2:09
+that's guaranteed beyond an HTTP status
+2:12
+code. We also have games executable
+2:14
+which is near and dear to me as a cloud
+2:17
+gaming SR manager. Having come from a
+2:19
+world where I was manage the managing
+2:21
+the Netflix CDN and we were serving
+2:23
+static video files, moving to a world
+2:25
+where we're supporting games executables
+2:28
+which are fundamentally blackboxes in
+2:29
+their own provides an additional
+2:32
+opportunity for us to learn how to
+2:33
+manage them. We also have external APIs
+2:37
+and integrations. So many of you in the
+2:39
+audience today may be managing systems
+2:41
+that allow for people to be purchasing
+2:43
+items online and you may delegate that
+2:46
+to a third-party vendor that performs
+2:48
+the transactions. You don't have
+2:50
+visibility on whether they're
+2:51
+implementing a migration that could
+2:53
+impact their overall availability. And
+2:55
+for the most part, you just need to
+2:57
+trust that when you execute a
+2:58
+transaction that everything will be
+3:00
+okay. And then the last example that I
+3:03
+have here is vendor appliances and
+3:05
+hardware. So many of us in the audience
+3:07
+here may be relying on cloud compute
+3:09
+offerings and while they have high
+3:11
+levels of availability, you actually
+3:13
+don't know which individual server your
+3:15
+services are running on. It's possible
+3:17
+that that one server has had multiple
+3:19
+repairs and is being considered as a
+3:21
+lemon or underperforming.
+3:24
+So when it comes to being an S sur, we
+3:26
+need to pick our battles to determine
+3:27
+what we want to better understand and
+3:29
+manage because it's not feasible for us
+3:31
+to try to understand the full stack. How
+3:34
+many of you in the audience here today
+3:35
+would say you're having to be
+3:37
+responsible for a component of a
+3:38
+blackbox system? Raise your hand. So
+3:41
+like a majority of the room here. And
+3:44
+for many of us, we're responsible for
+3:46
+supporting a platform that runs these
+3:48
+blackbox systems. These black boxes can
+3:50
+be multiple different applications and
+3:53
+that you don't have full visibility
+3:54
+into. They can be running on shared
+3:56
+resources or have noisy neighbor issues.
+3:59
+Additionally, there can be opaque
+4:01
+changes that happen outside of your
+4:03
+platform. And oftent times when there's
+4:05
+an incident or something goes wrong, the
+4:07
+platform is the first to be blamed.
+4:09
+These changes are fundamentally opaque
+4:11
+because they could be happening
+4:12
+externally to you. For example, you may
+4:15
+have uh some thirdparty dependencies
+4:18
+that are being modified that you're not
+4:20
+even familiar with.
+4:22
+And in the example of supporting cloud
+4:24
+games at Netflix, one of the things that
+4:26
+I've seen is we support the physical
+4:28
+infrastructure in which we're running
+4:29
+these executables, but we allow the game
+4:32
+developers to have flexibility in
+4:34
+modifying their game on the fly. So we
+4:36
+may want to allow for them to enable
+4:38
+some seasonality changes so that when
+4:40
+you play the game and it's Halloween
+4:41
+time, it has some sort of Halloween
+4:43
+visual. Fundamentally, these are all
+4:45
+happening outside of our visibility as
+4:47
+SRRES and so we need to figure out how
+4:49
+to be managing them. And then the other
+4:51
+thing that's immediately top of mind for
+4:53
+me is an for AB testing. Netflix is
+4:56
+highly well known for allowing our our
+4:58
+employees to run AB tests to see how
+5:00
+things are performing in the wild. But
+5:03
+if there's an AB test running and
+5:05
+there's some overall changes happening
+5:06
+on our platform, it's really hard for us
+5:08
+to correlate without correlate what's
+5:11
+changed if we are not making them
+5:12
+ourselves.
+5:15
+Ultimately, we need to figure out a
+5:16
+scalable solution for managing our fleet
+5:18
+of black boxes. And that's going to be
+5:21
+the fundamental truth through uh all of
+5:23
+this is we're going to need to build a
+5:24
+strong framework that allows for us to
+5:26
+handle multiple black boxes rather than
+5:28
+just dealing with an individual one.
+5:31
+And then lastly, what's really important
+5:32
+for all of us in this room here today is
+5:34
+to communicate the challenges that we're
+5:36
+dealing with with our leadership teams.
+5:38
+So without them being aware of some of
+5:40
+the complexities that we have to deal
+5:41
+with on a day-to-day, they might not
+5:43
+understand why the system isn't as
+5:44
+reliable as maybe some of our historical
+5:46
+systems have been.
+5:49
+And with that, let's talk about the
+5:50
+modern reality that we're going to live
+5:52
+in. And there's not going to be a single
+5:54
+solution. As I mentioned with the Dublin
+5:56
+Castle, there's going to be a layered
+5:58
+approach when it comes to this. And we
+6:00
+can begin by gray boxing where possible.
+6:02
+So I mentioned black boxes are systems
+6:05
+where the internals are not readily
+6:07
+understood. Gray boxing allows for us to
+6:10
+better understand our systems by
+6:12
+investing time and resources. We can use
+6:14
+this as an opportunity to define where
+6:17
+there are black boxes that exist because
+6:19
+we haven't had the resources. So an
+6:21
+example of this is if I were to ask you
+6:23
+all how does Netflix streaming work? You
+6:25
+may just think it's as trivial as you
+6:27
+have a user, some blackbox wizardry, and
+6:30
+then streaming happens.
+6:32
+But with some additional time and
+6:34
+resources, you can better begin to model
+6:36
+the dependencies that you have. So
+6:38
+here's actually a diagram about how
+6:39
+Netflix streaming actually works.
+6:42
+This does mean that you need to spend
+6:44
+cycles to understand your full end to
+6:45
+end dependencies here. And even when
+6:48
+I've drawn out this diagram, there are
+6:49
+still components that are shown
+6:51
+literally in a black box. So let me dive
+6:53
+into the cache control service which is
+6:55
+shown on the bottom right. The cache
+6:57
+control service is responsible for
+6:59
+receiving information from all of our
+7:00
+open connect appliances on a periodic
+7:03
+basis. It's our way of knowing what are
+7:05
+the available files that are ex
+7:07
+currently on our open connect
+7:08
+appliances, what is the health status
+7:11
+and what are the routability uh clients
+7:13
+that we can reach from them. Given that
+7:16
+we know that this is such a critical
+7:17
+component to the user journey, we should
+7:19
+really invest our time in ensuring that
+7:21
+we have strong fundamental alerting and
+7:24
+monitoring around this particular
+7:25
+system. So if we were seeing that
+7:28
+clients when they were trying to play
+7:29
+back some pieces of content was failing
+7:31
+to begin and we see errors happening
+7:34
+related to the cache control service, it
+7:35
+would be relatively easy for us to
+7:37
+correlate the two. But this isn't to say
+7:39
+that everything can be gray boxed. It's
+7:41
+not feasible for us to spend all of our
+7:43
+resources to build this kind of model
+7:45
+for everything.
+7:47
+So with some preliminary graybox work
+7:49
+being done, we need to ensure that we
+7:51
+have a strong foundation of alerts that
+7:53
+we can rely on. And these are table
+7:55
+stake methodologies around maintaining
+7:57
+and managing our services. I recently
+8:00
+learned that table stakes is actually a
+8:02
+term that comes from playing poker. It's
+8:04
+the minimum amount of money that you
+8:05
+need to bring to the table. So think of
+8:07
+this as like the minimum amount of
+8:09
+metrics that you need to have to be
+8:10
+successful in managing these black
+8:12
+boxes. Starting on the left, we have the
+8:15
+use method, which is intended for
+8:17
+performance-based monitoring. The U
+8:19
+stands for utilization, so how much of a
+8:21
+resource is being used. The S stands for
+8:24
+saturation, how much of the work is
+8:26
+waiting to be done. And E is the errors,
+8:29
+how what is the count of errors. It
+8:31
+allows for us to identify performance
+8:33
+bottlenecks and issues within your
+8:35
+systems.
+8:37
+We also have the red method, which is
+8:39
+built for uh looking at microservices.
+8:42
+The red, the R in red stands for the
+8:45
+number of requests or RPS. E is the
+8:48
+errors being reported by your service. D
+8:50
+is the duration.
+8:52
+We also have our critical user journey
+8:54
+metrics. So if we were going back to our
+8:56
+Netflix, like all of our dependencies
+8:58
+that make up Netflix streaming, these
+9:00
+would be metrics that are specific to
+9:02
+our application and it particularly
+9:04
+focuses on the endto-end metrics. And
+9:07
+then lastly, um I'm going to have to lay
+9:10
+out the bad the bad news here. We're
+9:12
+going to have tailored metrics
+9:14
+specifically for our black boxes. So
+9:16
+despite having a black box and you don't
+9:18
+know the internals of it, we're going to
+9:20
+have to enable some metrics to track
+9:21
+them. So let's look at a few examples of
+9:24
+what these metrics might look like. So
+9:26
+for the use method, we can track
+9:28
+utilization over time. And let's say
+9:30
+that we're supporting a platform that
+9:32
+runs multiple different applications and
+9:34
+we don't know the internals of them. We
+9:36
+can use the use method to track the
+9:38
+system resource and determine whether
+9:40
+there's a baseline that we can compare
+9:42
+against. And if there's not a baseline,
+9:44
+ideally there's some sort of contractual
+9:46
+agreement specifying the limits of this
+9:48
+particular application, a contract if
+9:50
+you will. And in this example, which
+9:53
+I've mocked up by Claude, um it's
+9:55
+showing what the theoretical RAM usage
+9:58
+is across multiple different
+9:59
+applications. As you can see, there's
+10:02
+one that clearly is standing beyond the
+10:04
+rest. And it's possible that this
+10:06
+particular application would start
+10:08
+cannibalizing some of the system
+10:09
+resources and so we need to be
+10:11
+monitoring this and in the most
+10:13
+egregious cases we need to prevent the
+10:15
+cannibalization.
+10:17
+Now for the red method so focusing on a
+10:20
+single application we would want to look
+10:22
+at something like the duration metric.
+10:24
+So this diagram on the left hand side
+10:26
+here is showing the overall distribution
+10:30
+of duration metrics for a particular
+10:32
+application. And again, you can kind of
+10:34
+see that something has changed in the
+10:35
+middle of September that's caused the
+10:37
+overall um duration metrics to increase.
+10:41
+So, we want our strong um use and red
+10:44
+alerts so that we know when something is
+10:46
+not working or potentially has issues.
+10:48
+And we also want our critical user
+10:50
+journey metrics to tie the whole
+10:52
+endto-end picture. It's intended to
+10:54
+capture all of our dependencies. So if
+10:56
+we were going back to the Netflix
+10:58
+streaming example, the way I would think
+11:00
+about our critical user journey metric
+11:02
+would be for any client that attempted
+11:04
+to play a particular piece of content,
+11:07
+were they able to successfully receive
+11:09
+URLs and play from an open connect
+11:10
+appliance that would be considered a
+11:12
+successful session and from that we
+11:15
+should be able to track that over time.
+11:16
+So on the right hand side we have
+11:18
+percent of successful video streams over
+11:21
+time and it's very clear that something
+11:22
+has degraded on a particular day. I
+11:25
+think it's 914. And this gives us an
+11:27
+indication that there's something along
+11:28
+our dependencies that isn't working
+11:30
+quite correctly.
+11:32
+If we were talking about like an
+11:34
+application such as an LLM, what our
+11:36
+critical user journey metric might look
+11:38
+like is for anyone who goes to the
+11:41
+chat's website, are they able to input a
+11:43
+prompt and receive a non-zero length
+11:45
+response? And so for these particular
+11:47
+metrics, you really need to think about
+11:48
+your particular application and what
+11:50
+those endto-end metrics should be.
+11:54
+So the next one is tailoring metrics
+11:56
+specifically around our blackbox use
+11:58
+case. So we need to think about the
+12:01
+application itself and then determine
+12:03
+which metrics fit fit it best. So are
+12:05
+you responsible for deploying a machine
+12:07
+learning model that gets deployed into a
+12:10
+customer-f facing application? Are you
+12:12
+managing streaming content that's being
+12:14
+delivered from a third party or are you
+12:16
+responsible for some sort of service
+12:18
+that depends on a third party
+12:19
+interaction? And then the key here is to
+12:22
+determine what metrics would allow for
+12:24
+you to determine whether things are
+12:25
+working properly.
+12:27
+So in the case of cloud gaming at
+12:29
+Netflix, one of the things that we would
+12:31
+want to look at is something like the
+12:33
+play duration per title. And this allows
+12:35
+for us to have one common metric that
+12:37
+tracks all of the different games
+12:38
+without having to be completely aware of
+12:40
+what these individual games are. So
+12:43
+again, mocked up by Claude, this is
+12:45
+looking at a bird's eye view of what's
+12:47
+happening on the platform. You can see
+12:49
+here there's something happening on
+12:52
+again September 14th that's caused two
+12:55
+titles to degrade in their average play
+12:57
+duration. Now with this particular piece
+13:00
+of information, we should be able to
+13:02
+determine what exactly has changed. Is
+13:04
+it possible that someone enabled a AB
+13:07
+feature that's incompatible with these
+13:09
+particular titles? Maybe they're testing
+13:11
+new resolutions and frame rates.
+13:13
+Additionally, if we identify that these
+13:15
+two titles correspond to the same game
+13:17
+developer, it's possible that there's
+13:19
+some thirdparty dependency that is not
+13:21
+functioning properly.
+13:24
+So to recap, there's not going to be a
+13:26
+single solution. We need to apply this
+13:28
+layered approach where we're looking at
+13:29
+our fundamental metrics, our fundamental
+13:31
+metrics. So the use method, the red, the
+13:34
+critical user journey, and our specific
+13:36
+tailored blackbox.
+13:38
+And furthermore, we need to embrace a
+13:41
+world where we have a layered system of
+13:42
+defense. So going back to our Dublin
+13:44
+castle, it's not feasible that we're
+13:46
+going to have all of the metrics and
+13:48
+alerting and monitoring to prevent every
+13:50
+failure from being shown on our
+13:52
+platform. But we need to enable these
+13:54
+strong foundational alerts to prevent
+13:55
+these regressions from being introduced.
+13:57
+So when we've defined these metrics,
+13:59
+instrument them as part of your canaries
+14:01
+to prevent these changes from going out.
+14:04
+In addition to that, we know we're not
+14:06
+going to catch everything. So let's work
+14:08
+on building out a strong defense system
+14:10
+so that you can detect when these issues
+14:11
+have gone into the wild. Configure
+14:13
+alerting across your metrics and
+14:15
+leverage incidents as a way to close
+14:17
+this feedback loop here. So if you find
+14:19
+a new incident, which particular metrics
+14:21
+point you to that particular problem?
+14:23
+Can we add it to our prevention and
+14:25
+detection steps?
+14:27
+And then lastly, we need to have strong
+14:29
+mitigation strategies. So in a world
+14:31
+with black boxes, we're going to need to
+14:33
+be really agile and we need to have
+14:35
+runbooks around our mitigation strategy.
+14:37
+We need to have tested roll back
+14:39
+mechanisms and ways to hot fix forward
+14:42
+if needed. We need to be agile in this
+14:44
+new world.
+14:46
+And with that, let me share specific
+14:47
+case studies for like how this looks
+14:49
+like in production.
+14:51
+So earlier this year, we published a
+14:53
+blog talking about the content delivery
+14:55
+efficiency at Netflix. And I want to
+14:58
+dive into one of these tailored blackbox
+15:00
+metrics. But to set the stage, the CDN S
+15:04
+sur team is responsible for managing
+15:06
+over 18,000 of our Open Connect
+15:08
+appliances in over 175 different
+15:11
+countries. These OCAs have content
+15:14
+prepositioned on them. So the night
+15:16
+before a particular title is released,
+15:18
+we will push that content onto these
+15:20
+servers. What this means is that each
+15:23
+individual OCA is continuously looking
+15:25
+for the latest files that offload and
+15:28
+localize the traffic the most at these
+15:30
+locations. And when you think about a
+15:32
+single title, it's not like a single
+15:34
+like one file. It's actually made up of
+15:36
+multiple files. So if we were looking at
+15:38
+the Crown season 1 episode 5, you have
+15:41
+your video tracks, audio tracks, and
+15:43
+subtitles. So to determine what content
+15:45
+we should populate, we need to figure
+15:47
+out what's the popularity of all of
+15:49
+these pieces of content and how should
+15:50
+they be best placed on our machines.
+15:53
+And to do this, we have our blackbox. We
+15:56
+have a popularity prediction blackbox.
+15:59
+This particular machine learning model
+16:01
+takes in historical data about what
+16:03
+people are viewing on Netflix, what
+16:05
+particular titles may be popular and
+16:07
+coming onto the platform, and we look at
+16:09
+the bit rate streamed by our members. It
+16:11
+takes all of this information and then
+16:13
+determines what files a specific OCA
+16:15
+should download. So, as you can imagine,
+16:17
+for us to build some alerting around
+16:20
+title predictions, it would be really,
+16:22
+really complicated, especially because
+16:24
+we're not trying to get 100% perfect
+16:25
+with title prediction, we're just trying
+16:27
+to minimize how much traffic is sent
+16:29
+further away. So rather than us trying
+16:32
+to ensure that each title is perfectly
+16:33
+predicted, what we have built are
+16:35
+metrics around instances where our
+16:37
+clients are trying to view pieces of
+16:39
+content that are not available locally.
+16:41
+And that's called content shed. And it's
+16:43
+talked a lot in the article if you're
+16:45
+interested in more. But fundamentally
+16:47
+what this is is when requests are served
+16:49
+from an OCA, not from the nearest OCA
+16:52
+because the content isn't available on
+16:54
+it. We are able to track this by logging
+16:58
+this data at steering time and attribute
+17:00
+the streamed client traffic to it. So
+17:02
+now we know hey this is the amount of
+17:04
+traffic that was not streamed from these
+17:06
+servers because of popularity.
+17:09
+So from this we get a much clearer
+17:11
+picture about how well our prediction
+17:12
+algorithms are performing in the wild.
+17:14
+When we see alerts trigger for content
+17:16
+shed. So in this example 1 2 3 4 5 6 um
+17:20
+we can attribute that to traffic that
+17:22
+was streamed from nonoptimal locations.
+17:25
+In addition we also know which exact
+17:27
+piece of content that is. So in this
+17:29
+particular case this content shed is
+17:31
+being driven by a single end code and a
+17:33
+single piece of content that we
+17:34
+mispredicted popularity for. As the SR
+17:37
+teams were able to automatically deploy
+17:39
+these on the servers to minimize the
+17:41
+user impact.
+17:43
+But in all of this, we needed to we
+17:45
+needed to develop specific metrics that
+17:48
+are tailored to this use case. And we
+17:50
+needed to work with our machine learning
+17:52
+partners to improve this model when we
+17:55
+identified regressions or even
+17:57
+significant content miss. And that goes
+18:00
+back to tailoring these individual
+18:02
+blackbox metrics.
+18:04
+Now for case study number two, which I
+18:07
+will call benchmarking hardware to
+18:09
+detect unknown unknowns.
+18:12
+So, I'd say that blackboxes are
+18:13
+everywhere and I'd even consider the
+18:15
+hardware platform that you specifically
+18:17
+own to be a blackbox when you're
+18:19
+operating as a hypers scale. Seemingly
+18:22
+identical servers aren't actually
+18:23
+identical. And let me talk about why.
+18:26
+So, first you have what I would call the
+18:28
+silicon lottery. The individual
+18:30
+components that go into these servers
+18:31
+are being manufactured at different
+18:33
+points of time. There could have been a
+18:35
+regression at a manufacturing site which
+18:37
+resulted in different batches of
+18:39
+components behaving differently. So even
+18:41
+though they're supposed to be identical,
+18:43
+they're not quite.
+18:45
+Additionally, if you're shipping
+18:47
+different hardware uh over extended
+18:49
+periods of time, you're going to end up
+18:51
+with firmware fragmentation where
+18:53
+multiple different firmware revisions
+18:55
+out in production have different
+18:58
+behavioral deltas.
+19:00
+We also have configuration drift. So on
+19:02
+the servers themselves while they're
+19:04
+running in production, you can have them
+19:06
+changing over time. So PCIe lane
+19:09
+training can be trained to different
+19:10
+widths and speed after transient
+19:12
+failures which could result in again
+19:14
+identical servers behaving very
+19:16
+differently.
+19:18
+And then this is what I would call the
+19:19
+statistical inevitability. So when
+19:22
+you're operating at a scale of over a
+19:24
+million servers, your one ina million
+19:26
+sort of errors, the ones where you have
+19:28
+a bad capacitor, a memory flip, you have
+19:32
+these really rare events, they're
+19:34
+actually not so rare anymore. So
+19:37
+what do we do in these particular cases
+19:39
+where we have a fleet of identical
+19:41
+servers with unpredicted variance?
+19:44
+So we start establishing a baseline for
+19:47
+hardware performance and these this is
+19:49
+our example of tailoring a blackbox
+19:51
+metric for this. So the challenge is how
+19:54
+do you know if quote unquote identical
+19:56
+hardware is actually performing
+19:58
+identically? So internally referred to
+20:01
+as Lemonade and publicly mentioned as
+20:03
+Fleet Scanner by Meta, we were able to
+20:05
+benchmark servers in production to
+20:08
+standardize and build a library of
+20:09
+expected performance. By doing this, we
+20:12
+could compare identical servers against
+20:14
+one another and identify underperforming
+20:16
+machines before they hit production. So
+20:19
+to do this, we needed to run several
+20:21
+different kinds of benchmarks and
+20:22
+measure everything. We had to build a
+20:24
+reference library. So I've shown here
+20:26
+there's a normal distribution for a CPU
+20:29
+benchmark and that's our reference
+20:31
+library. And then from all of this we
+20:33
+need to hunt for lemons or
+20:34
+underperforming servers.
+20:37
+And so if we were to benchmark a machine
+20:39
+that is severely underperforming the CPU
+20:41
+benchmark we could identify it as a
+20:43
+lemon before it goes onto production.
+20:47
+All right. So I've talked about several
+20:48
+different kinds of frameworks for
+20:50
+monitoring. And then the last one that I
+20:52
+want to talk about is leveraging
+20:53
+consumer insights. So something that
+20:55
+I've learned even more so as I've had
+20:57
+the opportunity to work on a platform
+20:59
+that manages to run blackbox executables
+21:02
+is the importance of leveraging consumer
+21:04
+insights because our user feedback
+21:07
+ultimately is telemetry.
+21:09
+So here's an example of how you could
+21:11
+potentially use that. So what you would
+21:14
+want to think about is what would your
+21:16
+users do when things aren't working
+21:18
+properly? If you're trying to stream
+21:20
+Netflix and you're unable to fetch
+21:22
+critical assets to start up your device,
+21:24
+your device will show you an NW2-5.
+21:27
+Now, Netflix publishes a help article
+21:30
+that's public facing that our members
+21:32
+can look at. And what we can do is track
+21:34
+the frequency at which people are
+21:36
+looking at this particular um article to
+21:38
+detect whether there are any
+21:40
+regressions. Now, in this particular
+21:42
+case, we actually do track client side
+21:44
+errors and we do know about this. But if
+21:45
+there was an instance where we didn't,
+21:47
+we could leverage additional secondary
+21:49
+signals to understand what's going on.
+21:53
+And here something seems a little off
+21:55
+where we have an increase in the number
+21:57
+of people looking up this article.
+22:00
+Okay. And then when it comes again to
+22:02
+true true blackbox systems, it's not
+22:04
+always possible for us to identify
+22:06
+exactly what's changed, but we could
+22:09
+leverage something like survey responses
+22:11
+to track user sentiment over time. So if
+22:14
+you are as fortunate as I am, uh you
+22:16
+have people who provide feedback on your
+22:18
+service and they will rate it between 1
+22:20
+through five. You can track this over
+22:22
+time and see how proportions of feedback
+22:24
+changes. And in this particular case, it
+22:27
+seems again 914 something has regressed
+22:30
+and we see a reduction in our five-star
+22:32
+ratings. We want to enable Canaries to
+22:35
+monitor when user sentiment around our
+22:37
+services are changing. And if you don't
+22:39
+have access to a survey that's rating
+22:41
+between 1 through five, you may be able
+22:43
+to leverage something like the thumbs up
+22:45
+and thumbs down ratios.
+22:48
+With this data, we can start tracking
+22:49
+and alerting on different kinds of uh
+22:51
+dimensions. We may be looking at if this
+22:54
+is impacting a single title, if it's
+22:56
+only happening in an individual country,
+22:58
+a device group, or even granular, even
+23:00
+more granular in ASN.
+23:03
+And then tying in even more with some
+23:06
+feedback that we get from our members,
+23:08
+if you're ever as lucky to receive free
+23:10
+form feedback, we can leverage LLMs to
+23:12
+better classify these kinds of feedback.
+23:14
+So this particular one says, "The video
+23:16
+quality was a little choppy and looked
+23:18
+like it was running on 720p. It reminds
+23:20
+me of streaming a game from another
+23:22
+computer, which is really funny because
+23:23
+this is for cloud gaming." So this piece
+23:25
+of feedback I got from someone. By
+23:28
+leveraging an LLM, we're able to bucket
+23:30
+these kinds of feedbacks into different
+23:31
+groups. So in this particular case, we
+23:33
+could classify this as a piece of
+23:35
+feedback associated to quality of
+23:37
+experience.
+23:39
+And by doing this, we can start tracking
+23:41
+buckets of feedback over time to see if
+23:43
+there's any changes on our platform.
+23:45
+Ultimately, we're not fixed in the
+23:47
+buckets that we've established. And so
+23:49
+if we're learning new things while
+23:50
+managing the service, we can modify the
+23:52
+buckets.
+23:54
+Now, with all of these new metrics, we
+23:56
+need to ensure that we're not drowning
+23:57
+in a sea of a million alarms blaring at
+23:59
+you. And this is where I'd say we would
+24:01
+adopt composite metrics or alerts. So
+24:04
+rather than alerting on reduced
+24:05
+engagement, increased complaints in
+24:07
+surveys, and increased searches for help
+24:09
+articles, we would all bubble we would
+24:11
+bubble this up as user satisfaction
+24:13
+diminished. So if that alert triggers,
+24:16
+you have all of these secondary signals
+24:17
+to look at. And with that, I'm going to
+24:20
+share the last case study that I have.
+24:22
+So how we continuously improve the
+24:24
+reliability of our platform.
+24:27
+So back in 2024, we had noticed that
+24:29
+despite any of our core KPI alerts
+24:32
+firing, that a manual audit of the
+24:34
+freeformed feedback showed that there
+24:36
+was a potential regression. So it's not
+24:38
+exactly this, but it the distribution
+24:40
+looked pretty similar where over time we
+24:42
+were seeing a gradual increase in the
+24:44
+number of feedback associated with
+24:46
+quality of experience. And by diving
+24:48
+into those explicit pieces of feedback,
+24:51
+it was very clear that there was
+24:52
+something wrong. So in Spanish, these
+24:54
+first two says, uh, the game does not
+24:57
+charge, the game does not appear, and
+24:58
+then the last two are showing the game
+25:00
+will not load.
+25:02
+This was pretty telling that there was
+25:03
+something wrong in our platform. And
+25:05
+what we were easily able to correlate
+25:07
+this with was we had just finished a
+25:09
+deployment of all of our server
+25:11
+firmware. And so one of the challenges
+25:13
+in all of this however is that when we
+25:16
+deployed this change this was only
+25:18
+impacting a subset of users on their
+25:20
+first time engaging with this particular
+25:22
+title. So it made it a little bit tricky
+25:24
+for us to identify. So how do what do we
+25:27
+do from this and how do we continue
+25:29
+leveraging these metrics? At Netflix we
+25:31
+leverage incidents as opportunities to
+25:33
+learn and we embrace these lessons as
+25:36
+they teach us where there are gaps in
+25:37
+our observability monitoring and
+25:39
+resilience.
+25:40
+When we looked closer at the specific
+25:42
+root cause, what we had found is that
+25:44
+there was a specific exception string
+25:47
+that was being reported that was
+25:48
+correlated with these users receiving a
+25:50
+black screen. So shown here as Netflix
+25:53
+exception NGP profiles response type
+25:56
+name unknown.
+25:58
+And you might think, oh, I should alert
+26:00
+on this particular string. But no, we
+26:02
+shouldn't because by the time we
+26:04
+identified this regression, we worked
+26:06
+directly with the game developer to fix
+26:08
+this particular issue. And so we're not
+26:10
+in the business of playing whack-a-ole
+26:11
+where we're trying to like find
+26:12
+individual exception strings and alert
+26:14
+on them. We needed to figure out a
+26:16
+scalable solution that applies to
+26:18
+multiple titles. So what did we do?
+26:21
+Well, the first thing that we did was we
+26:23
+enabled alerting around user sentiment
+26:25
+and user behavior changes around our
+26:27
+titles rather than just relying on our
+26:29
+core KPIs.
+26:32
+We also instrumented these metrics into
+26:34
+our canaries. So going back to that
+26:35
+prevention stage, we wanted to harden
+26:37
+that to prevent us from releasing new
+26:39
+firmware that impacted particular titles
+26:41
+in production.
+26:43
+What we did as well is we developed
+26:46
+correlations between these exception
+26:48
+logs and user behavior. So we were able
+26:50
+to correlate which exceptions were
+26:52
+highly correlated with people quitting
+26:54
+the game. And that allows for us to
+26:56
+build a scalable way of alerting on
+26:58
+unique exceptions that are performance
+27:00
+impacting rather than alerting on
+27:02
+individual strings.
+27:05
+We also implemented low complexity and
+27:08
+black frame detection on our servers to
+27:10
+be applied to all games moving forward.
+27:12
+So this is yet another way of building
+27:14
+another tailored metric for our
+27:16
+blackbox.
+27:17
+And we needed to adopt mechanisms for
+27:20
+reducing member harm. So when we
+27:21
+identified this happening in production,
+27:23
+we needed to figure out how do we fix
+27:25
+this as soon as possible.
+27:27
+And we also learned about closing the
+27:29
+feedback loop. So throughout this
+27:31
+incident, we were working really closely
+27:33
+with the game developers and we're
+27:35
+working in tandem highlighting the
+27:36
+challenges and observability monitoring
+27:39
+and resilience and we're able to get
+27:40
+everyone on the same page. So this was
+27:42
+an incredibly critical part of this
+27:44
+particular incident.
+27:46
+And with that we get into accepting the
+27:48
+new reality which is that we need to
+27:50
+fundamentally adapt. So here's what I
+27:53
+want you to take home. We're going to
+27:55
+continue managing blackbox systems and
+27:57
+we'll likely be managing even more of
+27:59
+them in the future. There's not one
+28:01
+signal that's going to be enough for
+28:02
+everything. So, not the user error
+28:04
+rates, not the latency, not even the
+28:07
+user feedback. You need multiple
+28:09
+independent sources that correlate
+28:11
+together that tell you a picture of
+28:12
+what's happening. Correlate across all
+28:15
+of your layers because one signal can
+28:16
+look like noise, but three pointing at
+28:18
+the same thing is clearly an incident or
+28:20
+a problem. Invest in your detection
+28:23
+systems. So the Dublin castle survived
+28:26
+800 years not by being perfect but by
+28:28
+being resilient through redundancy. So
+28:30
+think about your systems in the same way
+28:33
+because when blackboxes fail and they
+28:34
+will you need more than hope and
+28:36
+dashboards you need layers. Thank you.
+28:40
+[Applause]

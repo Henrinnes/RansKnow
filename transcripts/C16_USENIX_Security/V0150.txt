@@ -1,0 +1,1040 @@
+0:18
+Welcome to act to the future TCP in
+0:21
+2025. If we could please begin with the
+0:25
+correct handshake. Sin
+0:28
+act. That's a TCP joke. Shall I tell you
+0:32
+a UDP joke?
+0:34
+Did you get it?
+0:37
+My name is Philip Roland. I'm here with
+0:39
+Jane Street. Please say hello at our
+0:41
+booth downstairs. Now, I'm certain that
+0:44
+everyone here uses TCP and I'm confident
+0:47
+that at least one of the ideas in this
+0:50
+talk can help in your environment. So,
+0:53
+something for everyone. The big idea on
+0:55
+which TCP has more or less succeeded
+0:58
+since 1974 is rate control without a
+1:01
+central authority. In simpler terms,
+1:04
+send as fast as you can until you can't.
+1:07
+The big idea of this talk is that TCP
+1:10
+tuning is worth paying attention to
+1:12
+making the most of the network capacity
+1:14
+that you're paying for. We're going to
+1:16
+discuss congestion, buffer sizing, and
+1:19
+hardware acceleration. But let's start
+1:21
+with a brief trip down memory lane.
+1:26
+Just to reassure you, all the words in
+1:28
+this talk are mine, but the stock photos
+1:31
+are AI generated. I tried it the other
+1:33
+way around but couldn't take any good
+1:35
+TCP related pictures. TCP has survived
+1:39
+for 50 years through being both
+1:41
+extensible and backward compatible. Here
+1:44
+are three examples. Windows scaling.
+1:47
+When a window size of 64 kilobytes
+1:50
+proved to be too small, we didn't need
+1:52
+to invent a whole new protocol, just a
+1:54
+new TCP option in the three-way
+1:56
+handshake. Incidentally, this is why
+1:59
+it's always useful to TCP dump including
+2:02
+the handshake to allow accurate decoding
+2:04
+of the other TCP headers. Selective
+2:07
+acknowledgements. In the beginning was
+2:09
+the act meaning I have received this
+2:12
+sequence number and everything before
+2:14
+it. But when packets go missing, there
+2:17
+was no way to express partial receipt of
+2:19
+incoming data. The selective
+2:21
+acknowledgement option allows us to
+2:23
+confirm exactly what's missing, avoiding
+2:25
+costly retransmits
+2:27
+and sync cookies. Like so many
+2:30
+protocols, TCP has its origins in a
+2:32
+simpler time where malicious hackers
+2:34
+didn't exist. Um, to handle denial of
+2:37
+service attacks, sin cookies are an
+2:39
+approach which avoids filling up the
+2:41
+connection table with speurious entries.
+2:45
+Those were just three examples out of
+2:47
+literally hundreds of RFC's discussing
+2:50
+TCP's design and implementation. Here's
+2:53
+just a small sample, including RFC 1263,
+2:57
+which argues in vain against protocol
+3:00
+extensions, and 5841, an April Fool's
+3:04
+joke RFC adding emotions to packets. Who
+3:07
+said protocol designers can't have fun?
+3:09
+Uh but these are historical. This talk
+3:12
+is TCP in 2025 and we'll be covering
+3:15
+three main areas which discuss TCP
+3:17
+performance and connection health.
+3:20
+Starting with congestion control. What
+3:24
+is congestion control? It's the ability
+3:26
+of TCP to vary the sending rate
+3:29
+depending on the observed traffic
+3:31
+conditions. If instead we negotiated
+3:35
+some reserved bandwidth as part of the
+3:36
+connection handway handshake, then
+3:38
+adaptive congestion control wouldn't be
+3:41
+needed. But network over subscription is
+3:43
+the norm. How busy is the network right
+3:46
+now when starting a connection? We don't
+3:49
+know. There's nobody to ask. So, we just
+3:52
+need to start slow and get a feel for
+3:54
+network congestion. If all of our
+3:56
+packets are getting through, great.
+3:58
+Let's send faster. If some are not being
+4:00
+acted, then slow down. This way we can
+4:03
+arrive at a happy level of throughput.
+4:07
+Queuing theory although fascinating is
+4:10
+not going to feature much in these
+4:11
+slides. Many clever people over the
+4:13
+years have proposed algorithms which not
+4:15
+only need to be performant but fair to
+4:18
+others. Even within private networks,
+4:21
+there'll be old devices running old and
+4:23
+brittle software which we need to
+4:25
+coexist with. Out on the internet, we
+4:27
+can't dictate which tuning settings
+4:29
+others should follow. Here are just some
+4:31
+of the algorithms you may have
+4:33
+encountered. And the two we're going to
+4:34
+look at today are Cubic and BBR.
+4:39
+Here's Cubic. It's the algorithm you're
+4:42
+probably using out of the box on Linux
+4:44
+and Windows and Mac OS. The name cubic
+4:47
+comes from a previous algorithm, BIC,
+4:50
+and also refers to the third exponent of
+4:52
+the congestion window function. It's
+4:54
+another TCP joke. Here you can see
+4:57
+everything is working. There's no packet
+4:59
+loss. And after a few seconds, we've
+5:01
+reached a steady transfer rate of around
+5:03
+25 megabytes a second. Well, I've
+5:06
+tricked you. This synthetic benchmark
+5:09
+under perfect lab conditions is
+5:11
+unrealistic. So, let's sprinkle in some
+5:13
+packet loss.
+5:15
+This is the same test, but with
+5:17
+artificial packet loss of 0.05%
+5:21
+or 1 in 2,000 packets. To be clear, you
+5:25
+could run per second pings for 20
+5:28
+minutes and wouldn't expect to detect
+5:30
+this level of packet loss. What happens?
+5:33
+Cubic is timid and backs off such that
+5:36
+it reaches less than 1 of the baseline
+5:39
+throughput. Here I've misled you again.
+5:42
+Uh real world packet loss tends to be
+5:44
+bursty or correlated, not random. But
+5:47
+the point of this slide is to is to
+5:50
+illustrate a timid congestion algorithm.
+5:53
+What do you suppose generative AI
+5:55
+imagery looks like for timid congestion
+5:57
+control algorithm?
+6:02
+See, he's he's running scared of the
+6:04
+packet loss. Um, this chart is from a
+6:06
+recent TU Dresden paper and shows just
+6:09
+how poorly cubic copes with small
+6:12
+amounts of packet loss. So, if Cubic is
+6:15
+so timid, is there a more robust
+6:17
+alternative?
+6:20
+I just want to give credit here. This
+6:22
+talk would not be possible without
+6:23
+Wireshark. They're not paying me. It's
+6:26
+not just a protocol decoder, but the TCP
+6:28
+analysis and visualization features are
+6:31
+invaluable for studying network
+6:33
+performance. If you haven't seen them
+6:35
+before, all the charts in this section
+6:37
+are generated by Wireshark's TCP stream
+6:40
+graphs feature.
+6:42
+Here's BBR, which stands for bottleneck
+6:45
+bandwidth and round trip. Two things to
+6:48
+point out are the improved tolerance of
+6:50
+packet loss and the indicated blips
+6:52
+where BBR probes by allowing buffers to
+6:56
+drain for a more accurate round trip
+6:58
+time. I did read somewhere that BBR
+7:01
+stands for buffer bloat reduction, but I
+7:03
+don't think that's official. So if BBR
+7:06
+performs better, why are we stuck on
+7:08
+cubic as a default? Let's talk about
+7:11
+BBR's development. But before we can do
+7:13
+that, let's talk about quick
+7:16
+The development cycle for this stuff
+7:19
+takes years, getting your changes into
+7:21
+the kernel, waiting for users to rebase,
+7:24
+etc. Google got bored waiting, so
+7:27
+ditched TCP entirely and moved to UDP.
+7:31
+Look at this bog standard search request
+7:33
+using Chrome where we see all the
+7:35
+packets going to UDP port 443.
+7:39
+The advantage here for Google is that
+7:41
+you can iterate much more quickly on
+7:43
+both the server and client side when you
+7:45
+own the world's most popular website and
+7:47
+browser. But quick isn't a silver
+7:50
+bullet. UDP isn't immune to congestion
+7:53
+and dynamic network conditions. And the
+7:55
+similarities between Quick and TCP
+7:57
+include sliding windows, selective
+7:59
+acknowledgement, and a connection
+8:01
+handshake.
+8:03
+Having worked on getting YouTube videos
+8:05
+delivered faster over congested links,
+8:07
+the benefits of BBR were eventually
+8:09
+released to the Linux kernel in 2016.
+8:15
+We now understand the motivation for
+8:17
+quick and BBR, but the kernel
+8:19
+development cycle lag still exists and
+8:22
+BBR has been through various iterations
+8:25
+of which version 3 is the latest. I'm
+8:28
+not here to tell Google any project
+8:30
+priorities, but BBR version 3 has been
+8:32
+living out of tree on GitHub for over 3
+8:35
+years. What you're seeing in mainline
+8:37
+kernels is still version one. Does this
+8:40
+matter? Is there really any difference
+8:42
+between the versions? Well, quoting the
+8:44
+developer Neil Cardwell, BBR versions
+8:47
+one and two are obsolete, deprecated,
+8:50
+and contain bugs.
+8:52
+What's the problem with BBR version one?
+8:55
+One important aspect is fairness,
+8:58
+whether it drowns out other congestion
+9:00
+algorithms. Maybe we should consider the
+9:02
+latest revision, version three. The good
+9:05
+news is that the fairness and
+9:07
+retransmission behavior is improved. The
+9:09
+bad news is that BBR3 lives out of tree
+9:12
+on GitHub, is therefore harder to
+9:14
+deploy, and doesn't benefit from many
+9:16
+eyes of testing. We're not going to deep
+9:20
+dive into the research behind BBR, but
+9:22
+one distinguishing feature is the
+9:24
+response to packet loss. But what if
+9:27
+there was no packet loss? Impossible.
+9:31
+Explicit congestion notification is a
+9:34
+cooperative feature between endpoints
+9:36
+and network devices to reduce packet
+9:38
+loss. Avoiding packet loss avoids
+9:41
+retransmission with its associated delay
+9:43
+and detriment to throughput. It works
+9:46
+like this. Some router along the path is
+9:48
+busy but not yet at 100% utilization. So
+9:51
+it sets the congestion encountered bits
+9:54
+in the IP header. Senders respond by
+9:57
+slowing down. This way packet loss can
+10:00
+be avoided or at least reduced. ECN
+10:03
+support is pretty good in Linux and
+10:05
+Windows and iOS. Apple is taking the
+10:08
+lead in switching it on as an out-of-box
+10:10
+default, but ECM won't get you anywhere
+10:13
+without network cooperation. So check
+10:16
+whether your favorite equipment vendor
+10:18
+is able to add congestion encountered
+10:20
+marking to a packet.
+10:24
+In summary, not every packet will make
+10:27
+it across the internet. But by choosing
+10:29
+a suitable congestion control algorithm
+10:31
+and looking at ECN features which allow
+10:34
+network annotated hints as to when to
+10:36
+slow down, packet loss can be reduced
+10:39
+and the response to packet loss
+10:40
+improved. If you're in a congested
+10:42
+network, how is Cubic managing with
+10:45
+that?
+10:46
+How easy is it to try BBR as an
+10:49
+alternative? Would explicit congestion
+10:51
+notification help? And do your network
+10:54
+devices support it?
+10:57
+In the next section, let's talk about
+11:00
+windows and buffers. Not Microsoft
+11:02
+Windows, not glass rectangles in the
+11:04
+wall windows, but windows in the TCP
+11:07
+sequence. Here is a admittedly weak
+11:10
+analogy. Imagine a mail room where
+11:13
+parcels wait to be shipped out or
+11:16
+received. The size of the mail room is
+11:19
+one of the factors which determines how
+11:21
+fast we can send parcels.
+11:24
+To make things interesting, you may have
+11:25
+heard the terms receive window and
+11:28
+congestion window. Well, we talked about
+11:30
+congestion in the previous section. So,
+11:31
+from here on, it's just receive window.
+11:34
+I'll say it again in a few slides, but
+11:36
+getting this tuning right is vital for
+11:39
+good TCP performance.
+11:41
+Let's just ensure we really understand
+11:43
+the performance implications here. TFTP
+11:46
+is the world's stupidest file transfer
+11:49
+protocol and works by sending and
+11:51
+acknowledging data in lock step. But by
+11:54
+having only one packet on the wire at
+11:56
+any one time, we're limited by the round
+11:59
+trip time. And here the speed of light
+12:01
+is unreasonably slow. For example, from
+12:05
+Dublin to New York, we get only 12 round
+12:08
+trips per second. That's far too low in
+12:10
+throughput terms. So TCP is designed to
+12:13
+have multiple packets in flight. So how
+12:16
+many?
+12:18
+This is the busiest diagram. So just
+12:21
+take a moment.
+12:23
+Here we see a flow of data from the
+12:25
+sender on the left.
+12:28
+When does data leave the send queue? uh
+12:32
+when it's sent, no, when it's
+12:34
+acknowledged. TCP is reliable. Any
+12:38
+packet in flight might get lost.
+12:40
+Therefore, note the unact data still
+12:43
+present in the send queue.
+12:46
+TCP doesn't know when unread data will
+12:48
+leave the receive queue and also has to
+12:51
+leave room for incoming packets in
+12:53
+flight. If either of these cues fill up,
+12:56
+then we have to stop sending. This is a
+12:59
+stealthy performance killer. stealthy
+13:01
+because nothing is broken. There's zero
+13:04
+packet loss, yet we're not using the
+13:07
+full capacity of the network. Remember,
+13:10
+this aspect of buffer sizing is
+13:12
+controlled by the endpoints, not the
+13:13
+routters and switches. In the orange box
+13:16
+are the defaults from a recent Fedora
+13:18
+installation. The third value is the
+13:21
+important one, the maximum buffer size.
+13:24
+Here, the sending value is lower than
+13:26
+receiving, probably making the sender
+13:28
+the effective bottleneck. Here's
+13:31
+another way to visualize the buffer
+13:33
+limits. The size of the receive window
+13:36
+dictates the upper limit of the sequence
+13:38
+number we can send. The size of the send
+13:41
+Q dictates how much data can be in
+13:43
+flight not yet acknowledged. I've only
+13:46
+shown these one way, but TCP is
+13:48
+birectional. So duplicate all of this
+13:51
+for the return data path. Remember, if
+13:54
+we're looking in Wireshark, only the
+13:56
+receive window is visible in the packet
+13:58
+header. And these sizes are a hard limit
+14:01
+on performance. It's vital to tune them
+14:04
+correctly. So what's the magic number?
+14:09
+To avoid this artificial bottleneck, we
+14:11
+need to ensure that buffer sizes exceed
+14:14
+the magic number known as bandwidth
+14:16
+delay product. What is the BDP? In the
+14:20
+general case, we don't know. When we
+14:23
+talk to a random client on the internet,
+14:25
+we don't know beforehand how far away it
+14:28
+is or what bandwidth is available right
+14:30
+now. So in the absence of a concrete
+14:33
+BDP, what number shall we pick for
+14:35
+buffer sizing? It's tempting to
+14:37
+calculate and bake it into config files
+14:40
+or even worse code. I would not
+14:42
+recommend this approach, which is like
+14:44
+setting traps for ourselves in the
+14:46
+future. Rather, we can let the kernel
+14:48
+autotune the buffer size on our behalf
+14:51
+up to the maximum value we saw earlier.
+14:54
+We do need to pick a maximum though. In
+14:58
+this example, suppose we buy a 1 gig
+15:00
+circuit between Dublin and Seattle for
+15:03
+the next Scon. Then that would require
+15:06
+17 12 megabytes of packets in flight. Do
+15:09
+you use 1 gig or 10 gig or faster WAN
+15:12
+links? Do you talk to servers worldwide
+15:15
+or transatlantic or just in the same
+15:18
+region?
+15:21
+If we get this wrong, this staircase
+15:24
+pattern will emerge when zooming in on
+15:26
+your pcap files. Each step is one round
+15:30
+trip time wide and one window high. Look
+15:33
+at all the flatline sections where we
+15:36
+could be sending data. If only the
+15:38
+buffer size tuning was good. I would
+15:40
+typically recommend making TCP RM and WM
+15:44
+the same and larger than the largest
+15:47
+expected BDP.
+15:49
+Remember that we said only the receive
+15:51
+window is visible to Wireshark. This
+15:54
+filter window full will calculate when
+15:57
+the unused window size drops to zero.
+16:00
+But it can only do this when the pcap
+16:02
+file includes the TCP handshake. So
+16:04
+always capture handshakes if possible.
+16:07
+The other possibility send Q full won't
+16:10
+show up in Wireshark directly, but we
+16:12
+can infer it from the staircase pattern.
+16:15
+Some congestion control algorithms avoid
+16:17
+the staircase with a technique named
+16:19
+pacing, which tries to send data at a
+16:22
+steady rate instead of bursts, but in
+16:24
+other respects, the same buffer
+16:25
+constraints apply.
+16:27
+In summary, your default TCP buffer
+16:30
+sizing sucks and you should change it.
+16:33
+Um, this section is probably the easiest
+16:36
+return on investment because it's just
+16:38
+kernel settings. You don't need
+16:41
+permission from the network team. So,
+16:43
+work out your maximum bandwidth delay
+16:46
+product, compare that to your maximum
+16:48
+buffer size, and look for the hidden
+16:50
+performance gap between them.
+16:58
+hardware offload.
+17:00
+As interface speeds increase,
+17:02
+performance uh problems emerge for TCP
+17:06
+performance such as shrinking amount of
+17:08
+time available to process each packet
+17:11
+and the even distribution of work
+17:13
+throughout the system. But over recent
+17:16
+years, network hardware has gained the
+17:18
+ability to handle increasingly complex
+17:20
+tasks on our behalf. There are even
+17:22
+approaches which dump raw packet data
+17:24
+into memory and let user space processes
+17:27
+handle it. In case you're wondering,
+17:29
+we're not going to talk about NAPI or
+17:32
+busy polling or interrupt coalescing
+17:35
+because this is a TCP talk and those are
+17:38
+more like general driver optimizations,
+17:41
+but you might still want to check them
+17:42
+out. Let's look at some of the
+17:44
+approaches to hardware offload.
+17:50
+What do all these ETH tool settings
+17:51
+mean? Why are there so many? Once we've
+17:55
+optimized the performance from previous
+17:56
+sections, we could be dealing with 10
+17:58
+Gbits per second, maybe more. That's
+18:01
+getting close to 1 million packets per
+18:03
+second or one packet per microscond. So,
+18:07
+anything the nick can do to save CPU
+18:10
+cycles will be beneficial.
+18:12
+Let's start with the simple one. Check
+18:14
+sums. TCP inside IP inside Ethernet uses
+18:19
+three check sums in different parts of
+18:21
+the packet. Easy enough for the nick to
+18:23
+calculate. Check sum offload works for
+18:25
+both transmit and receive. Check sums
+18:28
+aren't complex but an opportunity cost.
+18:31
+Every cycle spent on CRC calculations
+18:34
+can't be spent elsewhere.
+18:38
+Let's talk about segmentation.
+18:41
+Realistically, 1500 bytes is the maximum
+18:44
+packet size you'll achieve on the
+18:46
+internet today. I know there are some
+18:48
+fans of jumbo frames out uh but it's a
+18:50
+world of config and compatibility
+18:52
+problems. Um but TCP stacks can go much
+18:55
+bigger if the nick supports segmentation
+18:58
+offload. The idea here is that we
+19:00
+pretend to transmit say 12 kilobytes all
+19:03
+in one go. Set the sequence number
+19:06
+accordingly. But the sending nick takes
+19:08
+its packet scissors and cuts up the mega
+19:10
+packets into MTU sized pieces. The
+19:13
+receiving nick takes its packet glue and
+19:15
+attaches them back together. This isn't
+19:17
+a feature that has to be negotiated by
+19:19
+both ends and we can split and recombine
+19:22
+in different sizes. There may be a
+19:25
+latency trade-off when you receive a
+19:26
+packet if we wait just in case for the
+19:29
+next one to arrive. And if you've ever
+19:31
+noticed unfeasibly large packets in
+19:34
+packet capture, this is the reason.
+19:39
+Let's talk about flow affinity. In
+19:42
+modern server class nicks, there's
+19:44
+support for multiple receive cues to
+19:46
+spread the work around, but packets
+19:49
+snake their way across the network, and
+19:51
+there could be any number of TCP
+19:53
+connections interled, for example,
+19:55
+three. What this diagram shows is the
+19:58
+hardware splitting up each flow into a
+20:01
+different queue. It's configurable, but
+20:03
+a typical scheme is to use the source
+20:05
+and destination address and port number
+20:07
+which are consistent for the lifetime of
+20:09
+a TCP flow. Three connections isn't very
+20:13
+taxing, but this approach can scale up
+20:15
+to thousands of flows across tens of
+20:17
+cues.
+20:19
+Let's talk about the huristics of TCP
+20:22
+health. NSTAT and ETH tool provide many
+20:26
+many counters seen here. But are they
+20:29
+positive or negative or neutral? I've
+20:32
+added the color highlighting with my
+20:34
+subjective opinion on a few of them, but
+20:36
+your mileage may vary and your network
+20:39
+won't look exactly like this. So ask
+20:41
+yourself, am I collecting metrics
+20:44
+related to TCP health? And how would I
+20:47
+know when the network is unhealthy? By
+20:49
+the way, these are supported in
+20:51
+Prometheus by node exporters ETH tool
+20:53
+and netstat collectors.
+20:57
+Occasionally though, hardware offload
+20:59
+can be actively hostile to good
+21:01
+performance. Here's a war story about
+21:03
+one specific metric, TCPOQ,
+21:06
+or out of order processing. In 2010, a
+21:11
+paper from Feab was published titled Why
+21:14
+does flow director cause packet
+21:15
+reordering?
+21:17
+15 years later, I read this paper, shook
+21:21
+my fist at a nearby cloud, and disabled
+21:23
+the particular offload feature which was
+21:25
+causing the extremely high TECPOQ
+21:28
+counter and the sack responses evident
+21:31
+in Wireshark. If you ever see these
+21:33
+black highlighted lines in Wireshark,
+21:36
+check the expert notes and do try to
+21:38
+understand what's happening. I should
+21:40
+emphasize that these unhealthy metrics
+21:43
+don't have to be zero, but when you see
+21:45
+330 million out of order packets,
+21:48
+something's gone wrong. The narrow
+21:50
+lesson here is to double check your
+21:53
+Intel 700 series nicks, but I don't know
+21:55
+what hardware you're running. The
+21:57
+general takeaway is that hardware
+22:00
+offload isn't magic, doesn't always do
+22:03
+the right thing, and it's worth spending
+22:04
+the time and effort to understand which
+22:06
+offload techniques are useful in your
+22:08
+environment and eyeball the error
+22:10
+counters once in a while.
+22:13
+In summary, you're probably using
+22:15
+hardware offload by default, and it does
+22:17
+help to scale performance and reduce CPU
+22:20
+overhead. Use the metrics provided by
+22:22
+the kernel and network card to convince
+22:24
+yourself that throughput is good and
+22:27
+errors are low. May your windows be
+22:29
+large and your packets delivered. Let's
+22:32
+now end the conversation according to
+22:34
+the sacred texts. Finn
+22:39
+a thank you.

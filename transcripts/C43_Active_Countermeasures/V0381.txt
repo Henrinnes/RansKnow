@@ -1,0 +1,917 @@
+0:01
+There we go. Leave on the audio. Kill the video. Hey, we are ready to roll.
+0:06
+So, uh, thank you for everybody for coming out today. Um, I want to talk about VPNs. The problem is there's a lot
+0:14
+to talk about. Um, it's like to talk about SSH or TLS, there's some
+0:20
+foundational information you really need or it just makes absolutely no sense at all. Um, so we're going to break this up
+0:26
+into three parts. Um, this week I'm going to kind of talk uh talk talk about in general what makes up a VPN and then
+0:33
+we'll start talking about the individual components. Uh, in uh part two, which
+0:39
+will be next week, I'll talk about the rest of those components that make up a VPN. And then in week three, which will
+0:46
+be two weeks from now, I'm actually going to talk more in detail about SSH, TLS, and IPSACE. Uh there's one kind of
+0:54
+lab/hands walkthrough we're going to do together today if you're interested. If not, hey, you can just watch. Nothing
+1:00
+more wrong with just sitting back and chilling. You know, I'm just kind of hanging drinking my swamp juice. You can do the same. Um but if you want to go
+1:07
+hands-on and you want to kind of play around with it, and I think this one's kind of fun. Um feel free to download it
+1:12
+at the link shown in the slides. Open up the tarball. It's going to create a directory named hashing. There'll be two
+1:19
+image files in there that we'll be working with a little bit later. So what makes up a
+1:27
+VPN? So a VPN has to have a number of components that are part of it. The
+1:33
+first is initial authentication, right? We need some way to verify that we are
+1:38
+in fact talking to the endpoint that we think we are, that we're not getting redirected someplace else, that there
+1:44
+isn't somebody doing a man-in-the-middle attack. we need some way to really verify that
+1:50
+authentication. One of the things that I hope you pull out of this talk over the next couple of weeks is that all the
+1:57
+other parts that go into making up a VPN, we do pretty good at it. I mean, we
+2:03
+mess things up on occasion. These things happen. Um, uh, let's see. CFAR was
+2:08
+asking, "How long will the downloads be available for?" Well, probably six months. I, you know, it's on an S3
+2:15
+bucket. No reason to delete that anytime soon. Excuse me. So, you know, when you
+2:21
+talk about like what goes into making a VPN, we've got really good math to make
+2:27
+sure that we understand the risks involved and that what we've created is
+2:32
+something that's relatively secure based on the technology that's available to us today. And we actually have math that we
+2:39
+can run to identify just how safe is it. You know, the one spot where we don't
+2:46
+have math is initial authentication. We have a little bit of math, but what you
+2:52
+find is when you start flipping through the pages of math, at the very bottom is a warm fuzzy. What I mean by that is
+2:59
+whether you trust it or not comes down to how you feel. There's no math to
+3:04
+empirically prove whether it's really trustworthy or not. A portion of it is going to come down to how you feel. And
+3:11
+if initial authentication fails, guess what? Everything else fails after that.
+3:16
+It's a domino's effect. If someone can break that initial authentication, the whole thing can fall apart. And I'll
+3:22
+talk more about that later. But again, to kind of go through the different parts of our VPN, we need that initial
+3:27
+authentication. Are you in fact who I think you are? We need a way to set up a secure channel over an insecure medium.
+3:34
+This isn't easy, right? Like you know, you're on the other side of the internet. We want to create a VPN
+3:39
+between us to send information securely. Well, we could encrypt it, and I'll talk
+3:45
+about what that means in just a little bit. But how do we get the keys to each other, right? We we have so little faith
+3:51
+in this medium. We want to encrypt things. How do we get the keys back and forth? you know, cuz we don't have, you
+3:57
+know, people in dark suits and, you know, white shirts and nondescript ties with little briefcases, you know,
+4:03
+handcuffed to their wrist to run around and deliver keys for all of us when we use VPNs on the internet. So, how do we
+4:09
+get that secure channel set up? That's a problem. And and there are, you know, there are there are uh processes for
+4:15
+fixing that privacy of all passing data. So now that we've created that secure channel, we need to make sure that a way
+4:23
+uh we need to ensure there's a way to uh to make sure that our data stays private. That as it's getting
+4:28
+transmitted back and forth, if somebody tries sniffing or whatever, that they're not going to be privy to the actual
+4:35
+information that's being passed back and forth. We also not alone not all only do
+4:40
+we need initial authentication, we need consistent authentication every time we
+4:46
+send data across, right? If if someone jumps in halfway through, excuse me, and
+4:53
+starts flipping some bits around, we need a way to detect that. If they go in and try to change something in transit,
+4:59
+we need a way to be able to detect that. So, it's not only initial authentication we need to worry about. We also need to
+5:05
+worry about every chunk of data that gets sent back and
+5:12
+forth. So there's a couple of different protocols that we leverage for doing VPNs. Like I said, we'll come back,
+5:18
+we'll talk more about those a little bit later, but I want to go through and get the basics out of the way first. So the
+5:23
+first thing I want to go through and do is um is I want to give you a definition of
+5:29
+two terms that I sometimes see used interchangeably and they're not used interchangeably. The first is encryption
+5:36
+and I like this description of it because I think it's relatively straightforward. Encryption is a way to take information in its native format
+5:44
+which is referred to as plain text regardless of whether it's text or not. You know, in encryption lingo, it's
+5:50
+referred to as plain text, and we need to convert it to an alternate format that's easy for a select group of
+5:56
+people, but hard for everybody else to get back to that original plain text again. Now, if you think about like
+6:02
+encrypting with keys, that falls right into this description, right? Cuz I have a key, Bill has a key, Keith doesn't
+6:08
+have a key. So, me and Bill can decrypt this stuff, but Keith can't because he doesn't have a key. That's encryption.
+6:15
+Hashing is completely different. Hashing looks similar sometimes, right? It looks
+6:21
+like a bunch of scrambled characters. Same as in the same as cipher text is going to look like, but hashing is
+6:26
+designed to be a one-way algorithm. If we're doing hashing correctly, there is no way it so it
+6:35
+takes plain text, converts it to an alternate format that we refer to as a hash. and that and it should be
+6:42
+impossible to take that hash and do something with it that lets you derive
+6:48
+the original plain text again. So, it's it's what's referred to as a one-way algorithm, right? Encryption is two-way.
+6:54
+I need to encrypt it and decrypt it. Hashing is one way. I convert it to this alternate format. There's no way to
+7:00
+reverse it back again. Well, wait, Chris, if I can't reverse it, what good is it? Uh, we'll actually get in and
+7:06
+talk about that. Hashing can really be Yeah. super helpful.
+7:13
+Okay. So, I'm going to kind of I'm not going to cover the VPN in steps, you
+7:18
+know, like, you know, let's talk about initial authentication first because that's the first part of it. I'm going to jump around. And the reason I'm going
+7:24
+to jump around is I'm going to start with the simpler concepts and build on those to the more complex things later,
+7:31
+leveraging those things that we've already learned. So, we're going to jump around a little bit as we do this. So the first thing I want to talk about is
+7:38
+symmetrical key encryption. So this is probably the simplest form of encryption in that the same key is used to encrypt
+7:45
+as is used to decrypt. So what I do is I take a math algorithm. I take the
+7:51
+information I want to protect and I plug that into this algorithm and then I take a key which is some random value that I
+7:58
+know and I you algorithm as well. And then it goes
+8:03
+through it, you know, scrambles for a while and, you know, bakes at 350. And now what comes out the other side is
+8:08
+cipher text. And now it whoever has a copy of that same key I used to encrypt
+8:15
+it can now have the ability to decrypt it on the other side. So same key is
+8:20
+used to encrypt is decrypt. What's nice about this is it's a relatively low CPU hit, meaning that we can use fairly
+8:27
+large keys and not have a huge impact on our CPU processing time because they're
+8:33
+relatively simple algorithms. You know, it's not like it's, you know, A plus B equals C. It's not that simple, but in
+8:40
+the realm of encryption, it's a pretty simple algorithm when you start comparing it to some of the other things that are out there. But this creates
+8:47
+that problem I talked about. Okay, I create a key. I'm going to encrypt my data because I don't trust the medium.
+8:54
+How do I get the key to the person on the other side so they can decrypt it? So, it's that chicken in the egg problem. You know, how do how am I going
+9:00
+to do this? This is still so it'll protect our data, but it doesn't fix
+9:06
+that setting up a secure channel over an insecure medium problem. We need some other solution to be able to go in and
+9:12
+take care of that. So when we talk about encryption being
+9:17
+vulnerable, what exactly does that mean? Well, it has a couple of possibilities, one is the key size is
+9:25
+too small. So you'll hear folks say dez encryption sucks. And I take a huge
+9:32
+exception to that. Um, one is I used to hang out, actually Bill used to too, with the guy who wrote Dez encryption.
+9:38
+Uh, his name was Robert Morris senior. Wicked smart dude. one of the smartest tech guys I've ever met. Um, he was
+9:46
+actually one of the primary authors for DES encryption. But if you look at DES encryption, DES encryption was used
+9:52
+safely and successfully for about 30 years before we had to get rid of it.
+9:58
+That is super awesome. That's better than any other algorithm we've come up with so far. Also in that time it was it
+10:05
+was exposed to public scrutiny and there were only a I I seem to remember one
+10:12
+minor flaw that impacted a very small portion of the key space. Meaning that
+10:18
+if if your random key that you selected to decrypt data was in this particular
+10:23
+range, it might be a little bit easier than just regular brute forcing to be able to figure out what that key was.
+10:30
+Uh, wasn't his spawn the creator of the Unixor back in the way day? Yes, that was Robert Morris Jr. That was his son.
+10:36
+That was his son trying to keep up with his dad. Um, not to go off on a tangent,
+10:42
+but um, Robert Robert Morris Jr. is actually a cool dude. He wasn't trying to be evil. Uh, he was actually trying
+10:50
+to patch and fix things and it just kind of got out of hand. He wasn't as smart as he thought he was is really what it
+10:56
+came down to and it ended up breaking the internet. You know, we talk about the internet being down. Yeah. Now the
+11:01
+internet goes doesn't go down. But when the when the Morris worm was released, the internet did literally go down
+11:07
+because people were unplugging left and right. So yeah, this was his dad who wrote DES encryption. See, look at the type of
+11:14
+things you learn in these things. Huh? So that's one possibility is the key is too small. So when when DES encryption
+11:21
+was created, it used a 56-bit key. And when you know 8086 was the fastest home
+11:27
+computer processor that was out there, it would take you forever to try and guess all the different possibilities
+11:35
+that could be available to a 56-bit key. But as processors got faster and faster,
+11:41
+well, now they could make more guesses per second, and now that key space wasn't as strong as it used to be,
+11:49
+right? So it so when they talk about dezz being vulnerable, it wasn't a flaw
+11:54
+in the algorithm. That's different. It was just the fact that hey CPUs get faster. You know, we're looking at like
+12:00
+quantum computing maybe coming out over the next, you know, year or 20 years or 50 years depending upon who you talk to.
+12:07
+But a lot of the encryption we use today probably isn't going to hold up to that if it works. If it works the way it's
+12:13
+claimed, it may work. Um, but that's not necessarily a flaw in the algorithms
+12:19
+themselves. That's just the limitations of the key space that's being used. When I when I talk about encryption being
+12:26
+vulnerable, it has to do with there being flaws in the algorithm a lot of times. And and I I saw this a lot when
+12:33
+firewalls first came out. Every vendor decided to write their own VPN software instead of using standard well-known and
+12:41
+evaluated algorithms. you know, they they thought, "Hey, how hard can this be?" Well, it's actually pretty hard.
+12:47
+And what a lot of them ran into were problems where the cipher text wasn't
+12:52
+being randomized enough. By that, I mean, if you knew there were common
+12:57
+values being transmitted, you could look for repetitive patterns and you could
+13:02
+actually reverse engineer the key based on those repetitive patterns. Well, one of the problems we have with VPNs is
+13:09
+what usually goes into a VPN, an IP packet, right? What's the beginning of an IP packet? Oh, hi, I'm IP version 4.
+13:18
+I am my IP header is 532-bit words. Type of service is not shut off. In other
+13:24
+words, the the headers have some standard information in it that's pretty repetitive. So, if repetitive patterns
+13:31
+help you break that algorithm, oh, you're in trouble if you're trying to do this over a VPN. So that's what I think
+13:38
+is excuse me that's what I think is really what people should be talking about when they talk about
+13:43
+vulnerabilities. You know the algorithm has flaws built into it. You know there's also the possibility of the key
+13:48
+getting compromised in transit right or the keys just getting compromised. You know this happens a lot. Uh one of the
+13:55
+things that a lot of folks don't really think about is that when they set up their web server one of the things that
+14:00
+gets set up for it is a key. And we'll it's an asymmetric key. It's a private key. I'll talk about asymmetric and what
+14:07
+that means in a little bit. But the key to encrypt and decrypt all the data going to your web server gets stored on
+14:14
+the hard drive of your web server. And most people store it in plain text
+14:19
+unencrypted. Which means if I break into your web server and I can get a copy of your private key, I can decrypt
+14:26
+anybody's data going to and from your web server after that. Uh wireshark actually has a feature for that. If you
+14:33
+have the private key that was used as part of like a TLS session, you just give that to Wireshark and it'll
+14:38
+automatically decrypt all the data for you. No problem. So, you know, keys be getting compromised is another
+14:44
+possibility when we talk about encryption vulnerabilities. Not changing the keys often enough. I talked about
+14:49
+that problem with repetitive data, right? If the keys never get changed,
+14:55
+you're giving somebody a longer period of time to brute force and try different keys to see if they can eventually match
+15:01
+against it. If you never change your key, they'll probably eventually break it. But if you're changing your key,
+15:08
+let's say every 30 minutes, well, now they'll try for 30 minutes and all that work gets thrown away because you've
+15:14
+changed to a different key. They got to try something different after that. Uh the other nice thing about that is
+15:20
+breaking one key does not make all the data fall. Right? If I'm changing a key every half hour and somebody breaks a
+15:27
+key, they get a half hour of information. Well, if I'm changing keys once per year and somebody breaks the
+15:34
+key, they have access to, you guessed it, a year's worth of data. So changing the key is also
+15:40
+important. So hashing, I talked about this. So this is a process to take our data, convert it to an alternate format,
+15:48
+usually a fixed length string. So one of the things we like to use this for is
+15:53
+like file transfers. So if you've ever sat through any of my classes, one of the things I'll always do is I'll say, "Hey, you know, here's the class VM in
+16:00
+VMware format and Virtual Box format, and here's a generic OVF, and here's the link to go download it, and here's a
+16:08
+hash of that file." And what that allows you to do is that allows you to download the file, use the hashing algorithm that
+16:15
+I used, which is usually SHA one. And you get to check to see if you generated
+16:20
+the same hash that I did. If you did, you know, the data hasn't changed. That's cool. So rather than having to
+16:27
+like check every single bite in that entire VM and compare it and make sure
+16:34
+it's okay, we have a quick easy way to go in and verify. Yep, everything came through. No problem. Nothing has
+16:40
+changed. The other nice thing about it is, remember I said with hashing, it's a one-way algorithm. Once you convert it
+16:47
+to that alternate format, you can't reverse it back again. Well, this is a great way to save passwords, right?
+16:52
+Because if I, let's say I have a password file, you know, or I have a password database and I'm saving
+16:57
+everything in clear text, anybody who gets access to that database immediately has access to everybody's password,
+17:04
+right? But if I hash it, you can see what the hash is, but you don't know
+17:10
+immediately what the clear text password is. Now, that doesn't mean you can't try and brute force it. That's certainly a
+17:15
+possibility. Now, one of the problems with hashing with passwords is
+17:22
+repeatability, right? That was a strength for us when we talked about doing file transfers, right? Because you
+17:27
+know, you transfer the file, you should get that same hash that I do. That way, you know, everything came through. Okay?
+17:32
+Well, if my password is money and your password is money and we run it through the same hashing algorithm, guess what?
+17:38
+They're both have the same hash. So now, if I'm going through a password database
+17:43
+that's been hashed up and I I might see 20 different accounts have the same
+17:48
+password assigned to them because they all have identical hash values. I know if I crack that one password, all 20
+17:56
+accounts all fall at the same time. So that repeatability can sometimes actually be a problem with us. And the
+18:02
+same thing holds true with VPNs, right? We need a way to authenticate every
+18:07
+packet. Well, hashing sounds good on the surface because it creates a small little hash compared to the amount of
+18:13
+data that's actually being transferred. But if anybody can just run the same algorithm we did and and you know,
+18:19
+generate a valid hash. Well, now I could go in change some bits around, rehash it
+18:24
+with the same algorithm you used, and now when it gets to the other side, you can't tell the difference. You don't know it was actually modified in
+18:29
+transit. So the baseline of hashing is cool but there's some things we need to
+18:35
+tweak a little bit in order to use it for passwords as well as using it as part of VPNs. So we use them in passwords, file
+18:42
+transfers, network packets. So with network packets we refer to it as a CRC I can never say this right
+18:49
+cylindrical redundancy check but basically that's a hash that's it. So
+18:55
+every packet that gets delivered gets hashed and now the receiving system checks that hash to see did the packet
+19:02
+get corrupted in transit yes or no. So again we have a couple of different places we can go in and use
+19:10
+this. So we said sometimes that repeatability with hashes is good but
+19:16
+sometimes it's problematic like with using passwords. So, one of the things
+19:21
+we do to make passwords more secure is we use something referred to as a random
+19:26
+seed. Now, I see um a lot of mistaken interpretations around the random seed.
+19:33
+The random seed does not improve the integrity of the algorithm. It does not
+19:39
+increase the size of the hash or anything like that. All it is is it's a random number that gets generated to
+19:46
+make things look different. So for example, your password is money. My password is money. When your password
+19:53
+gets created, the system will might uh grab a random seed value
+19:59
+of 123. But when my account got created, it grabbed a different number as a
+20:06
+random seed of 512. Just to throw out a couple of numbers, right? So because the
+20:12
+slightly different information being injected into that hash, your hash looks different than mine even though our
+20:19
+passwords may in fact be the same. So that's one of the uses for a random
+20:27
+seed. So if you ever look at a Linux shadow file, so you need root level root
+20:32
+level privileges to be able to go in and look for this file. It's in the Etsy directory and you're going to see
+20:37
+information kind of laid out something like this. So, and I kind of colorcoded things out so you could tell where the
+20:43
+breaks are. All the different fields are broken up with a dollar sign here. So, anytime you see a well until you get to
+20:48
+the end and then this is part of the accounting for that system. So, that's using colons. But the main fields are
+20:55
+all separated by dollar signs. The first one identifies this is the name of the login. This is the login name for the
+21:01
+user. So, jrand C Brenton whatever the case may be. The second value identifies
+21:07
+the hash algorithm that was used because you can choose between different hashing algorithms that you may want to use
+21:14
+depending upon what level of security you want to you want to deploy. So in this case here if you see a value of six
+21:20
+and so this is standard Linux it's a value of six shaw shaw 512 is what's
+21:26
+being used to go through and generate that hash. The next thing between the dollar signs is the random seed. So, this is
+21:34
+just a random value that's going to get added to my password before it gets run
+21:39
+through that hashing algorithm to make sure that, you know, if John picked the word money for his password and I picked
+21:46
+the word money for my password, they're going to look different because these randomly random character strings are
+21:53
+different and they're getting adding in added into our password as part of this whole thing. So, notice the random seed
+21:58
+isn't really hidden, right? like looking at this file, we get to see what the random seed is. So, this doesn't do
+22:04
+anything to make it more secure beyond making sure hashes look different if the passwords end up being the same. And
+22:11
+then after that, this long string of purple characters here is my hash value.
+22:16
+So, that is my password plus whatever the random seed value was run through
+22:22
+the defined algorithm. And this is the fixed length string that's getting output by that 512 bits of length.
+22:29
+That's my hash. So now what happens when I go to log in? When I go to log into this system, right, I'll type something
+22:37
+in. The system will say, okay, what hash algorithm was used when Chris's account
+22:43
+was created? Oh, six. Okay, it was shot 512. What's his random seed? Okay, let
+22:49
+me take this random seed value. Let me take the characters he just typed in. Let me run it through shot 512. And then
+22:57
+let me see if the resulting hatch hash matches this value exactly. And it has
+23:02
+to be an exact val match. You know, the system's not like, they were only off by one character. Maybe that's a typo. No
+23:08
+big deal. No, no, no. The hashes have to match exactly. Now notice the system doesn't need to store my password in
+23:15
+plain text for this to work. That's kind of cool because now if the root level user goes in and looks, they're not, you
+23:21
+know, they they're not immediately saying what everybody's password is. So, this is a great way to go in and hide
+23:27
+this. Excuse me. So, we got the random seed to make sure passwords don't look the same, even if they are. We're
+23:33
+hashing it up so that we're not saving things in plain plain text. So far, we're off to a pretty good start here.
+23:40
+If we don't want anybody to be able to log into the account, we can simply just go in and say star. That's a locked
+23:46
+account. So, now the account exists. I can assign permissions associated with that account, but no one can actually
+23:53
+try and log in as that user anymore. That's not a possibility. Now, one of the things that
+24:00
+we try to avoid with our hash algorithms is what's referred to as collisions in
+24:06
+the hash space. What does that mean? Okay, let let's talk about like MD5. That was one of the first ones where we
+24:12
+found this in or one of the mo one of the first commonly used ones that we found it in. So MD5 takes infinite size
+24:20
+input. So I can I can take a space character and run that through MD5. I
+24:27
+can take, you know, a lowercase A and run that through MD5. I can take the Encyclopedia Britannica and run it
+24:34
+through MD5. So there's no restrictions put on the size of the input. The output
+24:40
+of MD5 is always 128 bits. So just think
+24:45
+about it logically for a second, right? Infinite size input of any combination
+24:52
+finite output is bound to be what's referred to as collisions in the hashspace. Collision in the hashspace
+24:58
+means two different values are going to generate the same hash. And for the longest time it was theorized that it
+25:04
+might be possible. And then we found and then we started finding some examples and then some folks started actually
+25:10
+figuring out how to make it predictable. And predictable is the part that matters because I can guarantee just about every
+25:18
+hash algorithm we use is going to have collisions because again most of them
+25:24
+are are infinite input or if there is a restriction on the size of the input it's so large it's almost negligible
+25:31
+anyway but the output is always a fixed length string and it's usually you know
+25:36
+124 uh bits or less usually 5126 is the range that we work with So we have this
+25:42
+infinite input finite output thing with all of our hash algorithms. There's bound to be collisions in the hash
+25:49
+space. Where it matters is is it predictable? Can I force a collision to
+25:55
+happen as opposed to having it happen accidentally? That's huge, right? Because one of the things we we do today
+26:02
+is we digitally sign documents, right? We digitally sign code. Well, what if
+26:07
+you digitally sign code and I could find a flaw in your algorithm that would give
+26:13
+me the math needed to figure out how to make the changes I want to make to your code, like install some malware, but
+26:20
+then some additional changes I'd need to make in order to make sure the same hash
+26:26
+gets generated in the end. If someone figures out how to do that repeatedly,
+26:31
+oh, that algorithm is useless now, right? We can't trust it. we can't trust it because it's easy to give us
+26:37
+something different and completely modify it and that's bad. So collisions initially, you know, when we when we
+26:45
+first find out there's a collision in the hash space, we get a little nervous and we decide, yeah, okay, you know, the
+26:51
+dominoes are starting to fall, starting time to start looking at something else. But once it's predictable, oh, run for
+26:57
+the hills. You got to get off that thing as quickly as you can. So here's what we're going to do.
+27:04
+So those files I had you download, let's take a look at those
+27:09
+together. So you should have created a directory called named hashing. Mine's named image. Don't worry about it. It's
+27:16
+pretty much the same. But what you should find inside of it is two different files. Image 1.jpeg and
+27:22
+image2.jpeg. So I'm going to type ls-al. And if we look at these two
+27:27
+files, same owner, same group, file size is identical.
+27:34
+date timestamp is identical. Huh. So, it looks like these might be the same file.
+27:41
+They're just two different names associated with it. So, this is where hashing comes in, right? We can use
+27:47
+hashing to check to see are they the same or not. So, what I'm going to do is I'm going to run MD5 sum and I'm going
+27:53
+to say image star. So, I'm going to say I want to take both image files and run
+27:59
+them through the MD5 algorithm and see what happens. Oh, look. The hashes are the same. So,
+28:08
+based on what we've talked about so far, this should tell me these are two
+28:13
+identical files. They just have slightly different names to them, right? Let's take it a little deeper. I'm going to
+28:19
+try and run it through Shiaan as well. So, let's run it through Shiaan sum. And
+28:24
+the same thing, I'm going to say image star. Oh, wait. Look at that.
+28:32
+The hashes are different. MD5 sum is saying these are the same files. Child
+28:38
+one sum is saying these are different files. Which one's right? Well, there's
+28:44
+a way we can go in and definitively check that. We can use the CMP command.
+28:49
+So the CMP command is the file compare command. So I'm going to go in and say L. I want to list any changes
+28:56
+between image one and image two. And
+29:02
+then I'm going to pipe that through less so if it ends up with a bunch of lines, it doesn't just scroll off the screen.
+29:08
+And I will copy paste this one into chat. Oh, come on, Chris. It's not that
+29:14
+hard to copy paste. You can do it. I have faith. There we go. All right. Let's run
+29:20
+this and see what it comes up with. Huh. This is printing out a lot of information. What does this information
+29:26
+mean? What this what this tool is telling me is that if you offset to byte
+29:33
+165 in both files, image one contains a value of 331. Image 2 contains a value
+29:42
+of 211. They are in fact different. Offset to byte
+29:47
+624. Image one has a value of 375. Image two has a value of 370. So again,
+29:55
+it's saying they're different. So what's going on? These files are an example of a
+30:04
+collision in the hash space. MD5 sum is generating the same
+30:10
+hash value for them even though they are in fact different. And we know they're different because SHA1 sum is giving us
+30:17
+a different hash value. and running the file compare command is showing us what bytes are actually different and what
+30:24
+the different values are in each of those bytes between those two files. So this is two different files. Well, do
+30:31
+they look the same? Do they look different? Let's take the files and you
+30:37
+can just open up in your browser if you want to. Um here's image one. So this is somebody
+30:45
+having a bad day, right? It looks like we're, you know, above an airport here, but this plane's coming down. Not doing
+30:51
+too well. Luckily, the pilot got out. That shoot isn't fully open yet, so that's not a good thing. There goes the
+30:57
+seat they were sitting in. So, this is somebody having a bad day in their plane. So, that's image
+31:03
+one. This is image two. Wait, Chris, these look nothing alike. Yeah, you're
+31:09
+right. This isn't just, oh, hey, you know, some of the pixels that were blue are now aqua instead. It's not like it's
+31:17
+some minor change. These files look absolutely nothing
+31:22
+alike. So they are definitely very drastic drastically different files. So
+31:28
+if we were relying on MD5 sum to identify differences for us, this would
+31:34
+fail, right? We'd think we have the same file when we don't. But if we using SHA1 or some other algorithm that would be
+31:40
+able to go through and figure that out for us. So when we talk about, you know, when when folks are saying you're like,
+31:46
+"Yeah, no, don't use MD5 sum anymore because there's collisions in the hash space, this is what they mean by that."
+31:53
+What they mean by that is it's possible to have two different files and yeah, those commands and everything are all
+31:58
+documented here for you in case you want to go back through this later. Still someone having a bad day
+32:03
+though. Yeah, the boat. Yeah, that's true. Someone a long time ago had a bad day when that boat sunk. Um but yeah,
+32:10
+you know, this is why they say don't use MD5 sum anymore because you can't rely on it to give you accurate information.
+32:18
+And in fact, some folks have figured out how in certain conditions you can make
+32:23
+predictable changes to a file and still generate the same MD5 sum on the other
+32:28
+side. So this is why, you know, nobody should be using MD5 sum for anything anymore. And yep, a copy of the two
+32:36
+images. Cool. So yeah, we had a collision. We talked about that. And the definitive one for
+32:41
+me is running that file compare command because that is showing us the exact bytes that are different between the two
+32:50
+files. This is especially a problem with passwords, right? Because you kind of
+32:56
+assume that if my password is money, only people who type in the word money
+33:01
+are going to be able to get access to my account. Well, if there's collisions in the hash space, it's possible that two,
+33:10
+five, 10, 100 different words would also give people access to that uh account as
+33:17
+well. So, you know, again, you for password possibilities here, we
+33:23
+definitely want to make sure we're not using an algorithm that has a that has a big collision problem because this also
+33:29
+makes cracking that much easier. Um the I'm going to do a lab with you on
+33:34
+password cracking, but that's still a couple of months out. We got some other stuff to cover before we get into that.
+33:40
+But basically with password cracking, when you do what's referred to as offline cracking is you take a word list
+33:47
+or a dictionary and then you just try that as the possible password for everything. And then if you do a what's
+33:53
+referred to as a rulesbased attack, which is what most offline attacks are now, a rulebased attack allows you to
+34:00
+take that password list and modify it in different ways and then try those
+34:05
+modifications as the password. So for example, you may go in and say, hey, you know, try all the dictionary words. Now
+34:12
+try all of the dictionary words combined together in a two-word combination. Okay, try it again, but capitalizing the
+34:19
+first letter of each word. Okay, try it again, but putting a special character between them. Okay, try all the
+34:25
+dictionary words again, but this time change it to elite speak. So, change the
+34:31
+O's to zeros and change the the L's to ones and you know, blah blah blah. And you know, and if you're hearing any of
+34:37
+this and this has been part of your your process structure creating secure passwords, you know, not necessarily,
+34:43
+you know, good rulebased attack is going to be able to go through and hit them. But, you know, think about it. If I'm
+34:48
+using MD5 sum, I may use a completely random 50 character password and think,
+34:55
+hey, I'm in great shape, but there might be a four character combination that generates the
+35:01
+same hash, in which case, oops, that's going to fall pretty damn quickly. So, this is why, you know, uh, hash
+35:08
+algorithms that generate collisions are a really bad thing.
+35:14
+Okay, so let's kind of jump back into our VPN and see where we're at here. So, we still haven't solved initial
+35:20
+authentication. We're going to have to come back and talk about that. We have still haven't solved setting up a secure channel over an insecure medium. We're
+35:26
+going to have to come back and talk about that. But when it comes to protecting our data going back and forth, we can use symmetrical key for
+35:32
+that. No problem. Hashing sounds like it has possibilities, right? So long as we
+35:39
+use a good hashing algorithm. The problem is though the repeatability, right? The problem is if I go in and
+35:46
+make changes to your packet and I know what hash algorithm you can you used, I can generate a valid hash for that. So
+35:53
+we need a way to hash but not a way to hash that is repeatable by anybody and
+35:59
+everybody. Well, this is where HMAC comes in. So what HMAC is is you take
+36:05
+the thing you want to hash, you take a secret only you know about and then you
+36:10
+combine that with what's getting hashed and now you run it through the hash algorithm. And now the only way to get
+36:16
+it back on the same on the other side is to have that same secret value that nobody else knew about. The if I go in
+36:22
+and I change your packets in transit, I could I can't just run it through shot 256. I have to also know that secret
+36:30
+value to inject as part of that or I'm not going to be able to get it. Symmetrical keys equals hash. So well,
+36:38
+so that begs the question, right? So what value should I inject as part of the HMAC that only the two ends know
+36:45
+about and nobody knows about in the middle? Well, we already said we're going to use symmetrical key encryption.
+36:51
+So I can use now there's a couple other variants, but this is the most popular. Just use that symmetrical key when you
+36:57
+go in and you do your hashing. And now that value that only the two endpoints know about can be used to set up that
+37:05
+secure channel over an insecure medium, meaning encryption. And it can authenticate every single packet that
+37:10
+goes by, namely HMAC, using a hash with that secret value that nobody else knows
+37:17
+about. So where are we at? We got the back end of our VPN figured out, right?
+37:22
+We can secure the data as it goes by. We can authenticate the packets as they go by. We got the back end figured out, no
+37:29
+problem. What we still got to figure out though is the beginning of it. How do we
+37:34
+authenticate? How do we make sure that the other end is in fact who we think it is? How do we make sure that we can set
+37:42
+up a secure channel over that insecure medium in order to be able to exchange those secret keys with each other?
+37:47
+Right? Symmetrical encryption. We got to have the same key on both sides. But how do we do that over the internet in a
+37:53
+secure fashion? That's where setting up the secure channel over an insecure medium comes from and we haven't talked
+37:58
+through that yet, but we will we will talk about that
+38:05
+next week. So next week on Fireside Friday, we're going to go in and we're
+38:10
+going to fill in these two first two parts here. We're going to figure out doing authentication, initial
+38:16
+authentication, and we're going to figure out how to set up a secure channel over an insecure medium. And as I said before, that initial
+38:23
+authentication, that's the one where some of it comes down to warm fuzzy. Some of it comes down to how much do you
+38:30
+trust, how do you feel about the actual process in order to be able to do that
+38:36
+initial authentication securely because there at the end of the day, there's no math at the bottom of the rabbit hole.
+38:42
+And I'll talk about that more next week. So that's what we're going to talk about next week. Um, but thank you for
+38:49
+attending. I appreciate everybody showing up. This this class is a little bit shorter. I know we still got like 20
+38:55
+minutes before the top of the hour, but I'm going to give you 20 minutes of your life back because I looked at the next
+39:00
+section and didn't feel like I could cover it well in 20 minutes and didn't want to just rush it. So, I'd rather cut
+39:06
+a little early and and go through with you next week instead. But, I do want to thank everybody for sharing your time
+39:12
+with us today. Um I I hate when people say these are free because they're not.
+39:18
+You know, this is costing you your time. 20 minutes after car boost. Yeah, we
+39:24
+always go through and kind of uh kind of wrap things up at the end, right? So yeah, we can we we can do I don't know
+39:29
+about 20 minutes worth, but yeah, we can definitely do a little bit of post uh uh post banter too if folks are up for
+39:35
+that. But uh yeah, we'll come back and we'll finish up the rest of our VPN next week. And then like I said, the week
+39:41
+after that, we're going to come back and we're actually going to look at specific implementations. So with that said, I'm
+39:47
+going to go back on camera. Keith, Bill, did I miss any questions in Discord? I tried to kind of keep up. All right, you
+39:53
+kept up well. Yeah, I didn't see anything you missed. So cool. If anybody
+39:59
+if anybody had a question and you feel like I missed it, uh please do an ask Chris to me and I'll make sure we go
+40:06
+through and answer it. Now, uh, a Chris, that means I have 20 minutes more for
+40:12
+CISSP prep. Yes, you do. My sympathies. There you go. Yeah. Yes.
+40:19
+Yeah. And that is great, Chris. I mean, the MD5 hash collisions on those image files, I mean, really drives the point
+40:25
+home when you can see it like that, you know? I mean, it's one thing to see like a little pixel that's a slight different
+40:32
+shade of brown. This is a little more than that. Yeah. Yeah. Yeah, it's like Yeah. Uh, one of the other examples I've
+40:39
+seen before are two PDF files and they're two legal documents and they say
+40:44
+slightly different things. Wow. And yeah, that that is somewhat dramatic,
+40:50
+but I think the images definitely kind of do the whole dramatic. Uh, Chris, how did you create the image files? I
+40:56
+didn't. I stole them. Um, I found them out on the internet at some places. An example of collisions in the half space.
+41:04
+I love it when the original contract said, "I'm going to pay $300,000 for this very large house." And the other
+41:10
+contract says, "You're going to pay 4.6 billion and breakfast every Thursday for
+41:16
+this house." Yes. They're going to hate eggs by the time we're done with this house. Yeah.
+41:23
+Really? Yeah. I I I love this section. uh mostly because this was one of the topics that
+41:30
+I struggled with the most, you know, when I first got introduced to it, trying to and a lot of it came from just
+41:36
+the way it was taught because um so if if you enjoy the math and you
+41:43
+want to get into the math, there's plenty of papers out there on it. Go for it. Uh what I hated was that I didn't
+41:49
+have my brain wrapped around how this worked from a 50,000 foot view yet. So
+41:55
+to start introducing the math to as a proof of how how and why it works. No,
+42:01
+too much information. Don't do this to me right now. Yeah. Thanks. It's not important to run various things through
+42:07
+multiple algorithms to identify abnormalities. Is there a quick script for that? Well, so it it it depends on
+42:13
+what you're talking about. Um um most of these things get done
+42:18
+multiple times, right? Like when you look at like uh like a like AES, right?
+42:24
+AES doesn't just run stuff through once, it actually runs it through multiple times to go through. So that's actually
+42:30
+built into a lot of these algorithms right off the bat. And yeah, people are talking about
+42:37
+drinking. So yeah, so hopefully there's not many questions coming out of all this. So
+42:44
+I think Chris, after you did this an earlier time and you you kind of explained this on a previous class, I
+42:50
+went back to a program that I had that identified identical files on a file system and hard linked them together to
+42:57
+save space and I realized I was using an MD5 check some and I was like that can't
+43:03
+be good. And so that the the software unless you put in a command line switch
+43:09
+which is almost undocumented uh it will absolutely identify a
+43:15
+candidate for linking two files together because they have the same MD5 check sum
+43:21
+but before it does it reads them bite by bite and makes sure they're actually
+43:27
+identical before linking them together to save space. Yeah. So, somebody had
+43:32
+the question, have there been actual attacks against MD5? And the answer to that is probably the the challenge is
+43:40
+that's a tough one to run down, right? Like if data is getting changed in
+43:46
+transit because somebody relied on MD5, we can say, well, it might be because of that, but we don't necessarily know for
+43:53
+sure. uh there have been a number of examples a number of papers written on
+43:58
+this is how to predict what impact your changes will have on the MD5 algorithm
+44:03
+so that you can add additional data to get it back to that original uh hash again. So the steps to do it are out
+44:11
+there. Um is it easy? No. I you know this isn't script kitty. Absolutely it's
+44:17
+not script kitty. Could you know crime organizations nation state do this? Oh,
+44:22
+abs freakingutely. Absolutely. So, it's definitely out there as a
+44:28
+possibility. But it is one that's tough to run down. Yeah.
+44:34
+Uh we had beta questions. Okay, cool. Awesome. Uh fun ones are public,
+44:41
+less fun ones are out here. Okay, awesome. So, DF, thanks for uh sharing that link. Much much appreciated. See,
+44:47
+this is what's awesome about this. We can be because guys, we can be like totally stupid about stuff like this and
+44:53
+someone in the audience is smarter than us and knows to, you know, where to point P folks for things like this and,
+44:59
+you know, that's one of the things that just makes this so awesome. Yeah. Yep. Absolutely. People don't have to rely on
+45:05
+us being smart all the time, which is such a good idea. Yeah. Trust
+45:13
+us. Oh, very cool. Uh, let's see. The web warrior said, "Chris, your teaching methodology is impeachable." Oh, no. I'm
+45:19
+going to get impeached. Bill and Keith, are you going to impeach me? Is that it? Oh, no. No. We We're
+45:27
+already been kicked out of office. It's It's Yeah. Sorry. Well, since everyone's
+45:32
+talking about drinking, maybe vodka with peaches in it or something. Ah, peach
+45:37
+vodka. There you go. Yeah. Now we're starting to get somewhere. Yeah. Off topic. When is AC Hunter version X
+45:44
+releasing? So, uh, so Brian, um, AC
+45:49
+Hunter 7 beta is out. Uh, we have a very limited group of people we're letting
+45:56
+use it. With that said, uh, reach out to Bill. He'll set you up. You You're one of the cool kids, so
+46:04
+we're more than happy to share the beta code if you want to get a look at it. Um, we've gotten feedback from the beta
+46:09
+code. We're in a couple of sprint cycles now to make changes based on the feedback we got off of beta. So, I don't
+46:15
+have a specific release date for you yet. Um, I will say that once all the
+46:21
+current tickets are gone through, we're going to have a release and then we're going to release that. We're going to
+46:27
+see, okay, was there any problems that wasn't found in beta? If so, let's get those fixed. And as part of fixing
+46:34
+those, we're also going to be releasing a community edition. So, it'll be happening sometime soon. Um, but I don't
+46:41
+want to like lock it down because um, the next dev meeting is next Wednesday and that's when I'll get an update if I
+46:47
+figure it out. So, Mr. Bill, please. I have two spare
+46:55
+mini PCs raring to go. That's right. They both got a gig, so
+47:00
+isn't that enough? Come on. Yeah. Ryan, for the beta, you only need one
+47:07
+because the beta in the beta version, we just said, "Hey, throw Zeke and AC Hunter on the same system just to keep
+47:12
+it simple." Y
+47:19
+So cool. All right. Well, Bill, Keith, either one of you got anything else? I
+47:25
+think we're all set. Thanks, guys. Awesome. Yeah. Thank you, everybody. Yeah, like I said, I I really do
+47:31
+appreciate everybody sharing your time with us today. Um, it would hard I I love doing this. This is like party for
+47:37
+me and it would be hard for me to justify this if only Bill and Keith showed up. Yeah. So, the fact that the
+47:43
+rest of you show up to make it easier for me to justify being able to have fun like this, I really do appreciate that.
+47:50
+Fantastic. Yeah. So, with that said, hey everybody, enjoy your weekend. Have a good one. And, uh, we will see you again
+47:56
+next Friday. Yeah. Thank you everyone. See you next week. Yep.
+

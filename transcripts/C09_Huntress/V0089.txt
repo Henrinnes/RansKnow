@@ -1,0 +1,1013 @@
+0:04
+[music]
+0:13
+[music]
+0:20
+[music]
+0:28
+Good morning. Good time zone. Good afternoon everybody. Welcome to Trade Craft Tuesday, first one of 2026. Super
+0:34
+excited to uh kind of be kicking off the new year, right? Um with kind of a cool
+0:40
+topic. First, I wanted to ask, you know, hey, light up the chat. Let us uh let us all
+0:46
+know where you're from, kind of where you're checking in from. We'd love to to hear from you and kind of get that engagement rolling early.
+0:54
+Moving right along. So today's topic is actually going to be inside the react to shell exploits. So um December 3rd kind
+1:03
+of time frame. Uh the internet was alive with yet another JavaScript vulnerability and uh it kind of made for
+1:12
+a very rough end to the 2025 year. Um and so we're going to kind of go over
+1:19
+the ins and outs of that. um what happened, how it happened, some of the detections, all that good stuff. Joining
+1:26
+me today, I have Anna Fam, Craig Sweeney, and Bob Rutus. Uh Anna, if you want to kick us off with uh kind of tell
+1:33
+us a little bit about yourself, what you're doing here. Yeah, thank you, Michael. So, I'm Anna,
+1:38
+as you already heard. Um I'm a senior tactical response uh analyst here at Huntress. So um mainly I do reverse
+1:46
+engineering, thread hunting and just you know make the thread actor suffer sometimes with Michael and the rest of
+1:52
+the team. Uh yeah, but it's nice to meet you guys. So
+2:00
+Michigan's here. Few folks from Michigan.
+2:09
+Uh Craig, if you want to tell us kind of where you're coming at us from. Hey. Uh, I'm Craig Swinny. I'm the, uh, or one of
+2:15
+the principal detection engineer and thread hunting analysts here at Huntress. Um, I primarily try to create
+2:23
+detection rules to help catch thread actors so that our tactical response
+2:28
+team can help kick them out alongside our sock. Um, and I am joining from
+2:33
+Hawaii. So, very early morning for me. And lastly, our special guest, Bob Rutus
+2:40
+of uh Grey Noise Fame. If you want to tell us a little bit about yourself. Sure. Uh it's great to be here. And I uh
+2:47
+I lead the security research and data science and deception and detection engineering uh work over at Grey Knight.
+2:53
+So my teams are the ones that build all the tags that do all the cool things that work with all these cool people to
+2:59
+try to identify what's happening in the world and keep everybody safe.
+3:04
+Most excellent. And I guess I can round it out with myself. I'm Michael Tigus, senior hunt response analyst. So, one of Anna's co-workers. Um, one of the kind
+3:11
+of the boots on the grounds. We were doing a lot of the the response and triaging efforts of of this latest
+3:17
+vulnerability that we're going to be breaking down. So, we're super excited to come and talk about this. Um, and without further ado, let's get into it.
+3:27
+So, we're here obviously to talk about React shell, right? CBE 202555182.
+3:33
+I don't expect anybody to memorize that. I certainly don't. So, React is shall at its core has a CBSS, the common
+3:39
+vulnerability scoring system score of 10. So, basically the worst a vulnerability can possibly be. Uh, this
+3:47
+is because it's simple to exploit. You don't really need to authenticate to anything and you can do it basically
+3:52
+remotely. Uh funny story, I actually started to prepare a demonstration for this particular kind of uh
+4:00
+tradecraftraft Tuesday. And it was actually so boring because it was so easy that all that popped up is a
+4:05
+calculator. Um, and so if it ever, you know, if it ever tells you just how spectacular cyber security can be, um,
+4:13
+it's basically as easy as running a program on a computer, which is should be terrifying because, as we'll get into, this is one of the most prolific
+4:21
+kind of web frameworks and technologies to date. Uh, I have some more details up there. Um, this was originally disclosed
+4:27
+by Lackland Davidson, uh, 29 November, but it really started to kind of come to
+4:32
+fruition around the 3rd of December is when kind of activity started to slowly increase. And that weekend was kind of a
+4:40
+blood bath for kind of observing a lot of this compromise. Uh, the details up there, uh, effects 19.0, zero. I'm not
+4:47
+going to read all of that, but um the the vulnerability itself is specifically in kind of that React server components
+4:54
+RSC framework. And the so it's not it's not necessarily a
+5:00
+React vulnerability. You're going to hear people say React to Shell, etc., etc., but it's that underlying server
+5:06
+component kind of handler aspect that that has that vulnerability, specifically the flight protocol. Um,
+5:12
+and we'll get into what a lot of that means here in a second. So inside React, what is React? Right?
+5:19
+And we've kind of been throwing this around. Um React is a component web framework. It's written in JavaScript.
+5:25
+It's maintained by Meta, the kind of the Facebook people, right? Um and it's absolutely ubiquitous on the internet.
+5:31
+So about 7% of websites that use JavaScript use React. And that that number might sound like kind of not a
+5:38
+amazing number, but that's all websites, any JavaScript, etc., etc. It's fairly hard to kind of fingerprint how widely
+5:44
+this is used, but React itself kind of powers kind of that that dynamic loading
+5:50
+feature that you'll see on things like Facebook. Uh you know, you're scrolling your feed and looking at cat pictures or
+5:55
+whatever it is you do and you maybe it takes a second to buffer, things are kind of populating on that page
+6:00
+dynamically. That's React. Um there's a couple competitors and stuff, but that that technology is what powers kind of
+6:06
+our modern web interaction. Um, also included in this vulnerability
+6:12
+is Nex.js. So Nex.js is kind of based on that that React framework and it builds
+6:18
+upon it and kind of gives you the building blocks to glue everything together. Um, it's maintained by Versel.
+6:24
+If you've never heard of them, they are kind of a a web hosting cloud hosting provider. Um, great great people. Uh,
+6:31
+Nex.js JS is again another widely deployed uh framework and the
+6:40
+the big thing to take away here is that um these these frameworks this
+6:45
+JavaScript kind of system that we have here is is going to be everywhere uh places you don't even realize.
+6:53
+So all right under the hood let's talk about server side rendering. This is going to get a little technical. We're
+6:58
+going to try to scale it back right. So client side rendering happens in your browser. Uh when you refresh the web
+7:04
+page you're seeing me from right now, there is some client side rendering going on. And so your browser is
+7:10
+receiving some JavaScript, some HTML and some CSS and it's painting it all in a
+7:15
+nice little picture and on your screen live streamed here I am. Right? This is
+7:20
+kind of slow. Your web browser has to make a bunch of requests. It has to get all those resources. It has to glue it
+7:26
+together. We got to go fast. So how do we solve that? We do something called
+7:32
+serverside rendering, right? Um so instead of looking at kind of all those
+7:37
+those resources and requesting them all at the same time, building that web page, we can start to assemble certain
+7:45
+components of the web page uh on the server and that server will send that assembled response to your browser and
+7:52
+that is much faster, right? you're only making one web request or maybe you're making a couple of them over time um and
+7:59
+you can wait for certain components to populate. It's also generally safer, right? Uh having the server render
+8:05
+certain components of a website uh lets you basically trust what's going on in the server kind of. Um
+8:15
+this is actually where the vulnerability goes wrong is that we trust kind of that data flow in the server. So um on the
+8:23
+slide like I said servers have more control um server controlled operations are safer but this is kind of it's the
+8:30
+thing that makes react great but also kind of the downfalls downfall. So like Icarus we flew far too close to the sun
+8:36
+in the pursuit of speed. Last technical topic before we get into
+8:43
+some of the some of the the craziness of React is the flight protocol. Right. So
+8:50
+WTF what the flight uh flight is a react protocol. It's a language kind of how react expresses state um user session
+8:58
+data etc. Um and [clears throat] the
+9:06
+ultimately in order to pursue this concept of fast in the broader internet we try to make use of this asynchronous
+9:15
+programming model um which is essentially hey I don't have the answer
+9:21
+for you right now but if you check back to me in a little bit I will have the answer. So, in JavaScript, these are
+9:27
+venables. Um, you don't have to memorize that. They're also kind of promises. They're not the same thing, but in a lot
+9:33
+of public literature, they're going to be referred to as either venables or promises. Um, so to kind of wrap that up
+9:41
+because I think that's a convoluted way of talking about a pretty in-depth programming concept. Um, essentially
+9:48
+your web browser can go, hey, I need something to be processed and then I'm going to get the result
+9:55
+back at some point and I will then go ahead and render that result or populate
+10:02
+that data. A lot of times this is called hydration. I'll use that word in a little bit. um the state of all of that like the
+10:10
+status of kind of what asynchronous requests we've sent and what data we've gotten back is ultimately where this
+10:17
+vulnerability kind of lies. Uh we Lackland Davidson kind of the the vulnerability discover essentially fools
+10:24
+the flight protocol into losing track of which request it has and has not processed and essentially kind of uses
+10:31
+that to ultimately weaponize this uh exploit chain into remote code execution.
+10:38
+So a lot of this research I didn't do in a vacuum. Um the
+10:45
+Gummo Roush is the CEO of Versel and wrote this beautiful write up. I I
+10:50
+highly recommend you guys go and uh read it if you're super interested in kind of the internals there. He has a point of
+10:55
+view that not a lot of people can have being the CEO of Versel, but he's also a very competent developer. And so if you
+11:01
+sit down and kind of read through that, a lot of this is going to sound very familiar. And that's chiefly because
+11:07
+he's kind of gone through and not only summarized the vulnerability but actually broken it down to kind of the
+11:14
+minimum reproducible error uh which is something that we don't get a lot but it actually kind of expresses a lot of uh a
+11:21
+lot of the technical nuance of this vulnerability. So, um, some of the interesting behavior
+11:27
+that we saw come out of it, uh, a lot of people went in and kind of defaced public websites and said, "Hey, the
+11:33
+server is vulnerable and requires immediate patching, right? So, this is aedu website. It's a widely known one.
+11:38
+I'm going to avoid kind of listing the URLs or anything." But the the general
+11:43
+response of this was wild. You had stories coming up on Twitter of people's, you know, wallets getting drained or their web server assets
+11:49
+getting exfiltrated, right? that this is I mean basically anything CVE wise that
+11:56
+ends in shell um is going to be going to be a bad time. So that might evoke ideas
+12:01
+of log for shell that might tool shell uh you know very big vulnerabilities. Um
+12:09
+this is just another one. So reactor shell unveiled right let's talk about the exploit and let's talk
+12:15
+about the payload. So this is what reacttoshell looks like. Um this is GMO
+12:20
+Rous's example. This is probably not what people were using kind of widely exploited. they were likely using
+12:26
+another P um that that has proliferated across GitHub. Um Matt Matt said, "I
+12:35
+love tweetable exploits." Yeah, this this does fit in a tweet. So, um
+12:41
+essentially, I'm going to stop here. We started to annotate this and it ended up
+12:46
+looking a bit like Charlie Day of As It's Always Sunny in Philadelphia. I was hunting for Pepe Sylvia. Um there's a
+12:53
+lot to explain here. your eyes are probably going to glaze over through some of this expla uh explanation, but
+12:59
+I'll do my best to kind of get us to a point where maybe it makes a little bit of sense and so you kind of understand
+13:05
+uh a little bit about what's going on. So hopefully you guys can see my mouse here. So we're going to start with uh you know this this one over here. This
+13:12
+is this is what the flight protocol looks like under the hood. Um this is how React kind of tracks that state and
+13:19
+those uh those model representations under the hood. The specific points here are this dollar
+13:27
+sign at zero. Remember we talked about the concept of promises and vendable.
+13:33
+This is actually what indicates that um this this data is venable.
+13:39
+So we refer to these as chunks. One and zero are chunks in the flight protocol.
+13:46
+Um so one is basically saying chunk zero is thenable. It's awaitable, right? It's a promise. Um, and that is because we
+13:53
+see the then method implemented. So
+14:00
+with with some imaginary magic here, we're going to go ahead and say that all
+14:05
+right, this is this is a piece of code that we're ultimately awaiting on and we need a way to kind of track that status.
+14:12
+Well, if we move up here to status, we see resolved model, right? So remember we referred to like the idea of models
+14:18
+and kind of how we express state in React. Well, we've resolved this model. So, we're no longer waiting for it,
+14:24
+right? We're we're ready to fulfill that that promise, that request. Um, and we
+14:30
+absolutely can do that, right? So, our response is this mess, and it looks a
+14:36
+little convoluted, but there's two key points here. First off, we see the prefix element. Now, if
+14:43
+you're familiar with JavaScript, this should look pretty standard. It's logging a skull icon to a console, but
+14:49
+you can insert any manner of malicious code into that. Right? What I want us to
+14:54
+pay attention to is these two slashes here. So if you see my my mouse moving,
+15:00
+so the prefix component of this is actually put in front of some other code. And so what happens is the prefix
+15:07
+component is evaluated. If you guys have messed around with anything kind of SQL
+15:12
+injection looking, this should be pretty similar to the idea of commenting out that that following code with the two
+15:18
+dashes. Um, and so what that does is it evaluates console log and simply
+15:23
+prevents it from erroring. So we get there uh with the form data component.
+15:29
+This is a data model. Um, it they are data modelsish. Um, Rachel Smith asked
+15:35
+in chat. they they behave like data models, but this is all data that we've supplied. So, this isn't React's data
+15:42
+model. We've just confused React into thinking that something exists that
+15:48
+we're essentially saying, hey, like I am the author of this. Um, that's actually how they fix this. We'll talk about that
+15:54
+kind of near the end. Um, so essentially anytime a JavaScript vulnerability
+16:00
+reacts some sort of or implements some access to a constructor or prototype
+16:05
+methods, um, you're going to have a bad time. So essentially all this is saying
+16:10
+is, hey, I have this venable data that I want to kind of await and execute. Let
+16:17
+me go ahead and resolve that model. So now you don't have to wait for it. Just go ahead and execute it. I'm going to
+16:23
+insert it into this dollar sign B, which is kind of a how React expresses a blob,
+16:30
+just a piece of data. And then through some JavaScript magic, uh, we're going to go ahead and basically throw this on
+16:37
+the front of any code and execute it, right? Um, that's kind of an
+16:42
+oversimplified explanation, but anything deeper is going to require like a level of JavaScript explanation that is we'll
+16:49
+be here for the next two hours. Um so essentially what we're doing is we're we're inserting code in in place of this
+16:55
+dollar sign B. We're awaiting it and then we're telling uh the flight protocol react, hey, go ahead and
+17:00
+execute this, right? And so ultimately that is exactly what adversaries did. Um
+17:06
+they they went ahead and kind of attained this this remote code execution to be able to do things like list
+17:12
+environment secrets to be able to exfiltrate data from web servers. Um, and I think Anna's going to talk to us a
+17:18
+little bit more about kind of the follow- on activity that we had. If you guys have any questions about this, uh, there there's a lot of literature out
+17:24
+there. Um, you're free to ask questions in the chat. Um, specifically regarding the vulnerability, but the the technical
+17:32
+nuance of it. People have celebrated this as kind of a genius exploit because it makes it levies a bunch of little
+17:40
+problems in React to ultimately kind of receive that or get that code execution on the web server.
+17:50
+Cool. Thank you, Michael. I think there was a question uh in the chat. Can you repeat the lessons learned
+17:58
+from the audience?
+18:03
+Yeah. So, I mean, uh, I can go over some of the lessons learned for, uh, for the
+18:10
+React to shell exploit itself. It's it's going to s be quite similar to log forj
+18:15
+and, uh, tool shell and stuff, which is don't trust user input, right? Um,
+18:21
+you always have a problem if you start accidentally trusting it. Uh, which is kind of what happened here. Um but it
+18:28
+ultimately comes down to the to the same fundamental issue which is that uh there
+18:35
+versel and meta's fix for this was actually just to check who
+18:40
+who introduced the code essentially right it's an ownership check um and
+18:46
+that's it is a small oversight but it is so
+18:51
+critical and led to and continues to lead I mean deserialization vulnerabilities are one of the most common ones to date. Um, and they're
+18:58
+often very severe, right? We talked about tool shell and log forj, very severe. Um,
+19:05
+the problem comes when you're dealing with kind of the this this data structure in a way that allows a user to
+19:10
+introduce their own data. So, the the biggest lesson learned is ultimately just to kind of continually evaluate
+19:17
+where you stand at for what data is going into your web server, what data is it handling. If you're a developer, you
+19:22
+need to be continually examining that posture. Um, deserialization vulnerabilities are often very easy to
+19:27
+rationalize um, with like static application security testing tools or dynamic application security testing
+19:34
+tools. Um, so you can introduce, you know, bad variables and stuff, throw it in there. If you're an end user, uh, the
+19:40
+biggest I mean, the biggest takeaway to any of these vulnerabilities ever is good software inventory, right? Like if
+19:46
+you want to if you want to help kind of mitigate this and and learn from these mistakes, it's to
+19:53
+continually examine what kind of dependencies and what kind of code you're using and ensure it's,
+19:59
+you know, validated. Look at your logs, make sure there's nothing crazy coming into that, you know, next.js instance,
+20:05
+that for sale instance. Um, a lot of good logging caught this essentially. And so uh those are kind of some of our
+20:12
+key takeaways from from this vulnerability. Thank you Michael answers the questions.
+20:20
+So Ed says it's all new to him. Um which like Michael explained everything so
+20:26
+beautifully like even you've read the blogs hundreds of times right it was a great refresher and like including me I
+20:34
+forget things the next day. So it was very helpful. Thank you Michael. So if you came to this webinar to listen to me
+20:41
+talk about like three malware we have discovered during the reactor exploitation you might be disappointed
+20:47
+because we were talking about peer blight today and I think that's one of the most interesting u backdoor that we
+20:54
+have uncovered during the reactor share exploitation and we name it peer blight.
+21:00
+So um yeah let's talk about the peer blight overall C2 capabilities first um
+21:05
+and I think that was the highlight of the whole m itself. Uh the back door has
+21:10
+three layers right of fallbacks because you know the thread actors they don't want to lose control of their bots and
+21:17
+typically a lot of malware developers nowadays they write mowers with a bunch of fallbacks mechanism just in case the
+21:24
+C2 becomes unresponsive or being blocked right so let's start from the layer first here layer one the layer one is
+21:31
+kind of boring you know hard-coded IP address uh over port 8443 pretty fast
+21:36
+direct and very easy to block and once you block the layer one right you figure
+21:42
+out the IP address here's when layer 2 kicks in our old good domain generation
+21:47
+algorithm and the domain generation algorithm so the backd dooror generates 200 domain port pairs right based uh on
+21:56
+the hard-coded date in the binary so it's using it to produce a seed and we'll talk about it later so the domain
+22:03
+generation algorithm it uses a mer twister you probably seen it in a lot of other malware using leveraging Meren
+22:09
+Twister for pseudo random number generation, right? And pseudo doesn't
+22:14
+mean it's truly random. It's pretty deterministic. So you give it a seat, it'll produce you the exact numbers uh
+22:21
+sequence of the numbers. And so once you figure out the domain generation algorithm in peer blight, right, and
+22:27
+extract the hard-coded date, you can easily generate 200 domains yourself and then put it in your blog list, right? So
+22:34
+develop the developers randomness becomes your blog list. So thank you for
+22:40
+making that one easy. And you know when two of those hund 200 domains stop
+22:46
+working right and you're like we got them game over right it's not that here's when the layer three kicks in and
+22:53
+this is where it gets pretty much very interesting. So peer bllight joins the
+22:58
+infected machine into the bit to DHT network and DHT stands for distributed hasht. It's how bittoring clients you
+23:06
+know talk to other talk to each other connects to the client without having uh to need a central server that is also
+23:13
+known as tracker. And instead of asking the server like, hey, do you have this file for me, right, every client becomes
+23:22
+like this giant peer-to-peer phone book, right, where they talk to each other. So
+23:27
+peer blight connects to the Bit Torren nodes through the legitimate infrastructure such as Btorin router.
+23:35
+Router. And if you're seeing your production server reaching out to you know like
+23:42
+bootstraps bit to nodes you might ask yourself a question why right like are you like torrenting your files on the
+23:48
+system or like Linux images or something that's pretty um suspicious there and
+23:56
+yeah so then coming back to peer blight it get then proceeds and finds the note
+24:02
+ID that is very uniquely named it starts with lol lol L. So yeah, that's their
+24:08
+note ID identifier. And then they pull the fresh C2 address from that. So you
+24:15
+know, now you're not just fighting hard-coded domains anymore. You're not fighting randomly generated domains
+24:23
+anymore. You're fighting a peer-to-peer network hiding inside Bit Torrent. And
+24:28
+good luck with taking that one down. So let's move to the next slide and let's
+24:34
+talk about how DGA works right uh more closely here. So it starts with the what
+24:41
+I mentioned before with a hard-coded date in the binary pretty easy and that date goes through the shot 256 hashing
+24:48
+algorithm and then it gets u processed in four bite chunks using rotate to lab
+24:54
+and exor operations mixed with a constant dead beef. Um, yes, the
+24:59
+infamous dead beef. It's like makes me hungry right now. Actually, it's lunch lunchtime. And so, as a result, it
+25:07
+produces a 32 beat seed value. And that seat value then gets fed into mer
+25:13
+twister, right? So, what's interesting here is that the
+25:21
+back door has three word list baked in. So, it consists of subjects, verbs, and
+25:26
+nouns. not counting till D's here. Right? So the first number generated by my sun twister, it will be the number
+25:34
+that decides the um the order, right? So the whether the formula whether you that
+25:40
+you choose to you choose the subjects plus verbs plus nouns to like merge them into like the uh the full domain or
+25:47
+verbs plus nouns or subjects plus nouns etc. So then more numbers are going to
+25:52
+be generated from a sun twister that gives you the indexes into the word list. So the backd doorors goes and be
+25:58
+like can you give me a word under the index 117. So the backd doorors be like
+26:04
+here's the car carpenter word right and so on. It does that for 200 times combine each u word from the word list
+26:11
+adds the tldds generate a port done. So imagine every infected machine that has
+26:17
+the same probably hard-coded date, right? It will generate the same seed, the name, same indexes, the same
+26:23
+domains. It's so predictable and so easy to detect, right? So let's move on to
+26:29
+the distributed hash table here where it gets a bit more interesting.
+26:35
+Okay, you can switch to the next slide, please. Thank you. So we covered the
+26:42
+distributed hash table at the beginning, right? Let's look at how it actually works under the hood because I find it
+26:48
+very interesting when I was trying to like extract the configuration and like it didn't work and then just had to like
+26:54
+look at the disassembly again to understand what the heck is going on. So when Perl finds another LOL node, it
+27:01
+doesn't just ask for a C2 IP address in clear text. That would be like so freaking easy, right? There's a whole
+27:07
+protocol going on here. First, it's gonna be Wait, did you I think you missed the previous I just noticed that,
+27:13
+Michael. There's like a previous slide in there. There you go. Thank you. I was like, wait, I'm talking off the wrong
+27:20
+slide. So, okay. Sorry, guys. Let's start it over again here. So, the validation
+27:25
+check. So the backd dooror it validates the incoming request using a specific
+27:31
+formula where each bite is going to be 109 times the previous bite plus 83.
+27:38
+Right? If it fails a check you're not going to receive the configuration. And if it pass a check the pier will give
+27:45
+you the two fields here the CG and then SG. CG stands for encrypted
+27:50
+configuration and SG stands for the RSA signature. So both of them that the
+27:56
+whole blob is going to be I sort the offiscated you know simple but it works. So after the decryption peer blight
+28:02
+verifies the RSA signature right uh and that is designed to prevent people from
+28:10
+you know injecting fake configuration to the botnet right because even if you have the right node ID even you manage
+28:16
+to join the DHT network you will not be able to pollute the configuration table without the private key. So once
+28:23
+everything is verified, it proceeds and extract the C2 parameters such as CNC IP
+28:28
+that stands for C2 IP address, CNC port stands for the port, SRVK stands for the
+28:34
+server public key and a time stamp. The timestamps lets the newer configurations override the older ones. So the attacker
+28:41
+can push the updates across the entire botnet. Right? If an affected machines received two configurations from two
+28:47
+different peers, it will keep the ones that has the newest time stamp.
+28:53
+All right, so let's now move to that slide,
+28:58
+the next slide. Perfect. Oh, I've been yapping too much about malware. Oh my gosh, I'm like running out of breath
+29:04
+here. So, this is like the slide that I don't like to talk a lot about the
+29:09
+attribution because it sucks. attribution is really brutal, especially if you're like trying to find a malware
+29:16
+that you know very new to you and you're scared to like name it something different and then just get your whole
+29:22
+like um you know people in on Twitter calling you out for like you know misattributing this or like calling
+29:28
+another name. So it's very brutal. But anyways, when I was searching for peer
+29:33
+blight indicators of compromise, right, TDPs, I, you know, I stumbled like 70
+29:39
+70% of the blocks out there was about mai botnet. I was like, it better not be mai bot.net because I'm so done with it.
+29:46
+Like, yeah, we've seen so much of that, you know, and it's like we've got it, we've got so far analyzing this payload
+29:51
+and you don't tell me it's mai botnet, please. And good news is it's not mai bot.net. Okay. So, peer bl was not
+29:58
+written from scratch. So when I was doing some research, I found a few articles written by Netlab 360. Kudos to
+30:06
+them covering Pingbotnet and when I read through the articles like they have a
+30:13
+lot of overlapping similarities like co code similarities and just to say a few words about pingbotnet it was a botnet
+30:19
+that was very popular in 2021. So I think infected about 1.6 million devices
+30:26
+and 96% of them were based in China. It targeted mainly MIPS based routers and
+30:31
+it was so aggressive that you know the vendors had to fight with threat actors to take control over the infected
+30:37
+devices right. So the vendor would try to like push the patches and the thread actor would push the firmware to block
+30:44
+the patches and they would try like push the patches to the upgrade channel then they block the port uh that was
+30:51
+responsible for the upgrade channels. So it was um yeah it was very brutal and
+30:57
+you know pink botnet has a few similarities with um Peter blight right like the exor decryption here but you
+31:04
+know exor is pretty common like a lot of malware developers are using it so it's this alone is not a concrete evidence of
+31:10
+you know it being the same malware uh but you know if combined with everything
+31:15
+else it's going to be a data point right there right so peer blight exores um each bite with its current index
+31:22
+application and a constant bite. So if you remember in the previous slide, it does that to decrypt the distributed
+31:28
+hasht configuration. So, pingbot.net it does the same right but just uses a different constant and instead of using
+31:35
+distributed hash table pingbotnet uses peer-to-peer model where it listens to
+31:41
+UDP port u over port one two three and sends the probe to the hard-coded IP
+31:47
+ranges and then you know tries to u receive the configuration. Does it sound
+31:53
+familiar to you? So dear blight uses the similar you know uh fallback mechanism
+31:58
+right but it's just DHT. So when you look at the configuration
+32:04
+structure right here in uh on the slide you see that they look pretty identical right pingbotnet has CNC IP1 CNC port
+32:12
+one server key and verify instead of the time stamp so nearly identical schema
+32:20
+here and that's not just a common pattern anymore like that's pretty specific.
+32:25
+So for persistence when peer blight has root access right it drops
+32:31
+configurations for both systemd and upstart what are these there are the Linux initialization systems so the
+32:37
+first thing that starts when your kernel boots and is responsible for restarting all of your services. So the
+32:43
+configuration pretty much just say like go and start the back door when the system reboots
+32:49
+right and system D is uh what modern Linux system nowadays uses like Ubuntu
+32:56
+15 and ops and OS7 pretty much everything today and upstar is for older Linux systems and pure doesn't care like
+33:04
+what system it's running on it's just going to drop two configuration and see what's going to stick so systemd service
+33:10
+at systemd agent.service service and upstart at systemd agent.config and both
+33:16
+are going to be pointed to the same backdoor location uh b backd door binary
+33:22
+at uh systemd demon. So doing further
+33:27
+research right looking for this path um on Google and things like that I've saw
+33:34
+same path same file names were also mentioned in roto jakira which is
+33:39
+another backd dooror that was covered by by netl 360 in 2021
+33:44
+and it was managed to stay hidden for at least three years without zero without any detections on virus total right so
+33:51
+it's using the same persistent trick same fake systemd service binary name system demon and NATLAB was linking that
+33:58
+to the Torybotnet uh that was specifically targeting IoT devices based on the code similarities.
+34:06
+So what do you see here? Right, you see like three or even four different
+34:11
+malware families with overlapping code patterns. It's like a milkshake of all
+34:16
+the malware together. And this is you know like you start thinking this is
+34:21
+like either a share code the same developer or someone who studied this samples or families very closely right
+34:29
+either way if you have detections for for example [ __ ] or Roto Jakira you
+34:35
+probably already have detections for peer blight. So, uh, yeah. So, that that
+34:41
+was me yapping about malware here. And you probably wonder now like we, you
+34:46
+know, like how do we stop re this like from, you know, even happening, right?
+34:51
+Like how do we like detect uh the exploitation? So, this is where Craig
+34:57
+comes in here. He's our wizard of detection engineering and he's going to share some tips on how you can detect um
+35:04
+yeah the reactive shell exploitations. Thanks Anna. I'm definitely not a wizard
+35:10
+by any means. Um [clears throat] but here at Huntress we do try to stay proactive uh and try to get detections
+35:18
+in place uh that catch activity before uh something like a zero day uh
+35:25
+exploitation happens at scale. Right. Um, thread actors usually um,
+35:31
+[clears throat] weaponize PC's very quickly after they're released. So, this one was
+35:36
+released end of November and then we saw exploitation early December uh, at
+35:42
+scale, right? Um, luckily the threat actors didn't have the
+35:50
+most I'll say um, evasive uh, techniques that
+35:56
+they did. Um they uh they mass sent out uh similar commands uh to Windows and
+36:05
+Linux host at the same time too, right? Like they were not um being very selective on uh how they targeted these
+36:12
+systems, right? So um yeah, luckily uh they did stuff like who am I? I think everyone likes to make fun of who am I
+36:18
+and how uh it's an easy way to catch threat actors. Uh so luckily we saw that
+36:24
+quite a bit. Um, and that was I want to say that was one of the commands that
+36:29
+hit almost every Windows system that we saw, right? So, luckily um wasn't too
+36:36
+crazy uh from that regard. Um
+36:41
+yeah, uh never asked how am I. Yeah, they never they never ask how am I for sure. Um so
+36:49
+we saw similar activity to uh other uh orgs such as unit 42, Amazon whiz um and
+36:57
+a few others. Uh we released a few sigma rules uh which are included in our blog
+37:03
+if anyone wants to look at those. Also um there's about three Y rules in there as well for anyone who's like worried uh
+37:11
+that their systems are compromised and they want to you know check to see uh if they're clean, right? Um but through and
+37:18
+through this um was not nearly as bad as some of the other um exploits such as uh
+37:25
+log forj or something that uh we were kind of worried about at first. Uh seeing CVSS 10 uh is pretty scary and
+37:34
+you are uh kind of worried that uh systems are going to be affected in mass. Uh so luckily that didn't happen.
+37:41
+Um there wasn't much lateral movement or anything. Um and not much persistence as
+37:46
+well. So luckily this uh was able to kind of be
+37:52
+nipped in the bud. I think it's still being uh you know used by thread actors. Uh we've
+37:58
+seen a few things in the news lately, but um this could have been much worse. Could have been much worse. So
+38:06
+um that's about it from me. Uh, Michael, if you want to
+38:13
+Yeah, I can a little more about those. Yeah. Yeah. The Y rules if you want to.
+38:18
+Yeah. The uh real quick, one of the one of the more interesting things I think we weaponized kind of very rapidly um
+38:25
+for kind of understanding and triaging these systems at scale was actually like the scanning activities fromerts. Um
+38:32
+being able to like look and see kind of these like math PowerShell statements. that aren't really doing. Oh yeah.
+38:37
+But like going through and using those to identify some of these vulnerable systems was actually pivotal in kind of
+38:43
+how we triage and look for more information coming down from these. I think it in most of the systems that we
+38:50
+saw there was always kind of that thatert or computer emergency response team cyber security emergency depending
+38:56
+on where you're at. um that that activity helped us very rapidly kind of scale this up and and
+39:03
+presented one of the best detection opportunities I think we saw.
+39:08
+Yeah. Yeah. Um yeah, very very different than normal. So uh it's kind of easy to
+39:15
+uh create detections from that. Um we created quite a few on the spot and we're able to catch quite a few things.
+39:21
+Uh a lot of thread hunting going on uh early early December.
+39:29
+Um, I think that's it. All we have for
+39:34
+I think that's about it that we can kind of share. I would love to share more, but you know, we kind of got to keep that close to the vest if we can. So,
+39:43
+uh, so I think that, um, now is the time to involve kind of that internet
+39:48
+broadscaling expert perspective. Bob, what do you got for us? What do you think? Wow, that's no pressure at all. So, it
+39:55
+was a great question. So, how fast did threat actors take this up? Uh, I kind of want to tell a little story about the
+40:01
+beginning of this because we yeah you everybody got wind of it like I I am
+40:07
+thankful that the big players got protected because this could have been devastating if they didn't tell the big players about this and there was a
+40:15
+little bit of time delay because everybody was working on figuring out exploits for those things. And the first thing I just wanted to note to
+40:20
+everybody, so we our security research team has been dealing with something
+40:25
+we've been called, we've been calling slop exploits for about 8 to nine months now, which is just ab abject morons who
+40:34
+are using AI to try to craft exploits and they're broken. They're and they're either they're they're either researchers or they're bad people,
+40:40
+whatever. But they don't work and we have to we have to sift through the proof of concepts to see if they work or don't work. So kudos to my team for
+40:47
+putting up with that garbage because they did that. But we have great research partners like y'all and a bunch of other ones. And uh by the time this
+40:53
+was ready to be handled, we had a great detection rule in place. Uh and this was
+40:58
+before the exploitation started. We also managed to get uh a bunch of completely vulnerable uh Nex.js systems running as
+41:06
+well too with this one. Uh completely with ability to kind of do the artifacting on the back end as well. And
+41:12
+uh for folks that have listened to me on my storm the storm march podcast that we intermittently do like I sleep sleep and I don't have a great relationship right
+41:18
+now. And um so I was actually up watching our platform when I saw the
+41:23
+first thing hit and then I saw literally I I forget the name of the Japanese poster with the wave but then like that
+41:29
+Japanese poster wave just boom on top of it for there. And uh it it was it was
+41:35
+really I mean I wasn't glad to be awake but I was glad to be at least I had something to do for this particular one. And uh so the exploitation was
+41:41
+absolutely massive and I I don't want to like go through like boring timelines with folks because we actually have a lot of this out documented on the blog
+41:48
+but the so my fear initially like you all said was is this going to be another log for Jay and like please dollar
+41:55
+dating no not like and it isn't it isn't another log for Jay for lots and lots of reasons which we're not going to probably cover today but what it is is
+42:02
+this this was a great um collection uh zoo for us to be able to to collect
+42:08
+things. So, as of So, we did a blog post update the other day and as of a couple days ago, it was 8.1 million sessions.
+42:15
+So, 8.1 million. It's actually a little bit more than that cuz some of the sessions were HTTP2. So, they snuck a couple payloads in at the same time, but
+42:21
+it's about 8.1 million payloads slung our way. That number is up to 11.2 million as of today. I kind of checked
+42:28
+on there. We see like 300 to 400,000 sessions coming a day from this thing. And I just let everybody know there this
+42:35
+is the one of the big differences between this and log forj is like we we're seeing we're right about to get to
+42:40
+10,000 total IPs overall over time slamming the internet probably DHCP and cycling through um
+42:47
+infrastructure and hosting providers that pales in comparison to log forj. So
+42:53
+everyone like everyone kind of like went fast they all tried to take ground. and they all tried to find what was out
+42:58
+there and the and they they then they kind of just stopped and honestly 50% of that 400,000 sessions we see a day come
+43:04
+from two IP addresses in Poland right now. So if you're in Poland go find those two and you know be added to them because it's not great. the uh and so
+43:12
+the the other thing that so we I I talked about the slots exploits because I wanted to mention that so AI AI was
+43:17
+used for some part of this and just causing havoc and confusion at the beginning but so we we all these
+43:22
+payloads came in and uh so in the blogs that we have there it's a link to our GitHub if you want the payloads they're
+43:28
+there we actually gave away all of the thread intel for this so you can dig into the payloads we actually built a payload explorer app that explains what
+43:35
+a lot of the payloads are and what they do and how they actually work uh we collected and and we stopped because we
+43:40
+actually have real jobs than just watching react to shell. So we stopped at about 300 unique malware samples. We
+43:46
+did we we did the whole collect you know um blow up and like see what they did in virus total. So we like they're they're
+43:52
+cycling through the the ability to change the the variable of of what's what's going on on on the bits for the
+43:58
+malware. And um we decided to do a couple things. So, uh, thanks to Census,
+44:04
+the one thing I started to notice we saw is that there's like and like I we're not going to go into too many details, but there's a attackers are using all
+44:10
+the stuff that we let them use like and whatever we're using, they're going to use. So, they're using open source frameworks for doing room management.
+44:16
+Well, they they they deployed a bunch of those onto there and then they enlisted those into so we were like, is this
+44:21
+going to become a worm? It's like, nope, no worm because no, there's not enough of them. Nobody cares. It's not going to be out there. And and then we're like,
+44:28
+okay, so like now that we have all these payloads, so the one so you saw the proof of execution, like that was the simple addition, the simple math that
+44:34
+just to see is this thing vulnerable. My goodness, the the number of calculators being used out there for this was
+44:40
+insane. It's like it's easy to throw those away. Everyone everyone was doing it both like both attackers and people
+44:46
+were just kind of trying to poke around the internet. But yeah, and you guys you guys saw all this too, like every single conceivable piece of garbage, useless
+44:52
+botnet malware dropping on these things was was was being just willy-nilly thrown into it. Now, what I did
+44:58
+appreciate was like people did try to like mix up how they got the system command executed. I was I was pretty
+45:04
+cool and uh the the you know, the use of the the O domains, you know, the the the well-known autoband stuff. It was it was
+45:10
+not as ubiquitous as I thought it was going to be, but it was okay. That's fair that they get little props on there. But then we're like, what are
+45:17
+these giant payloads? So like the for folks that haven't had to do this before, you try to make the stuff as as
+45:23
+unnoisy and as so as silent as possible and as small as possible to evade detections. Now most of these things had
+45:29
+no detection software on them anyway. But we we saw these giant giant payloads coming at these things and I'm like,
+45:35
+what are they? So, we ran uh we developed a couple models to do some clustering and there's a blog post that
+45:40
+I just enjoyed every single character I penned on that blog post because it was a bunch of idiots using AI to try to
+45:48
+code exploits. So, they're wonderful, fully commented, beautifully indented
+45:55
+uh going through and it's like holy I can't. So, people are using AI idiots.
+46:01
+Okay, these aren't the sophisticated ones. These are just idiots. And I I that's why I love it because I get to be so mean to these these idiot folks that
+46:07
+are trying to do this stuff on the internet. But it's worth going through that blog post because you get to see that's definitely AI. Oh, is this AI
+46:14
+assisted? And someone actually did it. And then some folks just Oh, and there was also this other set setup too that I
+46:19
+have to I have to tell folks because I I actually saw it play out in real time as I was going from session to session to
+46:25
+session. So there was a bunch of folks who were actually live they were they were typing their own exploits and they
+46:32
+spelled wget wrong or they spell curl wrong and I could just hear them sling the exploit. It fails. They look at the
+46:38
+code and they go crap and then they try to get it right again and they spell it wrong again and then you can like I'm
+46:44
+not going to use exploit because don't do that but like they keep doing that and it was like oh I'm glad they got frustrated so bad for these things. It
+46:49
+was it was really good to see them do that. Um, so it was just a wonderful like little contained ecosystem of
+46:56
+seeing what like the mid to low-level like attacker space is out there like and I I'm I'm a little encouraged by it
+47:02
+because a they're noisy, they're loud, it's the same as all the other garbage on the internet. The ones using AI have
+47:07
+no idea what they're doing. So we got time we got time for that. And you know the ones that are just trying to do it
+47:13
+themselves and learn like they're screwing up and they're they're as they're as inept as the other ones. The bad side of all this is that's what we
+47:19
+saw because like we're not like we didn't have a huge like so we will sometimes run deception campaigns where we pretend to be companies and looks
+47:24
+really cool and whatever. This was can we get a vulnerable next.js thing before people hit this thing done it because we knew they were going to do it. So we we
+47:31
+got the opportunistic stuff on here but think of all the domains like so all the like if you go to the common crawl you
+47:36
+can identify servers running next.js from the common crawl with actual real domains. So no real attacker, like a
+47:43
+really good one, no nation state, no organized crime, none of those folks had to come to me, come to my come come to
+47:49
+my fleet to hit anything. They could just go right to those servers. And so so the to the thing about like we
+47:54
+haven't heard a lot of downfall yet for this particular thing. I'm kind of waiting for this month in California. So
+48:01
+in California, the at the beginning of the month, a brand new breach law came into effect and they got 30 days if they got if they got hit with this to tell
+48:07
+anybody about it. So I'm watching all the forms and boards for those things and I think we're going to see trickle
+48:12
+in over the course of the next few months legitimate organizations say hey yeah this thing got in and it did stuff
+48:18
+and and it is what out there and there's going to be about 20,000 hosts that are in that permavone category where everyone's fighting over them like they
+48:24
+do fight over every piece of garbage on the internet as well too. So I had a lot of fun with this one cuz like it wasn't
+48:30
+doing a whole lot of damage. Oh, I guess the thing is like and the vibe coders, bless the vibe coders because they just
+48:35
+gave servers to these people to go hit too because React is the fave thing to create for every single vibe coding
+48:42
+thing that happens out there. So vibe coding was actually a fairly big reason why there was as many vulnerable hosts
+48:47
+on on the internet as well too. Um so I really enjoyed this. I enjoyed writing every blog post. I really enjoy getting
+48:52
+permission to share everything with everybody so that you all can learn uh from these things. So go grab the IOC's,
+48:58
+go grab all grab all the things cuz and ask questions like our team, my team loves to ask qu loves to answer
+49:04
+questions. So if you have any questions about any of the stuff, we'll be glad to answer any of those things too and kind of show you how all all that stuff works
+49:10
+if you need to. Yeah, thanks for that uh that
+49:15
+perspective. It's it's really cool to see kind of how like what we're seeing aligns with kind of that broader
+49:21
+internet activity and where like it just kind of fits in as a piece of the puzzle like uh kind of some of the the crux
+49:28
+about being like an MDR kind of this uh this protective sphere is that we'll
+49:34
+often stop attacks before they ever actually evolve into any sort of like tradecraftraft. So we we can often
+49:39
+mitigate a lot of this before we ever actually see things like ransomware, things like um you know people have
+49:44
+thrown out like sliver um you know various other C2s. And so kind of seeing
+49:50
+how that all fits into the like the vibe coding um broader stuff that they're throwing at
+49:56
+here is is definitely pretty interesting. So, I think unless anybody else has
+50:04
+anything else, uh, we're going to skip the poll because I think we're running a little low on time. I wanted to
+50:10
+we can linger on that slide actually. So, nobody's scanning random QR codes. I wanted to open it up if anybody has any
+50:16
+kind of parting thoughts, any uh any last minute questions. Uh, you're free to use the QA and Q&A feature and we
+50:23
+would love to kind of answer what we can there. I know that uh Sharon asked what kind of post exploitation actions have
+50:29
+been most common. Um the truth is a lot of this we were actually able to stop before it got very far. Um if if you've
+50:36
+ever looked in like kind of like web server logs or kind of any of that stuff, you're going to see that a lot of
+50:42
+this is is really easy to detect because it all hits the same as uh Anna kind of alluded to earlier like Marai and stuff
+50:48
+like that. Those those big botn nets um a lot of it looked exactly the same.
+50:55
+Uh, Matthew asks, is this a broader trend with software supply chain compromises?
+51:02
+Yes and no. Right. So, React can be introduced through um some of some of
+51:07
+your dependencies through that kind of that like, hey, you know, I'm I'm running this uh this vendor application or something and suddenly I have a
+51:14
+vulnerable React server and it was, you know, it not super critical, mission critical or anything like that, but you
+51:20
+know, you're running a compromised web server now. So, that's not great. Um, but
+51:27
+I mean as far as uh like software supply chain compromises go, this isn't this isn't necessarily malware in the supply
+51:33
+chain. It's just an introduction of a vulnerable kind of dependency. Um,
+51:39
+so
+51:48
+any other questions? Awesome.
+51:56
+So, if you guys do have any questions, feel free to kind of reach out to us and um you know, uh I think everybody's
+52:04
+pretty public on Twitter and whatnot. Um so, you could probably hunt us down uh willing to kind of field anything. I
+52:10
+think a lot of us felt pretty impassionate about the research that we put in here. I know Anna, um where in
+52:16
+the world is Huntress these days? Can we get an AT rundown? Okay, cool. So
+52:22
+yeah, uh you can find me on Twitter at uh pseudoorem pseudo_rem. Pseudo like
+52:28
+the Linux command and rem like RDM. Um Bob, if you want to plug your socials
+52:33
+quick. Yeah. Um so it's at it's GRO is on all of them. You can find them. I think everyone knows that they are. I'm at
+52:39
+harbormasterdon.social because that's the only sad place that I live these days.
+52:46
+Uh Craig, you can find me on social. You can find me on LinkedIn. uh which and I'm not there very often, but I'm
+52:53
+there. So, um what is my LinkedIn
+52:59
+that? So, yeah. Um I think that's going to conclude our episode of Tradecraft
+53:05
+Tuesday. Make sure you guys join in next month. You can scan this awesome QR code and pull it up and um take you right
+53:11
+there. Uh but that'll be February 10th right now at 10 p.m. Eastern time.
+53:20
+I think right away. Thank you guys for joining. I think we're going to all grab
+53:26
+strawberry milkshakes, right? [laughter] So, or chase the Sasquatch.
+53:33
+Yeah. All right. Thank you everybody for coming. We appreciate uh your
+53:39
+attendance. Uh everybody have a wonderful day. Thank you. Bye.
+53:44
+Take care.
+

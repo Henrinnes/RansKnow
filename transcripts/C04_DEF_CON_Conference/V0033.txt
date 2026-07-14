@@ -1,0 +1,798 @@
+0:00
+So I'm here to introduce our speaker uh Dr. Bramwell Brunzine um with his talk
+0:06
+can't stop the rap automating ASLR. I am extremely excited for this talk. So
+0:11
+would you all please help me welcome him. [applause]
+0:20
+Alrighty. Welcome welcome. Thank you for coming to my talk. the first talk uh in
+0:26
+a while that I've actually had full control of my voice. The last few I've had severely affected u vocal quality
+0:33
+from uh my voice being ravaged. So in any case, uh my name is uh Bremo
+0:38
+Brzendine. I am the director of the Verona lab at UAH and also an assistant professor and uh creator of various
+0:46
+different tools including uh the shell wasp which allows us to utilize Windows SIS calls and shell code. uh the job
+0:53
+rocket allowing us to do jump oriented programming and drop rocket for return oriented programming and an NSA funded
+0:59
+uh shell code analysis framework um shar funded with about $300,000
+1:06
+uh a speaker at various uh conferences black hat hack in the box virus bulletin
+1:12
+uh PI on different grants from the uh NSA and more recently uh DLD uh I do
+1:18
+have a PhD in cyber operations which is a highly technical degree dealing with reverse engineering malware analysis and
+1:23
+software exploitation. So now that we have all of that uh out of the way, why why should you care?
+1:31
+What is the the big selling point of this talk? And really the answer to that
+1:36
+is ASLR is the crown jewel in the
+1:41
+arsenal uh for Microsoft in terms of defending against memory corruption
+1:46
+bugs. So if you're using applications that are made in a non-memory safe language, this is extremely highly
+1:54
+highly relevant. So high entropy ASLR is hopefully supposed to def defend and be
+2:00
+very resilient against these attacks. But the reality is it's not. It's a significant design flaw vulnerability
+2:08
+that allows us to do some some things that we probably shouldn't be able to do, but yet we can easily do. So uh in
+2:15
+my testing I've achieved 100% success uh on the different uh OS builds that we
+2:20
+tested it on and I we expected nothing less. What this talk is going to give us we're going to have a mini tool that
+2:26
+we'll release and actually released about 3:00 a.m. uh part of the drop rocket tool and also have a demo. So
+2:34
+some things to look forward to. So why did I do this work in the first place? Well, I saw that there was a bug bounty
+2:39
+uh listed on Microsoft's website uh valued at 5,000 to 15,000. And I thought, well, you know, I could do
+2:45
+this. I looked at the scope, um, what was in scope, what was out of scope, and it seemed like something that I could
+2:52
+easily do. And so, uh, that was the motivation for this work.
+2:59
+So, a one page one page slide u crash course into ROP. What is it? is really a
+3:06
+way for us to have bits bits of executable code chained together allowing us to then overcome a
+3:12
+mitigation such as data execution prevention or address space layout randomization. If we can do that then we
+3:18
+can then execute our shell code or or achieve our arbitrary computation. So
+3:23
+these are highly super super relevant uh ASLR it's been around for a minute or
+3:30
+two. So first came about in 2001 with PAX
+3:35
+uh 2004 we figured out you know what um we need more entropy than 32bit because
+3:42
+if we don't then we can simply do brute forcing attacks. Um it took a little
+3:48
+while for Microsoft to uh make use of ASLR but they eventually came around to
+3:53
+it. More recently, what's been most fashionable and all the rage has been
+3:59
+different side channel microarchchitectural uh attacks. So, some really superb
+4:05
+research on uh some of that uh right now and we're skipping through some of them
+4:11
+just in interest of time. But, uh and then the last there is this universal ASLR bypass which is really a an
+4:19
+enhancer or a multiplier to a pre-existing vulnerability.
+4:27
+So, some classic approaches to an ASLR bypass, and this is not 100% all-incclusive, but one could be a
+4:34
+memory disclosure bug. So, we might have something like a use after free. We have some particular value that's being displayed, maybe printed to a screen. We
+4:41
+free that. We then maybe cause that particular memory location to be overwritten with uh something of the
+4:47
+same size. And then when you go to display it again, hence the use after free, then maybe you disclose something
+4:53
+like a function pointer and then from that you can extrapolate and determine the base address.
+4:59
+Other things um page spraying, heap spraying, uh brute force attacks, those
+5:05
+used to be highly effective, uh and then to a lesser degree, but with high entropy ASLR, the entropy is just too
+5:12
+great for those to to really be feasible. Uh if you go back much further, uh simply just using hard-coded
+5:18
+predictable addresses if you didn't have um ASLR. Uh so I guess that's not really
+5:24
+a bypass. [snorts] Uh our approach here is um
+5:30
+we need to have one existing vulnerability. So if you don't have
+5:35
+something like say a memory corruption bug, then this is not going to work. Uh
+5:40
+you need to have the ability to execute rot gadgets. So, uh, if you don't have that, if you don't
+5:47
+have the ability to use ROP, then this will not work. So, we're targeting 64-bit windows and in particular high
+5:53
+entropy ASLR and we can have force relocate enabled as well. And our goal is to get the base address of system
+6:00
+DLS. Um, in this case, we then have effectively bypassed ASLR and we now
+6:07
+have access to those and we can easily readily use them to massively expand the
+6:13
+attack surface. And we need to have a payload size of sufficient um size.
+6:20
+The benefits to the attacker massively expanding the attack surface. So maybe
+6:25
+you have a small application and there's just really not enough to to really do much. But with this you now have the
+6:31
+ability to um potentially add thousands of additional gadgets and that can then
+6:38
+enable you to do something more substantial. It is portable across binaries meaning that this general
+6:43
+approach you can take it and apply it to hopefully any Windows binary. It's not
+6:49
+tied to a specific application that happens to be vulnerable. Hence the universal ASLR bypass and the title of
+6:56
+this talk. So this does make use of the process environment block the PB. I'm sure a lot of you are familiar with that
+7:02
+and it's something that's easily readable from user mode. Uh there are some common ways to disclose that that
+7:09
+we'll get into but there's also some rather uncommon ways as well that I think will probably be surprising and
+7:16
+interesting to to most people though not necessarily everybody. [snorts] So we'll go through all of them and uh this
+7:21
+technique can make use of any of them. Uh but we'll start with the most sus. Um
+7:28
+so in this page right here we see the the tab being displayed the threat environment block and so that can be
+7:33
+pointed to by the the GS segment register and then at offset 60 is going
+7:38
+to be located the process environment block. So if we have the ability to access the GS register then we can
+7:45
+easily uh access that. And then if we don't that's fine. There are other ways we could obtain that as well. So the PB
+7:51
+is defined as a as a structure. Um one place that is defined is you can see the Windows internal header file. Uh you
+7:58
+could also view that in tools like wind debug and see some some more of those
+8:04
+reserved. Um in this particular thing here we see reserved one two reserve two
+8:09
+one. Um but if you view that in window debug you can see the the actual titles of all of those. Um but in any case our
+8:17
+goal our general approach here to this is firstly we somehow we need to obtain the PB. There are many ways in which we
+8:24
+can do that. So the most common easy way to do that would be the GS segment register at offset 60. We saw that that
+8:31
+points to the process environment block. If we can do that great. Uh if we're doing it in a 32bit then that would be
+8:38
+FS30 would hold the PB. If we're doing WOW 64 and we want to access the PB, you
+8:44
+could do something called Heaven's Gate, where you transition from 32-bit to 64-bit mode, which is really very uh fun
+8:50
+and interesting to to observe. Um, and in that case, the R12 would hold a
+8:56
+pointer to the TB and then you could use that to then go and obtain the PB. Uh, and some other more interesting ways,
+9:03
+uh, Windows SIS calls, we can use them. We'll explore those. And then RDG
+9:09
+uh RDGS base is another uh less familiar way that we we will explore. We need to
+9:15
+have a way to reach the PB LDR data. We'll check that out. And then we can
+9:21
+choose one of three doubly linked modulus and then we'll follow the flinks
+9:26
+um a set number of times based on the general approach that we follow. And then finally we will obtain the DLL base
+9:33
+which will be a field that will be uh available and accessible. So we'll go into great detail momentarily. Uh but
+9:40
+first let's take a look here at an example of how we one way we could uh leak the PB. So in this case uh it's a
+9:46
+very ugly kind of nasty looking uh gadget. And we see subrcx qword pointer
+9:53
+gs rsi plus some big number. So what we want to do is we want to have rsi be
+9:58
+equal to 60. I already have a big number there. How can I do that? The answer is simple integer overflow. So we just add
+10:05
+another really big number so that once you add them together they equal to 60. RCX we can set that to zero and then the
+10:12
+result will be a negative value in two's complement form. And then we can then do uh n
+10:19
+rcx which will then restore it to its original form and that will be the pebb.
+10:24
+uh we also have to make sure that the EAX register is set to valid memory and then the pop and the red 10 we can
+10:30
+easily compensate for those with filler. So going back more to the specifics of
+10:35
+our approach here we have nine different variant approaches targeting three
+10:40
+different DLS. So in any particular Windows application or almost a vast majority of them except for really tiny
+10:47
+minified applications but in any real world application you will always have these three DLS loaded and depending on
+10:54
+the particular uh module list that you make use of they will be loaded in a preset order. So we can manipulate and
+11:02
+use that and this is a a table that I created. So we can have the number of different flinks that are indicated
+11:08
+showing um the the steps that we would take. So
+11:13
+these are double linked module lists. So essentially we have a module list it'll have a forward link pointer uh and then
+11:20
+a backward link pointer. So if we take one uh flink then that takes us to the next one to the next one etc. And then
+11:26
+the offsets for u the the list and the DL base um those can vary. You notice
+11:33
+that all of them you add them together, the sum is always going to be 40. Not that that's super relevant, but just
+11:38
+kind of interesting. So, what we're going to do is going to do a case study of one of these approaches, and we go into super great
+11:45
+detail. And um the others are similar, but just slight differences in terms of
+11:51
+uh what you're pursuing. Um and then this is something that we'll
+11:56
+also see that can be fully automated by the tool. So it will generate all the rot gadgets and we'll see that
+12:02
+momentarily. So here was a a handwritten script to get kernel 32. And you notice these are
+12:08
+all really basic simple gadgets. We're not using anything unusual like uh move dreference some um offset. We can have
+12:17
+one move dreference gadget and uh a lot of flexibility. And so the it's really
+12:23
+designed to be very uh simple and basic gadgets that are easily readily
+12:28
+available on binaries. Uh in terms of capturing the PB. So in
+12:34
+this case we're doing it with a leak in the GS register. We can look in wind debug and we see okay RDX what is there?
+12:39
+It's the PB. We can verify that with the bang PB and then we need to add a distance of 18. That will then allow us
+12:46
+to reach the the PB LDR. We can add that. Uh, in this case, we're adding
+12:51
+we're popping that into one register and then doing uh adding the two registers together. If we don't have the ability
+12:57
+to add registers, not a problem. We could also do something very simple. For instance, uh 18 increments, very easy
+13:04
+common gadgets to obtain. Um, and then we can then dreference that we get the LDR location. So, we're basically
+13:12
+traversing window structures here. And then we want to reach the initialization modulus. And so in this case, we're
+13:18
+going to add 30. We can consult that little table that I showed you earlier.
+13:24
+And uh once we do that, uh we can then obtain the LDR in an initialization
+13:30
+order modulus uh location. And then we can follow that uh that'll be returned
+13:36
+to us in RBX. So we complete those uh ROP gadgets that you see uh on the slide
+13:42
+there. And then now it's following the flank. So we get to our first flank and
+13:48
+what that is pointing to is simply another flank and that's pointing to another flank and that's pointing to
+13:54
+another flank. And so we can easily traverse that just by simply taking one
+14:00
+dreferencering it getting that address and then dreferencing it until we get to the location that we so desire.
+14:07
+Um so we can our initial one that was on the previous page can take us to NDL flink. We take another uh move
+14:14
+dreference getting us to the kernel base flink. And then finally a third dreference will get us to the kernel 32
+14:22
+module list for an initialization or I'm sorry the entry not the module.
+14:29
+[snorts] Um and then within that structure there's a field called uh the
+14:34
+DLL base. And so that is really what we what we're focused on. If we can obtain
+14:41
+the DLL base that gives us the base address that means we can take that base address and that's the ASLR bypass. So
+14:50
+we can then from that utilize simply offsets. So we're going to proceed
+14:56
+forward and we see that uh once we capture that we get that into RBX we
+15:02
+dreference that we can check we can do the LMF command and window bug and we see clearly okay this is kernel 32 we
+15:10
+have obtained our ASR bypass. Um another view from the the window bug
+15:17
+there we check in RBX and it maps out. So the kinds of gadgets that we can use
+15:24
+again this whole approach is we're taking um trying to take something and make it
+15:30
+simple and easy to do with ROP. We're not writing shell code. We're not writing um malware with inline assembly
+15:37
+where we can just use whatever we want. We need to use it with commonly available gadgets. So we need some way
+15:43
+to leak the PB, some way to add offsets. It could be a series of increments and
+15:48
+then some way to dreference. Now the registers being used does not matter not important. Uh and we can have a single
+15:56
+dreference gadget. We can use it multiple times and it could also be exor dreference or add or sub dreference.
+16:03
+We can work with any of them. Uh some way to load load a value whether it's popping or integer overflow or negation.
+16:10
+Lots of opportunities. So what are some alternative routes? So,
+16:16
+a lot of you may know about the GS register, but let's check out some of these less common ones because you know
+16:21
+what? Not every binary is going to have a way to leak the GS register. So, can we can we proceed forward without that?
+16:26
+Absolutely. So, two different sys call roads or paths to get to the PB. One is NT query
+16:35
+information thread which will give us gif wrapped the t pointer and nquery information process which will then
+16:43
+return to us the pebb. So we got to set up those uh CIS calls. Um so the first
+16:50
+one NQU information process how specifically do we set that up? So we
+16:56
+just simply follow the x64 uh system calling convention but with some minor twists that we'll get into. So into RDX
+17:03
+we can provide zero which will specify the uh process basic information. uh R8
+17:09
+can be any uh memory that is writable does not have to be um you can use
+17:16
+multiple gadgets to do that could be the stack really doesn't matter and then R9
+17:21
+we want to provide the size of the process basic information structure
+17:26
+um R10 we want to do negative one so that's going to be 16fs
+17:32
+and then the sys call um system number the SSN we will provide 19 and I'll talk
+17:38
+about that it momentarily [snorts] and then in some way to invoke the sys call a sis call uh gadget and then after that
+17:45
+we'll get into eax or rax uh n status code zero which stands for slk and then
+17:52
+we can then go and retrieve the pbase address which will be located from that structure we created but it'll be at
+17:58
+offset 8. So the SSN it's a Windows SIS call. How
+18:04
+can we deal with this? Some of some of you know that with Windows SIS calls there can be challenges. You need to
+18:09
+dynamic dynamically resolve the SS in because um it can change from one OS
+18:16
+build to the next. And that is super true. So we may have techniques like you know cis whispers, hell'sgate, halosgate
+18:23
+etc. But if we do our information gathering, we determine, hey, we're targeting Windows 10 or 11, then in that
+18:30
+particular case, um it's completely stable. It's the same SSN for all of them. So, we could actually ignore that
+18:37
+step. But if you wanted to also target Windows 7 or other earlier versions,
+18:42
+then that could be something extra that you could add to to do that. So, the structure for the process basic
+18:49
+information, you can see that uh provided there for you. And then the one we care about is the PB uh address or PB
+18:56
+base address at offset 8. So here's some inline uh assembly just
+19:02
+to kind of demonstrate the what we could do in order to obtain this. So we can set uh RDX to zero by zoring it
+19:09
+together. we provide a memory address uh RSP50 and then in R9 we're providing our size
+19:18
+and then R10 we are providing negative -1 and you might say well the calling
+19:23
+convention is you should do that in RCX but because we're doing CIS calls what's
+19:28
+going to actually happen is you have a native API wrapper and that will just simply take the RCX value move that into
+19:36
+R10 so we can skip loading our um RC CX, it's not necessary. We can instead just
+19:42
+load the value directly into R10. And if we don't do that, it's not going to work. Uh, and there's also a fifth
+19:47
+parameter, the return length. Guess what? It's optional. So, we can just simply ignore that. And that's true for
+19:54
+both of these SIS calls. The SSN, we can provide that directly. And then we have uh a SIS call value or SIS call
+20:01
+instruction there. Once that's done, then we can simply retrieve that at offset uh 8 from that structure that we
+20:07
+provided. Um so this again we'll see this in rot form uh momentarily u from
+20:13
+the tool that'll automate that process. We can check that out after we do it. We do the bang p we compare what we have in
+20:20
+rax does it match? Yes it does. So totally works
+20:26
+in tquery information thread another sys call that can work very effective and
+20:32
+also very similar some minor uh changes. So zero is going to specify the thread
+20:37
+basic information structure. Again any writable memory is adequate for our R8
+20:43
+register. R9 we can provide the size of that structure. And then within R10
+20:51
+again that is going to be u the handle in this case it's going to be -2 which
+20:56
+is going to be the the current thread and we'll provide that in two's complement form.
+21:02
+uh the SSN and we can provide that directly and then the sys call instruction we can do that cleanly with
+21:08
+a nice sys call gadget and once we get the the result where we get the tab so we'll have a couple extra steps we'll
+21:14
+need to also then add uh 60 to that and then dreference that
+21:20
+the SSN same situation same story we don't need to resolve it if you're doing
+21:26
+Windows 10 or 11 if you want to include other ones then that you would need to have um utilize a technique to
+21:33
+dynamically resolve the SSN. So we could check out the uh inline
+21:39
+assembly uh form of that. We set RDX to zero. We provide a a buffer for our
+21:45
+structure. We provide the size of that into R9 and then the SSN of 25. That's
+21:53
+how we specify this is the SIS call that we're using. We don't have to worry about resolving any addresses for SIS
+21:58
+calls. We just need the SSN directly. We add the -2 and the the two's complement
+22:04
+form there. We call the SIS call and then whatever location we provided as
+22:09
+the memory. Uh we can then go and retrieve that at offset 8. So again very similar to the previous one. We can
+22:16
+execute it check it out in a window bug and we get a particular value. We do the bang t and it matches. And then there at
+22:24
+the bottom circled in uh silver, we can see the PB address. That's where we want
+22:30
+to get to eventually. So we can simply add 60 to that because offset 60 of the
+22:36
+the TB points to the process environment block. So uh in this case you can see there we're just doing rax plus 60.
+22:43
+Later on you'll see that in rot format uh generated by the the tool.
+22:48
+So another uh option and this is one that probably most people are not familiar with is RDGS base. It's an
+22:56
+actual assembly instruction. So you could provide it RDGS base RAX. It's going to return the address of the tab
+23:02
+directly into RAX. So that would be very effective if you were writing say shell code or malware and you wanted to you
+23:09
+know resolve the base address of uh a DL. If you're doing it with return
+23:15
+oriented programming, you know, we have to look at what are the gadgets that will be found. This may be too obscure
+23:22
+to be commonly readily available as a gadget. Um, so we also want to acknowledge uh Sino who made this public
+23:29
+for offensive use in 2024. We can check this out in wind debug. We
+23:35
+execute it very simple gives us the uh tab very easily and then we can add 60
+23:43
+to that and once we do that then that gives us um 2ac 0
+23:51
+and that checks out is uh the pb there.
+23:56
+So another option, what if those four things do not exist? Could we still do this via ROP? And the answer is yes, we
+24:02
+can effectively synthesize our own ROP gadget. For instance, you could synthesize RDGS base. So if you have the
+24:09
+ability to write uh bytes to memory, let's say for instance virtual allocate
+24:15
+virtual memory. I mean those could potentially potentially be blocked. But let's say we we have some way to do
+24:21
+that. then we could write that to memory and then we can then call that uh gadget
+24:26
+and then make use of it. Um it's a technique that we um made use of in our defcon talk uh last year on process
+24:33
+injection via return oriented programming. So let's check out the exploit demo. We
+24:38
+have a little video here. So let's hope I'm sophisticated enough to operate this.
+24:56
+Wrong video.
+25:02
+Okay, there we go. So, we have the leaked PB uh right there.
+25:07
+And we're going to verify it with a bang PB command. And uh I pause it. up. We can load the
+25:15
+LDR offset there. And now we have the LDR address there.
+25:20
+We can continue on. Now we want to set up uh getting the LDR uh in load memory.
+25:26
+And we got that. Now we're following different flinks. And at this point, we want to add 30.
+25:32
+And that will then allow us to reach the DLL base. And we add that. Now we have the DLL
+25:38
+base. Uh we're about to to to get it momentarily.
+25:43
+And we see that that is uh looks like it. Now we have the ASLR bypass. We've
+25:50
+achieved it. So that simple. And we have the bypass.
+26:03
+So the reality is uh probably 99% of the time or greater this is going to work.
+26:09
+Uh if you have these RO gadgets, you set them up. I mean, this is a design flaw
+26:14
+vulnerability. Um, it's almost certain that it will work. I don't want to say
+26:20
+100% but very likely. Um, do we need to leak the GS register? No.
+26:26
+There are alternative ways as we explored. Um, do we always need or want to do this? The the cases in which you
+26:33
+want to do this is if you want to have it as a as a multiplier or as an an enhancer. You have the ability to call
+26:40
+RAW, but you need significantly more gadgets. You want access to some of these system DLS. If you can obtain
+26:46
+that, then that vastly expands your attack surface. So, you can do things
+26:51
+that otherwise you may not have previously been able to to do. So, some
+26:56
+possible mitigations, how could we fix this? How could we address this? How could Microsoft address it? Well, one is
+27:02
+to randomize the LDR data table entry different um insert unpredictable
+27:08
+offsets into that to break some of these fixed uh offset traversals. So you can't
+27:14
+just use these hard-coded offsets. Uh so it's unpredictable gaps. Uh this could
+27:20
+be uh done on a per process basis or just uh set up once uh each time you
+27:25
+load the operating system. Either way would be effective. And so in that case,
+27:31
+if you were to try to you use one of these fixed offsets, then it simply would not give you the the desired
+27:36
+result and it would break uh this approach. We could also have privilege PB access um to that. So block direct uh
+27:46
+segment loading and user mode that could be an option. Maybe we have a new SIS call that is a little bit more
+27:52
+responsible in terms of how it provides uh access to the PB or the TB and we could check uh things like what is the
+27:59
+control flow graph that led to that? Did we follow valid path or are we doing things that are kind of unusual
+28:06
+um so that would be a major uh architectural lift but it would eradicate this uh set of of bypasses.
+28:14
+Some other possibilities is pointer offiscation or encryption. So maybe we have encrypted values and so if you go
+28:20
+and obtain it um it's not enough because it's encoded. So you could use the
+28:26
+Windows uh API. It already has some pre-existing um things that could be used or just
+28:32
+simply even in something as simple as an exor key. So an additional step that
+28:37
+could be relatively simple to implement uh in my opinion [gasps]
+28:42
+but could be uh highly effective so that you can't just simply decode these PB values on the fly. We could also have
+28:49
+approaches like fine grained ASLR dynamic ASLR uh with um fine grain we're
+28:55
+going to shuffle um functions and even basic blocks so that if you do obtain a bypass it doesn't matter because the
+29:02
+other things have been randomized as well. dynamic ASLR where we have periodic rebasing. So you might it may
+29:08
+briefly be effective but then it's going to change and so it no longer is useful or relevant. So these would serve to
+29:15
+complement not to replace ASLR and we could also have execute only. So you could have that would implemented via
+29:22
+hardware support um making PB and loader pages uh non-readable.
+29:28
+Um how would the access be granted? that would be something that would need to be carefully determined, but it it could be
+29:34
+viable. Uh we could also simply enhance the the existing exploit detection. So
+29:39
+things like EAF and EAF plus have been around for a very long time. So we may add some additional huristics to that or
+29:46
+Microsoft could and so flag some of these abnormal list entry walks and um
+29:52
+it wouldn't prevent it but it could stop it from being uh effective. All right,
+29:57
+so let's dive into the ASR mini bypass tool. So this is built off of ROP rocket
+30:03
+and uh what it will do was everything that we talked about it can generate those complete RO chains. So if you
+30:09
+wanted to to do this and not have to spend the time to write the code, you simply use the tool. So it does it in
+30:16
+64-bit and it'll do all nine variants and it'll output it as Python. Here we can see a complete Python exploit
+30:23
+script. So it takes care of a lot of the mechanics there and we will zoom in on that uh here. So one way is the the PB
+30:30
+disclosure disclosure via the GS register. So we could set that up and obtain that and then it follows the
+30:37
+various uh steps and it does it by uh kind of a hybrid approach of semantic
+30:43
+searching. So we may say okay I want to load a particular value into this register. What are the different ways in
+30:49
+which we could do that? So it's not something that's just a simple hard-coded uh recipe, but there's a lot
+30:55
+of uh very rich flexibility that's possible. We can also do it via the RDGS
+31:01
+base uh the inquery information process and the NT query information thread. In
+31:07
+this case, to obtain our uh writable and readable memory, we have it set to a
+31:14
+particular location um relative to the stack. we use emulation to then calculate the the distance to that and
+31:22
+so we use that to provide the parameter and then later on when we go and um get that as our result and add offset 8 it
+31:30
+automatically takes care of that and does emulation to precisely calculate the what that's going to be so this is
+31:37
+actually a little bit more complicated than what I showed you um and again it's fully automated um sort of does it
+31:43
+through those four methods R the GS register RD RDG GS base and then the two
+31:49
+SIS calls and if you get the ROP gadgets from it then it should work. It should be
+31:55
+totally reliable if it provides those gadgets. So nine bypass techniques are supported
+32:01
+by the tool we have kernel 32 kernel base and TDLL and for all three of the
+32:07
+different module lists and moreover we implement them. So we actually have it'll generate not 9 but actually 9 * 4
+32:16
+which is 36. So we can do it for the GS register we'll get nine variants. We can
+32:22
+do it for the RDGS base for the niquery information process as well as the
+32:28
+niquery information thread. All of them will work and um we'll see a demo
+32:35
+momentarily but if you're interested go ahead and take a picture. It's going to be part of Rob Rocket. I updated at
+32:41
+about 3:00 a.m. this morning providing this additional uh functionality.
+32:46
+[snorts] So tool demo time.
+33:06
+Okay, there we go. So here's the tool. We're running it and right now it's generating all of those. It's going you
+33:12
+know it's 36 of them and it's very fast. Uh of course this can vary from application to application and whatever
+33:17
+the attack surface uh supports and also at the same time it's going to write it all to um to file. So uh obviously you
+33:25
+don't want to copy and paste from a command console. So you can take one of them and and make use of it. So a very
+33:31
+uh effective tool. So the disclosure timeline for for
+33:37
+Microsoft discloses this April 15th. Uh reported it to them May 2024. Um
+33:45
+Microsoft acknowledges the validity decides to to do nothing. That's kind of unfortunate. Uh Microsoft in July they
+33:53
+asked to meet during Black Hat and then later I do meet with them. Today I'm releasing the tool.
+34:01
+So, we got an email from Microsoft um May 1st, 2024. They they claim the
+34:09
+report is valid, but that they uh prioritize vulnerabilities that are assessed as important critical
+34:16
+uh severities for immediate servicing. Uh they don't consider an ASL bypass to
+34:22
+be uh relevant uh if it doesn't cross a security boundary. What that means is um
+34:29
+the fact that it relies on a pre-existing um vulnerability
+34:35
+um you know but that is true but this this is u the goal of this is to be a
+34:40
+multiplier or an enhancer and um in terms of uh the the the patch history
+34:46
+for Microsoft we see that 2013 there was a another ASLR bypass that was making
+34:53
+use of some uh readily available address and it was rep uh disclosed publicly but
+35:00
+not to them but Microsoft did actually fix that. Uh this has been reported in
+35:05
+April 2024. They have not fixed it. They've not shown any interest in fixing it unfortunately. Uh it's it's sad that
+35:13
+they don't care, but I guess that's the reality. So some contacts for them um invited me
+35:20
+to meet with them on July 11th. Um, I didn't uh acknowledge them for a couple
+35:26
+weeks, but eventually I did agree to meet with them on the 22nd of July. I got another detailed email on the 30th
+35:33
+of July uh asking for detailed information. My response was, can you provide me more information on Hawaii?
+35:40
+You you decided to pay zero zero dollars for the bypass since my whole purpose of
+35:46
+doing this was to hopefully obtain uh a bug bounty. Um I didn't get a response
+35:52
+but I did get a a response uh in person when I did meet with them. So uh they did ask uh to meet and I met them on
+36:00
+August 7th. We spoke about 50 minutes uh in detail regarding the case. Um
+36:08
+one of their issues was they wondered how they could change the scope so that uh somebody like me wanted to do an ASR
+36:15
+bypass then they would have legitimate grounds to not pay it. My thinking was
+36:21
+you have your scope clearly defined on the website and um I followed that. I
+36:27
+looked very closely at what was in scope, what was out of scope and um I I
+36:32
+think it would be better to honor their pre-existing scope, but I think that they had other ideas which is fine. It's
+36:39
+their choice. uh they mentioned in 2013
+36:45
+um there was a a post they made uh where they said you know what we had this uh
+36:51
+vulnerability which was the same vulnerability we talked about a moment ago um and we already knew about it but
+36:58
+if that person had reported that to us that would have been really cool we could have then given them a bug bounty
+37:04
+but they didn't by the way you should go and submit your your vulnerabilities to us so um it's disappointing that um they
+37:13
+make statements like that and then they publicly contradict um their kind of um
+37:18
+general um stance on that. Um but in any
+37:24
+case um they decided not to do that. Um
+37:31
+why does this matter for um for Windows malware? Uh so that we could go much
+37:37
+further beyond simply what we have been talking about. So you could if you were to go and fix this for ASLR that would
+37:44
+be great that would be cool but it would be much more hugely impactful for the malware ecosystem in general.
+37:52
+What that would mean is uh a lot of uh malware will utilize some of these pebb
+37:57
+walking techniques in order to then go much further and dynamically resolve runtime addresses and by doing that you
+38:05
+can kind of hide and conceal what you are doing. So if we were to fix that
+38:11
+then that would break it so that much of the current existing malware
+38:17
+simply would not work. Um it could um work in
+38:24
+that case you would have to use normal imports. Um that's something that's could be easily detected from a static
+38:30
+analysis standpoint. A tool like PA studio could easily enumerate that. You can also do things like get proc address
+38:36
+load library and those are also very easily detectable things from a static
+38:42
+analysis standpoint. So fixing this for ASLR would be much more hugely impactful
+38:48
+uh in terms of securing um the enterprise or securing just any
+38:53
+Microsoft computer from from the threat of malware. um forcing attackers to make their
+39:01
+malicious functionality very obvious because if they were to resolve it by
+39:06
+using techniques like pebb walking and and then traversing later on the PE file
+39:11
+format, those are things that are not easy to be detected from a static analysis
+39:16
+standpoint. You'd have to drop it in uh a sandbox or do some type of dynamic um
+39:22
+execution. So, a massive hugely impactful gain for
+39:29
+uh defenders, but I guess that's not important to them. Another alternative for them going in an opposite direction
+39:36
+is it could force them to use window sis calls to then more
+39:43
+uh to obscure their activities. Now, SIS calls can be much more challenging to to
+39:49
+utilize. They're a lot more complicated. Um it's not something that every malware author would be able to do just because
+39:55
+of the complexity uh of that. Um and some functionality that could be easily
+40:02
+implemented via Windows APIs may this the same thing may not be true necessarily for for Windows SIS calls.
+40:09
+So uh either way uh would be a huge win. So some some takeaways
+40:15
+uh here is um we have these existing
+40:21
+structures the PB the modulus these have been a single uh point of
+40:26
+failure uh they've been existing in this form for for decades and you know it's
+40:32
+an inherent design flaw and it should have been corrected a long time ago but unfortunately it has not and so we've
+40:39
+seen how we could take this uh general approach to pebb walking and then apply
+40:45
+that to to rock to make it much more simple, basic where we can use a few
+40:53
+easy to find gadgets, even the same ones over and over again to achieve it in a
+41:00
+relatively simple way and how we can even take that and then automate that
+41:05
+with a tool. So you can accomplish that in seconds. you could maybe have 30
+41:10
+seconds and then you have 36 different approaches of bypassing
+41:15
+um ASLR. So, it' be great if Microsoft would patch it. They've really shown no interest in doing so. Um and it's not
+41:22
+really something that could be achieved with a patch. it would need to be uh more of an architectural lift. But if
+41:29
+they were to do that, um it would defend against ASLR and also a lot of malware
+41:36
+that's currently existing that's native CC++ compiled would no longer work and
+41:42
+force the attackers to implement that malicious functionality uh in a different way. Unfortunately, um you
+41:49
+know, Microsoft does not care. They've made that clear. Um but maybe someday uh in the distant
+41:57
+future we may see a more responsible approach that can preclude some of these
+42:03
+attacks but I don't see that on the horizon for the for the immediate future. So with that I'd like to thank
+42:10
+you uh Defcon is an incredible place um very very special place and thank you
+42:16
+for coming to my talk but more importantly thank you to coming to Defcon. Feel free to contact me. You can
+42:23
+email me. You can uh check me out on GitHub. The address of the tool is there. Feel free to add me on LinkedIn
+42:29
+or make contact however you like. Uh I won't take any questions now, but I'll
+42:35
+step uh to the front there and then possibly outside. So feel feel free to come and chat with me. And thank you
+42:42
+very much.

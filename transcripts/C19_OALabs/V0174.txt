@@ -1,0 +1,1713 @@
+0:00
+doing it. The reason why we're streaming for the first time in like four months, uh, by the way, we're very busy on Unpack Me. That's why we're not
+0:05
+streaming a lot. Uh, crazy features coming soon. Shout out Unpack Me, shout out me, shout out Sean. Um, but
+0:10
+basically the reason why we're streaming is because it's pretty cool. It, uh, blew my mind at how good it was uh, for so little effort. So, um, the topic
+0:18
+today is basically hooking up IDA to an LLM uh, multiple LLMs, I guess, and uh,
+0:26
+asking it to automate reverse engineering for you. Uh, as crazy as that sounds, that that's actually what
+0:32
+we're going to do today. Um, I'm going to demonstrate how it's all set up. Duncan's going to talk a little bit about how the MCP um connector basically
+0:40
+connects IDA to the LLM. Uh, it'll be boring five minutes or most important
+0:47
+five minutes. If you can hear us snoring, it's my dog beside me. Um, so yeah, the important stuff is in the five minutes right now, so pay attention and
+0:53
+then we're just going to zone out and vibe as it reverses for us. Um, also if
+0:58
+you guys have some samples that you want me to check out, uh, send the hashes in the chat and, uh, I will gladly check
+1:06
+them out on screen, uh, for you. Uh, so send me send me interesting stuff. So
+1:11
+far with testing, it doesn't do great with Rust or Go or anything that has sort of like super structures or meta
+1:16
+structures on top of the code, but uh, you'll see, stay tuned. Okay, so um, yeah, just maybe five minute explainer.
+1:24
+Uh, what is an MCP? Why is that important? And how does that kind of differ from the normal prompt chat box
+1:30
+that everyone
+1:38
+Yes. So basically the MCP it stands for model context protocol and it's just
+1:45
+like a protocol that defines a way like a unified way for LLMs to call tools. Um
+1:52
+so under the hood it is actually super lame. I'm sorry to say, but it just sends a bunch of JSON like the LLM says,
+1:59
+"Hey, I want to use this tool." And it sends some JSON and then uh the kind of the thing that hosts the actual model.
+2:07
+So like chat GPT or CL or whatever some some client will see this JSON appear
+2:12
+and then it's like oh okay that looks like an MCP call and then it will call the appropriate MCP server to basically
+2:20
+ask it for some response. So, I don't know, create an image or I don't know, translate this text or whatever, and
+2:27
+then uh basically the MCP server, it's not it's not exactly a server, but it
+2:32
+just returns the data back and then the LM gets that data into its context. So, that's that's all it is essentially. Uh
+2:39
+it's like pretty overengineered in my opinion, but basically right now you have Claude and Klein and a bunch of
+2:45
+other uh popular tools that implement this MCP protocol. So yeah, that's uh I
+2:52
+guess why people are implementing MCP servers because it's basically allows your MCP tool to be used by like a bunch
+2:58
+of different clients without having to change uh anything about them. And then specifically the one for IDA Pro. So the
+3:05
+MCP server works by communicating over STD in and STD out just via like a pipe
+3:10
+essentially. Uh and you know we cannot communicate like this with IDA pro. So the MCP server there's like an
+3:17
+additional layer uh where we have a IDA plugin that actually hosts like an HTTP
+3:23
+server and then inside of the server.py like the MCP server itself we just send like a post request that hey IDA plugin
+3:30
+please do something for me and then the IDA plugin returns the uh result. So
+3:36
+yeah that's pretty much it. It's super simple. Yeah. So, what what I pulled up
+3:41
+on the screen here is just the functionality that Duncan's implemented so far for the uh for the plugin. Um,
+3:49
+and I guess that's like one that's one really important thing to keep in mind is like you're basically taking the LM
+3:55
+and you're shoving it down into like a bunch of different commands that it can call to get extra context. So, uh I saw
+4:02
+a lot of questions on Discord about this, like can it rename like uh can it build structures and stuff like that?
+4:07
+It's like maybe it could if the command existed in the IDA plugin. Duncan yeah
+4:14
+implemented like six commands and was like done. So no it can't right now but
+4:19
+maybe if you implement plenty but no no but yeah in all seriousness it's
+4:25
+just like a few commands that are required for the basics of like uh reading functions identifying functions
+4:32
+that kind of stuff. So that's and also like the the there is like a balance
+4:37
+here because like if you give if you would give it the whole IDA API you know you could imagine you can somehow glue
+4:43
+together this IDA API via this HTTP calls and just give it access to the complete IDA API you know this like a
+4:50
+nightmare waiting to happen because like the the tools become very difficult to use for the LLM. So it's very likely
+4:55
+that it will fail to actually you know for example if it will try to write a script it's very likely to fail writing
+5:01
+the script because you know we all know that IDA's API changes every month right and you have to completely redo all your
+5:06
+clients. So you know that that would that would not be a good tool. So like the kind of
+5:12
+the the trick is to give it the tools that are like small in scope but still
+5:18
+useful. So for example decompile this function that is a useful tool because then the LLM just gets a decompilation
+5:24
+that the analyst would also see but you don't want to have like uh some very
+5:30
+broadly scoped tools let's say and also there was someone who already exploited
+5:35
+uh such a tool like execute script where there was some prompt injection trick and then it executed calc popped cal on
+5:42
+the on the users machine which is obviously bad. So you also want to be careful with this. It's like all untrusted data everywhere, right? So,
+5:49
+it's like Yeah. Yeah. One thing that was like particularly concerning, I'll show you like as we as we actually get into
+5:56
+like the demo portion of this, but like um obviously there's a debugger in IDA and Gihydra. Um so I was really
+6:04
+concerned that it was just going to be like I know what to do. I'll just I'll I'll launch the malware and see what it
+6:10
+does. So like we had to take a lot of steps to like make sure that it you know we basically changed the extension to
+6:16
+something like there's no possible way it could run it. Um and like even then I'm pretty I'm concerned that it like if
+6:23
+you weren't babysitting it it might just be like do you want me to try and execute this somehow? Like you know it's
+6:29
+like do you want me to change the extension and run this? So yeah anyway it can do that kind of stuff. Um there's
+6:35
+I'll show you guys the safety features in a minute. There's basically uh we were running it in VS Code and there's
+6:41
+this uh for the the plugin that we're using. It prompts you every time it wants to like make a command and then
+6:48
+you can kind of like filter what commands are safe and what aren't. But uh but yeah, we we'll get into that in the demo part. Um there's definitely
+6:55
+there's definitely dragons here if you if you just decide to really vibe out go ahead analyze the malware.
+7:03
+Um here uh I'm just going to see through just going to read through chat. Can you also see the chat, Duncan? I don't know.
+7:09
+I think there's a few. Yes, yeah, it's kind of Yeah, I have it. Uh, you should not use MCP for malware analysis. So,
+7:16
+yeah, this is wrong. I would say you you can use it. You just have to be careful, right? Like with everything you don't
+7:22
+have to don't do something stupid. Uh, you don't want to implement more than 20 tools otherwise the LM gets confused.
+7:28
+Yeah, that that could be I mean, you know, now it will get confused, but I think we have to also look at the trend,
+7:34
+right? like you're seeing the context windows basically increase like a lot.
+7:39
+So I think next year for example yeah it wouldn't be an issue to give it like a huge amount of data and it will just kind of work at least on some
+7:47
+definition. Uh have you considered using a VM? Yes, we are using VM. We're using VM. Everything's in VMs guys. Um also I
+7:55
+saw Tainted is saying it's going to take a long time before we figure out how to prompt these tools for reverse engineering. As we'll show you today the
+8:02
+prompt matters a lot. Uh, as with everything AI, the prompt is like a big
+8:08
+uh Oh, thanks for spamming the chat there, Humpty Dumpty. All the gifted subs. This goes straight to Bezos on his
+8:14
+[ __ ] yacht. [ __ ] you, Bezos. Stealing my money. We make so little off Twitch.
+8:19
+Actually, I didn't even renew the tax document. So, that money's just going straight to Bezos. Appreciate it anyway,
+8:26
+though. Thank you very much. Um, yeah. So anyway, uh the
+8:31
+prompts do matter and and I have we have two that we were working on for the last two days that uh seem to be the best for
+8:39
+different scenarios. So is there anything else? Yeah, sorry. Go ahead. Go
+8:44
+ahead. Yeah, I just wanted to mention like a very concrete example of this this prompting uh because at the beginning I was trying some to solve
+8:50
+some crackies and and Ida disassembled it as like decimal numbers and then the LLM was basically in its head converting
+8:58
+those decimal numbers to hex and it just hallucinated a bunch of stuff right so then we added this convert number tool
+9:05
+uh so shout out to this guy at GH who came up with this plan and then you have to prompt it like hey never convert
+9:12
+numbers you know use this convert number tool and then it will get like when it gives a number in there it will get all
+9:17
+different representations and then after adding this it was actually able to solve this crack me which was kind of uh
+9:23
+do you want to crack me I didn't even uh we should demo that too yeah yeah sure sure that's actually a good idea and
+9:31
+somebody was asking how we donate if we don't donate on Twitch and that is a cue for Johnny Sins obviously what's up
+9:37
+Johnny Sins here I just want to clear something up I am definitely not Sergey
+9:43
+day without glasses. Although, am I? Hey folks, just cuz I'm not Johnny Sins
+9:48
+doesn't mean I'm not getting busy on camera all the time. I'm so busy, in fact, that I've created a huge catalog
+9:54
+of video content on Patreon, which if you like these streams, you should go check out. We have over 140 hours of
+10:01
+streams, live streams covering everything from deoffiscation, building config extractors, unpacking malware,
+10:07
+everything you could think of related to reverse engineering malware. We also have in-depth tutorials covering things
+10:12
+like unpacking VM protect, how to set up a malware analysis lab, how to build a config extractor, calling conventions,
+10:18
+what that means, what the hell is even that? All kinds of in-depth reverse engineering content on OAB's Patreon. Go
+10:26
+check it out. We'll see you there. What the hell is even that? All right, guys. Okay, so uh so um the way we have
+10:34
+the set up, it's kind of janky. Um so we have VS Code
+10:39
+uh set up with this plugin.
+10:45
+Uh I'm going to open a new folder here. Uh Vive One.
+10:54
+There we go. Yes. Yeah. So, uh yeah, I trust the authors. Um yeah, so we have
+11:01
+this plugin called uh Rue Code, and that's the MCP host, right? Is that the
+11:07
+right term? So, oh client. It's the MCP client. Yeah. But yeah, that's the thing that actually hosts the server. Yeah.
+11:15
+Yeah. Yeah. This is the server, right? So, so maybe you can show the MCP servers like uh the config. Yeah. So, um
+11:24
+so the way I have it set up here is I have two MCP servers right now. This is Lor's, but I'm going to turn hers off
+11:30
+for right now. Um so, Oh. Oh, I see.
+11:35
+Okay. Without ads. Yeah, it's fine. Uh, so this is Duncan's. Uh, I think actually if I go to edit MCP servers,
+11:41
+it's probably easier. Oh, now
+11:47
+there we go. It'll be easier for you guys to see what's going on here. Um, so the integration is super simple. Uh, we
+11:55
+just have like the directory where the server code is. Um, and you're basically
+12:01
+just running it via UV, which is like that Python environment changer uh
+12:06
+thing. That's what it is, right? Like the I don't know what it basically it's like dependency resolv. Yeah.
+12:12
+Environment. Yeah. Um, so you just set it up with like the command that you need to run the actual server and uh and
+12:19
+then uh the timeout stuff. I mean that's just how long it waits for a command from IDA. But this is the key part here.
+12:26
+So I've been running this a bit locally. So, we've added a bunch of commands that are allowed, but when you first start
+12:33
+out, um maybe I'll just delete these so that you guys can see the original experience. Um you'll see this. No, but
+12:39
+actually because I I updated the installation process so it will do all all of this automatically. So, you will
+12:46
+not see anything. Uh it will put everything now. Oh, okay. All right.
+12:53
+Okay. All right. Um yeah. So, uh, the, um, each one of these is one of the
+12:59
+commands that's allowed by the MCP server. So, normally it would prompt you to say like, do you want me to get metadata or whatever. Um, so I have two
+13:07
+of them installed and we'll try like uh, like I was tweeting out, we'll do like a bake off. So, this is Duncan's and it
+13:13
+works with IDA and uh, this is Lor's and it works with Gihydra. Um, and I think
+13:20
+I'm not sure what's Ghydra. That's what it's called,
+13:27
+brother. Go to Wikileaks, look up uh NSA dissembly tool, and you'll see there's a
+13:33
+pronunciation for how to pronounce it. It's pronounced G E Hydra. Um,
+13:38
+internally, that's what they call it at the NSA. It's very hard to say that with a straight
+13:43
+face. Last time I said that, someone actually emailed me from from like the NSA, from the project, and was like
+13:49
+super mad. like it's based on like this ancient Chinese lore. It's like, "All right, buddy. Come on. It's clearly a
+13:55
+joke." Okay, so anyway, um yeah, so this is Lor's. I don't know what uh Lor's
+14:02
+list of um allowed functionality for or not allowed, but implemented
+14:07
+functionality for Ghydra is. I didn't see a list of it. I guess we could open the plugin and take a look, but I'm not
+14:13
+sure how many functions she implemented for for Ghydra, but these are the ones that I was when I was testing it that I
+14:19
+that I found. Um, so anyway, that's how it's set up. Uh, for right now, we're just going to for for the bake off,
+14:25
+we're going to enable Duncan um for IDA. And uh the way that it works here is we
+14:31
+basically just open a project. Um, so inside the Vibe folder is uh the binary
+14:37
+that we want to analyze. And then we open uh IDA and open the binary in IDA
+14:43
+and then start the IDA server and then we can start prompting prompting with uh
+14:51
+pro yeah proved our life away um with this. So if you guys have any questions about the setup just put them in the
+14:57
+chat now. Um, Duncan did a pretty good job on the GitHub of setting up of like
+15:03
+explaining how this works. And I think you said you have like a full install now that just does it for you. I think.
+15:10
+Yes. Yes. Yeah. You basically pip install IDA MCP server and then you run the install command and it just works.
+15:15
+There's also video on the GitHub. So, it's super easy. At the beginning, it was a bit finicky, but I kind of streamlined that because Yeah. Do you
+15:22
+want to put the link to the GitHub repo in the chat uh while I Yeah. Yeah, sure. Yeah, sure. And I'll just when we get to
+15:29
+Lor's, I'll explain how I set Lor's up. So Lor's project wasn't made to be run
+15:34
+this way, so I had to make a few changes to it, but uh they're really easy. Um basically, you just have to set up the
+15:40
+uh the MCP, like initialize MCP or whatever inside the the project. Um but
+15:46
+yeah, I'll go through that when we when we try hers. So uh got to get IDA open
+15:52
+here. Which IDA do we use? Latest IDA, I guess.
+15:57
+Uh yeah.
+16:03
+Yeah, I know, right? Where's Nice uh desktop shortcuts. Uh
+16:10
+just leave me alone. They're all different versions of IDA. It's not my fault. I also remember
+16:18
+your uh VS Code was like 5 years old.
+16:23
+I I like that version cuz it's not all online and [ __ ] I hate the new version.
+16:30
+Bro, look at this hairline. I'm not switching. I'm not I'm not doing it. Okay.
+16:37
+Okay. Uh so, let's open up Vibe One. Uh and those of you who are on the Patreon,
+16:43
+you're actually going to recognize this uh file probably uh cuz we've been doing
+16:49
+a series on it. And you're gonna see that all that work that you did, the like uh seven hours of work to reverse
+16:55
+it, you're gonna you're gonna start crying soon, I'm sure. Okay, so we have it open here. Uh the plugin is just
+17:02
+dropped in the plugins directory to start it. We use uh control altm. So you can see here the MCP server has started.
+17:09
+Um and so it can now receive commands from uh VS Code. Uh what was the hash
+17:16
+that you put in? Oh, this is the this the sample we're analyzing. Yeah, it should be okay. If the lemon didn't
+17:22
+hallucinate it. Uh, hi Rad. Rad skits are posting in the
+17:29
+chat here. Um, okay. So, it's lovely. Uh, okay. So, we're we're ready to go.
+17:35
+Um, this is where we're going to print. And, uh, I don't know. I think for this one, we should use the original prompt.
+17:42
+Uh, so let me just pull that up in Sublime here. Uh, fivecode.ext. text. So, I saved out
+17:49
+a bunch of different prompts that were uh that were interesting to use.
+17:56
+And I think what I'd like to do is actually show it to you guys on screen.
+18:03
+Um yeah. So, this was the original one here. I'm
+18:10
+just going to replace this actually with uh this one which is a bit better. So,
+18:15
+uh, let's go through, uh, let's go through this, um, just line by line. Um, because this actually matters. Like I
+18:21
+mentioned before, this matters quite a bit. Uh, and we're playing around with a bunch of different things. One thing I noticed is we were trying, your task is
+18:28
+to analyze. See how we have a se Oh, no. This is a different one. I'm sorry. This is not the right one. Do you have the
+18:35
+original one, Duncan? Um, yeah. Yeah. Yeah. I have the one we used. Uh, yeah. The one that like tells it to write a
+18:42
+report at the end. Yeah. Yeah. Yeah. Let me I'm sending it in the uh do it live discord. Yeah.
+18:51
+There. Yes. Okay. Uh and then I'm like this was the first iteration we did.
+19:00
+Yeah. So I'm going to make a few updates to this. Yeah. So the first thing is when you tell it that it's malware, it
+19:06
+assumes that all functionality is malicious. So it's very funny to tell it
+19:11
+to like analyze a regular binary as malware because it'll be like this this CRT initialization
+19:19
+function is used to like make the malware initialize. You're like no it's
+19:24
+it's not. So uh we I think we are going to leave it in there just so you guys can see what how that works. Um but
+19:32
+generally I like to use binary. That's one of the things that I kind of learned um as I was playing with this is to use
+19:37
+just analyze this binary. areas a bit better. Um, yeah. Yeah. Another thing
+19:42
+that I recently added which is very helpful is uh this prompt here. So where
+19:50
+do we say rename functions? So change function names to be more descriptive. I
+19:56
+changed this to be change function names to be more descriptive. Preface all of
+20:01
+your function names with vibe uh the vibe namespace. The reason why that is
+20:07
+uh important as you guys will well maybe you won't see on this this binary because it works well on binaries where
+20:13
+it doesn't work well sometimes it starts to hallucinate and it's really good to get a sense of what it renamed and what
+20:19
+it didn't because like I was running this without the vibe namespace and I
+20:24
+sometimes I would like be like oh that that's main and you click on it you be like it's not that's not main that's
+20:30
+just a [ __ ] random function. So yeah, it's good to have the the vibe namespace. Um, and I also added this
+20:38
+prompt here. Uh, which I don't know whether it's required for this uh
+20:44
+sample, but uh I asked it to only rename functions that start with sub underscore
+20:49
+which is like IDA's like unknown function naming protocol because I also noticed that it happily renames properly
+20:58
+named functions. So again like main it'll be like that's not main that's
+21:03
+malware start and you're like no damn it. So yeah. So this you know you have
+21:09
+to be careful with this because like um there was this kind of attack where they were just renaming the functions to be
+21:15
+something fake to try to like uh inject something into the LM. So that's the other side of this right. You have to
+21:20
+kind of pick for your use case what you want. Yeah that's that's true. True. I mean, I haven't tested this on any like
+21:28
+adversarial, you know, malware like or samples or whatever.
+21:33
+Um, yeah. So, anyway, the these those were the two changes that I made. Um, so
+21:39
+let's uh let's give this a shot, copy out here, and
+21:45
+uh now we do some reverse engineering, guys. Wow, this is lovely.
+21:52
+All right. So, uh, if we I think it's nice to watch this, you know, very cool. Yes.
+22:00
+But also, it's cool to watch Ida. And if we filter on
+22:08
+Vibe, we should be able to start seeing it rename some functions as it goes. So,
+22:13
+let me pull this up. Make it a bit smaller. Um, so you guys can see, um, now as
+22:21
+you're, uh, pulling in your 300k a year to analyze malware from Andient. Um,
+22:28
+instead you can be playing some Valerant and, uh, just letting this run in the background. And, uh, yeah, let's Oh, it
+22:36
+hasn't renamed anything yet. Oh, it's got an error. That's not good.
+22:41
+Yeah, I think it's you didn't get the latest version because I think Mishop fixed this in the Yeah, you have like a bit older
+22:48
+version of the MCP server, I think. Yeah,
+22:54
+but yeah, you might want to update actually because this will not work. Uh the Oh, no. It's okay. It found
+23:01
+something. Okay. Well, I mean, let's We We ran Let's let
+23:07
+it run. I mean, there's not that many people here. It's fine. It's just a small group group of folks. Oh, yeah.
+23:14
+How complex is the sample? Yeah. So, this is a sample that I selected for our
+23:19
+Patreon learning how to reverse engineer series. Um, and I specifically selected it because it is the easiest sample I've
+23:27
+ever found to reverse engineer that has actual malware functionality. It's
+23:32
+written in C. There's no API offiscation and there's no string offiscation. So
+23:38
+basically in the pseudo code view, if you can write C code, you can read the sample, right? So that's kind of that's
+23:45
+the level that we're starting with. Don't worry if you guys stick around for a bit, we'll we'll get into some some
+23:51
+more interesting stuff. Um yeah, so here you go. You can see they've already labeled something malware main. Let's
+23:58
+figure it out if that's malware main in a bit. Can it unpack VMP? Uh in my in my
+24:04
+limited Yeah. Yeah. Of course I can. Yes. Subscribe to Unpack Me. Um no. So
+24:11
+uh in my limited uh testing with this basically any sort of protection at all
+24:17
+is enough to completely [ __ ] it. So like even again I'll show you guys in a
+24:22
+little bit um with C++. So even the like STL type stuff is enough to make it
+24:29
+really have a hard time. Um which is not offiscation obviously that's just compiled data structures. Um so that's
+24:35
+you know it's uh it has troubles with that kind of stuff. But that being said there's a lot
+24:42
+of tools that we could add via MCP. You know you could add other stuff in there if you wanted to. Um and you could also
+24:49
+maybe add some prompts like re-replicate this in Python. you know that's kind of you know what is the normal reverse
+24:55
+engineering process well maybe if you don't understand it replicate in Python run it you know that kind of stuff so
+25:02
+it's this is just the baby steps um yeah you know you can also hook it up to an
+25:07
+emulator for example right like you could have some dump
+25:13
+say yeah from what I heard Nox is working on the x64 debug MCP so we'll
+25:18
+see that uh I don't know when but eventually but I don't know That's going to be like running the malware.
+25:25
+Just run that here to be honest. Run the ransomware.
+25:30
+Yeah. Um, yeah. So, you can see, you know, maybe you can give it access to a VM,
+25:36
+let it restore. That's what I meant. Yeah, that that is what I implied. But yeah, I mean, you even have the remote
+25:43
+debugger for IDA, which is, you know, that might work. Yeah.
+25:50
+Uh, so is this field cooked? I mean it's cooked if this is all you're doing for your 300k a year. Yeah. But I mean I in
+26:00
+my experience like uh you know this kind of stuff was like prevalent like stuff
+26:05
+at this level is prevalent maybe you know when I had hair but uh nowadays pretty pretty much everything is like
+26:11
+multiple layers of offiscation at least API protection and string protection.
+26:17
+So, um I guess good, you know, good time to plug us over at UnpackMe. Um you got
+26:24
+to unpack the samples before this is even going to attempt to work. And you got to do some sort of like uh API
+26:31
+resolving and shout out hashdb and uh string resolving before any of this is
+26:37
+going to work at all. Um you know, yeah, but you know, for example, if you have
+26:42
+already annotated a sample, right? like you already did the offiscation, you already wrote all the nice comments in
+26:47
+decompilation, then you could ask it, hey, write me the report, right? It'll do it. I mean, and if you tell it to
+26:53
+not, you know, not rename, not change anything, it will just use whatever information you put there and it will write the report about like the
+27:00
+techniques used and everything. So, you know, in that way, it could be you could be cooked if that's that's one thing
+27:07
+that like at the end of this, so one the last prompt, I don't know if you guys saw, is to ask it to write a report.
+27:13
+That was the thing. Uh, this is what blew me away when I first uh when we
+27:18
+first ran this is that wait until you see how good this is. Um, anyway, I'm
+27:25
+talking it up and now it's not going to work. Yeah, we never know because mostly deterministic.
+27:32
+It's going to go. It's going to start writing a novel for us. But, uh, yeah,
+27:38
+we can always pull up the report that was originally generated. Yeah, the it was generated, bro. It's just like we
+27:44
+just wrote it out for for Twitter. Um, yeah, the uh I saw mention
+27:51
+about the cost here. Um, I want to I do want to put this in perspective. So, I ran this on a C++ RAT that's uh
+27:59
+330K. Uh, it's it has a lot of STL stuff in it. Um it took about five hours to
+28:05
+run through um and annotate I'd say maybe 80% of the malware and it cost me
+28:11
+about 60 bucks US uh to do that with a completely different prompt. I had to use a different prompt which I can show
+28:17
+you guys. Um so it was able to work through it very slowly. But for that
+28:23
+kind of thing you basically it's like a lot of looping. So it's going over the same function again and again as it adds
+28:29
+more context. um and and renaming it. So, it takes faking forever. Uh and it's
+28:36
+expensive, but you know, the price is just going to come down hopefully.
+28:45
+Yeah. But also, you know, this is this is where like uh stuff like Flirt and Lumina can also come in, right? Because
+28:50
+you obviously don't want to be analyzed. You don't want to analyze the C++ standard library like obviously. So if
+28:56
+you do that first then and you tell it hey don't analyze the functions that already have names or whatever then you
+29:01
+can kind of take a shortcut let's say. it yet. Yeah. I think I think feeding this with
+29:08
+like Yeah. all of the stuff that's known before we anal like this we just analyzed it completely blind, right? But
+29:15
+like I think feeding it some data would definitely well I don't think I know it would help quite a bit.
+29:22
+Yeah. And it's also one of the reasons I'm actually excited about it because it's
+29:28
+like yeah sure you know everyone is like oh if you obiscate it then it will not work. It's like yeah, no [ __ ] But
+29:33
+that's why you can create the compiler plugins, right, to do the offiscation for you and like that way you start a
+29:40
+business unpacking things, you know, for example, but you know, you can kind of you get
+29:46
+you get forced into writing automated tooling, which I love to do myself. Yeah. So, yeah.
+29:54
+No, I mean this is uh it's definitely promising. Um because you have to think about like well I don't know I don't
+30:02
+know how many people in here are doing reverse engineering full-time as like oh we hit $1 cost um who are doing like
+30:08
+reverse engineering full-time but if you are you know that like the first thing you're probably doing in your binary is
+30:14
+making it look basic like these binaries like you're resolving all the strings
+30:20
+you're like resolving the APIs you're cleaning things up so like even if you
+30:25
+just did that and then you had this thing do the last mile, it's already it's already winning, right? It's you're
+30:30
+already saving a bit of time. Um, so I'm bullish on this even though it looks
+30:36
+kind of janky and it's running out of VS Code right now, which we definitely have to fix this. It's not [ __ ] stupid.
+30:45
+Yeah. I mean, you know, you I I for me it was useful for example for the crack me because this thing can also this is
+30:50
+meant for like vibe coding, right? It's for programming. So in the case of the crack me it was generating Python and
+30:56
+running the Python getting output from there right. So that's kind of why I picked it. Uh but you can also use claw
+31:02
+desktop which is just the chat. Yeah that was like glorious.
+31:08
+Yeah. Um if you have autopro 10k you can get a computer in the range of 10k with
+31:14
+local deepseek. Yeah. I mean, yeah, we didn't try that, but I I think
+31:21
+you could do it for smaller tasks like if you basically say analyze only this
+31:27
+function, right? And you don't get too big of a context because local Deep Seek. Yeah, I don't know for 10K if you
+31:33
+can run that to be honest like the full model. But like a quantized one, yeah, you can run it on your Mac, right? And you can you can try uh it's it's the
+31:41
+same like with this plugin R code or Klein, you can just hook it up to Lama and you can try it. Let let me know how
+31:47
+it goes. I the results have been kind of mid for me for a lot of stuff like
+31:53
+bigger models. It makes a huge difference. So Oh, it's it's writing the report now.
+31:58
+See it writing the report here. Yeah. Um the the nice thing about VS
+32:05
+Code, I was I was just kind of [ __ ] on it because I think it's funny you have to run an IDE to do it, but like it
+32:11
+is really good for development because they have that built-in like um model selector. So like right now I'm running
+32:17
+through open rider. So like I can just select whatever I want there. But like here I can also select different uh LMS
+32:24
+if I want locally in VS code and the rue code will will use them. So yeah.
+32:33
+All right. Task complete. All right. So it cost me a dollar and 38 cents to do
+32:39
+this. I think that's cheaper than the first time. Yeah, it's learning.
+32:46
+Um, so you can see here it's renamed all these functions. I think probably it's uh it's good to
+32:53
+uh just F5 this so you guys can get a sense of what the code looks like.
+32:58
+Uh yeah, there you go. So um is this actually enabling SC debug
+33:04
+privilege? Yeah, it is. Um is this terminating security
+33:11
+software? Yeah, it is.
+33:17
+Yeah. Um, and then you know, is this terminating Microsoft
+33:22
+security? Yeah, it is. So, it's again, it works. The reason why we're doing the
+33:29
+stream is because it works so damn well for this sample. It's surprising. Um,
+33:34
+also here like ex excfiltrate data to C2. That's actually what it's doing. Like, it actually figured it out. Um,
+33:42
+which is pretty crazy. Uh, this get machine identifier is
+33:47
+actually correct and this is a little bit tricky um to see how they do it. Uh,
+33:53
+I think that it wouldn't have known that this is a machine identifier if you didn't tell it that this was malware.
+33:59
+So, I think if you said just analyze a binary, it might have named these a little bit different, which we can try in a minute if you guys want. But, it
+34:07
+did actually figure out like, okay, this is like a hex encoding function, right? binary to hex string. These are all
+34:14
+things that like a professional reverse engineer it would take you, you know, less than a minute to figure that out
+34:20
+just by you just look at this and be oh the shift and okay, yeah, whatever. But like if you weren't that then maybe, you
+34:27
+know, maybe this would take a little bit longer. So, why don't we take a look at the report and we'll see uh how that
+34:33
+stacks up. Uh I'm going to copy it out. Uh I think
+34:39
+it's saved. You can just preview it in VS Code. Uh, is there a preview button? The
+34:44
+little Yeah, the little the little Yeah. Yes. Yes. Okay. Then you drag the preview on on the other tab to kind of
+34:51
+or close the other tab. Can I just drag it out? Oh, that doesn't work. No. No. Yeah. Close the close the report
+34:57
+markdown file then. Yeah. Okay. Uh, I'm going to move this over because I think my uh bald head is blocking it. Oh, yes.
+35:05
+Okay. Uh, can you guys all see that? Uh, looks like it's okay in view. Um,
+35:12
+executive summary. This report detail. Well, we don't care about that. Uh, sample information. I mean, that looks nice and professional. I don't know why
+35:18
+I included the base address. It's always good to know what the base address is. Um, cuz that's what that in the get
+35:24
+metadata response. There's the base address. Probably that's why I was like, ah, metadata. It's good.
+35:31
+Um, privilege escalation. The malware attempts to acquire SC debug privilege which allows it to debug other pro priv
+35:36
+pro processes. This privilege is called I sound like [ __ ] Aiden Ross here. What is fascism? What does a fascist
+35:44
+mean?
+35:50
+Um, it means you are a faright authorization on you
+35:58
+alternative. Oh my god. Uh, have you guys seen that? If you guys haven't seen that video, you have to go watch that.
+36:04
+Maybe you can watch that at the end of the screen. Uh this privilege is commonly abused by malware to read uh
+36:09
+memory from other processes inject and yeah etc etc etc. Okay so good security
+36:15
+software termination the malware targets targets and terminates security software using a sophisticated technique. It
+36:22
+really likes to oh [ __ ] it really likes to uh embellish how sophisticated the
+36:27
+malware is. I I've noticed this like it must be because well I don't know I'm just industry right? Yes. I I was just
+36:35
+going to say I've just speculated here, but it's because if you've ever read a blog post by like a security company
+36:41
+about malware, they're always going on about how it's like so sophisticated, so advanced. Yeah,
+36:48
+exact also got a process killer. I mean
+36:53
+anyway, so I think because it was trained on the internet, it likes to do this kind of thing. But uh but yeah, it
+37:00
+identifies uh specific security related processes by name. This is actually correct. So I I reversed this. So this
+37:05
+is this is actually what it's doing. Um it didn't get that this was for trend micro. Uh but this is where that uh No,
+37:13
+but it did get it in my report. I think exact. I was just going to say this is where like that the the nuances because
+37:19
+it did in the first time we ran it, it figured out it was trend micro. So in this case, it hadn't figured it out. But
+37:25
+uh but yeah, it is. I know. You could ask it, right? You could ask what is the third party security software and update
+37:30
+report and then you know it might figure out. what it is. I I will actually do
+37:35
+that in a second once we finish going through because I'm curious to see if it'll if it'll it if you just Google any
+37:41
+one of these, it should say what it is. Um and then for identification uh for
+37:48
+the for each identified process, it enumerates all the threads in the process, opens each thread, injects exit process call using uh Q user APC, which
+37:56
+is actually a little bit hard to figure out if you read the code what it's doing there. So it's it's pretty good that it
+38:02
+figured that out. um and then forces security processes to terminate themselves. So this this is
+38:07
+one of those things where it's like it actually did have to reverse engineer that little bit of functionality to know
+38:13
+what was going on. The API calls are in plain text. So it it's not that hard, but you know, if you don't know how it
+38:19
+works, that's I think that's a good catch. Um security software deletion. So
+38:24
+after terminating security processes, the malware attempts to delete the security software executables using multiple techniques. That's good. Yes,
+38:31
+there are multiple techniques. uh marks the file for deletion. So this is just uh if you read the APIs you can see that
+38:38
+directly. This one is a little bit different though. So um in this malware they attempt to use like the C dollar
+38:46
+share to access the file to try and evade like anti-tamper on Windows Defender. It's kind of a clever thing
+38:51
+that they do. Um so it is kind of uh it is kind of interesting that they actually figured this out. Um you know
+38:58
+like the first time you look at it you might be like why are they doing that? But yeah, so it's kind of figured that out. And then this one again is just a
+39:04
+API call read. It just saw the ZWD delete file. It's pretty clear what's going on. Okay. So, uh before we read
+39:11
+through the data exfiltration, uh the the key point here is that in the data
+39:18
+exfiltration, they use RC4 to encrypt uh the path that they're sending and they
+39:25
+generate an ID on the from the computer information as the key for the RC4. So,
+39:31
+that was kind of the one of the big tests for this and I I'm curious to see whether they figured it out. They did in
+39:36
+the first time we did it. I'm not sure if they they've done it this time. So, it creates a unique uh machine
+39:42
+identifier by collecting the username, SID, and Windows installation date. That's correct. Um, calculates an MD5 of
+39:48
+this information and converts it to hexodimal string. That's correct. Uh, it compares data for exfiltration by
+39:54
+encoding information about the OS version and terminated security software. Uh, converting to B 64 and URL
+40:00
+encoding the result. That's correct. And it communicates with C2 servers by generating an offiscated URL path. So,
+40:06
+this is the the thing that's RC4 uh encrypted. I don't know whether it's figured that out yet or not. Um yeah, it
+40:14
+looks like it didn't. Yeah, it looks like it didn't figure it out. Ah, okay. So, this is performing a
+40:21
+little bit worse than the than the one that we The live demo
+40:26
+is always worse than Yeah, the live demo is always worse. Yeah. So in the one that we did, I mean, you know, Scouts
+40:32
+Honor, it did figure out the the RC4, which was very surprising or, you know,
+40:37
+very interesting at least. Um, but in this case, it looks like it didn't, you know, we can ask again, right? We can
+40:42
+try like how does it generate bots? That's pruned. Um, so we should ask it
+40:48
+first. Uh, what security what is the third party security software? What do you
+40:54
+guys think? Is that uh Yeah. Yeah. put a question mark. H whatever.
+41:04
+Uh the pros is so client SLA coded.
+41:10
+Yeah. Yes. But you know you can you can definitely control this right in your
+41:15
+report part of the prompt. You can say generate it in this style or whatever.
+41:20
+Did it figure it out? Uh no. I just say the processes. Yeah.
+41:26
+No, just that's too bad. Um, let's ask it
+41:32
+how is the uh path
+41:38
+obfiscated generated? What is the obiscation
+41:44
+technique? Describe this in
+41:50
+detail. All right, let's see. It better have a [ __ ] ton of emojis.
+41:57
+Yeah, we should add a prompt to say like include emojis in your uh in your
+42:03
+said it didn't analyze it in detail. Oh, so maybe we need to say to analyze it a
+42:09
+bit more like the apparently it forgot a few
+42:18
+functions. Uh, okay. We could say, how would we
+42:25
+phrase that? Maybe like analyze the C2 protocol. Yeah, use the No, no, just say
+42:31
+use the IDA MCP server to analyze this
+42:37
+function and then the the the actual name or the address,
+42:43
+whatever. Is that fine or is that too generic? Yeah. Yeah, just just try it. I
+42:49
+mean, do it live as they say. Yeah,
+42:57
+I'm actually working on a programming language for Gen Z. Everything's written in emojis. Yeah, I don't think Gen Z
+43:03
+actually uses emojis anymore. Or that's Gen Alpha. I noticed they stopped using emojis. Uh, I would reject this. It
+43:10
+started to do some weird weird stuff. Reject.
+43:19
+Yeah, this this function is sophistic s sophisticated for rough real. I don't
+43:25
+know if this is the actual function that does the RC4 though.
+43:32
+Yeah, I think this might be a different function or not. I mean, we can let it run a little bit. You know, I can spare
+43:39
+a doll. Yeah. Yeah, sure. I guess it's kind of boring for the for
+43:44
+chat here, but uh
+43:50
+All right. Says simple extra encryption. Ah, that's too bad. Yeah. Yeah, but remember
+43:56
+it's going to Ah, right. There was Yeah, it's a deeper
+44:01
+layer. Yeah. Oh, RC4 stream cipher. Oh, yes. Hell yeah. I saw it. Okay, it's
+44:08
+coming.
+44:13
+Uh, what's the uh what's the sparkling water that that guy was drinking in the wake up video? Is that the same thing
+44:20
+that you're drinking, Duncan? That No, I'm drinking something.
+44:26
+You know what I'm talking about, though? The Mhm. Mhm. crazy. No, I'm not putting
+44:32
+a banana peel on my face. That's not for me. Saratoga. Yeah. Somebody Somebody in the chat got Oh, wait. Snow, is that
+44:38
+you, Snow? The actual Snow is actually Snow on.
+44:46
+Um, so I should ask it to update the report. Yeah. Yeah. Yeah, I was good to
+44:52
+That was another thing I think in the Binary Ninja MCP server from Amy, I think it was. Uh, there in the prompt,
+44:59
+it said do not comment anything. only put comments in the functions and only use the MCP server so that it doesn't
+45:06
+kind of spam its own context with with its own like knowledge, but it's all in
+45:12
+in the actual binary ninja thing. Um, yeah, it also gets confused here
+45:19
+because it it it forgets that it has to use the root code read file, but it's like, oh, maybe this CP server can also
+45:26
+do this reading, but then it fails. That's all right. But usually it figures it out. That only just like 10 cents.
+45:33
+Yeah, that's no big deal.
+45:41
+Uh, how do I make you a RT4 state? Okay, now it's
+45:47
+blocks. No. Jesus. Ban. How do we make them a
+45:53
+mod? I don't even There's not even I don't even know how to use this technology, guys. For [ __ ] sake. I
+45:59
+also don't I'm also a mod and I don't know how to I think I am a mod actually. I don't even know. All right. Well, if somebody knows how to make snow a mod.
+46:13
+What model? I'm using Klein. The like uh the latest No,
+46:19
+the Claude. Claude. Claude. Not Klein. The The latest Cloud.
+46:27
+Yes. Uh, all right. So, did it fix it? C2 server infrastructure uses at
+46:35
+least one hard-coded C2 server IP. That's correct. Randomly selects from
+46:40
+multiple CC servers using rants. You think I could figure it out that there's four hard-coded ones based on this,
+46:47
+right? Maybe you guys can't see. I'll move it over. It's like, you know, do a little
+46:53
+thinking here. Um, but yeah, this is actually correct. Even though I didn't, you know, didn't figure out there's four
+46:59
+of them. Uh, URL path offiscation implements the RC4 stream cipher for URL
+47:05
+path encryption. That's actually correct. The key scheduling algorithm at blah blah blah. We don't care about that, but that is right. Uh, it uses the
+47:12
+machine identifier data as the encryption key. That was the key part. So, that's a little bit harder to figure out. Um, you do actually have to do some
+47:18
+reverse engineering to figure that out. So, it's kind of interesting that they they were able to do that. Um, and yeah,
+47:25
+this is correct. This is what uh I was hoping it would do. So again, if you didn't know that and you just read the
+47:31
+report, um maybe you wouldn't know to prompt it to get more, you know, you know, we're doing uh what is it like a
+47:38
+not a blind test, like we actually know what it should be returning. So it's not as scientific as it could be. Um but
+47:45
+yeah, that's So it did actually get it in the end, I guess, which is uh yeah,
+47:50
+interesting. So, what I'd like to do is [Music]
+47:56
+um let's do head-to-head. Duncan V. Lori will open
+48:02
+up Gihydra and we'll try and replicate the same thing with Gihydra. Yeah, human
+48:08
+vers AI. That would be a good one. Uh how skilled is the human? That's the
+48:15
+question. We need a human who costs the same, right? That's that's what we need to to do. Who wants to do this for
+48:23
+$220? I mean, that's that's another part of this that's pretty crazy is like,
+48:29
+yeah, yeah, cuz obviously it's easy to look at this and be like, ah, this is super stupid.
+48:35
+You know, you're wasting money. I could do this in myself, but you know how much you get paid per hour, right? What are you getting paid? Exactly. 5G one. Okay.
+48:45
+So, uh, I just I don't want cross, uh,
+48:50
+taints between the two. So, I'm just going to copy this into a new folder and, uh, and I'm going to open a new folder
+48:57
+in VS Code just so that there's no, uh, cross. Yeah, that's was my initial mistake when I when I first tried. I had
+49:04
+the crack me and I had the source code of the crack meme in the folder and then, you know, I was asking it, hey, solve it and no, it's not correct. And I
+49:10
+was like, oh, okay, let me check the source code to find the solution. Yeah, it's so funny.
+49:16
+You have to give it a nice also don't put this on your desktop.
+49:22
+Like don't open your desktop because it will just start reading a bunch of files like just you know it's you have to kind
+49:28
+of put in a little box otherwise things are going wrong.
+49:33
+Okay, so we have a new folder, same binary. Uh we're going to switch our MCP
+49:38
+server. Go a little hamburger. So, we're going to turn off Duncan. And before we
+49:44
+turn on Lori, I have to uh open Gihydra. His weird phrase. Open
+49:51
+your I think I have it here. Yeah, there we go. Gi Hydra. All right.
+49:58
+Poor guys. I'm going to say whatever. They're [ __ ] spying on my
+50:04
+dick pickics. They can take a little heat. Okay.
+50:10
+All right. Uh, I want a new project. Why is the font so [ __ ] See, this is
+50:17
+the thing. NSA can't get their [ __ ] straight. Uh, non-shared project. What
+50:22
+does it even matter? What does it matter, guys? No, no, no. You don't want this because then you need a server.
+50:27
+Non-shared project. You can tell how shared is pretty cool, but piece of [ __ ] Yeah. Yeah. Pretty cool, man. Look
+50:35
+at Bro, look at this. This is not pretty cool. This like some [ __ ] that they had in the [ __ ] 90s. Shared project is
+50:43
+cool because you have the server and you can like you work directly on the server. Project
+50:51
+collaborating fly off. Okay. And I think I just have to open a
+50:59
+folder now. I really don't use Ghydra. You drag the you press I to import a
+51:04
+file or do file import and then you
+51:10
+uh 5G for
+51:18
+this. Okay. And then
+51:25
+um yes, please. I know you guys can't. Trust me, if you're screaming on in the
+51:30
+chat about not being able to see the font, I can't see either. And I It's right in front of me on a giant 50-inch
+51:35
+monitor. That's so complicated. like it's we're just gonna have to deal
+51:41
+with it. Um so I noticed for the server to work it actually has to be open. Uh we have to like disassemone or open the
+51:49
+you know open this thing. Yeah. And probably also have to analyze it right. You have to run the auto analysis which to be fair we did the same in IDA. We
+51:55
+let IDA analyze everything before doing anything. Uh oh. It didn't work. Oh no.
+52:02
+No. Yeah. You can close this window and just double click on the binary there because there
+52:10
+people in the chat screaming about my gi. Yes, analyze it now. Yes. I don't
+52:16
+know what any of this means. We'll select the default. Yeah, just yes.
+52:21
+Okay. Uh '9s aesthetic is peak. Yeah, I kind of like the aesthetic, too.
+52:27
+Um flare on 2020. I also like the '9s aesthetic, but this is like this was ugly in the 90s, too.
+52:33
+Yeah, this wasn't good. I mean, in the '9s they had like rounded icons. Look at this [ __ ] This is like It's not even 8
+52:39
+bit. It's like three bit, four bit. Yeah. Now, the technology under Gitter
+52:44
+is really really quite cool. But yeah, the UI it's uh it needs some work, I think. Yeah, they just like hid it away.
+52:53
+But, you know, once we have the MC server, we don't need any UI at all, right? Hell yeah. That's the way it
+52:58
+goes. Headless mode, we don't care what it looks like anymore. But like we just print it. Yeah. So I was going to say I
+53:05
+think that's why this is like a good demo because you guys can see how incompetent I am at Hydra. I don't even
+53:10
+I didn't even know how to open the [ __ ] file. So but now watch me reverse
+53:16
+engineer. Watch me now. Watch this. Now I'm getting stronger and stronger by the
+53:24
+[Music] second technology.
+53:33
+Um yeah, I think you have to enable it, right? The Yeah, I have to enable it. Yeah. Um then retry connection. Retry.
+53:41
+Yes. Nice. Yeah. So to get the Now you have to actually turn it on cuz now it's
+53:46
+off. Well, there's the date. So it's I think it's fine. Yeah. This is the downside of this MCP architecture that
+53:51
+it goes over STD in and STD out. So as soon as you print something to the screen, it's like, oh, stream is corrupted, you know, and it doesn't
+53:57
+work. It's like uh I don't know what what is happening. I don't know. You can
+54:03
+try to maybe restart VS Code. Maybe that could work. Sure. Yeah. Like this technology is it's
+54:09
+still a bit jank. Help Lori. No, I mean I don't think she can help because I
+54:14
+don't mean that. I I mean like the MCP client server stuff because like they really spend a lot of time engineering
+54:20
+the protocol but very little time actually making it work. I mean, yeah,
+54:26
+it's you can check the logs if it worked. Where are the logs, Lori?
+54:32
+I guess the GRA logs probably right in the bottom of the GRA window. No, no, go to the initial page,
+54:41
+not the code page. Let's uh Oh, it's working now.
+54:46
+Yes. All right. Um, famous
+54:54
+house enjoyers. All right, let's see. We're done here. Okay, so now let's uh let's see if we can actually do this.
+55:02
+Um, we should probably use the exact same uh Yeah. Yeah. Yeah. The exact same prompt. Just you can copy it here in the
+55:08
+Oh, yeah. Whatever. But except in GRA, I don't think they're called sub, right? They're called
+55:13
+something else, right? Yes, of course. Um, fn underscore I think, but
+55:22
+I'm not sure. Yes. FN uh fun underscore fu. Oh, yeah.
+55:32
+Uh, oh, fun fun
+55:37
+fun. Yeah. Yeah. So anyway, what I was going to say is in order to get this uh sort of hacked up and working with VS
+55:43
+Code, the way that I did it was I just I copied Lor's project and then I initialized like the UV um or MCP
+55:50
+initialized, sorry, inside the project to get it set up. And that was all I had to do really. And then I just connected
+55:56
+to it. Um so maybe I'll add that to the readme or something um after. Yeah, we
+56:03
+can we can do a pull request. Yeah. Uh, I
+56:09
+think that's good. We don't want I don't want to change it too much cuz it is supposed to
+56:15
+be like a bake off, right? I was going to say we should add analyze the C2 protocol, but that would that would be
+56:20
+cheating. That would be cheating. Okay. All right. I think we're good to
+56:25
+go. Oh, it says IDA. Where does it say IDA? Uh, in Gihydra Gidra Pro.
+56:34
+That's a secret version. No, no, no. Don't do that.
+56:41
+It'll get confused. Okay. Okay. Okay. All right. Are we We're good. We're good,
+56:48
+guys. Everyone. Yeah. Um, let's go to, you know, this also
+56:55
+might not be still a fair comparison, right? Because there are different tools available, MCP tools. So it's a kind of
+57:01
+the prompt that we wrote was also kind of optimized for the you know the tool the IDA promc with the list entry points
+57:07
+and stuff. So you know it's still kind of might not be fully fair let's say because they're not exactly the same
+57:12
+tools available under the hood. So Duncan coping worried he's going to lose.
+57:19
+No I'm not worried. I'm just kidding. Okay. I'll be
+57:28
+happy. All right, let's see. It's working. It works. Yes.
+57:37
+Yes. Hell yeah. Okay. All right. Cool. Cool. Cool. Cool.
+57:42
+Um, so if we You have to approve. Oh, sorry. Cuz it's gonna Yes. always allow
+57:50
+allow everything on my host. Um, how do I show the function? Of
+57:58
+course, look at this layout, guys. How do I show the functions and filter it
+58:04
+functions? Functions. I don't even see left all the way on the left there's the symbol tree
+58:10
+in the middle, middle left panel. Oh, the middle. And then there you have
+58:15
+functions. And then you can type in the filter to Oh, okay. I think, but I don't know if Gidra
+58:21
+handles colons that well, but I pro probably stuck now that
+58:27
+you need to approve a bit a bunch more. Yeah. Yes, of course. Of course.
+58:33
+Yo, Miss, what's up? Thanks for the sub. Goes directly to Bezos.
+58:38
+Um, you can also go to window up and then click functions. Oh, I think we're
+58:44
+got it handled here hopefully. Um, you should make a fork of G
+58:51
+Hydra. I should fork it and change the name. Also, yeah, we can vibe codes and
+58:57
+new UI. Hell
+59:02
+yeah. Um, it would probably be pretty cool if you could use those Jet Brains UI
+59:09
+components. I think you can they're available for people to use because the Jet Brains tools look nice and they're also Java. So, and they're Java. Yeah,
+59:16
+exactly. Yeah, everyone wants a new UI. Maybe
+59:21
+that should new OA Lab stream series. We just vibe code. I don't know anything about Java. I just tell I prompted it.
+59:30
+I think we should do web technology. Yeah, I I mean that's the future. Put it
+59:37
+in the browser. Put it Put it in node. Uh, it does seem to be analyzing
+59:44
+it, but it doesn't seem to be renaming. I don't see any renames.
+59:50
+Maybe it's not called rename, but something else. Let me check.
+59:58
+Uh, could I vibe code my way into a job? I think there's some guy who got kicked
+1:00:03
+out of university who's who's got you covered there, bro. You guys seen that? I don't uh I
+1:00:09
+don't What is it called? I don't remember what it's called, but he's got [ __ ] lead code. It's called I think unle
+1:00:14
+code. No, [ __ ] lead code. Oh, [ __ ] [ __ ] lead code. Huh. Nice. Yeah, he made like
+1:00:20
+a little overlay, like a cheat overlay where you would speaking and then would take screenshots and then solve the lead
+1:00:26
+code problem and made it look like you were doing it step by step as well. I I love he had like a feature release I saw
+1:00:33
+on Twitter. He's he's a funny dude. And he was like now with like invisible overlay. And I was like, it's just a
+1:00:39
+straight cheat. It's like literally cheat technology but for [ __ ] interviews. It's so funny. I also saw
+1:00:45
+someone who already made like an anti-in cheat thing that you had to install on your computer and I would like look for
+1:00:50
+it and everything. Where's magic at? We need magic on the case.
+1:00:57
+[ __ ] new idea, guys. Anti-che for interviews. You heard it here first.
+1:01:03
+10% you guys 10%. There's a lot of money at stake, right? So, there's there's money in there in
+1:01:09
+the market. Yeah. Well, all they need is uh I think they already have that technology. It's just
+1:01:15
+really shitty for uh for high schools. Um they have these like test taker
+1:01:20
+things where it like installs a shitty driver that makes you super vulnerable. I only know about this because it's like
+1:01:26
+one of the top uploaded things to unpack me. Like I was like, "What the [ __ ] is this thing that people keep uploading?
+1:01:32
+It's like some sort of like high school test taker thing." Yeah, I know. It's
+1:01:38
+rename actually. Uh but I don't rename successfully. Oh no, it doesn't show.
+1:01:44
+Yeah, it probably doesn't automate. Yeah. Yeah, cuz Gro is a bit weird also with the undoing and and stuff like that
+1:01:51
+when you use the API. Oh yeah, there we go. Oh, it puts percent. Look at
+1:01:57
+the Hydra. Now I think this might be the the actual
+1:02:02
+plugin doing it. Trying to like escape the data. What's a name space?
+1:02:09
+All right. I should probably make it underscore. You should have put underscore. Yeah, because IDA does the same, right? Ida just replaces it all
+1:02:14
+with with underscores anyway. So yeah, one thing I notic ready for the
+1:02:21
+web. Yeah, exactly. Yes. I also noticed that um kind of you
+1:02:28
+want to give it tools to do bulk operations that I noticed that that because now this is like burning money
+1:02:33
+basically like it's just burning money renaming one by one and you know I also
+1:02:39
+in the item speed plugin I also didn't do this but it should just be like rename functions where it does in a
+1:02:44
+chunk same with commenting on the function that that should just be like a one time operation basically
+1:02:51
+something else that like so when I was doing the C++ one it had could keep like I said I had this thing the prompt that
+1:02:57
+was basically like don't you're not finished until everything is renamed from sub underscore so it would like go
+1:03:03
+back and go back and go back and it was like and I also had a prompt that said like if you have a name collision um put
+1:03:09
+like an underscore and and then iterate uh like a number so that there's no collision but because of that I noticed
+1:03:17
+like immediately I was like why am I burning money it's like because every time it renamed something it would be
+1:03:22
+like give me the function list and it just be like ah so so yeah there's definitely some
+1:03:29
+optimizations that can be done here with some sort of memory or something you know or or just bulk operations in
+1:03:35
+general. Also what I was thinking is a lot of these things you could probably write Python tools to do so like the MCP would
+1:03:43
+send a command and then you could do a little bit of logic in the Python tool um before you Yeah. Yeah. Sure. Yeah.
+1:03:50
+like with name collisions for example, it could just do that for you and just return the actual name like collision
+1:03:55
+renamed it to this or whatever and then it's also I just wanted to add like this this
+1:04:01
+IDMCP server was like it was vibe coded in like 3 hours uh you know it it really
+1:04:08
+can use a lot of work and I came back from a night out with friends and I was like ah this MCP I had it on my list for
+1:04:14
+a while right I was like ah MCP it's cool and everything and then I was like oh okay Lori released one uh there was
+1:04:20
+one release for binge. I was like okay there this is the opportunity make on pride but you know it's just
+1:04:26
+like you know proof of con it's super easy to make those MCP servers basically if you want to try it like it's like
+1:04:32
+something you can you can set it up in literally 5 minutes you can get one one working uh so yeah you should try it
+1:04:40
+unless you're trying to do it for x240 bug in which case you'll never get it working. No, no. Nox already has it
+1:04:46
+working. He sent me like some updates. Yeah. Yeah. He used this new x64 debug automate Python thing. So, he just the
+1:04:53
+MCP server just used that package to like start an X64 instance and he already got it to like start a process
+1:04:59
+and I think single step or something. He just did like proof of concept. But yeah, it's it's coming. Jesus. Like it
+1:05:06
+it is super e it's like it is super easy basically to give LLM tools and that's something that I think that's what
+1:05:11
+people should try, right? Uh, you don't have to use this or just whatever your workflow is, just try to encode it in
+1:05:18
+some MCP. Why not?
+1:05:23
+All right. Moment of truth. Moment of
+1:05:29
+truth. Valer else. Yeah. Then we have to do a vote. Which one? Yeah, we should.
+1:05:34
+So, afterwards, we'll do a vote. But to be fair, if Sorry. If it doesn't get the RC4, then we can still ask it about
+1:05:40
+this, right? Because we also did that for the other one. That's the other one. Yeah, I that is what I'm curious about.
+1:05:45
+I'm curious to see whether it got the the name of the software and also the RC4. Main functionality. Main
+1:05:53
+functionality vibe main is a simple structure. Oh, it's being a little bit more pedantic here. Um, terminate
+1:06:01
+security processes one and two. Okay. Um, the malware attempts to enable SU
+1:06:07
+debug privilege which allows it to debug and manipulate other processes. If successful, it calls two functions to terminate security software processes.
+1:06:14
+Okay. All right. Um, that's also not accurate, right? I know later it says
+1:06:19
+that's true. That's true. Yeah. Uh, privilege escalation. So, it just it
+1:06:26
+looks like it's being a little more descriptive, I guess, in this case, um, like about what the code is doing. But,
+1:06:33
+uh, I don't think that has much to do with Gio Hydra, though. So it might be because of the way the decompilation
+1:06:38
+looks because I think the IDA decompilation either looks more natural or it's just more available online,
+1:06:44
+right? So it kind of is more normal code whereas Gitra's decompilation is, you know, more computer cody. Yeah.
+1:06:52
+Um yeah, the mware targets two sets of security processes. First set uh so they
+1:06:58
+don't they didn't figure out Oh, okay. Here you go. So, they figured out the Microsoft one, but they didn't add it as
+1:07:04
+a as a top level here, but they didn't figure out trend micro.
+1:07:11
+Um, all right, that looks good. Uh, for each trigger process, the malware
+1:07:16
+creates a snapshot using Yeah. So, it's being like very pedantic. Um, again, yeah, probably rewriting the code. Yeah,
+1:07:23
+it's like Exactly. It's doing like um pseudo code style
+1:07:28
+or maybe it did it from disassembly. I'm not actually sure what what actually happened. I think it was
+1:07:34
+code. Uh yeah, it's pseudo code. Yeah. No. Yeah, it is. Okay. Okay. Interesting.
+1:07:41
+Uh it looks for process matching the target names. When it finds a match, it opens the process, gets full path to the
+1:07:47
+process. Yeah. So, this is like more reading like it's just telling you what the code is doing instead of kind of
+1:07:53
+raising it up to explain at a higher level. It's still correct. Um, you know, it's still correct what
+1:08:00
+it's doing. Hey, it also figured out the APC thing. So, it's Yeah, that's good. File deletion. Um, that's correct. The M
+1:08:08
+constructs a path using UNCC notation and replaces colons with dollar sign, which is how Windows represents
+1:08:14
+administrative shares. Okay, this is likely a technique to access and delete files that might otherwise be protected.
+1:08:19
+Okay, I mean, it definitely got that part. Um, okay. CNC, this is the important
+1:08:26
+part. It creates a unique identifier for the infected machine by collecting system information, username, SID,
+1:08:31
+Windows. So, it got that part correct. That's good. Computes an MD5 hash and then converts that. So, that's identical
+1:08:37
+and that's that was uh this was a little bit of a hard part. Constructs a post
+1:08:42
+request in the format of ID and data. That's correct. The data includes information about the OS version.
+1:08:48
+Encrypts it. Encrypts the data using RC4 with the machine identifier as the key. Ah, okay. I mean, that's not exactly
+1:08:55
+right. It encrypts the path, but it does it did figure out that it's RC4. Oh. Um,
+1:09:01
+but the machine identifier was the key, right? That was correct. Yes, that's the hard part. That's the part that's like a little tricky to figure out. Um, it uses
+1:09:09
+a random number generator to select one of several hard-coded IP addresses. Again, didn't figure out
+1:09:18
+I mean, okay. uh it sends the post request uh to a specified URL path by
+1:09:26
+construct URL path. Yeah. So it didn't ex it is actually a little bit confused
+1:09:31
+here because the RC4 is only used to encrypt the path not the data.
+1:09:37
+Um it tries 11 times to connect to different C2 servers if the initial attempt fails. Yeah, that's that's
+1:09:43
+correct. Um okay. The malware uses RC4 encryption algorithm to encrypt its C2
+1:09:48
+communication. uh to encrypt data. Okay. And then the
+1:09:55
+rename functions. Oh, it extracted some IOC's for us. All right. Oh, nice. Nice.
+1:10:01
+Yeah. All right. Possibly other IPs. Okay. Yeah. I mean, this this neither
+1:10:08
+one of them figured out that there's four IPs, which is kind of annoying. No, no. The the other one figured out that
+1:10:14
+there was I know it said just picks one of random percent from four.
+1:10:20
+If you modulate random by four, what do you get? Yeah. Anyway, I'm not good at
+1:10:26
+math. Yeah. Okay. So, all right. Um, again,
+1:10:32
+this one is a little bit more of a at least my read on it is it's a little bit
+1:10:38
+more uh closer to the code rather than the highle functionality. Um, but I don't seem to
+1:10:45
+think that's particularly wrong. It did get the RC4. Um, but it didn't explain the what's encrypted. I I think it kind
+1:10:52
+of got that wrong actually. Um, but the other one didn't even get the RC4. So,
+1:10:59
+yeah, we have to prompt it. We can also still ask it what was this uh security product because I think we did that,
+1:11:05
+right? Yes. Yes, I will definitely ask that. Um, actually, we should probably figure
+1:11:11
+out what they call it. What is the security
+1:11:17
+software that is is that uh is that what we asked it
+1:11:24
+on the other one? Yeah. Yeah. Something like that. Yes. Let's say what is the
+1:11:30
+name of that? It's probably just going to do the
+1:11:37
+processes though. Uh maybe maybe not. It's completely random, right?
+1:11:44
+That's the that's the issue I guess. It appears to be trend micro. Trend micro. Nice. Nice.
+1:11:52
+Right on. Good. Good. All right. Um, and let's also prompt it with the
+1:12:00
+So, let's see if we can clean up the uh security or the RC4. So um in the C2
+1:12:08
+proto call what specifically is
+1:12:16
+encrypted with C4? Yeah. Let's see if it does
+1:12:23
+that. Um is that because the subsequent IPs aren't shown in the assembly div compilation? Yeah, the the way um the
+1:12:32
+way it works here, let me just show you there. Um, actually it's Gi Hydra, so I don't
+1:12:38
+know how to show you. I could show you an IDA. Um, it's a giant structure that's uh that's hardcoded. It's a
+1:12:44
+hardcoded global. Um, so in the assembly only the first is ref only the first
+1:12:50
+entry in the structure is referenced. Um, so and you have to convert it into a structure. I can't show that to you
+1:12:57
+here. I don't know how to use GIRA, but maybe I'll show you an end in a minute. Also, imagine handing in the report with
+1:13:04
+vibe colon colon everywhere. Well, we can have it, you know, we can have it fixed. Uh, but you you heard it
+1:13:13
+here first, guys. If you guys start pulling down Lumina results from uh from Ida and you see
+1:13:20
+Vibe_, you heard it here first. That was her again. No, no, it's not me. It's somebody watches stream. Ah, not you.
+1:13:28
+Yeah, right. I mean, I'm actually curious what hexers will I guess I mean, I guess they
+1:13:34
+already have some kind of quality control, right, for Lumina or they they just take it. I don't know, man. I've seen some wild [ __ ] in there. I'm not
+1:13:41
+sure what they're doing. I'll ask. That's actually interesting cuz you probably want to be like, hey, you know,
+1:13:48
+this was AI generated or something. Exactly. Let's see. Update the report with these
+1:13:55
+new findings. Yeah. And just say and clean it up or
+1:14:01
+and make it less verbose or something or like cuz it was kind of
+1:14:07
+more hot. I mean, you know better, but I I think this was too verbose, right? Make the report
+1:14:14
+um I don't know how to describe that. I was having a hard time describing it. Less pedantic. I mean, that's the that's
+1:14:21
+the right word. Make report feel less written by a junior. Uh try that.
+1:14:30
+That's not going to work. It might work. We need to tell it that uh you are
+1:14:37
+a principal researcher. Reverse engineer. You are
+1:14:42
+a princip. But yeah, that's right.
+1:14:48
+engineer who has who has a good
+1:14:55
+grasp of malware
+1:15:02
+functionality. You can uh you can you can do this abstract
+1:15:10
+code. I don't I don't know. Just just just don't do you can just don't overengineer it. Just let's see what
+1:15:15
+happens. You know what? We need Mishap on the Mishap is a great prompt engineer. Send us your prompts. Mishap
+1:15:23
+do my work. Please uh run this on all O lab samples and
+1:15:29
+push everything to Lumina server just wants the world to burn down. She wants AI to be poor.
+1:15:38
+It's going to cost you like hundreds of dollars if not thousands. Thousands, man. Like I said, it costs it costs so
+1:15:45
+much money just to do that C++ thing. Oh man. It still put the vibe colon in
+1:15:53
+there. That's it's not a good sign. But you know, if you can dream it,
+1:15:58
+you can do it. Obsack. It mentioned OBSAC. Oh, that's amazing. We should We should add the think it, dream it, do it
+1:16:05
+prompt. All prompts should start with that.
+1:16:15
+All right. All right. Are we We're still waiting. Yeah.
+1:16:21
+I don't like how verbose like You don't have to tell me what you did. I don't even care. But yeah. Yeah. But that's
+1:16:26
+also something you can prompt out. Yeah. So I think that's what Amy did actually from what I saw from the video. But I think the Binary Ninja MCP is not
+1:16:32
+released, so we cannot really use. Amy was the dev for the binger one. Yeah, I
+1:16:38
+think so. Yes. maybe link her um her her GitHub as well. Uh all right, let's see
+1:16:46
+here. I put the put the tweet in the chat. Oh, yeah. Okay. Yeah,
+1:16:53
+perfect. Um I think that was the very first MCP.
+1:17:00
+Oh, look at that. They're doing uh they're embedding code now. I bet I bet if we gave it the ability to take
+1:17:06
+screenshots, it would put IDA screenshots in there. You know, you know, it was raised on the internet on
+1:17:12
+security blog, so you know, it' put a [ __ ] screenshot in there. Giblly styles IDA. Giblly IDA. Yeah. Um, okay.
+1:17:20
+So, the malware's execution begins at the standard entry point, which invokes C runtime. Well, come on, guys. Come on.
+1:17:26
+Why would you talk about that? The main function implements a persistent loop that attempts to obtain SC debug
+1:17:31
+privilege. A powerful capability that allows malware to manipulate processes. Okay. I mean, what's this?
+1:17:39
+Oh, amazing. Yeah. Yeah, it's definitely hyping it up a bit.
+1:17:45
+It's a it's a prof. It's a senior reverse engineer. Um, uses standard technique of opening current process
+1:17:52
+token. Yeah, I don't know why you have to include this stuff. Um, looking at your reverse engineer with one foot in
+1:17:58
+management. It's It's a little bit pedantic still. It It did clean it up though. Um.
+1:18:07
+Yeah. Yeah. Yeah. Now it's the trend micro thing and Yeah. Yeah. Yeah. Um,
+1:18:12
+Microsoft security products. Yeah. So, it listed them. This is Yeah. This actually cleaned up quite a bit. The
+1:18:18
+termination technique is particularly sophisticated. Avoiding direct process
+1:18:23
+termination calls. Um, that's actually true. Uh,
+1:18:29
+yeah. No, I mean that that is what it's doing though. I mean, yeah. Okay. I'm more about the sophisticated about that.
+1:18:36
+Hype hype hype. Right. But but this is it's kind of curious that figured this out, right?
+1:18:44
+No. True, true. Yeah. I mean, well, that is what it's doing.
+1:18:50
+Uh for each o thread it opens uh the thread with thread set context access
+1:18:56
+duplicates the thread handle cues uh the user APC with exit process as a
+1:19:02
+callback. That's correct. Um the APC injection technique is particularly effective as it leverages the target
+1:19:08
+processes own threads to execute the termination code bypassing many security monitoring solutions. I mean, I'm pretty
+1:19:14
+sure most security monitors know about set threat contacts and Q user PC, but
+1:19:19
+yeah. Um, cool. Uh, report like it was written by a red
+1:19:24
+teamer in his junior years. Uh, LMS think that the process of
+1:19:30
+decompiling code is sophisticated. Yeah. Yeah.
+1:19:35
+Just just because we make it out to be, right? Yeah. Yeah. If the whole internet was
+1:19:40
+like, "Ah, we just decompile and it's not a big deal." Then it would also not make a big deal out of it. Yeah,
+1:19:46
+exactly. Um, you think you can get away with dropping a polymorphic payload in my sandbox? Think again, noob. What?
+1:19:54
+What is this? The Jonathan data one report? Write the report like you're Jonathan data
+1:20:01
+one. That would be kind of funny. Um, all right. Let's go down to the C2
+1:20:06
+protocol and see if it fixed that. Uh the CT communication protocol uh employs
+1:20:13
+several offiscation techniques. URL path encryption that so it figured all this out now. Um so that is correct. It does
+1:20:20
+encode or encrypt that with RC4. Uh the encryption results is converted to X muscle string and
+1:20:26
+prepended with a specific bite. Okay. So it's prepended with the key. Um so uh
+1:20:34
+the first eight bytes of the machine identifier are appended to the encrypted path. No uh it's prepended with that
+1:20:42
+actually but uh but it kind of figured that out. I mean you know it's it's at least it
+1:20:48
+has some idea of what's going on. Yeah. Well we have
+1:20:54
+Yeah.
+1:21:00
+Uh yeah. Okay. Okay, so this is correct. The data um OS information be collected is manor
+1:21:08
+manager build um it didn't get so uh funny story when
+1:21:14
+I was testing this myself um the developers of this malware made a mistake uh and they do uh an encryption
+1:21:22
+where they subtract one from the string that they send to the C2 and then at runtime uh they sub no sorry they add
+1:21:31
+one and at runtime to decrypt the string what you should do is subtract one but they made a mistake in the code and so
+1:21:37
+they add one again so when I was reverse engineering it there's no way to figure that out unless you just kind of were
+1:21:43
+like that's obviously [ __ ] like this the string is not right um and the I
+1:21:48
+remember the first time it figured this out right yeah I was just going to say the first time we ran it actually figured that out and it was like you
+1:21:55
+know the developer no it didn't say they made a mistake it just said to decrypt the string properly You should subtract
+1:22:02
+one and it makes this. Yeah. And it gave the keys, I think, as well, like the the string. It it it gave the string, the
+1:22:08
+decrypted string. Yeah. Yeah. Oh, here we go. It's figured out the the
+1:22:16
+random number. It still can't It still can't figure out there's four IPs, but
+1:22:21
+at least it got the random number modulated by four instead of just random number. Um, so that's good.
+1:22:29
+Uh, and then this this reads pretty well though. So maybe malware capabilities assessment like this is probably
+1:22:35
+something you could you could hand in MITER matrix in there and you're like done promoting. Yeah, we should prompt
+1:22:42
+it. Add the MITER matrix and uh bump my salary. Yeah. Okay. So, I don't know if
+1:22:49
+you guys want to vote on this. I mean uh No, no, we can we can wrap. It's fine.
+1:22:55
+It's all right. We I think we've already done enough here. I'm also really hungry.
+1:23:01
+Yes, want to get angry at the LLM. That would be bad. Yeah, exactly.
+1:23:06
+All right, so conclusions. What What do you think? Conclusions? I think
+1:23:13
+that well, we just need scripts, plugins to basically do the stuff like hasht,
+1:23:20
+resolve those hashes, resolve the encrypted strings. Like that's the kind of stuff you need to do first. And I think once you have that like once the
+1:23:27
+decompilation looks kind of clean it can do the renaming of variables it can do
+1:23:32
+like same I think once you resolve the hashes you can just ask hey you know this is hash resolving just retype all
+1:23:37
+those variables correctly and it will do that I mean I'm sure you can also do it with a plug-in but you know you could do that kind of stuff like vibe vibe ask it
+1:23:45
+specific questions and I think for that it will work like it will work fine for analyzing whole binaries you just need
+1:23:50
+to have more metadata for it to be useful I think Yeah. On a bunch of raw data, it's not going to do anything. No
+1:23:57
+surprises there, I would say. Yeah. What do you think? You said you're a super doomer. Yeah. I mean, is it over? Well, two two
+1:24:05
+I mean, I think I think it's like my I was talking with Snow about this, I think, last night. Like the the main
+1:24:10
+takeaway here is like all of the lowhanging fruit is being picked. So, like, you know, I mean, I I worked as a
+1:24:17
+professional engineer forever now. I think it's probably almost 10 years. And like it's like any other job, like
+1:24:23
+sometimes you don't want to work too hard, maybe you're hung over, so you kind of do some like vibe reversing
+1:24:29
+yourself, right? Where you're just kind of like, okay, today I'm just going to rename functions and whatever and do some stuff. That's all gone, right? So
+1:24:35
+like I think that that's really like that probably within the year, you know, like that that stuff is gone for anyone
+1:24:42
+who knows what they're doing. It's going to take a while for this to actually get into production in like big companies,
+1:24:47
+but like for individuals, all of that like relaxing part of reversing I think is going to be
+1:24:53
+going away pretty quick and all for you. Yeah. And all that's left is the hard
+1:24:58
+stuff. I mean, that's I mean, that's that's really what I think is is happening here. Um, but it's good, right? I mean, that's what we want. I
+1:25:04
+think it's good. I'm I like this, but you know, I don't work as a professional
+1:25:11
+reverse engineer now. So, you know, I I work as a professional unpacker, and you
+1:25:16
+definitely need to be able to unpack to do any of this. So, yes, I'm obviously very bullish on this. Um, but yeah, I I
+1:25:23
+do think that it's like it's like a force multiplier. I kind of was joking in the chat earlier, but I really do
+1:25:30
+think like this is AI is not a democratizing tool. It's uh it's a
+1:25:36
+leveling up tool. So, if you're already pretty good, this is just going to make you faster and better. And if you don't
+1:25:42
+know what you're doing, this is this is it's bad news for you. I think if you cannot afford this this, you know, what
+1:25:48
+does it cost you to stream? Like 20 bucks or whatever then just for the for the for the heck of it. Like if you cannot afford this, which a lot of
+1:25:54
+people are in that position, right? It's like it's unfair essentially, right? Oh, I don't even mean like on the
+1:26:00
+econ I mean that's another that's a whole other [ __ ] discussion. Yeah, but I'm not even like dooming on that on
+1:26:05
+that side. I'm just saying like if you're if you're not a good reverse engineer and you're working in this
+1:26:11
+industry, all the stuff that you're doing is can be done by this now. It's like you you're probably you have to
+1:26:16
+have like some skills now. I think like that's what it that's what it feels like to me at least. I could be wrong. I
+1:26:23
+mean, I've been wrong before. So, I said that I said LM's aren't going to take your jobs like last year at a [ __ ]
+1:26:29
+keynote. Oh, big words. Oh, no. Yeah. So, I think uh
+1:26:37
+Mockru also asked an interesting question like what would someone train on if they want to get into the
+1:26:43
+industry? I mean, I I don't know. I I actually misread the question. So, basically, I wanted to say that for me
+1:26:49
+locally, I have this thing called Light LLM set up. So like all my actual prompts and all the responses are going
+1:26:55
+through like a proxy server and all the data is saved on my own like hard drive.
+1:27:01
+So I basically want to save because you know I'm I'm trying this stuff right and I'm you know trying to implement my
+1:27:07
+workflow and I think you know that data is valuable so you should collect it and definitely don't give it away for free.
+1:27:14
+Yeah because you know there are there are free models but you know they are training on your on your actual stuff right. Um but then to maybe to answer
+1:27:21
+the extra question, what would someone train on? Maybe you have a good idea, Sergey. Uh what would you like for
+1:27:27
+learning? Yeah, I was Yeah, I was thinking about this. Um one thing that like one kind of negative thing here is
+1:27:33
+like the first sample that we try the first malware sample that we tried um was actually the malware sample that we
+1:27:39
+used in Patreon for the last like couple uh tutorials to teach you like the basics of how to reverse engineer. And
+1:27:47
+like one of the problems I can see here is like if you don't go through that pain and you just use an LLM for that,
+1:27:54
+you won't learn how it works. And like it's going to be really tempting to do that cuz it's the easy stuff is easy.
+1:28:00
+And that's like one thing where I could I could just see like you probably should do have to go through the pain
+1:28:06
+because you you won't learn those basics any other way and the LM can't do the
+1:28:11
+hard stuff yet. Um, and honestly, some of the hard stuff is really hard. I
+1:28:17
+don't see I I think it's going to be quite a while before it can do a lot of it is kind of abstract thinking or like
+1:28:23
+pattern identification stuff. It's just hard to do. Um, it doesn't, we didn't
+1:28:29
+demonstrate this here, but it doesn't work at all on offiscation and like that stuff is coming. It's a different brain.
+1:28:37
+It's a different approach entirely to do that, right? So maybe you could use an LM to remove offiscation, but you
+1:28:43
+wouldn't be doing it like with IDA. You'd be doing it like in a different approach. So yeah. Anyway, I just one
+1:28:50
+thing to watch out for is if you're using the LM to do easy stuff and you're just starting out, that's probably not a
+1:28:55
+good idea because you're going to need those skills. I mean, yeah, just like VIP coding, right? Yes. If you have 10
+1:29:02
+years of experience doing software development, yeah, you know, for me, it's like whatever. I have an idea about the architecture, what I want to do.
+1:29:07
+actually, you know, I can see when it's doing something stupid and I can like kind of course code it. But if you don't have that experience, it's just over for
+1:29:14
+you. You have to you have to learn how to code, right? That's like the Yeah, that's that's what I was trying to get
+1:29:20
+at with like the democratization is not really it's not it's true. It's not true what it's doing. It's making the strong
+1:29:26
+stronger because the reason why this is so fun and cool and same with vibe coding too is like I know what it's
+1:29:34
+supposed to be doing. I like I I can tell. Oh, that's that's a that's an oopsie. You got to fix that. But if you
+1:29:40
+didn't know, you could be led way astray by this, right? This ransomware has uh
+1:29:46
+payload decryption and downloading and C2 communication. It's like
+1:29:51
+no, it doesn't have any of that. Yeah. Yeah. Yeah. Any other questions?
+1:29:56
+Can Stego beat LMS? You should try. I think it depends how hard it is. I don't
+1:30:02
+know. Like if for anyone watching like just try this stuff. I know it cost money. There are free models out there also. So Gemini 2.5 Pro it's like very
+1:30:09
+good and they're giving it away for free. Deepseek you can try for free. Clot you can try for free but you know
+1:30:15
+it's all trials right. But you know you can try this stuff today. You can you don't need any special stuff. You should
+1:30:20
+just try it and if you have a question like the stego thing just try it like
+1:30:26
+maybe it works maybe it doesn't. Maybe you can think of some tool that you could write you just just play with it. Right. That's like the
+1:30:33
+my main takeaway. Shout out to us sub sub to us on Patreon, but for free we have that O Labs research blog and like
+1:30:40
+all those samples that we streamed on for the past like three two and a half years are all like interesting corner
+1:30:47
+cases. Normally the streams are on like interesting reverse engineering corner cases. So if you guys wanted to try some
+1:30:53
+of those like we have a stego one, we have offiscated ones. It's free. Well, it's not free.
+1:30:59
+It's $2 for you to try. So, go give it a shot. And also, yeah, shout out for for
+1:31:06
+the GitHub for um that Lori has and that Duncan has. Um add some tools. I'm
+1:31:12
+really curious to see if you guys add some additional context, like additional tools that provide more context. I think
+1:31:19
+that's that's the future.
+1:31:29
+[Music]
+

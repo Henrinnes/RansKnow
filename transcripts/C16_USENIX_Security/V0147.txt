@@ -1,0 +1,631 @@
+0:18
+Good morning everyone. Um I am James from Huawei cloud reliability lab. Um
+0:24
+yeah. Hi I'm Jes from the so yeah so like uh so like I'm also from the Huawei so the
+0:31
+Huawei IL research center as well cloud relatability lab as well.
+0:38
+Yeah. Um I'm glad to be uh the first presentation today. So hope you're not
+0:43
+as sleepy um as me. So okay. So um today we're going to talk about um the lessons
+0:51
+we learned from building our level four low banser called hroter.
+0:57
+Um this is the rough agenda. Um not not exactly reflecting the um the slides. So
+1:04
+basically we're going to talk about the scale of our cloud and our deterministic operation framework and then um high
+1:12
+level introduction about um global load balancing platform and then d deeper
+1:18
+into our level for low balancing from deep plane to um control plane and
+1:24
+including some operational access lessons. So um let's have a quick look at the um
+1:31
+the scale of the H cloud. So um h cloud is relatively new to um comparing to uh
+1:38
+other um crowd providers. So many people may think why we only build hardware um
+1:45
+next switch or even mobile phones but actually we also build crowd um we already have u more than 33 public
+1:52
+regions also uh many private regions and it it's still growing fast about 20% per
+1:59
+year. So in order to um ensure reliability um
+2:05
+of u crow services we introduce a framework called a terminus operation.
+2:11
+So it's not just for operation basically it's a systematic appro uh framework to
+2:16
+ensure the system reliability from end to end from design phase to um
+2:22
+verification testing to um change management and also um data operation
+2:29
+and to ensure the way in the services have predictable performance scalability
+2:35
+and also have um certain certainty for disaster recovery
+2:42
+as well. Um is also kind of working backwards mindset. So for example, we
+2:48
+start a new service, we have to think about um how the the system will be
+2:54
+operated, how to do uh deal with disaster recovery um yeah all those
+2:59
+things at the very beginning. So uh we also build many common services and uh
+3:06
+platform services. For example, the uh global load balancing service is one of the um critical cornerstone of this uh
+3:13
+whole oper deterministic operation framework. Uh for example, it provide um
+3:19
+cross region load balancing. It also cross a cross um cross load balancing
+3:25
+flow automatically. So um just in case somebody don't know
+3:32
+what is load balancer um I hope most of you know that but uh so basically a load
+3:37
+balancer is a system itself that distribute networking traffic across multiple u backend servers to ensure the
+3:45
+reliability availability scalability of a performance of another system. So um
+3:53
+that's why today we are going to share today we're going to to share about experience about building a load
+3:58
+balancer service. It's a level four we call h router. Uh so we're not going to talk about how to use a load balancer.
+4:05
+Um it's a software load balancer for I guess most um modern node bouncers are
+4:11
+based on software based. It's not um it may still have some hardware based load
+4:16
+balancer but it's not the um not the scope we're talking about. Um the our
+4:22
+system was built for large scale multi-tenency platform uh as a cloud provider. So that means may some of
+4:30
+those experience not apply for all scenarios but hope it could be also
+4:36
+interesting to learn. Yeah. So the interest question would be
+4:41
+loans as the reliability foundation for other services. So how could we ensure
+4:48
+or guarantee the reliability of the loan loans itself? Um that's exactly the the
+4:53
+problem we're solving um in our whole load balancing platform.
+4:59
+Uh actually um last year in the corn we showed talk about our level serving dead
+5:04
+plane. Um it's called uh so it's also open sourced. Uh if you're interested
+5:10
+you can look at the um github code and so today we're going to talk about the
+5:15
+level four the our h router the level four low load balancer.
+5:20
+So before as a platform so um even though we have different lay layers but
+5:26
+um we always have to have a holistic view when we start before we start uh
+5:32
+design a system. So code design that's why we have to uh share about the uh
+5:39
+code design level four and level seven bansson. So um the first question you may be
+5:44
+wondering why we need a level four always uh mostly uh at least most of
+5:49
+time you need a level follower in front of your level seven. So um the primary
+5:55
+reason is normally the level seven uh RB is not resilient to the u for example node vine
+6:04
+usually for examp you use or invoy or or ring then once one of the node fails it
+6:11
+may mess up many tp connections because it's not resilient to the ec
+6:16
+um yeah so I mentioned two concept related concept here if you're not
+6:22
+familiar I Very quick definition here adding cost basically you um kind of
+6:27
+sharing the same IP address from multiple servers. So you have 100 even more they advertising the same AP
+6:35
+address uh with based on BGP or other uh routing protocols and the related
+6:41
+concept is called ECMP the that means for the router you see for one IP
+6:46
+address it has multiple uh destinations how the router should pick one one of
+6:53
+the server then normally it's just based on very simple hashing um on the fab 5
+6:59
+means the source IP, source uh parts and protocol and destation IP and
+7:05
+destination parts. So um that's why the we usually have in front of level seven
+7:11
+we have the level four and us level seven it's more stateful for example you do uh TS termination HP
+7:19
+header and body processing and so on and the level level four we designed to be
+7:24
+more stateless uh for just focus on the packet forwarding and so in order to
+7:31
+ensure cons the the uh scalability we use consistent competction for the
+7:37
+Bansson and connecting tracking to ensure the uh the issues I mentioned
+7:43
+post there uh some fine on the left sering
+7:50
+table ensure the TCP flow works for the um you already established connections.
+7:59
+So um before we design Hyproter we already have a system level four and the
+8:04
+follower which is based on LVS it implements from uh once so how it works
+8:10
+basically the level four get a packet and forward to the level seven and then to the uh microservices and then get
+8:17
+back to the level seven and uh get back to the level four but there's a problem
+8:22
+with this approach so suppose you uh just think about the HTTP gets is where
+8:27
+the request is very very small just maybe just a few few bats of requests but response could be uh could be any
+8:36
+size it could be um just a few bats to few megabs to even gigs so in this case
+8:43
+most of the time the level four don't need to do any process for those response or the level four should not
+8:50
+should not care about the response for the um uh in in this case just wasting
+8:55
+resources and also make the level four is not So scalable. Yeah, that's why
+9:00
+when we design the level four, we propose to only support the direct cell
+9:05
+return. That means we only focus on the um the ingress traffic for advancing for
+9:12
+7 and then that means we know our seven have to do some just return the response
+9:17
+through the default gateway to to clients. Yeah, this is maj what that's why we have the code design together
+9:23
+because it may uh it will simplify our level four uh as well.
+9:29
+Yeah, so the first lesson will be the code design the related systems like the level four and level seven in our case
+9:36
+could be reduced over capacity and also in uh improve the overall reliability of
+9:43
+the whole system. Yeah. Now that uh let's d deeper into our hyp
+9:48
+router. Um we have four very simple but not easy objectives similar to most
+9:56
+distributed system need high performance high scability high reliability and also
+10:02
+future proof. Um in this specific case the perform high performance means we
+10:08
+may we need to reach uh closed line read speed on average packet size. So we're
+10:14
+not seeing for all type of package size for smaller one maybe more challenge to to reach nonre and we also have to save
+10:21
+cost we don't want to um have um a lot of resources to to achieve the um the to
+10:29
+minimize the cost for example that's why we may have to process more than 10 million packet per second per CPU core
+10:36
+and we also have to minimize the overhead for because of our boron I think uh backend services don't expect
+10:44
+um increase the latency because you using low band especially level four right so we may have to process packet
+10:51
+at nanoseconds and scalability yeah that's quite easy to understand as I mentioned the scale
+10:57
+of the whole crowd and we're also growing so we have to scale up our clusters to meet new require the um the
+11:04
+increasing uh traffic and we have more uh deployed to cross
+11:10
+new data centers new as um for reliability theum is very it's
+11:17
+more challenge because customer always expecting almost zero downtime for c
+11:22
+services especially for load balancers so you use most customers even they know
+11:30
+the SA is only four line or even five line but they don't even expect any
+11:36
+downtime so that's why we had to try our best to ensure the high availability
+11:42
+during our daily operation and also should be resilient to u partial finers
+11:47
+for example networking fine or hardware uh and future proof. So uh we the system
+11:55
+should be uh evolvable to um adding new features to uh adapted to new hards for
+12:02
+example new to leverage the new capabilities provided by uh ns or some
+12:08
+new scenarios. So we don't want to start a new system few years later from scratch and so
+12:15
+that's the hello objective and yeah the the hello architecture is quite simple
+12:20
+we have deep plane and control plane dead plane focus on the packet processing for loans and then control
+12:26
+planes basically providing the APIs and also the cluster management of the dip plane configuration management and so
+12:33
+on. uh for the dip plane in each node they the process also um and the high level
+12:41
+process is bit simple so basically once we get a packet from the the nick um so
+12:47
+there's some mistake here so it's from the RSQ it's receive uh receive queue and then to uh we need to get based on
+12:55
+the IP and TCP and UDP header to match if we have any um virtual IP config for
+13:02
+a specific node browser and uh do we have any nest config for the specification for the packet and then we
+13:09
+have to pick one of the backend from let's say 10 more backend based on the um consistent hashion or any many any
+13:16
+other simple algorithm like run rubing which also commonly used and then we do packet encapsulation encapsulation here
+13:23
+is because we as mentioned we support only direct return that means we have to
+13:28
+encapsulate the original packet in into another one uh another layer similar to the wx9 um or and use IP
+13:37
+or GOE encodation and then forward back for to the to the nick.
+13:44
+So um our system implemented based on NAS. So the one the straightforward
+13:51
+approach would be how to make implements based on the um achieved high
+13:56
+performance in NAS kernel. But uh um m kind of networking stack is
+14:03
+designed for general purpose. It's very good at this um but it's um it is it's
+14:08
+very flexible and but it's not optimized for uh our use case for extremely high
+14:15
+low latency and high performance for example uh because the contest switch between user space center and current
+14:21
+space and our memory allocation when the the before the when the nick
+14:28
+get packet and then going has to uh allocate the the socket buffer and and
+14:33
+something like So it may be possible to achieve near
+14:40
+nar speed with with nonuna but it may you may need more intensive tuning and
+14:46
+also it cost more CPU um cycles. So um
+14:51
+here is a high level um high level structure of the um kernel. It has the
+14:58
+different layers the job layers. So once you get package into the from the input pass forward to the user space and then
+15:05
+back to the um to the nick or you may have forwarding pass that that's how it usually works. Um but actually Ninox
+15:13
+provides a kind of native kernel by passing approach. So you could you could process the packet as early as possible
+15:19
+if you don't really need need complex depends on the uh TCP IP stack provided
+15:25
+with Nas kernel it called XTP. So you could use the EBVF program to to run to
+15:31
+do the um make also make very simple decision based on the header to do you need shoot forward or you should job or
+15:38
+should just um um pass to the nearest kernel.
+15:44
+Uh so it's basically a framework that makes possible to perform high speeded pocket processing in the user space in
+15:51
+the kernel space. Um yeah so most of the NS kind of n version
+15:58
+support that natively that does good parts and also is uh CPU efficiency it
+16:04
+met our requirements but there it comes with limitations because you're running
+16:10
+in based on epf and also in the kernel space there with uh limited programming
+16:15
+model so it may not able to um to uh process so it not easy to to extend to
+16:22
+supporting multiple nicks for example and XTP program it has to attach to each nick uh instead of processing one
+16:30
+application to proc to deal with multiple need for us we it's kind of hard requirements we have to support at
+16:36
+least two nicks because we have for each servers most of servers we have two to
+16:41
+that means we need to connect to two toss to for advertising the to process the packet and another common used
+16:49
+framework called DBK which um is a full user space framework to uh basically
+16:55
+take over the nick and process and get process the packet uh through the DMA and then it's based on the pooling mode
+17:02
+to to process packet in fully in user space. So the the batteries is you have full control in user space and it
+17:10
+natively uh supporting multiple um nicks and it also match managements with
+17:16
+future page is very uh efficient but the the downside would be the um you need
+17:22
+dedicated nicks and CPUs CPU cores so once the duplicate take over the nick you cannot reuse that for any other
+17:28
+purpose your system cannot see the nick anymore and then it's always using ping
+17:34
+mode uh you could Yeah, other mode is exist but it's not uh not high for hyper
+17:40
+performance purpose. So uh that means it's always using 100% CPU even just no traffic. So um this is kind of one way
+17:48
+door decision we have to make and how to make the tradeoff for long term. So that's why um based on our um
+17:57
+requirements then we finally think this we uh it's acceptable in our case we
+18:02
+need for longterm for future flexibility uh it's okay to we have dedicated nick
+18:07
+we have additional nick for management purpose and the CPU we don't expect our servers running without traffic so yeah
+18:16
+we we have to make a trade-off here yeah the so basically and then the lesson we
+18:21
+learned would user space kernel bypass enable um you could develop a feature
+18:26
+reach ultra low latency dip plane but it limits the reuse hollows and kernel
+18:32
+capabilities so you have to uh use yeah so basically use the double-edged sword
+18:37
+care and then the next part I'm going to talk about would be the self-healing and isolation as the first cost design
+18:44
+principle so our dip plane or the hardware may go wrong at any time so we
+18:50
+have to design for fine So that we know we have a house tracking a self house tracking mechanism with the one of the
+18:57
+components in for example in our data plan node we have controller it collects matrix from the deep plane from the uh
+19:04
+BGP speakers also back in based on how backend health checking so it make
+19:09
+decision for example if we see high rate of error rates in our nique we may think there's some problem with the hardware
+19:15
+we have to isolate the node by cell so in order to isolate the node more um we
+19:23
+reliably so one of the approach would be we just withdraw the BGP from the node then the uh for the the the BGP router
+19:31
+will never see one of the the node but there's a problem there would be if we have a bug or there's a force positive
+19:38
+then we make all the the whole deep plan clusters with BGP and then even though
+19:43
+there's traffic coming even the load may be healthy but we cannot process packet
+19:48
+so in order to avoid this issue issue uh we we instead of with BGP
+19:54
+uh we just uh appending the AS um S number in the AS pass. So this way we'll
+20:00
+make the be the BP router it will see usually it's based on the length of the as pass in this case the the first node
+20:09
+uh has longer as pass so the traffic will be rooted to the other two node um so in this case the only traffic only go
+20:16
+to two and node three and suppose we made mistake and the false positive all the node
+20:23
+increase isolated themsel and then in this case all the node will get traffic as normal So that's the way we make the
+20:31
+isolation more reliable. So this is just an example to showing that um we how we
+20:38
+thinking we're doing self-healing isolation as the first principle then so so we could leverage the nature's or
+20:45
+charact the system properties um of the so instead of treating as after sort
+20:52
+then we need to add some uh selfing mechanism later. So it will be much easier to leverage those u property.
+21:00
+Yeah. Um now I'm hand over to um Jagenash to share the rest of those um
+21:06
+the system. All right. So so far we have seen about
+21:11
+the whole aspects of data plane and now we'll be looking into the uh into the specifics of the I mean so like of the
+21:18
+control plane and like the data plane we also have a lot of constraints and we need to pretty much work around them. Uh
+21:25
+one of the constraints we have here is we want to minimize the pretty much external dependency. That's one. The
+21:31
+most important of all is it should be resilient to network partition and also
+21:37
+similar to the data play it should also be self-healing in any centralized system which uh I
+21:44
+mean yeah uh it'll be pretty much not uh susceptible to any network partition
+21:52
+pretty much following the normal cap theorem where if you have consistency you cannot have partition tolerance or
+21:57
+if you have partition tolerance you cannot have consistency for the same given availability. So in this specific
+22:03
+case because the network partition is like super important to us because this is a level four load balancer which is
+22:10
+going to sit at the base of the whole stack. So if at all we have any network
+22:15
+partition we want the whole stack to still work. For that we chose to go for
+22:21
+a system which is decentralized and can lead to a consistency which is
+22:27
+not strongly consistent but it can become slow eventually consistent. One
+22:34
+for people who don't know what is P2P network it's a basically a kind of decentralized system where each node
+22:40
+holds a small shot of data right so we made a small variance to the standard P2P network. We'll just kind of go
+22:46
+through that in a bit. So the standard approach is that every node will hold a
+22:51
+small like a I mean it'll be holding a small shot of data. We made a modification so that every node will
+22:58
+actually hold all the data and eventual consistency will be achieved through
+23:04
+those gossip protocol. In case of conflicts we will be having versioning which will be setting those precedents
+23:09
+for us. Every node will be connected to every other node. So it'll be a bond based
+23:18
+mesh communication by using birectional gRPC. It's a logical step from here that
+23:24
+when you have multiple nodes and they're all getting connected one by one, you'll be forming a strongly connected system
+23:29
+which we will be referring to as islands and you'll be having multiple of these
+23:35
+islands which will be uh linked via weak network connections. So think of it like
+23:41
+inter regional connections and so on. um the network partition across these weak
+23:48
+connections is still fine because every single island has a strong consistency within it. Another thing is it should be
+23:55
+scalable and also balanced. So when a uh new data pretty much comes in, it can
+24:00
+reach across all the nodes within a given island in like the log of the
+24:06
+number of the nodes. This is important because when you have eventual consistency, you want the number of hops
+24:11
+to be as limited as possible because you don't want the delay to be long enough.
+24:18
+As mentioned before, we want it to be self-healing. So, it should also be so it should also be resilient to flaky
+24:24
+networks. So, the stack we put together in this case was the basic persistent layer which will be the kind of local
+24:30
+disk. uh on top of which we'll be having this so we'll be having this key value system and on top of this key value
+24:36
+semantics we'll be having the bond based mesh communication which is the so which is the whole communication layer in some
+24:43
+sense on top of which we'll be stacking the actual application layer node level details. So if you had seen in the last
+24:50
+slide we had different types of nodes. So you pretty much have the controller health checker and so on. So each of
+24:55
+these have their own node specific attributes that will be the pretty much top of the layer application layer. Uh
+25:02
+so this worked for us and u this was pretty scalable inside the I mean uh it
+25:08
+was pretty scalable inside the system as well. Uh so the lesson we learned here is when you want to minimize the pretty
+25:15
+much external dependency going for a decentralized architecture is pretty useful
+25:20
+because it's a new design it's a new variant of P2P. We also wanted to make sure it is formally verified. We have a
+25:27
+formal methods verification team within Huawei like within the Huawei Ireland research
+25:33
+center. So if so if you are interested you can speak to us afterwards as well. Uh they rigorously verified the whole
+25:40
+system specifications. They actually discovered a bug which we weren't able to catch even after our exhaustive unit
+25:48
+integration tests as well. And the bug was that in the bond communication to
+25:54
+build a bond there could be sometimes uh pretty much uh yeah it could be like
+26:01
+a pretty much unpredictable number of retries which happens. So we were able
+26:06
+to capture that with the formal verifications. Great. So now we have covered the whole data plane/control
+26:12
+plane. The obvious next question is operational extense. James spoke about this last year as well uh about
+26:20
+decreasing the overall blast radius um in a large scale distributed system uh
+26:29
+especially when it is multi-tenant and this is the bedrock of the whole stack it is important that if any failure
+26:36
+happens you contain it to the least blast radius so cellbased architecture is a very
+26:42
+well-known architecture we made use of that and also that is the shuffle sharding approach. Uh AWS has a paper on
+26:50
+this as well. We'll just quickly go over it and like why it actually helps us. So
+26:55
+in a static sharding approach, if you have let's say total of pretty much 10 nodes and like you have a virtual shard
+27:02
+where you pick every two nodes per shard. So you'll pretty much be having five shards, right? And if one start
+27:08
+goes down, it has a one by five impact on the user, which is like a 20% impact and on like all the tenants slash like
+27:15
+all the traffic. If you compare this with the shuffleing approach, it's a bit different where for
+27:22
+every virtual shard, you randomly take two nodes and they will be serving the
+27:27
+shard. So in this case, we chose pretty much every shot to have two nodes. So uh
+27:32
+you will pretty much have you will pretty much have NC2 which is in this case total of 45. So 45 different shards
+27:39
+or like you will have 45 different virtual shards in the sense and if one sh goes down the impact is just one by
+27:45
+45 and that works pretty well in this case because uh in this specific example
+27:51
+if you see that uh the cell one and the cell two are down the virtual shot two will still work because the cell 3 is
+27:58
+still not affected. So overall we were a we can decrease the
+28:03
+uh blast radius by about one/10enth and hence cellbased architecture with I
+28:11
+mean by using shuffle sharding is a very powerful approach to decrease your blast
+28:16
+radius overall. So we have the data plane, we have the control plane, we have the operational
+28:22
+excellence. How do you know if if these things all work together? Which brings us to the part of observability.
+28:28
+There are three main aspects. One is what signals you need. What signals
+28:35
+would tell you that you are actually performing well. Second is in these new
+28:42
+like in this d I mean in this new day and age of frameworks you already have a lot of by default configurations which
+28:49
+will give you a lot of pre uh built metric slash those like so slash those
+28:55
+signals in a list of predefined signals how do you filter out those which are
+29:01
+important to you and if a signal misbehaves or if its
+29:08
+behavior you have changes, how do you track it down to the like actual root
+29:13
+cause be it like your code level implementation changes or like production level implementation.
+29:18
+So for this we use the framework of critical user journey CUJ which is a
+29:23
+sequence of those essential actions we need to take to achieve a particular
+29:29
+task. So if you think about the whole framework now the CUJ is like the top
+29:35
+layer on which you start. CUJS will then advise on the signals you would need.
+29:41
+Signals would then mean what instrumentation implementation you need to do and they all will sit on a bedrock
+29:47
+of the whole observability platform which will take care of your storage/metrics locks traces correlation/context
+29:53
+propagation and like all the basic infrastructure you would need for that.
+29:59
+a a small concrete example of how we use this within the load I within the uh
+30:04
+level four load balancer. There are two main parts. One is the external user who
+30:10
+will be using the data plane path. So they will be asking for a virtual IP to be resolved and that virtual IP should
+30:18
+be resolved by the physical backends and then we need to pretty much uh we need to pretty much return the response.
+30:24
+That's one. In terms of the operator journey for the internal maintainer who
+30:30
+will be able to update those load balancer load balancer configurations
+30:36
+if they update the load balancer configuration it should propagate all the way to be at the end populated onto
+30:42
+the BGP. So these are the two major journeys for this specific system. We'll
+30:47
+quickly go over the example of this control plane. So we first specifically wrote down the whole specific journey.
+30:53
+The system receives the load balancer configuration from an system and then
+30:58
+populates the virtual load balancer routes onto the BGP from this because
+31:03
+it's an end to end path/ you need to pretty much trace the route. We built tracing on top of it and the tracing
+31:11
+will give you those traces from which we wanted metrics/ signals. So we uh use the span connector metrics to convert
+31:18
+them to metrics so that we'll be able to use some aggregation on top of them and we can also pretty much alarm on them if
+31:24
+necessary. From these signals we were able to achieve two major tasks. One we were
+31:30
+able to understand the performance of the system for this specific user
+31:35
+journey. Two, we were able to get a component level breakdown of this
+31:41
+journey and we were able to know the bottlenecks of this whole journey as
+31:46
+well. Interestingly, we also had another uh use which is that the data plane is very
+31:53
+hard to monitor. Even though we use DPDK and like DPDK has its own suite of monitoring, the DPDK monitoring doesn't
+31:59
+give you internal information about the uh about the system in terms of the latency and so on. But here because the
+32:07
+path flows through the data plane we were able to exactly pinpoint the data plane latency data plane based
+32:14
+correctness and the user feedback because it's going
+32:19
+to be used by our own developers. The user feedback was that they have much more insights onto the system which they
+32:26
+were not able to get before and in fact uh we were able to use it internally and we were able to uh make good use of it
+32:33
+to have like actual understanding of those systems and like we were able to discuss about what are the next imple uh
+32:39
+what are the next improvements we should probably do as well. So the final lesson
+32:44
+we learned is a CUJ based approach is a very strong powerful framework to
+32:50
+finally achieve user centric observability. Now just to recap on the last six
+32:56
+lessons we learned. So one level four level seven load balancers work together. Level and the user space
+33:02
+kernel bypass is a very so it is a very powerful technique. Self- failing and isolation should be a first class design
+33:09
+principle and it should not be some afterthought. A decentralized architecture by using peer-to-peer is a
+33:15
+very strong choice when you want to minimize those external dependencies. Cellbased architecture by using shuffle
+33:20
+sharding is also very good if you want to decrease the blast radius. CUJ is a very very powerful framework if you want
+33:26
+to achieve usercentric observability. Great. Thank you. That's the uh so
+33:32
+that's a talk. If now we can take some questions.
+

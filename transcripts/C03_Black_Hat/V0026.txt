@@ -1,0 +1,1454 @@
+0:03
+Uh hi everyone. Uh my name is Shakar.
+0:06
+This is Yarden. Uh and as you might have
+0:08
+noticed from our session title and the
+0:10
+opening slide, um we drew some
+0:12
+inspiration from the Apple TV show
+0:14
+Severance. Uh so they nailed the vibe
+0:17
+and it's sort of clean, corporate, and
+0:19
+slightly unsettling. Uh just like some
+0:22
+of the identity systems that we've seen
+0:23
+in the wild. Um don't worry though,
+0:25
+there's not going to be any spoilers. Um
+0:27
+but if anything feels cryptic then maybe
+0:29
+you should just go watch it. Um and we
+0:31
+are here representing uh SIATA
+0:35
+and SIATA uh is building the control
+0:38
+plane for agentic identities. Now u most
+0:41
+of our team uh comes from deep
+0:43
+vulnerability research backgrounds uh
+0:45
+places like Celebrite and others and
+0:47
+it's one of our core strengths and um
+0:50
+we're developing the next generation of
+0:52
+identity infrastructure. So before we
+0:54
+set out to build anything new and as we
+0:57
+intend to rely on and integrate with
+1:00
+identity foundations that we didn't
+1:01
+write, we set out to examine some of the
+1:04
+assumptions um and some of the blind
+1:06
+spots of today's identity stack,
+1:07
+especially when it comes to secret
+1:09
+management. And that led us right into
+1:11
+the world of enterprise vaults. So
+1:14
+that's a space that's evolved a lot um
+1:16
+over the past decade.
+1:18
+And
+1:20
+uh vault is um a system built to
+1:23
+securely store, manage and control
+1:26
+access to secrets. Uh so things like API
+1:28
+keys, tokens, passwords, certificates
+1:31
+and encryption keys. And every company
+1:33
+ends up in the same place. Uh so you
+1:35
+need to store secrets and you need to
+1:37
+control who gets access to them. And
+1:39
+these vaults became the security
+1:40
+backbone of the modern enterprise. So
+1:44
+let's consider vaults um from an
+1:46
+attacker's perspective. So what kind of
+1:48
+primitives or achievable goals does an
+1:50
+attacker aim for? And the primary attack
+1:53
+surface is going to be naturally um
+1:54
+authentication. And that's your main way
+1:57
+in. And there are a few of those
+1:59
+supported by each vault solution. Um
+2:02
+from basic usernames and passwords to
+2:03
+certificates and other methods. And to
+2:06
+authenticate, an attacker might uh
+2:08
+enable good old-fashioned brute force.
+2:10
+Uh so that that means trying passwords
+2:12
+one by one as fast as you can. And and
+2:15
+remember this is usually designed to be
+2:17
+impossible. Um an attacker can try to
+2:20
+weaken multifactor authentication which
+2:23
+is still solid defense and very widely
+2:26
+uh deployed. Uh or they can aim for a
+2:29
+full-blown bypass uh which both sounds
+2:32
+and is pretty uh pretty bad for any
+2:34
+vault. And if they're already in an
+2:37
+attacker is likely to escalate their
+2:39
+privileges. Uh so going from a a basic
+2:42
+user to one with access to real secrets.
+2:45
+And uh finally there's the holy grail of
+2:47
+remote code execution. So you know what
+2:49
+that means. Um is that that's going to
+2:52
+be full control of the infrastructure uh
+2:54
+enabling lateral movement and many other
+2:56
+things um you can dream of.
+2:59
+Um
+3:00
+okay so uh you know the first thing I
+3:05
+want to say is that you know we
+3:07
+definitely don't have time for
+3:08
+everything today and we tried to squeeze
+3:11
+some findings uh so and and picked a
+3:13
+couple of ones with neat demos but
+3:15
+you're going to get full details in our
+3:16
+website right after this talk um there's
+3:19
+going to be a link at the end so don't
+3:20
+worry about that and there's plenty of
+3:23
+vaults and secret management tools out
+3:24
+there and some of them are more obscure
+3:26
+some of them are running half of the
+3:27
+Fortune 500 00 and we figured we'd start
+3:30
+we'd start simple with something that's
+3:31
+low profile nothing too ambitious um and
+3:35
+and obviously we started with Hashior
+3:37
+Vault so so I was kidding um that's one
+3:40
+of the most widely recognized uh names
+3:43
+in the world of secret management um so
+3:46
+this is a 10-year-old project it's uh
+3:49
+trusted by governments startups and
+3:51
+probably uh some of you in the audience
+3:53
+it is considered the gold standard of
+3:55
+modern enterprisegrade uh secret
+3:56
+management
+3:58
+Now, Vault is mostly open source. Uh,
+4:01
+it's written in Go. Uh, it's a modern
+4:04
+memory safe language. Sort of a solid
+4:06
+choice for building secure
+4:08
+infrastructure.
+4:09
+Um, so looking at previous research, we
+4:13
+counted 53 CVEes um that have been
+4:17
+disclosed over the past decade. Most of
+4:19
+them minor with like nuanced
+4:22
+implications. Uh, but one piece of
+4:24
+research did stand out. That's from uh
+4:27
+Felix Wilhelm uh at Google project uh
+4:30
+zero and he did a a deep audit in 2020
+4:34
+uh and he uh uncovered uh sort of clever
+4:36
+ways to bypass authentication in uh
+4:39
+vault's cloudnative roles. So as I
+4:41
+mentioned before that that qualifies as
+4:43
+a pretty bad uh finding and and that was
+4:46
+the worth the worst thing that anyone
+4:48
+had found uh until yan showed up.
+4:52
+So okay so as we said the first part is
+4:55
+authentications. So Vault has a few
+4:57
+authentication method here are three
+4:59
+example user pass LDUP and setert
+5:03
+there's others
+5:05
+so user pass. So user pass is username
+5:09
+and password authentication the most
+5:11
+simple one. It like that's the
+5:14
+authentication method in like every
+5:15
+website
+5:18
+in vault. It lets you have five
+5:19
+attempts. So you can try to login five
+5:21
+attempts. After five invalid attempts
+5:24
+you get locked out for 15 minutes. This
+5:26
+is because like vault store the secrets
+5:28
+of the organization. So you don't want
+5:30
+to have to h to give attackers too many
+5:34
+attempts to brute force password. So
+5:36
+let's see the demo. So in the demo I'm
+5:40
+going to use two users one py and one
+5:42
+yenat which is me.
+5:50
+So as you see if I log in with py and
+5:52
+I'm going to use the wrong password I
+5:54
+get invalid username or password. This
+5:57
+is because I'm using the wrong password.
+5:59
+Now let's try to authenticate a few more
+6:01
+times with the wrong password.
+6:05
+So you can see the error message change.
+6:07
+It was involment invalid username or
+6:09
+password. Now it's permission denied.
+6:12
+This change is because the user is now
+6:13
+is now locked out. So instead of getting
+6:16
+invalid invalid username or password,
+6:18
+you're getting permission denied.
+6:20
+So now let use my user. You're then
+6:22
+parat.
+6:26
+I'm still going to use the wrong
+6:27
+password. And as you can see, I'm
+6:29
+getting invalid username or password,
+6:31
+right? Because I'm using the wrong
+6:32
+password. But now I'm going to find to
+6:35
+show you a trick, a nice but effective
+6:38
+one. How can I get more attempts more
+6:40
+than five? So instead of using yenorat
+6:43
+with lowerase letters, I'm going to use
+6:45
+uppercase letters. For example, a large
+6:48
+t.
+6:51
+And I'm going to continue this process
+6:52
+using uppercase letters.
+6:58
+And if you notice, I already tried to
+7:00
+login more than five times, right? And
+7:03
+as we said, the lockout is only five
+7:05
+times.
+7:08
+Now when when I'm using the correct
+7:09
+password
+7:13
+I'm going to get in. So you see using
+7:15
+this technique instead of having five
+7:17
+attempts I get more attempts. So the
+7:20
+idea is that you can use every upper to
+7:22
+lowerase option. So instead of having
+7:24
+five attempts you multiply it by two to
+7:26
+the number of different permutation
+7:28
+which is two to the number of number of
+7:30
+of letters I have.
+7:33
+So for your dear ant instead of having
+7:35
+five attempts I have 10,000 attempts and
+7:38
+this is for every 15 minutes.
+7:42
+Okay nice start. So another common
+7:45
+authenticator is going to be LDAP right
+7:47
+typically that's going to be with with
+7:48
+active directory or open LDAP and that
+7:51
+seems it seems simple enough. So the
+7:53
+user is going to enter a username and
+7:55
+password vault checks with the LDAP
+7:57
+server. If it's valid, you're in. And
+8:00
+most of you know reliance on a single
+8:02
+password is problematic. So many
+8:04
+organizations are going to enforce MFA.
+8:07
+And let's try to track the
+8:08
+authentication flow here. Um so you send
+8:10
+the username and password to the vault
+8:12
+and then the vault relays that that
+8:14
+username and password to the LDAP
+8:15
+server. LDAP normalizes the username. It
+8:18
+determines and responds whether the
+8:19
+credentials are valid or not. Vault will
+8:21
+take the original username as an alias.
+8:23
+From that alias, it creates an entity
+8:25
+ID. this entity ID is being checked
+8:27
+against the policy to determine if MFA
+8:29
+is enforced for that entity ID and
+8:31
+follow to present the MFA challenge to
+8:33
+the user. So let's just see how how does
+8:35
+that look.
+8:38
+Okay, we're going to log out and then
+8:41
+try to authenticate to the L with the
+8:44
+LDAP authenticator. The username is
+8:46
+going to be Heli and of course as I
+8:49
+entered the right password we get the
+8:50
+MFA challenge, right? So that's that's
+8:53
+very simple. This is what you would
+8:54
+expect to see. Now, if you listened
+8:57
+carefully, uh this specific flow is
+9:00
+vulnerable. So, for this exploit, we are
+9:04
+going to use a very specific uh and
+9:07
+deliberate crafting of a payload. Uh it
+9:10
+is pretty hard to describe. So, uh let's
+9:12
+just show it. So, just like before,
+9:14
+we're going to enter the username and
+9:15
+password, right? That's And now we are
+9:18
+going to add our MFA bypassing payload.
+9:21
+Now, don't blink.
+9:24
+That's it. It's a spacebar. And um so so
+9:27
+basically we we use this normalization
+9:30
+discrepancy that we noted between the
+9:32
+two flows. And the exploitation is way
+9:35
+simpler than anything that we imagined.
+9:37
+Um so any whites space that you add to
+9:40
+the username field is going to bypass
+9:42
+MFA in that in that scenario.
+9:47
+Okay.
+9:48
+Great.
+9:50
+Okay. So we talked a little bit about
+9:51
+authentication. Now we're going to jump
+9:53
+right to the end to the end stuff. What
+9:56
+can I do with the root token? Root token
+9:59
+is like the highest level permission
+10:00
+inside of vault. So using the root token
+10:03
+you have a few feature you can use. You
+10:05
+can create new tokens, you can assign
+10:08
+policies, you can disable audit logs and
+10:10
+you can seal the vaults. So we looked
+10:12
+what can you do using the root token and
+10:15
+one thing came up which is the plugins
+10:17
+feature. The plug-in feature is a
+10:20
+feature that let you load new plugins.
+10:22
+For example, you can load new
+10:24
+authentication methods, new secret
+10:25
+engines, and new databases.
+10:28
+A good example for it is a JWT
+10:30
+authentication method. And previously,
+10:33
+there was no way to authenticate using
+10:34
+JWT. So, if you want to use a JWT, you
+10:37
+need to load it as a new plug-in in
+10:39
+order to authenticate with it. The
+10:42
+plugin, in order to load a new plugin,
+10:44
+there's an HTTP endpoint remotely that
+10:46
+you can use to load the new plugin.
+10:48
+And as mentioned before, I'm going to
+10:50
+assume the root token, right? This this
+10:52
+feature you need the root token. I'm
+10:53
+going to assume from this step I have
+10:55
+the root token.
+10:58
+Okay, so the plug feature is well known,
+11:01
+but also there's a lot of guards in the
+11:03
+plugins. The most important thing is the
+11:06
+plug-in directory. The the plug-in
+11:09
+directory is set up to a specific
+11:11
+directory which is configurable, but you
+11:14
+can't change it in runtime. It has to be
+11:16
+configured before the before the vault
+11:17
+starts. When you load a new plugin,
+11:20
+there's good checks that there's no path
+11:22
+reversal. You can't load a plugin
+11:24
+outside of the plug-in directory. So, I
+11:26
+have to load a plugin inside vault
+11:28
+plugin in this example.
+11:31
+And there's a check on the hash of the
+11:33
+plugin. So, when I know I'm loading a
+11:35
+new plugin, I need to know exactly the
+11:37
+the plug-in I'm loading to the to the
+11:38
+bite in order to present it hash. So,
+11:41
+there's a lot of checks happening on the
+11:43
+plugins. So we look at each feature and
+11:46
+we ask ourel okay this is obviously an
+11:48
+interesting features because you load
+11:50
+new plugins into the code but there's a
+11:53
+lot of of guards against it against it.
+11:55
+So the question is what do I need in
+11:57
+order to load my like attacker control
+12:00
+plugin to gain code execution.
+12:04
+So we came up with five checks or
+12:06
+condition we need to bypass in order to
+12:09
+load our new plugin. So the first thing
+12:11
+we need to do is to create a file. In
+12:13
+order to load a plugin, it need to be on
+12:15
+the file disk. The second thing is we
+12:18
+need to control its contents. We need to
+12:20
+somehow control the contents of the
+12:21
+plug-in we want to load.
+12:23
+The third thing and may maybe the
+12:26
+hardest one is when you load a plugin
+12:29
+they check that it has executable flag.
+12:32
+So maybe I can create a file but to make
+12:33
+it executable that sounds quite hard.
+12:38
+The fourth thing is I need to know what
+12:40
+the plug-in directory is. There's no
+12:42
+like API that will tell you the plug-in
+12:44
+directory full path. So if I create a
+12:46
+file, I need to know where to create the
+12:48
+file to. And the last step is I need to
+12:50
+know the hash of the file, right? So I
+12:52
+need to know every every bytes of the
+12:53
+file in order to calculate the correct
+12:55
+hash. So this is the five checks I need
+12:57
+to pass. Um and one thing when you try
+13:01
+to abuse this feature um there's one
+13:04
+straight problem that you face
+13:07
+and that is inside vault everything is
+13:09
+encrypted.
+13:12
+So secrets config user metadata
+13:16
+everything is encrypted on vault and
+13:18
+it's stored like this JSON like what
+13:19
+value with encrypted stuff. So how how
+13:22
+can I create something that I control if
+13:24
+everything is encrypted and this is not
+13:27
+like a new binary or something that I
+13:29
+can run. So we looked what feature you
+13:32
+have using the root token in order to
+13:34
+bypass this problem and one thing came
+13:37
+up
+13:38
+and that is vault auditing the auditing
+13:41
+feature. So what is vault auditing? So
+13:44
+vault auditing feature lets you audit
+13:47
+every HTTP request or response you are
+13:49
+doing to the vault. So every time you
+13:50
+request some information on on a secret
+13:53
+is get audited.
+13:55
+There's three types of backends you can
+13:57
+use for the vault auditing. You can
+13:59
+audit audit a request to a file to a sys
+14:02
+log and to a socket.
+14:04
+You already can see that one option is
+14:06
+to a file.
+14:08
+This also can be used remotely and
+14:10
+there's this HTTP endpoint in order to
+14:13
+to enable or disable the audit feature
+14:16
+and as well we need the root token. So
+14:18
+this is like this requires high
+14:21
+permission.
+14:24
+Okay. So as I stated there's five
+14:26
+condition we need to bypass right. So
+14:29
+why do we want the vault auditing? So
+14:31
+the first oh wait sorry there's
+14:34
+something before. So how does the
+14:36
+auditing logs look like? So you can see
+14:38
+that when I do a request this is the
+14:40
+audit I get. Um, and as you can see,
+14:42
+it's maybe somewhat controlled, but it's
+14:44
+still a JSON. Like it, how can I use it
+14:47
+in order like to run a new plug-in? And
+14:49
+also, you can see there's a time there.
+14:51
+That's a time stamp, which is
+14:53
+millisecond time stamp. And it's going
+14:54
+to be hard to predict, right? For the
+14:56
+hash, it's hard to predict millisecond
+14:58
+time stamps.
+15:01
+Okay. So, first thing, as we said, we
+15:03
+need to create a file. So, if you use
+15:05
+the vault auditing, there's a feature or
+15:07
+a requirement to set the file path. And
+15:09
+you can set the file path to what you
+15:10
+want, to whatever you want. So, we're
+15:12
+going to set the file path to inside the
+15:14
+plug-in directory. We still don't know
+15:16
+what the plug-in directory is, but if we
+15:18
+knew, we could set it to them. Then the
+15:21
+next thing is how do we control the the
+15:23
+the content of of the payload we want to
+15:26
+run. We need to control it somehow
+15:27
+because the JSON is not good enough. So,
+15:30
+the idea is to use the prefix feature.
+15:32
+Before each one of the log entries, you
+15:34
+can use a prefix that will be added to
+15:36
+the log. So using this pre prefix
+15:39
+feature you can think about it for a
+15:41
+second what you want to do but the idea
+15:43
+is to use a shebang right you can use a
+15:46
+bin bash and then the start of the file
+15:48
+will start with a bin bash right and
+15:50
+then I can run whatever I want
+15:52
+okay the third problem how how do I
+15:56
+create this file executable that is
+15:58
+maybe the most hard part right because
+16:01
+the audit audit logs are not executable
+16:03
+so that was supposed to be the hardest
+16:06
+part but for I was surprised it was the
+16:08
+easiest part and you just have a feature
+16:10
+for it. You can set the audit login
+16:12
+entry to be executable
+16:14
+and so thank you Hashi Corp developer
+16:17
+who enabled this feature for me.
+16:21
+Okay, still two more stuff.
+16:23
+I heard I heard the Hashi Corp
+16:24
+developers laughing at
+16:25
+laughing. Yeah, thank you.
+16:28
+Okay, so still more stuff to do. So we
+16:31
+said we need to locate the plug-in
+16:32
+directory. So how do we know what the
+16:34
+plug-in directory is? So we try to a
+16:36
+little bit probe the feature. How do you
+16:37
+check what the plugin and we loaded
+16:40
+sample.exe which is a plugin that
+16:42
+doesn't exist inside the plug-in
+16:43
+directory and when we load the
+16:45
+sample.exe we got in the error message
+16:48
+the full plug-in directory path back to
+16:50
+us in the HTTP response.
+16:53
+So we know the plug-in directory but
+16:56
+still there's the hash right. We need to
+16:58
+know exactly the hash. So you can say
+17:01
+okay there's time stamps time stamp to
+17:03
+the millisecond. I can try to like
+17:05
+generate a million a million hashes and
+17:07
+try each one and then when I found the
+17:10
+correct one, it's going to load. But
+17:11
+like that's kind of not good enough. I
+17:14
+don't want to make a million tries.
+17:17
+So what is the idea here? The main idea
+17:20
+is I can have multiple backends. So can
+17:23
+I have one one audit back end that's
+17:26
+going to be write the log entries to a
+17:28
+file and I can have another another log
+17:31
+back end that's going to write the log
+17:34
+entry to a socket to a socket back to
+17:36
+us.
+17:38
+So you see each time I write the log
+17:40
+entry with the prefix with the shebang
+17:42
+it's going to also write it to a socket
+17:44
+and then I will know exactly the time
+17:46
+stamps.
+17:47
+Okay great. We're going to see this in a
+17:49
+second but so what do we have here? Um
+17:52
+so we found the the first arbitrary uh
+17:55
+rce in hashiorb vault in the project's
+17:58
+10 years uh 10-year history. Uh it's
+18:01
+probably the most significant finding
+18:03
+affecting the project to date. So
+18:04
+outstanding work by Elden, but I know
+18:07
+what you're thinking. So I can see some
+18:09
+of the faces in the crowd and you're
+18:11
+going, "Okay, RC is nice, but you kind
+18:14
+of assumed you had a root token." So
+18:17
+that's a very optimistic assumption uh
+18:19
+as a starting point. Um so for the demo
+18:23
+you're going to see next uh we're going
+18:25
+to include a few primitives that you'll
+18:27
+read about later but uh we're going to
+18:29
+show you the complete story right so
+18:31
+we're going to start with a default out
+18:32
+of the box plane user we're going to use
+18:34
+two pees um so one is going to gain
+18:37
+admin permission and the one uh to get
+18:39
+from admin to root and then we're going
+18:42
+to run our rce now if this works and and
+18:45
+only if this works I expect a nice round
+18:47
+of applause for so wait for it and let's
+18:53
+Okay, please no problems here.
+18:55
+Yeah.
+18:59
+Okay. So, as we said, we're going to
+19:00
+start with a default user. It's going to
+19:02
+be a client certificate user named Mark
+19:04
+S. Then we're going to use our first PE
+19:08
+and now we're going to impersonate an
+19:10
+admin level user. So, we gain his his uh
+19:14
+permission which are admin level. So,
+19:16
+from default we can get the admin level
+19:18
+permission using the first P. Then I'm
+19:20
+going to use another P for using from
+19:22
+getting the admin level policy to get
+19:24
+the root token. So I use the second P
+19:28
+and now I have the root token. So using
+19:30
+that root token I can start the code
+19:32
+execution.
+19:33
+So the first part of the code execution
+19:35
+was getting the plug-in directory and as
+19:37
+you can see I have here the full plug-in
+19:39
+directory. Now I'm going to do to set up
+19:42
+the two audit h audit back ends the
+19:45
+socket and the file.
+19:47
+Give it a second.
+19:50
+Okay. And now when I press enter, it's
+19:52
+going to execute code.
+20:00
+So let's see. It looks like nothing
+20:02
+happened, but
+20:05
+great. So we have all of the secrets uh
+20:09
+in in that deployment. So yeah,
+20:11
+[applause]
+20:15
+thank you. And all right great
+20:20
+and great some more severance uh
+20:23
+references and okay so we are we're done
+20:26
+with Hashi Cororb um but we have one
+20:29
+more niche vendor that we need to
+20:31
+address uh and that is Cyberarch I mean
+20:36
+PaloAlto I I mean I don't know but um
+20:40
+uh cyber aronjour is probably the second
+20:42
+most widely um used secret manager after
+20:45
+vault
+20:46
+uh and conjure is primarily designed for
+20:49
+machine identities. So originally that
+20:51
+meant scripts, containers and
+20:52
+infrastructure components authenticating
+20:54
+to other services um especially in
+20:56
+DevOps pipelines and CI/CD workflows.
+20:59
+But more recently and this is where it
+21:00
+gets interesting for us um agentic
+21:03
+identities like these AI agents that
+21:04
+also require authentication and
+21:06
+authorization.
+21:08
+Yeah. So yeah, so conjure has a few
+21:11
+authentication methods. One of them is
+21:13
+AWS IM. So the main idea is that the AWS
+21:17
+want to authenticate to conjure. So the
+21:19
+AWS is going to sign his identity and
+21:21
+pass it to conjure. Now conjure doesn't
+21:24
+know AWS that much. So we can't verify
+21:27
+his the identity of the workloads by
+21:29
+itself. So it's going to take the
+21:31
+identity and pass it to the AWS STS
+21:34
+which is the service token at the secure
+21:36
+token service. Now the S SDS server can
+21:40
+verify the identity and then will send
+21:42
+back to conjure the identity of the AWS
+21:44
+workload. That's the main authentication
+21:46
+method. Okay, great. So, so by the end
+21:49
+of that authentication process um the
+21:51
+machine is ready to present a signed uh
+21:54
+SWS header uh STS header and then it's
+21:57
+going to look something like this. So
+21:59
+you've got your credential with embedded
+22:01
+metadata. You got an AWS signature
+22:04
+that's tied to that specific access key.
+22:06
+you have a time stamp for freshness uh
+22:08
+and then there's a regional SDS server
+22:10
+that was used to sign it. Now STS is is
+22:13
+a foundational AWS service and it's how
+22:16
+temporary credentials get validated. So
+22:18
+because of how critical it is, uh AWS
+22:20
+runs STS servers in every major region
+22:23
+to help with latency and resilience. And
+22:25
+yes, there's there's a lot of them. So
+22:27
+as you can see on the right, um they all
+22:29
+live under the same pattern. It's going
+22:31
+to be STS.reion.mazonws.com.
+22:32
+region.mamazonws.com.
+22:36
+Um, and how does conjure figure out
+22:40
+which AWS STS endpoint to trust and
+22:43
+verify? So, it runs this function right
+22:46
+here. So, what's it it's doing pretty
+22:47
+straightforward. It's going to parse the
+22:49
+host and authorization headers. Uh, and
+22:51
+it can be the global endpoint, but it
+22:54
+can also be a regional endpoint. Uh, and
+22:56
+if it's regional, we're going to extract
+22:58
+the re the region. Um, and then we can
+23:02
+uh use that region right here to compose
+23:05
+an HTTP request and perform the actual
+23:07
+validation.
+23:10
+Great. Now, so some of you probably um
+23:12
+can already guess where where we're
+23:13
+going with this. Um, so Cyberarch
+23:16
+recommends selecting the AWS region that
+23:19
+is closest to the conjure node for
+23:22
+minimal latency. Um, so naturally we had
+23:25
+a great suggestion for a really great uh
+23:27
+low latency regional STS server that's
+23:30
+going to be uh SDS.sata.ai
+23:32
+I and it's really it's you know really
+23:35
+great low latency so everything seems
+23:37
+legit about that and um alas this would
+23:41
+never work be because the the region
+23:44
+parsing function that we just saw um uh
+23:48
+uses a a secure and well- tested
+23:51
+production grade primitive that never
+23:53
+goes wrong which is a regular
+23:55
+expression.
+23:58
+Okay, so let's let's take a closer look
+24:00
+at this regular expression. Um, so the
+24:03
+the line here is where conjure extracts
+24:06
+the AWS region, right? So it's it's
+24:08
+going to look for the third slash
+24:09
+delimited value in the credential
+24:11
+string. Um and in the normal case uh
+24:14
+that gives us something like US East
+24:16
+one. But this uh uh regular expression
+24:20
+is just a little too dangerous uh or and
+24:23
+and generous because it happily accepts
+24:25
+pretty much anything up to the next
+24:27
+slash. So here's the trick. Um we can
+24:30
+just use a question mark right after the
+24:33
+region. Um and uh hold on. So that would
+24:39
+turn the rest of the URL string into URL
+24:43
+parameters and the so the regular
+24:46
+expression is still is going to see
+24:47
+sciata.ai as the region and conjure will
+24:51
+still send that request and validate
+24:53
+with us and the STS check is now just
+24:56
+pointing right at us. Uh and then the
+24:58
+result uh URL is just going to remove
+25:01
+Amazon AWS. We end up um with our STS
+25:04
+server which means a full authentication
+25:06
+bypass. um for AWS roles. So, let's go
+25:11
+to the demo. Oh, I'm sorry. Yeah,
+25:13
+didn't see anything.
+25:14
+Yeah. Yeah, I didn't see anything.
+25:18
+So, for this demo,
+25:21
+we're going to use the official
+25:22
+documentation of AWS. Okay. This is the
+25:24
+official documentation. We didn't change
+25:26
+a single bit out of it
+25:27
+for how Cyber Arc defines, you know,
+25:30
+the AWS,
+25:31
+the documentation policy basically. So
+25:34
+as stated, we're going to do an AWS
+25:36
+authentication bypass. But if you do
+25:39
+authentication bypass, we can use it
+25:40
+like to authenticate as a host or as a
+25:43
+user like as an identity. But we found
+25:47
+out that using this bypass, you can do
+25:49
+something much more interesting. So
+25:51
+instead of authenticating as a host or
+25:54
+user like as an identity, we found out
+25:56
+that you can authenticate as a policy.
+26:00
+For those of you who doesn't know
+26:01
+conjure before saying authenticate as a
+26:04
+policy is like saying we're going to
+26:05
+authenticate as the settings like as the
+26:07
+setting of the configuration. It doesn't
+26:09
+really mean anything but we need this
+26:11
+for the chain to work. So using this
+26:14
+policy permission we don't have much
+26:17
+time but the main idea is to use three
+26:18
+type confusion. One time confusion on
+26:21
+the host factory h to confuse it one
+26:24
+time confusion on the secret endpoint
+26:26
+and then a fair time confusion on the
+26:28
+policy factory. While this tusion is
+26:31
+going to let us load an arbitrary which
+26:34
+is embedded Ruby which is the same thing
+26:36
+as saying code execution
+26:39
+and I'm going to load it
+26:50
+and as you can see I have the conjure
+26:52
+data key.
+26:57
+If if if you don't understand this, this
+26:59
+is a full like conversial on the conjure
+27:01
+note.
+27:05
+[applause]
+27:09
+Okay. All right. Awesome.
+27:13
+Great. Let's go forward. Okay. So, let's
+27:17
+try to put this uh in perspective. Um so
+27:20
+in total we disclosed uh nine CVEEs in
+27:22
+hashior vault five CVEEs in cyber ar
+27:25
+conjure uh including the first ever rce
+27:28
+reported on vault and the
+27:29
+pre-authentication rc and conjure um and
+27:33
+now before before we end um I I do want
+27:36
+to first acknowledge both hashi corp and
+27:38
+cyberarch so we we sent our findings and
+27:41
+both vendors responded very quickly
+27:44
+professionally and seriously um uh we
+27:47
+communicated clearly coordinated ated
+27:49
+fixes and you know both of them worked
+27:51
+with us to make sure that this was
+27:52
+handled the right way. Um so we respect
+27:55
+that and the ecosystem is uh better for
+27:57
+that uh for it.
+28:00
+Okay. Uh so a few recommendations and uh
+28:03
+uh takeaways. Um the first thing we want
+28:06
+to say is memory safety is is not going
+28:08
+to be a a silver bullet, right? So go is
+28:11
+great, but it's not going to stop a
+28:12
+logic bug or an overly trusting um
+28:15
+regular expression. manual reviews still
+28:17
+surface real and serious issues. Um and
+28:21
+second, yes, uh even vaults are
+28:24
+vulnerable and you need to account for
+28:27
+that in your thread model. Um so have a
+28:29
+response plan. Um build resilience. I
+28:32
+mean when when was the last time you ran
+28:34
+a vault breach drill? Um if if the
+28:37
+answer is never, maybe now is the time.
+28:40
+Uh third, uh your logs matter. Now
+28:43
+vaults generate great audit logs. um but
+28:46
+only if someone's looking at them. And
+28:48
+we're releasing a tool called Audi
+28:51
+finder um that's designed to help you
+28:53
+spot suspicious behavior in audit trails
+28:55
+and you can grab it from our website.
+28:58
+And uh finally, we posted uh a lot more
+29:02
+details uh detection guidance, defensive
+29:05
+strategies in our blog. Um so stay safe.
+29:10
+Uh question your trust assumptions. Um,
+29:13
+and that is it for us. If you want if
+29:16
+you want the full writeup, uh, detection
+29:18
+tips and all the greedy technical
+29:20
+details, uh, just scan the code or head
+29:22
+to sciata.ai. Uh, we're team SIATA. Come
+29:25
+and say hi. Uh, booth 6316.
+29:30
+I think there's a there's a wrapping
+29:31
+place if you want to.
+29:32
+There is there is a rap room if you have
+29:34
+any question. And so, come say hi and
+29:37
+tell us how many secrets you're hard
+29:38
+coding into your AI agents. Thank you
+29:40
+very much.

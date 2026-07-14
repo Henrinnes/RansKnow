@@ -1,0 +1,229 @@
+0:00
+Lee Kirkpatrick: Hi, my name is Lee Kirkpatrick, and I'm an incident lead
+0:03
+with the Sophos Rapid Response Team.
+0:05
+And in today's video, I'm going to be running you through a query that
+0:08
+we've discussed in one of the previous presentations as part of this series.
+0:12
+Specifically, we're going to execute the 4624_4625 login events query.
+Looking at Logins.01.1 - 4624_4625 Login events.sql
+0:18
+Now, as I've previously discussed, a 4624 is a successful login
+0:22
+and a 4625 is a failed login.
+0:25
+And this could be really useful and beneficial in identifying, for one,
+0:29
+successful RDP logins -- you would see a 4624 with what's called a log on type of
+0:34
+10 -- but it can also help you evaluate and identify if there's any failed RDP
+0:38
+logins potentially taking place as well.
+0:41
+If you remember, in a previous video, we've discussed what was called
+0:44
+network-level authentication or NLA, which means that the actual authentication
+0:49
+prior to the RDP session being established takes place over the network first.
+0:54
+So this can be really useful in identifying potential devices that have
+0:58
+RDP exposed, but maybe there hasn't been a successful login yet, and this can be
+1:02
+a really nice way of identifying if any of your devices in the environment are
+1:06
+potentially exposing RDP, and there's a brute force attack currently taking place.
+1:12
+So, in order to execute this query, you want to take the OS query code
+Creating the query
+1:17
+from the GitHub page, navigate over to Sophos Central, select Threat Analysis
+1:22
+Center, and go to Live Discover.
+1:25
+On the top left is the Designer Mode; toggle this button, and that will then
+1:29
+show us a new button called Create new query, which will actually allow us
+1:32
+to execute the custom OS query code that we've just copied from GitHub.
+1:37
+If we scroll down, there's a SQL text box where we can paste that
+1:41
+SQL code, and if we scroll down, we can then select the devices we
+Device selection
+1:45
+want to execute this query against.
+1:48
+Now, this is a query that only works against Windows operating systems,
+1:51
+so you'll want to deselect macOS and Linux and then click apply.
+1:56
+Then what you can do is select the devices you'd want to execute this query against.
+2:00
+Now, typically what we do as part of our initial investigation is execute
+2:04
+this across everything because we want to get an understanding of
+2:07
+exactly where these successful and failed logins are taking place.
+2:10
+Once you're happy with your device selection, you can click the Update
+2:14
+selected devices list and you'll see that we have two endpoints selected here.
+2:19
+Once we're happy, we can execute the query by clicking Run Query.
+Executing the query
+2:23
+It's going to prompt us and say, Do you want to run this untested query?
+2:26
+And we'll say yes.
+2:28
+But what you'll do is you'll get an additional error that
+Undefined variables?!
+2:31
+maybe you're not aware of.
+2:33
+And in this instance, it says Undefined variables, and that we have to define
+2:37
+the variables' username and source IP.
+2:40
+And that's because if we go back up to the query, there's actually a section
+2:43
+here where we denote two variables.
+2:46
+And that is by the two dollar symbols that you can see here.
+2:49
+Anything that has $$text$$ is a variable with an OS query.
+2:55
+So what we can do is expand the variable editor here, add two variables, one
+3:02
+being username, which is what the error stated, and one being source IP.
+3:07
+Both of these are going to be type string.
+3:10
+And in this instance, we're not focusing on a specific username.
+3:13
+So we can use a wildcard character, which means any username.
+3:17
+And subsequently, we're not looking for any particular source IP at present.
+3:20
+So we can use a wildcard and say I want to search for any IP address.
+3:24
+Now when we execute this query, that will get rid of that error
+3:28
+regarding the variables and this query will successfully execute.
+3:32
+Now, this query will take some time to return, and that depends again on
+3:36
+a number of different factors, the resources of the machines, the network
+3:40
+connection speeds of those machines, also how large the security event log
+3:45
+is, that can have an impact on how quickly this query takes as well, because
+3:49
+a lot of the times the security event logs contain quite a number of events.
+Query results
+3:54
+But what you're doing is you're waiting for the status column to say that this
+3:57
+query has finished, and then you can start browsing and looking at the results.
+4:02
+Now, this query may actually return quite a lot of information.
+4:05
+So what might be easier for you is exporting this here out
+4:09
+to a CSV and opening this in something like Microsoft Excel.
+4:13
+For this demo, I'll just continue to use the web UI, however.
+4:17
+Now again, the most important columns here are going to be endpoint name (so,
+Analyzing the results
+4:21
+where are these successful or failed logins actually taking place on?), also,
+4:25
+date_time (so when are these actual successful or failed logins taking place).
+4:30
+And what could be quite useful is actually clicking on this column header here to a
+4:34
+sort either by ascending or descending, so we can see the furthest events or
+4:39
+the closest events to the current time.
+4:42
+Now, if we sort descending in this instance, we can also see
+4:45
+that there's a lot of 4625s.
+4:47
+And if you're not familiar with what that is, there's a little description
+4:50
+and it tells you it's a failed login.
+4:52
+Now of course, this is from the security event log like we previously
+4:55
+discussed, the username columns going to show us the failed logins that were
+4:59
+taking place for that specific user.
+5:01
+So in this instance, there's a lot of administrators.
+5:03
+But some very random usernames here as well, such as reception-ei,
+5:07
+novakova, so quite a number of various different failed usernames
+5:12
+here that are attempting to log on.
+5:14
+What's also really interesting is the source machine network.
+5:18
+Now, what this shows us is the actual host name of the device that's attempting,
+5:23
+or if it was a 4624, that actually managed to successfully connect.
+5:28
+Now this can be really, really beneficial because if it's not a host name that you
+5:31
+recognize, that could raise suspicion.
+5:34
+And it's something that you want to investigate.
+5:36
+It could mean that you're under attack potentially, so definitely
+5:39
+something that you want to investigate if you don't recognize what these
+5:41
+source machine networks are.
+5:43
+Because most organizations are going to have a naming convention for
+5:46
+devices, and if you see source machine networks that differ from what you
+5:50
+would typically expect, definitely something you want to investigate.
+5:54
+Also, what we can see here is the source IP address, and this instance,
+5:58
+they are all remote IP addresses, so they're non-RFC 1918 IP addresses, so
+6:03
+these are going to be external IPs in this instance, which means someone is
+6:07
+failing to log in to our two devices in the environment from external IP
+6:12
+addresses, and the login type is 3.
+6:15
+Now, again, this is something that you typically associate with
+6:17
+network based logon, so something like SNB, and it could be that you
+6:20
+unfortunately have SNB exposed, and we do see that in some organizations.
+6:25
+But in this instance, this is because we have RDP exposed.
+6:28
+And because of that network level authentication, we're seeing a 4625
+6:32
+failed login event with a logon type 3, which indicates a logon over the network.
+6:37
+So this query can be really useful in identifying devices that maybe
+Wrapup
+6:41
+have RDP or something exposed to the internet that shouldn't.
+6:45
+I hope this video has been very useful for you.
+6:47
+Thank you very much for your time and catch you on the next video.
+

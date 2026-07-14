@@ -1,0 +1,1052 @@
+0:00
+Please feel free to go through and help yourself. Yes, pivot. Oh god, friends,
+0:05
+that was a long time ago. Thank you to our sponsors. Uh, no lab setup need for this
+0:11
+one. We're just going to kind of talk about it for a bit. So, for the last two weeks on Fireside Friday, we've
+0:17
+discussed all the different components that go into making up a VPN. You know, we talked about initial authentication
+0:24
+and we talked about how that's still kind of our Achilles heel. you know, initial authentication, doing it right
+0:31
+is very hard. And there's still a a component of that that comes down to warm fuzzy. Meaning, we can look at like
+0:38
+asymmetric encryption, symmetrical encryption, and we can use math to prove
+0:43
+how secure is it. With initial authentication, we can't just use math.
+0:48
+There is a very strong, you know, sit in a circle, cross your legs, sing kubay, and talk about how do you feel? Do you
+0:55
+feel like it's secure? And that's going to have a big segue on whether you're going to trust it or not. So we talked
+1:02
+through all the components over the last two weeks. So what I wanted to look at today is some of the actual implementations, some of the more common
+1:08
+ones that are used out there. So we're going to talk about secure shell, we're going to talk about IPSE, and we're going to talk about
+1:15
+TLS. So SSH, I think everybody's familiar with this tool, secure shell. So typically what we use this for is
+1:22
+secure access to a remote server, right? I spin some instance up in the cloud. I need to go in and manage it remotely.
+1:28
+SSH is the fallback tool that we're going to go through and we're going to use for that. There's a number of different methods of authentication that
+1:34
+are supported. You know, everything from like simple passwords, you can use public private keys and today you can
+1:41
+even do it via digital certificates. Digital certificates are more work upfront, but it solves a lot of the
+1:48
+long-term administration problems that you can run into with SSH. So for example, let's say we have, you know, a
+1:54
+hundred servers and somebody leaves the company and they have SSH access to all of those servers. How do we quickly and
+2:02
+easily and efficiently and efficiently manage that? Right? I mean, if we're
+2:07
+just using like simple passwords on everything, we got to log into every single one of those 100 servers and
+2:13
+disable that user's account. But if we're using digital certificates, all we need to do is go through and revoke that
+2:18
+person's digital certificate. bang, they lose access to everything. Um, if you don't want to go to digital certificates, there's some other things
+2:25
+you can do to kind of help secure SSH remotely. I'll talk about those as we go through to as well. But digital
+2:32
+certificates is where I personally feel like we need to move towards uh with regards to
+2:38
+SSH. So, like I said, secure terminal access uh also secure file transfer. Um,
+2:45
+it even has the the ability to let you, you know, using things like arsync, I can synchronize file systems across
+2:52
+multiple systems and and do it in a secure fashion. There's all sorts of cool stuff you can do use with that. Uh,
+2:58
+we actually use that with AC Hunter uh to pull logs off of a Zeke probe. So a
+3:04
+Zeke probe will go through and watch traffic going by, create log entries, and then we have a process that kicks
+3:10
+off SSH and uses our sync to pull those log entries over to the AC Hunter system
+3:16
+so that AC hunter can then go through process those logs and look for potential command and control and fun
+3:21
+things like that. So you can do a lot of cool stuff with it. And you know, if you use something like public private keys,
+3:27
+you can fully automate it. you know, you don't have to be there to log in type of thing and you can do it in a fairly
+3:32
+secure fashion. There's also support for X Windows. Uh, a lot of folks don't
+3:38
+realize this. If you're sshing to a remote server and it's running X
+3:43
+Windows, you can run a local XW Windows emulator and run any of those X Windows
+3:49
+applications. They, you know, sort of fully execute on the server itself. But
+3:55
+um but yeah, if you like, you know, if you're remoting to a Linux box and you want the Linux desktop in order to, you
+4:02
+know, work with it, in order to be able to manage it, uh X Windows is the way to go. That's it's there with like Mac and
+4:10
+BSD and Linux. Windows, it's not there by default, but there are some really good projects that'll add that type of
+4:17
+capability. Uh let's see. Can public private keys anderts both be used for
+4:23
+SSH at the same time? Would there any be any point in doing that?
+4:28
+Well, when you when you use digital certificates, you sort of are because what digital certificates are is a way
+4:35
+to securely manage and hand out public keys, right? So, we're already using a
+4:42
+public key as part of the digital certificates. We're just using the cert to be able to
+4:47
+keep track of it, validate it, revoke it if we need to, and that type of thing. Uh, with think SSH keys for normal
+4:54
+users, searchs for admins, that's a possibility, too. Um, although we try to
+5:00
+just stick with keys all the time for everybody at a minimum. You know, use
+5:05
+public private keys. It's just that way you don't end up in a situation where somebody does a really poor job of of
+5:12
+generating the you know password that they want to use. Now what makes SSH kind of a VPN is
+5:20
+this concept of port forwarding. So SSH has the ability to tunnel different
+5:26
+types of traffic through this SSH tunnel that it creates between the client and the server. There are two types of port
+5:34
+forwarding you can do. There's local port forwarding which sets up a local
+5:39
+listener and then there's remote port forwarding which sets up a remote listener. So with local I'm opening up a
+5:47
+listening port on the system running the SSH client. With a with remote port I'm
+5:52
+opening up an SS I'm opening up a listening port on the SSH server. And when you might want to use one versus
+5:59
+another kind of depends upon um you know your situation, what you're trying to accomplish. So here's an example. So I
+6:06
+gave these all as like SSH command line commands so that you know what the command line needs to look like. If
+6:12
+you're using some sort of a graphic tool, you know, extrapolate that to however the the tool wants you to input
+6:18
+this type of information. So, we're saying
+6:24
+SSH-L, I want to set up a local listening port on port 8080, and then I
+6:30
+want to send that down the tunnel. And I want to send it to localhost from the
+6:36
+SSH server's perspective. So, that's going to be localhost on the SSH server,
+6:41
+and I want to send that to port 8080. So with the configuration I have here, I
+6:46
+could run a proxy on this box that's also running the SSH server. And now all
+6:52
+I need to do is configure my browser on the client to use tell it the proxy is
+6:58
+at localhost on port 880. And now that traffic will get tunnneled through the SSH session and come out here. Um I've
+7:06
+seen lots of folks do this. Um, some sites strictly regulate what you can
+7:13
+visit on the internet. You know, they only want you going to work related websites and you know,
+7:20
+www.betyouhouse.com. So, you know, if you want to gamble and only bet your house, you can do that. You know, I'm kidding. It's a madeup site. But let's
+7:26
+say I wanted to get to that, but that's on the band list and the firewall will filter out any traffic trying to get to
+7:31
+it. Well, now all the firewall sees is an SSH session going to this box. My web
+7:38
+browser traffic gets tunnneled through that SSH session. It comes out the SSH server and gets dumped into the proxy
+7:45
+server on this local system and now the proxy goes through and connects to that system and any data retrieved by the
+7:52
+proxy again comes back through that SSH session. So again allows us to go through and kind of circumvent the whole
+7:58
+thing. Now I don't have to have the listening port
+8:04
+um on the server per se. So for example, one of the things I can do is I can say,
+8:10
+hey, I want to listen on port 3306, right? Some, you know, SQL client
+8:16
+port. Just throwing out an example. I want to have the system running the SSH client. I want the SSH software to open
+8:24
+up a local listening port of 3,36. And now anything that goes to that
+8:30
+port, send it through the SSH tunnel to the SSH server. And I'm going to tell
+8:36
+the SSH server, hey, anything coming through that tunnel, send it to this IP
+8:41
+address, this port number. So, what does that do for me? Well, now let's say I'm
+8:47
+on this network someplace and I need to get to this box, but I can't. And I know this IP address has access to that box.
+8:55
+Well, I can just SSH to the box that has access, create a tunnel to in order to
+9:00
+send the traffic through. Life is good. Well, life life is good if you're trying to solve this problem. Life is maybe not
+9:07
+good if you're trying to actually control what type of traffic is allowed to go through the network. Maybe there's
+9:12
+some reason the firewall doesn't let access to this box. This allows somebody to go through and completely circumvent
+9:18
+that. Uh the other one I've seen people do is they'll set up a proxy on their local system and they'll uh tell it to
+9:27
+so here we were saying we wanted to listen on the local host port. Um, but
+9:32
+if you bind it to the network interface instead, now you and all your buddies can take a proxy, point it at your
+9:39
+system, and all get internet access to this proxy out on the internet. Um, I
+9:44
+remember uh we we found this because we noticed a a dramatic change in traffic where all of a sudden this client was
+9:51
+was receiving a lot sending and receiving a lot more data than it used to and it was getting it from other
+9:57
+clients. And our first thought was, okay, somebody's whacked that box. But when we looked in a little bit deeper,
+10:02
+it was no, we had a very restrictive internet browsing policy and one person
+10:08
+figured out how to set up a proxy with an SSH server and just tunnel everything out through it. And when their buddies
+10:15
+saw that they could do that, their buddies asked them to grant them access instead. So they just bound it up to the
+10:20
+network interface instead of the loop back interface. And that'll work as well. But I could do that here also. I
+10:26
+could say, "Yeah, bind on the uh network interface." And that way anybody on that
+10:31
+network can connect to that port and immediately get sent to that server
+10:37
+there. I've actually seen some compromises happen this way too. Um, I
+10:42
+was I called in on a site where they had an internal web server that had been
+10:47
+compromised. And when they ran through when I went through and kind of ran down the logs, um, the source system was one
+10:56
+of the HR people, you know, it was an it was a woman who was like late 50s, did not look like a hacker. So, the fact
+11:02
+that it was her system that compromised this this internal server was kind of weird, especially since it like defaced
+11:09
+the web page. It's like why do that for an internal only server and you know long story short the IT folk person had
+11:16
+set them up to be able to access a port on their local system at home get access
+11:23
+to the server that way and now they could update pages and help documents and that type of thing. Well that when
+11:29
+the IT person gave them the command they didn't restrict access on the person's
+11:36
+home system to just the local host. It was anything with network access to this
+11:41
+can get to it. And you know, we think that's how somebody got in. You know, they saw port 80 was on open on this
+11:48
+system. And they were able to get in and compromise the box that way. They thought it was, you know, some host
+11:53
+hanging off a Comcast or in a coffee shop or whatever. And it turned out no, this was actually a web server that was
+11:59
+sitting inside of a firewall that probably wasn't patched and fixed as well as they could because they said,
+12:05
+"Oh, it's on the internal network. Only users can get to it. the firewalls in the way. No one could ever compromise
+12:10
+this box. And someone was able to come in and compromise the box. Oh, I hate it when that
+12:16
+happens. So yeah, like I said, I can go through and I can say bind to all interfaces and now anybody can come
+12:23
+through me to get to that box out on the internet or anybody could come through me to get to the proxy running on the
+12:29
+SSH server or the proxy running on a different IP that I pointed to through with this command. You know, either way
+12:35
+will go through and work. So that's a local port forwarding. I can
+12:42
+also do remote port forwarding. So with remote port forwarding when I create my
+12:47
+SSH connection, I tell the SSH server, hey, do me a favor and open this
+12:53
+particular listening port, whether it be localhost or whether it be on all network interfaces. And anything that
+13:00
+connects to port to this port on you, send it down the SSH tunnel and send it
+13:06
+to me. the SSH client and I will take care of forwarding that traffic to some other internal system. So that
+13:12
+compromise I talked about this was effectively how they had gone through and set up. So she would on her work
+13:18
+computer SSH out to her home system and now that would open up a port she could
+13:24
+work with that port except somebody else got access to that port and then tunnled through and was able to compromise that
+13:30
+internal server. Oh, I hate it when that happens. I hate it when we have internal servers that we're convinced nobody from
+13:37
+the outside can get to and somebody figures out how to get to it. You know, they leverage something we didn't expect to see on our network. But if you think
+13:44
+about it, this is a VPN, right? I can talk to servers. You know, if I'm the
+13:51
+SSH client here and I've got a firewall here, I can, you know, have this network
+13:57
+talk to hosts out here. I can have stuff out here, talk to stuff in here. it'll
+14:02
+tunnel that traffic through. I've got to set up an s uh a TCP listening port for
+14:08
+every single one. So, that's kind of cumbersome, right? If I have, you know, 10 different applications that I want to
+14:15
+grant access to, I'm going to have to create, you know, I'm going to have to include those 10 different specifications on the command line or
+14:22
+put it in a config file. And I'll talk about that just a little bit. Um, but yeah, I'm going to have to configure it
+14:28
+for that. And I can't support UDP. There isn't you. To the best of my knowledge, at least the last time I was really
+14:34
+playing around with this, Bill knows more about SSH than I ever will until I die. So if Bill jumps into Discord and
+14:40
+says, "Well, no, actually Chris, it supports UDP now." Then yeah, listen to Bill, don't listen to me. But the last
+14:46
+time I played around with it, it didn't have UDP support. So you couldn't send things like DNS queries through this.
+14:52
+But TCP, yeah, you could go through and you could do that.
+14:58
+Now, one of the challenges we run into, this is correct. UDP port forwarding is
+15:03
+not supported. Awesome. Thank you, Bill. Thank you, Bill. Glad I picked on Keith today instead of
+15:10
+you. So, uh, one of the challenges we talked about is that let's say I have a cloud
+15:16
+setup, right? And I'm managing those cloud instances via SSH. Well, port 22
+15:23
+is probably open on every single one of those boxes. anybody can try and get in. They're going to get hammered away on
+15:29
+all the time. You know, if I'm using passwords, I got to worry about did somebody pick a poor password that they
+15:34
+went through and used. And now, you know, that system may be susceptible to, you know, brute force password attacks.
+15:41
+One of the things you can do is you can set up an SSH forwarding gateway. So,
+15:47
+here's how it works. I have one box and in order to get to any of the servers,
+15:52
+you've got to SSH and authenticate with this one box first. Well, this is kind
+15:58
+of cool because this creates the opportunity to, you know, really kind of
+16:04
+lock down authentication if I want to. You know, in other words, I could go through and I could implement UB keys,
+16:09
+right? And now rather than having to implement UB keys on every single one of my servers, I implement it on the
+16:16
+gateway box only. and I'm good to go from there. I could in uh I could enable, you know, some form of
+16:21
+two-factor authentication that has to be used. And again, I only have to do it on the gateway box and and everything is
+16:28
+kind of forced through that as we go through. So the concept with the gateway box is that the user will SSH to the
+16:35
+gateway box and then they'll set up port tunnels to all the systems that they may
+16:41
+need SSH access to after that. So the way this works is I would try and SSH to
+16:48
+the gateway. And if I properly authenticate, all of a sudden these
+16:53
+ports are going to be open on the local interface off of this system. And I can
+16:58
+now SSH to those ports or I can set it up in a config file. And I'll show you that in just a second. So that anytime I
+17:05
+try to SSH to let's say server one, it will automatically know, oh hey, that's
+17:11
+got to go to TCP port 20 2205 on the loop back interface and that
+17:17
+and you're sshing inside of an SSH session, which seems kind of weird and a
+17:23
+little bit overkill, but it works nicely because now none of these boxes are exposed to SSH access from the internet.
+17:30
+The only thing that can get SSH access to it is the gateway, which means you got to be able to authenticate to the
+17:36
+gateway before you can get access to any other systems. And here's an example of that
+17:42
+config I was talking about. So I can go through and I can identify, hey, server one, it's located in localhost. Here's
+17:50
+the local port number that you need to talk to in order to get to it. So now if I say SSH server 1, it's going to
+17:57
+automatically, you know, see this config and load it up appropriately. So it's a really nice way to go through and and
+18:04
+kind of reduce the number of exposed SSH ports, you know, that are out on the
+18:10
+internet, if you will. Um, Bill has an awesome write up on this technique over
+18:15
+at his site sterns.org. So if this looks interesting to you as a way to kind of manage SSH access, I highly recommend
+18:22
+you read that. You know, we we we talked about using digital certificates to kind of control when new users need to get
+18:28
+added or deleted. You know, if person leaves the company, I can just revoke the digital certificate. Well, with this
+18:34
+setup here, if I remove that user from access to the gateway, they can't get to these
+18:40
+other boxes anymore. I still probably want to go through these boxes and, you know, do proper account management. But
+18:47
+as far as like, you know, let's say this is like a hostile firing and we're worried about this tur person trying to
+18:53
+come back in and break things. So long as I kick their account here, they can't get to anything else behind it. So we
+18:59
+can respond very quickly to those types of
+19:06
+situations. Come on, you can do it. There we go. Okay, so that's SSH.
+19:13
+One of our other VPN options is IPSAC. So, this one's been around for a while.
+19:19
+Uh, what's what's kind of nice about IPSAC it is it is that it's a true
+19:25
+full-blown VPN, meaning not just TCP, I can throw UDP down the tunnel. I can
+19:31
+throw ICMP down the tunnel. I can throw any of my TCP, you know, transports through it, which works out kind of
+19:37
+nice. Um, it's also pretty flexible. I can use ipseack to secure traffic
+19:42
+between two endpoints. I can use uh IPSec to secure traffic between two different networks or or also a
+19:50
+combination of the two. So I could have an SS I could have a uh an IPSAC client
+19:56
+a single host get access to a full network and do it that way as well. Um
+20:02
+so there's a lot of flexibility here. There's a lot to work with. There's three different protocols that come into
+20:07
+play here. First one is Ike. Ike kind of deals with um uh key negotiation, you
+20:13
+know, like negotiating the, you know, the prime numbers, the generator numbers, public keys, all that other fun stuff that all that all takes place
+20:20
+over. For actually securing the data, we have two different protocols. We have
+20:25
+ESP and we have eh. Okay. What's the difference between
+20:31
+them? What's the difference between uh encapsulation security protocol and authentication header? Well,
+20:37
+authentication header as the name implies authenticates things. Um, Ike on port
+20:46
+47. I to the best of my knowledge it uses 500. That's what I always kind of
+20:52
+worked with. So, authentication header does not
+20:58
+provide any data privacy. What I mean by that is nothing gets encrypted. So we
+21:05
+have some areas of the world where you can't use encryption. So rather than you know so
+21:11
+if you can't use encryption rather than doing nothing you could at least use authentication header and that will at
+21:16
+least ensure that your data hasn't been changed in transit. It can't protect you
+21:21
+from that data being sniffed. it's going to be seen, but you have to make sure
+21:27
+that um but it can at least make sure that none of that data was modified as it was
+21:33
+going by. Now, the problem with authentication header is that it tries
+21:39
+to authenticate portions of the IP header, thus the name authentication
+21:44
+header. One of the things it authenticates is the IP addresses. Well,
+21:50
+one of the common things we use today is network address translation, right? We're changing IP addresses. If you go
+21:58
+through a NAT device with IPSAC supporting authentication header, that
+22:03
+tunnel is going to break down and it isn't going to work. So, that's not fun. That's not very useful. ESP doesn't have
+22:10
+that problem. So, ESP provides data privacy. So, there's encryption supported. It also supports
+22:17
+authentication of every packet. It just doesn't reach all the way into the IP header to authenticate the source and
+22:23
+destination IP. So the nice thing about ESP is that you can deal with an AT device no
+22:33
+problem. IPSAC has been around for a while now. Um I think I was doing my
+22:38
+first IPSec tunnels 25 years ago, something like that. Um so it's been
+22:44
+around for a while. It was originally created to be part of IPv6 and it's actually built into IPv6, but we looked
+22:51
+at that and said, well, we need encrypted tunnels much sooner than we're going to get IPv6 as a full global
+22:58
+rollout. So, let's borrow some of this stuff and tweak it to get it to work
+23:04
+with IPv4. Um, during the Snowden leagues, it was kind of talked about that some of the
+23:10
+specifications were purposely dumbed down to make sure that, you know, NSA
+23:15
+could still get, you know, read session if they had to. Um, that stuff has since
+23:21
+been addressed. So, that shouldn't be there anymore. But you know I will
+23:26
+caution you that that is a problem quite honestly with any open standard um or or
+23:32
+open software that anybody can contribute to. But you know with the open standards sometimes you get people
+23:38
+that are part of that standard committee that have an agenda meaning
+23:44
+that meaning that they their goal is not necessarily to create something secure.
+23:51
+their goal may be something else that doesn't quite align with everybody else. Um, so these things will can and can do
+23:59
+and will pop up from time to time. So how do you set up an IP sec
+24:06
+tunnel? One of the first things you need to look at is how does this need to be configured? Is it going to be host to
+24:12
+host, network to network, host to network? What are you going to do for setup? Most IPsack tunnels require the
+24:20
+use of a uh of a pre-shared secret. Think of that as like a password that
+24:26
+the two endpoints know about, nobody else does. And that's how it goes through and deals with initial
+24:31
+authentication. So, one of the first problems you can run into is your shared
+24:37
+secrets are not in sync. You know, you thought the password was money, they thought the password was puppy, and now
+24:43
+those things aren't going to be able to talk to each other. Obviously, they're going to fall apart at initial authentication.
+24:50
+Um, excuse me. You can then uh the the other thing that's a requirement is that
+24:56
+if I want to get to network resources on the other side, right? So, if I'm not doing if I'm doing host to host, I'm
+25:02
+okay. But if I want to do host to network, that target not only has to be
+25:08
+configured as an IPAC endpoint, it also has to be configured as a router, which means I need to turn on IP forwarding. I
+25:15
+may want to implement some level of firewall rules to control what kind of traffic is permitted to come through
+25:20
+this IP sector tunnel. Um, so there's a lot of kind of considerations you need to run through. Uh, Cisco has a good
+25:27
+write up on this, although quite honestly, one of the best ones I found was Red Hat. I thought they did a really good job of kind of talking about, you
+25:33
+know, what you need to go be concerned about as well as giving like a nice generic config that'll work with any
+25:39
+Linux box. Network to network, pretty much the
+25:46
+same thing except both ends obviously have to have IP forwarding set up and
+25:51
+you need to figure out what are you going to do about routing, right? Am I going to run a dynamic routing protocol
+25:56
+that's going to send updates through the VPN tunnel using up bandwidth? Is that
+26:01
+how I want to set up my routing? Do I want to use fixed route entries that get
+26:06
+handed out as part of DHCP? You know, it's not enough to create the tunnel. We
+26:12
+have to make sure routing is also configured properly to make sure that folks on one side can reach resources on
+26:18
+the other and vice versa.
+26:23
+And that's about it for TYP sec for now. Uh I was going to go into it a little bit deeper, but it's not as popular as
+26:29
+it used to be. Although people do still pull it out and use it on occasion. Arguably the most popular way
+26:35
+to secure a data streams though is TLS. So TLS is designed to secure any
+26:44
+TCP transport. Now it doesn't always work by default. You have to actually
+26:50
+write code to address that. So, for example, you know, we had HTTP, we had
+26:56
+web servers, but there's additional code needed to have that be HTTPS, which is HTTP being secured by
+27:04
+TLS. But, you know, if it's run based on uh a TCP port, at least that option is
+27:10
+there to be able to go through and support that. We started off using SSL, right? That was the original transport
+27:16
+protocol we were using. But SSL was created by, I think it was Netscape. And
+27:21
+because it was something that was, you know, owned and registered to a specific
+27:27
+organization, we wanted to create something different or we wanted to create something open source that
+27:33
+anybody could tap into without having to worry about, you know, license conflict issues or whatever the case may be. So,
+27:39
+you know, TLS version one is the same as I think it whatever the last version of
+27:45
+SSL was. I think it was like SSL version 2.2 or 2.3 or something along those lines. So, we basically just kind of
+27:51
+rewrote it enough to have it be different so that the we had an open-
+27:56
+source standard now instead of a one based on a commercial product. The two most common versions of
+28:03
+TLS we're using today is 1.2 and 1.3. I highly recommend sticking with 1.2. And
+28:09
+I'll talk about why as we go through
+28:14
+it. So some of the nice things about TLS, one is that it's agentless, right?
+28:20
+With IPSAC, I need an IPSAC agent or I need IPSAC software for both ends of the
+28:25
+connection. With SSH, I need, you know, an SSH client and an SSH server. With
+28:31
+TLS, it's more like we just modify the existing service to be able to, you
+28:36
+know, accommodate encrypted data streams as well. That's really all we did with like web on both the server side and the
+28:43
+on the web browser side. So that makes it a whole lot easier to go through and work with. It also tends to be a lot
+28:49
+more stable. Um, IPSec can have problems. Probably one of the biggest problems
+28:56
+I've run into with IPSec is time drift. You know, if I don't keep my endpoints
+29:03
+in perfect time, uh, perfect synchronous time, it's possible for the VPN
+29:09
+connection to go just fall apart. It also becomes kind of hard to go through and troubleshoot, right? like if you
+29:16
+can't get the VPN to start working in the first place, that's a little bit easier because you can kind of look at
+29:23
+like how many packets go by and sometimes there'll actually be a useful error code in there as well. But, you
+29:28
+know, if you see like one or two packets, you know, exchanged and that's it, okay, you probably got an initial
+29:35
+authentication problem. If it's more like five or six packets in, okay, it's probably has something to do with like
+29:41
+the Diffy helmet exchange and trying to come up with a pre-shared uh pre-shared secret. that's falling apart. So, you
+29:46
+get the idea. You know, with with the initial connection, getting it to work right out of the bat, you got a little
+29:52
+bit more you can kind of work through logically. But one of the biggest problems I see folks having with IPSec
+29:59
+tunnels is it works and it works and it works and it works and it works for, you know, 3 days, 3 weeks, whatever the case
+30:04
+may be, and then it just stops working. and there's some error messages, but nothing that really allows you to see
+30:11
+this is what broke and this is what I can do to keep this from happening again in the future. So, I've actually seen
+30:17
+sites that just kind of get in the habit of, you know, once a day, once a week, whatever. We're just going to reboot
+30:23
+both sides of the connection, restart it all over again, you know, and that'll that'll give us a little bit more stability to work with. So, like I said,
+30:29
+IPSAC can be a real challenge when it comes to that. TLS is a lot more forgiving. you don't run into those same
+30:36
+types of connectivity problems. Does TLS always encrypt? No,
+30:41
+it doesn't have to. TLS has support for
+30:48
+authentication, both initial as well as authentication of each packet without the need of of encrypting the data and
+30:55
+having encryption overhead. So, excuse me. So, um, so yeah, just because
+31:04
+something has the S at the end of the protocol name or at the beginning or wherever they decide to put it, you
+31:10
+know, on the middle lying underneath on its side, you know, wherever it happens to be, that S that says it's secure
+31:16
+doesn't necessarily mean data privacy, right? Secure is different than data
+31:22
+privacy. Data privacy is your data is getting scrambled. It's only getting transmitted to cipher text. secure could
+31:29
+very well mean just authentication without any type of data privacy. So, you know, we got a couple of different
+31:35
+possibilities here. Um, and this is again where the ah implementation came in. If you're in a position where you
+31:42
+can encrypt things, but you at least want to do something, ah is better than nothing. I wouldn't use it otherwise.
+31:49
+You know, in other words, one of the biggest problems I see when people try to roll out IPSAC is they don't take the
+31:55
+time to kind of learn the technology, learn the protocols, learn what different team, what what different uh
+32:02
+terms mean. So when they go to set up their IPSec tunnel, they do what always has worked for them in the past. They
+32:08
+turn everything on, right? We want to create a tunnel and make sure it works. So, hey, let's just turn everything on.
+32:13
+Well, one of the things they turn on is authentication header. and one side of the connection to the other is going through a NAT device and blah that just
+32:20
+breaks everything. So, you know, focus and it and it works out a little bit easier. Um, I mentioned that, you know,
+32:29
+TLS 1.2, it's been around for a while. That's the standard everybody's been running with, but you know, 5, eight
+32:35
+years ago, we came up with TLS version 1.3.
+32:41
+TLS 1.3 is dramatically different in how it changes things versus earlier
+32:47
+versions. With earlier versions, what we did is we went through and said, "What do we need to do to make it more secure,
+32:53
+right?" Like, "Oh, hey, these older algorithms have small key sizes. Get rid of those." Oh, hey, here was some
+32:59
+integrity flaws that we we we found in our processes. Let's fix those. So, it was always about making things more
+33:05
+secure. When you get into TLS 1.3, there's some things they're doing to make things faster that actually make it
+33:13
+less secure and that's kind of a bummer. There's also some things they're doing that quite honestly as security people
+33:19
+makes our lives a whole lot more difficult. So, uh there are security improvements certainly like perfect
+33:25
+forward secrecy. Uh, perfect forward secrecy is when I'm regenerating my
+33:31
+session keys. I can throw out everything and
+33:36
+start from scratch. That's perfect for secrecy. Or I can reuse some of the values that was used from the previous
+33:42
+key. I am going to change a couple of values and that is going to make sure I
+33:48
+generate a different session key. But, you know, if I've got a, you know, prime number and generator number that was
+33:54
+negotiated between the two systems and I renegotiate the generator number but
+33:59
+keep the same prime number. Well, that's going to create a mathematical relationship between those two different keys. Perfect for secrecy says don't do
+34:06
+that. Why would we want to do that? Well, doing that gives us less of a CPU
+34:12
+hit and things perform a little bit better. So, you know, that that that's kind of nice. Um, but it it does do it
+34:20
+at the behest of a little bit of a security. TLS 1.3 finally implements a
+34:27
+perfect forward secrecy option. So, that's like one of the few things with TLS 1.3 that I think I really like. Uh,
+34:34
+the rest of it is just kind of bad. Like the the roundtrip
+34:40
+time vulnerability. So, you know, zero roundtrip time resumption. What does that mean? what that so today if I
+34:48
+connect to a web server right and I do a secure connection I'm going to send my SSL hello packet the server is going to
+34:55
+send me its digital certificate it's going to send me it's the server hello packet we're going to negotiate with
+35:01
+algorithms to use we're going to secure the connection bang we're off to the races with zero
+35:08
+RTT we're saying hey for some period of time h let's just assume the key hasn't
+35:14
+changed So now if I come back to that same server 5 minutes later, I just resume using the previous key. I don't bother
+35:22
+going through the negotiation fully authenticating the system. I just kind of assume that well, you know, if they
+35:27
+have the same key as me, they must know what's going on. That does make TLS more susceptible to uh man-in-the-middle
+35:34
+attacks than it used to be. So it it speeds things up and then it saves us
+35:40
+like a couple of packets. But the downside of it is is it does put us in a less secure posture. I personally don't
+35:48
+like to trade saving a couple of packets just to be less secure. You know, it's a
+35:53
+couple of packets. It just not worth it. Some of the other challenges with
+35:59
+TLS version 1.3 is that it's now optional to encrypt the SNI. What's the SNI? The SNI is the indicator
+36:06
+identifying what resource was this connection trying to access. So, for
+36:11
+example, if I'm going to www.google.com and I want to do that over
+36:17
+https, one of the things that'll show up in clear text as part of that initial negotiation is I'm trying to get to
+36:25
+www.google.com. Why put that in the payload? Well, a couple reasons. One is the system on the other side might have
+36:32
+50 virtual servers running. How does it know which one of those 50 you want to talk to? Well, that's where this SNI
+36:38
+information comes in. Um, or I could be going through a proxy and it's the same type of thing. What I like about it is
+36:45
+it makes it easier to figure out where people are going, right? I see some sort of suspicious traffic pattern, you know,
+36:51
+HTTPS leaving my network going to some host out on the internet and I look at
+36:56
+it and it's like, gee, that seems to be moving a lot of data out of my network. That's not a normal characteristic. I
+37:04
+want to figure out more about this. One of the nice things about the SNI information is I can look at that and say, "What's that user trying to get
+37:10
+to?" You know, if they're trying to get to, you know, evil. Guy.ru, while they're moving all this data, I'm going
+37:16
+to be really nervous about that. Well, with 1.3, the bad guys can just simply encrypt the SNI, so you can't see it. So
+37:23
+now you have no way of knowing that shy going back to your DNS records and maybe
+37:28
+trying to correlate it that way instead. So, I personally feel like that has made
+37:35
+TLS less secure because it's taken away our ability as blue teamers to secure
+37:42
+our network. You know, that's one of the tools we would use is being able to reach in the packet and look at that. Now, we're, you know, going to
+37:48
+optionally not be able to do that anymore. I I I I just I don't know why
+37:54
+anybody thought that was an idea, you know, that they they tend to kind of fall back and say, "Oh, it's a privacy
+37:59
+thing. It's a privacy thing and no no something else is going on here. Uh does
+38:05
+this optional SNI setting help TLS inspection proxies? So great question.
+38:11
+So how do proxies deal with this? Right? Because historically what's happened is let's say you subscribe to Okami. You
+38:17
+know you pay them money to proxy your traffic with their CDN network. your traffic would go to the proxy that SNI
+38:26
+information is there and then that proxy would redirect you to a local resource if one was available or hand up out
+38:33
+information out of cache if it wasn't. So it allows you to go through and kind of switch over to another server if you
+38:39
+need to. With 1.3, if that field's encrypted, that proxy has to stay in the
+38:46
+middle of the session. It can't hand that traffic off anymore. Well, that means all of your traffic is getting
+38:53
+decrypted on the proxy and then re-encrypted again to be sent out up the other side. Gee, where's my central
+38:58
+point of vulnerability here? It's the box decryptting everything that gets to see all the plain text traffic, right?
+39:06
+So, what's an attacker want going to go after if they want to like, you know, get your bank information or whatever
+39:11
+the case may be? That box. Because normally your connection would be secure between you and you know, your bank's
+39:18
+site. Well, now there may be a new hop in the middle of it that's decrypting all of that data along the way. And for
+39:24
+some reason, that's a feature. I don't know. That just looks to me like something, you know, the NSA stuck in,
+39:29
+right? Oh, we'll call this a privacy thing and we'll do this and that'll force people through our proxies and now
+39:35
+we get to, you know, automatically decrypt all their data on the fly. I don't know that for certain, but it
+39:40
+feels that way to me just because this implementation seems like a really bad idea.
+39:47
+So yeah, I'm not a big 1.3 fan. I I recommend to folks to stick with version
+39:55
+1.2. Now, some of the other things we're using TLS to secure now are things like DNS queries. If you've been going to
+40:03
+these webcasts for a while, you probably already know how I feel about this because I have a very big soapbox when
+40:09
+it comes to, you know, tunneling DNS over TLS. The argument sounds good, right?
+40:16
+The argument is always, oh, your ISPs can see all your DNS queries. They know
+40:22
+who you're visiting. They can track you. They can sell that information. They can make money off of your, you know, your
+40:28
+internet habits. So, you know, let's secure your DNS over TLS sessions and
+40:34
+they won't be able to do that anymore. Well, think of this logically. If I'm
+40:39
+encrypting the DNS sessions, you're right. My ISP won't see it anymore. So,
+40:44
+it will not, you know, they won't be able to make money off of me. But who will? Whoever's running the damn DNS
+40:51
+server, right? Whoever's running the DNS server can do everything that the ISP
+40:58
+could do. Only they don't have to be directly connected to your network to do it. In other words, if I can get you to,
+41:05
+you know, connect your DNS queries to my system that's 20 hops away from you sitting in, you know, Russia or China or
+41:11
+North Korea or whatever, I can now get all, you know, decrypt all your DNS queries and see where you're going to
+41:17
+from here. This to me is just a hugely bad idea. It's a really bad idea. Um, it
+41:24
+also feels like it's a little bit of a power grab from the browser vendors. You know, what do I mean by that? Um, so you
+41:30
+know, I taught my packet decoding class this week and one of the things we talked about was uh the quick protocol.
+41:37
+So quick is effectively a UDP replacement for TCP, TL, you know, TLS
+41:44
+and HTTP or HTTPS. So it's designed to kind of replace all of that. But a lot of decisions have been made for the
+41:51
+benefits of performance of the benefits of security. And you know, one of the things we talked about was that when you
+41:58
+look at, you know, who's responsible for initially moving this thing along, it's folks that that have the ability to make
+42:04
+a lot of money off of that. Well, what do you mean, Chris? How does somebody make how does somebody make money off of an open standard? Well, think about it.
+42:12
+If I can dumb down TLS and make it less secure and doing
+42:19
+that will reduce the amount of overhead on my servers. And I'm someone like
+42:25
+Google or Amazon or Microsoft that has literally thousands, tens of thousands
+42:32
+of servers out there that need deal with, you know, secure HTTP traffic. If
+42:38
+I can come up with a spec that reduces the overhead on those boxes, I may be able to save myself millions, you know,
+42:45
+possibly dozens of millions of dollars by reducing my hardware requirements. So, it behooves them to kind of shoot
+42:54
+the speck in the foot to make it less secure if that reduces overhead on the
+42:59
+endpoint boxes because now they're going to spend less money on hardware in order to be able to do business. I it just
+43:06
+it's to me it's a bad idea. It's a really bad idea. Like I said, I have a really big soap box around this bad
+43:12
+Cloudflare does not have a good reputation with anyone who works on online threats.
+43:18
+Um, oh, maybe that's in reference to something else somebody said out of the CDN's out there. Have any of you felt
+43:25
+there is a vendor that is bad compared to the others out there? Just curious with the conversation around Okami
+43:31
+Cloudflare, etc. doing reverse proxying. Um, so Raj, great
+43:37
+question. We've seen bad traffic pretty much everywhere. Well, now I take that
+43:43
+back. I haven't seen Cloudflare being used to proxy C2
+43:51
+traffic yet. I've seen Microsoft, I've seen Amazon, I've seen Alami. I haven't seen
+43:56
+Cloudflare. Now, given that they have like a kind of an introductory level,
+44:02
+that kind of surprises me a little bit that we haven't seen that. It doesn't mean it hasn't happened. you know that
+44:08
+if if folks have seen Cloudflare used as like you know a proxy in front of a C2 box, please go ahead throw it into uh
+44:15
+the Discord and give as many many details as you can without getting yourself in trouble with your boss. Um
+44:21
+just so we kind of get a handle on, you know, how it was operated. But Cloudflare is the only one I haven't
+44:26
+seen that with so far. That's a good question. Uh well, really it seems like
+44:32
+Cloudflare at least serves a ton of malware. Uh well so malware is different than a command and control channel.
+44:38
+Yeah. But a lot of times what I found is that the systems that are serving up the
+44:44
+malware that are going through Cloudflare, the servers have been compromised, right? It wasn't like the
+44:50
+malware vendor signed up for service. They compromised somebody else that had already signed up for service. I you
+44:56
+know that's kind of splitting hairs a little bit, but yeah, that's the difference in what I've seen.
+45:04
+The challenge with encrypted DNS is you can't just say no, right?
+45:11
+Like like DOT uses TCP TCP port 853.
+45:16
+Great. So now I have an option to go to my firewall and saying anybody going to the internet trying to access TCP port
+45:23
+853, drop it. And now I can stop that from working. But do uses TCP 443, the
+45:32
+same ports that are used by all secure browsing sessions. So I can't just block
+45:38
+that port. Now I can play whack-a-ole with the servers that are out there
+45:43
+answering these queries, but I'm going to end up playing whack-a-ole. That's always going to be a living list. It's
+45:48
+always going to be changing. So, I'm going to need some level of maintenance to keep up with that, which again to me kind of makes it
+45:55
+kind of a pain. The other thing that kind of bugs me about this is this is not like a DHCP
+46:02
+thing, right? Like there isn't like a setting I can put in DHCP to completely
+46:08
+get rid of the chances of DNS going over a TCP transport because browsers are
+46:14
+overriding it. I can have my system set up to say, "Hey, use
+46:19
+192.168.1.10 for all DNS queries." And the system is configured that way. But my web browser might say, "Well,
+46:27
+actually, when you're using me and you type in a name, I'm not going to use the
+46:32
+local DNS resource. I'm going to tunnel it out over the internet and send it to somebody who is, you know, going to pay
+46:39
+for this or, you know, whatever. Whatever the motivation is, you know, you get the idea. So now what I have to
+46:44
+do is change the config for every browser being used and I have to monitor
+46:51
+that config to make sure it doesn't get changed back. That is a much heavier lift than just being able to block a
+46:57
+port in a firewall and be done with the whole thing. Right? So the do implementation really bugs me because it
+47:05
+really feels like an effort to say we're going to make it really hard for blue teamers to be able to do their job.
+47:14
+And that's it for this week. So, next week on Fireside Fridays, we're going to
+47:19
+be talking about authentication. We're going to be talking about passwords. We're going to be doing a little bit of password cracking. Uh we're going to be
+47:25
+working with John the Ripper. I'm going to give you some shadow files to play with, maybe some other stuff so you can
+47:30
+see how password cracking works. Um and I'll create uh I don't have a link to uh
+47:38
+how to get set up for this yet. I'll make sure it's ready by next Thursday. The setup's going to be pretty
+47:43
+straightforward. It's basically going to be install the Docker image, pull down a couple files, bang, you're done. You're
+47:48
+ready to go. Um, so I will get that out by Thursday. So by Thursday and next
+47:54
+week, if you check the Fireside content channel, that'll have instructions on how to get set up for the uh set up for
+48:00
+the hands-on walkthroughs that we're going to be doing next week. But with that said, we are
+48:07
+done. So I'm going to go
+48:13
+I can go back on camera if it'll let me. There we go. Helps if you click the
+48:18
+wrong button or the right button. So, Keith, Bill, Casey, anybody got anything else they want to add or toss in before
+48:24
+we call it a day. Think you got most of the questions I saw fly by.
+48:31
+Cool. We like that. Same here. Yep. Yeah. And again, great conversations in Discord. So, uh, thank you all for being
+48:38
+on Discord and doing what you do. It's great. Yeah, especially the folks that are like, you know, throwing in their
+48:43
+firsthand experience with this type of thing. And, um, you know, I I love that. E, even if you don't agree with me,
+48:50
+that's awesome. That is awesome. The, you know, the more opinions, the more perspectives, the better. It makes life
+48:56
+easier for all of us. Uh, silly maybe. Do UACM have anything that I can use to test AC as far as safe
+49:06
+nastiness? Oh, that's an easy question. That's an easy question. And I'll bet somebody else answers this
+49:13
+before I do. If you go to our website and go to
+49:18
+education blog, you're going to see a number of blog entries. In fact, you can
+49:23
+do a search on them called malware of the day. That's where you want to go. Th This was
+49:29
+by, by the way, this one that Fond did the C2 over NTP. I thought this one was
+49:34
+awesome. Um, but here's what you do. Skip down the bottom, right? So, don't
+49:40
+look at anything. Close your eyes. La. Go to your happy place. Then you can check out sexy fawn, you know, or cool
+49:46
+malware guy. And then go up a little bit higher than him. And then right here, you'll see a zip file. That's going to
+49:53
+be a 24-hour pcap. Sometimes he gives you an hour cap and and a 24-hour cap, but there'll always be at least a
+49:59
+24-hour pcap. Go in and grab that, download it, unzip it, and now run your
+50:05
+process against it. You know, if that's to have Zeke go through and check it or whatever you want to do. Do whatever you need to do with that pcap to try and
+50:12
+find the badness. Once you think you found the badness, okay, come back to the same page and go through the whole
+50:19
+thing again. And now you can see what should you have found, what's there and interesting. Did your process find the
+50:26
+whole thing? Um, I actually find this one really uh useful as well. Um, in
+50:32
+fact, I tweaked my processes a little bit based on uh where was it? I'm trying to remember which one of the ones he was
+50:38
+doing. Oh, Havoc. I think it was Havoc that like actually had like some sub channels that were getting kicked off
+50:44
+too. Uh, so that was a really cool one that he went through and did. So, yeah, that would be my recommendation around
+50:50
+that. How does block the do service and firewalls work?
+50:58
+So go back to the slide. So DO is using TCP 443. So I can't just say you can't
+51:07
+go you can't use TCP 443. Well, I could, but now you can't get to any secure web
+51:13
+server anywhere on the internet. And that's bad. There are lists um I've noticed a couple of them up on GitHub
+51:19
+that try and track all of the DO servers. So it lists out all the IP addresses that are used by them. So one
+51:26
+of the things you could do is pull down Oh, thank you, Bill. Awesome, dude. So one of the things you can do is pull
+51:32
+down that list and now you create an outbound firewall rule that says anybody
+51:38
+going to any of these IP addresses, TCP 443, drop it. Don't let it through. And
+51:45
+then after that you have your permit rules. So firewalls always execute things in order. So as long as you've
+51:51
+blocked this before you've permitted you know outbound HTTPS access the block
+51:56
+will take precedence and they won't be able to get to those systems. That doesn't mean they won't be able to find a DAO do server that doesn't show up on
+52:04
+that list but it's better than nothing. So that's how you would do it at a firewall level.
+52:09
+Chris and I have been doing firewalls for decades and uh there's a concept of
+52:15
+whack-a-ole. So I may be able to find 150 different do servers. Guess what? On
+52:21
+Tuesday there'll be 151st that I don't know. Yes, exactly. All right. Whack
+52:27
+another one. Yep. Uh let's see. Nerf was asking, "How
+52:32
+does Dacket inspection and nextg firewalls work?" Wow. I I wish I was
+52:38
+playing like uh marketing card roulette on that one.
+52:43
+Deep packet inspection and nextgen firewalls. So, I hate to say it, but deep packet inspection and nextg
+52:50
+firewalls are both just marketing terms. They don't actually mean anything. Deepacket inspection is the same thing
+52:56
+as stateful inspection. The difference is we called them stateful inspection firewalls for a couple of years and
+53:03
+salespeople felt like their sales were dropping off because people would say, "Well, you're just trying to sell me a
+53:08
+stateful inspection firewall. I already have one of those." And they decided to call them deep packet inspection
+53:14
+firewalls now. And that got people saying, "Oh, wait. I don't have that yet." Yeah, here's here. Take my money.
+53:20
+Take my money. Uh same thing with kind of nextg. But as far as like those go,
+53:25
+the ability to go in and inspect in the payload, this is encrypted from the client to the server. So as it passes
+53:31
+through that firewall, it's an encrypted data stream. So a stateful inspection firewall isn't going to be able to help
+53:39
+you at all with that. The best you can do is to say, "Hey, anything going out
+53:45
+has to go through a proxy or I'm going to block, you know, those ports." And you know, either one of those would be a
+53:51
+much better way to go through and deal with this. Yeah. Yeah. Somebody said you need an
+53:56
+application firewall. Totally agree. Totally agree. Cool. Oh, it's Jelly Beanster.
+54:04
+Hey, Jelly Beanster. Jelly Beanster, you didn't hear me enough this week. Jelly Beanster was in my packet deco class.
+54:10
+Had a lot of good input on that. So, that was cool. Four days was not enough. We have to go for five. Yeah. Exactly.
+54:17
+Yeah. Yeah. Because listening to me for four days isn't enough to make you want to gouge your ears out. Oh no.
+54:24
+And we're back to knife throwing. Okay, good. Yes. And we are
+54:32
+awesome. I think we're good. That's case. Let's uh let's let's wrap this up. We'll give everybody five
+54:38
+minutes of their life back on a Friday. Uh especially for Mother's Day weekend. So So hey, it's Mother's Day this
+54:45
+weekend in case you forgot. If it is, we're giving you back five minutes of your life to go through and uh, you
+54:51
+know, do something about that so you don't get your butt in trouble. Yeah, this is the day. Thanks everybody. That
+54:56
+said, thanks everybody. Enjoy the rest of your day. Enjoy. Have a good weekend. Thank her.

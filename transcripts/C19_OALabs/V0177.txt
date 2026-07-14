@@ -1,0 +1,437 @@
+0:00
+hi folks and welcome to open analysis
+0:01
+live or rather a twitch clip from our
+0:04
+twitch stream go check us out if you
+0:05
+like this kind of stuff and also a
+0:06
+reminder that we have over 200 hours of
+0:09
+live stream recordings on our patreon as
+0:12
+well as in-depth reverse engineering
+0:13
+tutorials if you like this kind of stuff
+0:15
+go check it out now let's get back to
+0:17
+the clip all right so let's open this
+0:18
+thing up in Ida and take a look we can
+0:21
+already see there going to be some rc4
+0:23
+in here likely some rc4 some xor stack
+0:28
+strings they're going to be loading
+0:30
+binary probably pressing PE header maybe
+0:32
+that's part of their Dynamic API
+0:35
+resolution or maybe that's part of a PE
+0:37
+loader not sure yet so let's load this
+0:41
+sucker up here's our binary here I'll
+0:44
+just have five this and set up in a
+0:46
+split view for you guys so we can
+0:47
+already see you know some stack string
+0:50
+looking stuff here we see a lot of a lot
+0:54
+of junk honestly a lot of junk looking
+0:57
+stuff more stack strings here
+1:00
+it looks like they there is some sort of
+1:03
+offc in here I I assume it's custom I
+1:06
+did as you guys can tell I did a bit of
+1:08
+work on this before stream and I found
+1:11
+some other samples their loader uses the
+1:14
+offis and there's some other samples out
+1:16
+there that use it as well basically I'll
+1:19
+show you guys maybe it's easier to see
+1:20
+in the
+1:22
+decompiled view here so kind of what
+1:25
+they do is they have these useless sort
+1:27
+of Loops that do that don't do very much
+1:30
+or they don't do anything at all
+1:32
+actually like this right here they have
+1:35
+these I don't know just it's just kind
+1:37
+of junk code that's injected in there
+1:40
+and it it makes it kind of hard to
+1:41
+follow the control flow actually I guess
+1:43
+it is a little bit easier to see in the
+1:45
+decomil code here you can see the snack
+1:47
+strings here and if we follow down the
+1:50
+snack strings to see where they're being
+1:52
+used we can see well here is a nice Loop
+1:57
+for 256 we see another one here
+2:00
+right what is this everyone yell it out
+2:02
+in the chat should everyone should know
+2:04
+what this is right what is it when you
+2:06
+create a
+2:08
+256 size buffer where the buffer is
+2:11
+initially filled with the value in the
+2:13
+buffer yeah dra's got it this's got it
+2:16
+rc4 yeah so it's all rc4 so it looks
+2:20
+like what they've done is they have rc4
+2:22
+decryption you can see here's their this
+2:25
+is where they're building the the key
+2:27
+key stream for rc4 you usually you can
+2:30
+spot this I mean it's by now we've seen
+2:32
+enough of it it should be really dead
+2:34
+simple to spot you can see like whenever
+2:36
+they set up the uh the initial buffer
+2:38
+here you always have this scenario where
+2:40
+you move the um the value the position
+2:43
+value of the bite into the array at that
+2:47
+position so like it's an array of like 0
+2:50
+1 2 3 4 blah blah blah all the way up to
+2:52
+256 so that's that kind of stands out
+2:55
+but the other thing is whenever you see
+2:57
+this like percent by some value where
+2:59
+it's being added uh so there's like a
+3:01
+counter or like a pointer and it's being
+3:04
+modded by some value usually this is
+3:06
+like a key and basically they there this
+3:10
+is the length of the key it's just kind
+3:12
+of a pattern that I don't expect
+3:13
+everyone to pick it out but it's just
+3:15
+kind of a pattern that that kind of
+3:16
+stands out for for rc4 and and for
+3:19
+anything else where you have like a a
+3:21
+key that you're iterating over so you
+3:23
+can see here this is their this is where
+3:26
+they're building the the key and then
+3:28
+down here we have another loop
+3:30
+where they're actually doing the exor
+3:33
+with the key stream and the I believe
+3:35
+this is the stack string yeah I think
+3:38
+it's kind of hard to see well we'll
+3:39
+clean this up in a minute but yeah it's
+3:41
+I think that's the stack string and
+3:42
+that's the key the key stram
+3:45
+unfortunately I'm just going to actually
+3:47
+highlight flip these back to hex values
+3:50
+here and I'm going to highlight this so
+3:53
+that we can see it in the code and you
+3:55
+can see here that it's all over
+4:00
+the code now this is our first hint that
+4:04
+something is is terribly wrong with this
+4:07
+binary right cuz what is this telling
+4:10
+you well it's telling you that the the
+4:12
+rc4 decryption is not a function that's
+4:16
+decrypting the strings it's [ __ ] in
+4:19
+line so every time they have a string
+4:23
+they have an inline rsc4 decryption
+4:26
+which makes reading this code a god damn
+4:30
+nightmare so there's tons of so every
+4:32
+time they want to use a string they have
+4:35
+this [ __ ] inlin
+4:38
+rc4 and they have this junk code that's
+4:43
+interspaced with it so it makes reading
+4:46
+this extremely hard I don't know like
+4:49
+when I first opened the binary I was
+4:51
+like H I don't know if I'm going to do
+4:54
+this statically uh usually when you see
+4:56
+stuff like this you want to start
+4:58
+looking towards emulation and dynamic
+5:01
+analysis because to make this look good
+5:03
+in AA is is a real challenge I'm not
+5:06
+even sure if if if it'll be possible to
+5:09
+do I'll put a little bit of effort into
+5:11
+it but really we might have to kind of
+5:14
+take an approach where we try to ignore
+5:17
+code that's not relevant rather than
+5:19
+trying to remove it from Ida just
+5:22
+because the effort to remove it might be
+5:23
+might be significant you want to do
+5:26
+inline string encryption in C yeah I
+5:28
+mean inline makes it a lot harder again
+5:30
+this is one of those things where I
+5:31
+think I don't know if they watched our
+5:33
+stream but I think they probably read
+5:34
+some of those blogs about um the
+5:37
+previous versions and they were like
+5:39
+inline string encryption is the is the
+5:41
+way to go I don't think anything is post
+5:44
+compile
+5:45
+aisc no these are all this is all macros
+5:49
+like whenever you see inline string
+5:51
+stuff like this this is all like a macro
+5:53
+I I did a couple streams ago on uh on
+5:56
+ADV office skater and like you can do
+5:59
+this with the same technique that ADV
+6:03
+off the skater uses like literally you
+6:05
+you could make an rc4 advv off the
+6:07
+skater if you wanted it's not too hard
+6:09
+to do what did you mean when you said
+6:12
+the decryption Loop will be embedded by
+6:14
+a macro is that worth explaining I mean
+6:17
+I don't want to take too much time here
+6:19
+but yeah it's probably worth explaining
+6:21
+do I have let's see here yeah I do yeah
+6:26
+let me show you yeah so when you're
+6:29
+like when you're writing a when you're
+6:33
+writing software when you're developing
+6:34
+software you're not it would be way too
+6:38
+hard to do something like like this in
+6:42
+the software every time you had a string
+6:44
+right it's you could do that but it
+6:47
+would be insane so instead the way that
+6:49
+it's done is if we look at this as an
+6:51
+open source office skater the way that
+6:53
+it's done is every time you have a
+6:55
+string instead of just writing the
+6:57
+string in in the binary
+7:00
+you wrap it in a macro right and so your
+7:04
+code looks nice and clean right it looks
+7:07
+it's easy to read right you just have a
+7:09
+tiny little mac macro wrapper every time
+7:11
+you use a string however when you
+7:13
+compile it that macro actually it's
+7:16
+easier just to show you a compiled
+7:18
+version of this that's probably the best
+7:20
+way to do this yeah there we go I even
+7:23
+have an idb for it yeah so this is
+7:30
+this I saw this in the elak cony source
+7:33
+code yeah I have the leak Cony source
+7:35
+code here I actually building it on this
+7:38
+box yeah they use ad offis skater but
+7:41
+yeah basically this little macro here at
+7:45
+compile time gets turned into all of
+7:48
+this so this whole stack string here
+7:50
+this decryption Loop all of that is just
+7:54
+the single uh macro so that's just a
+7:58
+this is just a simple example to explain
+8:01
+how how this kind of stuff works but
+8:03
+it's really good to have that as a
+8:05
+reference in your mind when you're
+8:07
+looking at malware is like how did they
+8:10
+actually develop the source CU that can
+8:12
+tell you important things like anything
+8:15
+like I said anything inside the string
+8:18
+decryption Loop so all all this stuff
+8:21
+here is not relevant because if it was
+8:25
+relevant to the operation of the binary
+8:27
+if it wasn't just junk code then it
+8:29
+would be very difficult to use a macro
+8:32
+to uh protect your strings you would
+8:35
+need to do something I don't know it
+8:38
+would be very complex to do that so my
+8:41
+bad is that they just have a a macro
+8:44
+that inserts some drump code along with
+8:46
+the decryption operation okay was that a
+8:49
+was that a good explanation I just want
+8:51
+to cuz this is complex enough it's good
+8:54
+to make sure everyone's on the on the
+8:56
+same page all right I hope you guys
+8:57
+enjoyed that just a reminder that we are
+8:59
+live on Sundays on Twitch and if you
+9:02
+like this kind of stuff go check out our
+9:03
+patreon we have lots more RSE engering
+9:05
+content over 200 hours of live streams
+9:07
+as well as in-depth reverse engineering
+9:09
+tutorials all right until next time keep
+9:11
+exposing mechanics behind the malare
+9:12
+stay curious
+

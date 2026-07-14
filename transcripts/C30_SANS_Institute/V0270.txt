@@ -1,0 +1,651 @@
+0:02
+Good morning everyone. Um, thank you for being here. I am really happy of being
+0:09
+here as well with all of you and I would like to start by thanking God and sons
+0:16
+for this great opportunity. I really really appreciate it. And
+0:22
+today's talk is just like Steve said, subverting Mac OS applications and
+0:28
+security controls through zero day vulnerabilities.
+0:33
+Who am I? Well, thank God that Steve helped me in this sense because I'm not
+0:38
+good explaining who am I, but I will do my best going straight to the point.
+0:43
+Ping operations leader at Pentra. Also I am a security searcher with more than 10
+0:51
+plus vulnerabilities in Mac OS applications. I perform adversary emulation and
+0:58
+simulation also penetration testing. I'm also very passionate about Windows and
+1:05
+Mac OS interns. In fact, this is a fun fact because I do prefer Windows over
+1:12
+Mac when it comes to securityurities research and exploitation.
+1:17
+And that's all what are the topics that we will be
+1:23
+discussing? Well, explicive fundamentals and we are going to demonstrate some of
+1:29
+the latest bundleabilities that I have found
+1:35
+in Mac OS third party applications
+1:40
+and an important question arises why am I giving this talk and the reason is I
+1:47
+would like to present some of the main mechanism and controls that define the
+1:53
+Mac OS security model. Also we can still found find a surprising number of
+2:01
+applications even well-known ones as you are going to see that are vulnerable to
+2:07
+different kind of vulnerabilities like privilege escalation defensivation
+2:14
+and thing is you can leverage you can use these techniques during a
+2:19
+penetration test or even if you want to discover a vulnerability by yourself. I
+2:25
+would say that sometimes it is not too difficult but rather that there is not
+2:31
+too much information out there but let's dive in.
+2:38
+Expacity going straight to the point because the scope of this topics is very stis so
+2:46
+I'm going to focus on the good parts only. XPC is the de facto standard for
+2:53
+interprocess communication not only for Mac OS but also iOS. It is a lightweight
+2:59
+mechanism which is integrated with grand central dispatch. Grenter dispatch is a
+3:06
+mechanism for synchronization based on cues. Also SPC
+3:13
+works with launchd D. As some of you already know launchd D is the first
+3:20
+system process spawn and
+3:25
+the core functionality of launchd is as its name implies is to launch new
+3:31
+processes or jobs on a demand or on a
+3:36
+schedule basis. There are two type of jobs. Demons as you already know the
+3:43
+classic or traditional units demons that
+3:48
+don't interact directly with the user. And on the other side of the coin, we
+3:54
+got agents. They are also demons, but they run when the user logs on and they
+4:03
+may interface with the user. The agents and demons can be found in
+4:09
+multiple locations in the systems. For example, in library launch demons or
+4:16
+system library demons. Also, we have the launch agents which can be found in
+4:23
+library logs. Um, accordingly,
+4:29
+XPC offers components and privilege separation. This part is critical
+4:34
+because take into consideration the following. You have a complex application that is its components are
+4:43
+splitted into several processes. But if one of these process crashes it doesn't
+4:49
+mean that the main process will be shut down as well. It won't be affected by
+4:57
+any means. Let me put you a quick example. Safari. Safari leverages XPC.
+5:05
+It has a component which is in charge of the rendering process. So if a top
+5:11
+crashes, Safari will continue to be working perfectly.
+5:17
+And privilege separation because you can split the different permissions across
+5:22
+the different components or processes that com that you know are part of the
+5:31
+system. A good example is the QuickTime player application. It has an SPC component
+5:40
+whose sore purpose is to video to decode
+5:45
+videos. But what if we manage to gain remote code execution into this
+5:52
+component? Due to its limitation, we cannot exploit further the system
+5:58
+that is manipulate the file system or even access network resources since this
+6:05
+component permissions are quite restrictive.
+6:12
+And another point to take into consideration is XPC is closely integrated with Mac.
+6:18
+Mac kernel is quite interesting because it has two personalities. The first one
+6:26
+is the poxis BSD layer and the other side is the MAC micro kernel. They work
+6:34
+together but XPC works with MAC messages
+6:40
+which is an interprocess communication mechanism based on messages and cues.
+6:48
+Next, XPC constraints that all message data be encoded as dictionaries.
+6:55
+And finally, we have public APIs to interact um or consume this
+7:03
+subsystem. We got the two the low-level API which
+7:08
+supports XPC functions from leaf XPC dial leaf. This is used in C programs
+7:18
+and we got the foundations grappers as well. Um the foundation grappers are
+7:24
+used in objective C and sweet programs. We will see both approaches.
+7:30
+Where can we find XPC? Well, everywhere. Another example is Xcode. It has an XPC
+7:38
+component to highlight our code. And just like I said, Safari is a good
+7:45
+example. Even third party applications rely a lot in to XPC.
+7:53
+So the first vulnerability acronis image for Western digital allows local
+8:00
+privilege escalation and transparency consent and control for disk access by
+8:05
+pass. The first thing that we need to understand
+8:12
+is what is transparency, consent and control aka TCC. Well, from my point of
+8:18
+view and experience, I would say that this is a quite good mechanism since it
+8:24
+prevents unauthorized applications from accessing certain locations in the
+8:30
+system and even critical services. that is you don't want by any means
+8:38
+someone to access your photos, your downloads or even worst your messages.
+8:44
+You don't want that even if it is the root user or you don't want an untrusted
+8:51
+application to access your microphone or camera without your consent. That's the
+8:58
+goal behind TCC. So some of you have seen this prompt
+9:06
+which says this application would like to access files in your documents folder
+9:12
+or any other protected path in your system. Basically TCC is requiring you
+9:19
+to give the consent before the application could access this particular
+9:26
+file or folder. How does the system manages? How does
+9:34
+the system manage the TCC privileges? Well, these privileges are contained or
+9:41
+defined in two SQLite tree databases. We got one
+9:49
+systemwide database and one database per user.
+9:55
+thing is that the systemwide database is protected by system integrity protection
+10:02
+and can and can only be modified by the TCC demon process even with root
+10:08
+privileges. We cannot add entries directly to this database. And
+10:16
+system integrity protection is just a mechanism to protect core system files
+10:23
+and even protects process protects processes from being affected by
+10:30
+unauthorized code. On the other hand, the user database is
+10:35
+less protected and more accessible when it comes to modification.
+10:43
+In the same vein, in order to an application
+10:49
+ask for an specific TCC privilege, it needs to define
+10:55
+that it requires that capability in its environments.
+11:02
+What are the entirements of an application? Basically, entirements just define what are the
+11:08
+restrictions of the application itself. Because
+11:13
+some of you already know that these applications app Mac OS applications
+11:18
+nowadays run in a sandbox. Even all the applications found in the app store
+11:24
+needs need to run in a sandbox. So by
+11:29
+specifying interments you are saying look I know that I am running in a sandbox but I need access to your camera
+11:36
+or look I need access to your microphone or I need to access your downloads folder.
+11:43
+Look at this example Zoom. Zoom obviously in order to work properly it
+11:49
+needs access to your camera. It needs access to your microphone. So it needs to define these capabilities, these
+11:55
+permissions in its environments otherwise
+12:00
+those permissions permissions won't be granted too soon.
+12:05
+Okay, now that we have understood TCC
+12:11
+and you know in in general we can dive in in
+12:17
+the problem that I found with acronym.
+12:23
+Access to image is an application uh which offers multiple functionality
+12:28
+functionalities like protecting or even
+12:33
+um making up a backup of your data. Thus it requires an special privilege
+12:40
+which is full disk access. By granting this privilege, an application can
+12:46
+virtually access any system file, any file in the file system. But of course
+12:55
+um it doesn't mean that it it can change any file because as we previously saw we
+13:03
+got system integrity protection and system inte integrity protection is a
+13:09
+mechanism which is enforced at this at the kernel level. But yeah, by having
+13:16
+this privilege for disk access, an application could access your photos,
+13:21
+your messages, documents, downloads, and other sensitive files.
+13:28
+When this privilege was granted to Acronis image, we can examine the system
+13:36
+database to see that indeed the privilege is present. We can see here
+13:42
+that the client comic cyber protect home home office has the for this access
+13:49
+privilege and I know this because the off value column is equal to two when
+13:55
+it's equal to two it says look the privilege has been granted. So that's
+14:01
+how you validate what which permissions have been granted to an specific
+14:07
+application. At this point another question comes in.
+14:13
+How can we as an attackers abuse this application to inherit
+14:20
+its privileges, its permissions so that uh so that that we can access this
+14:27
+restricted locations of the file system.
+14:32
+There are multiple ways but in in this case I will focus by abusing an insecure
+14:39
+interprocess communication mechanism which is XPC and we are going to see why
+14:46
+um this was abused of course. Okay,
+14:51
+going straight to the point, as some of you already know, when it comes to reverse engineering, we need to put our
+14:58
+focus on the interesting functions and parts that are going to lead us to
+15:06
+achieve our goal. In this case, what we want is
+15:11
+establish a connection with a service that is installed by Acronis image to
+15:20
+somehow tell it please um I would like to access this file or please execute
+15:27
+this command for me as we are going to see soon. And here we got the listener
+15:34
+should accept new connection method. Of course um I know that this code is
+15:42
+not easy to understand but it is what it is. It is object PC. It is not easy
+15:50
+at least at first but thing is listener should have set new connection is a method responsible for handling coming
+15:57
+connections. You can you can think of it as the accept Cisco call in Linux.
+16:04
+It is I mean they are similar but not exactly the same of course. But in
+16:10
+general what should we focus on here? First what is the interface or protocol
+16:16
+being exported? An interface it is literally an interface. It just
+16:22
+defines the different methods that are allowed to be called during an XPC
+16:28
+connection. That's it. For example, you can have a method whose purpose is to copy files or maybe
+16:35
+install a package. Another important question is is there
+16:41
+any kind of validation performed to verify the client's authenticity and
+16:46
+environments because what if you are a server that is a service running with
+16:53
+root privileges and anyone can talk with you and tell you please do this for me
+17:00
+like run this system command this system command or copy this file to this
+17:06
+location then you got a serious problem because you want to
+17:11
+be sure that only a legitimate client can talk to you and anyone else. And as
+17:21
+we can see here, the sported interface is helper to protocol. In the same vein,
+17:28
+this function just returns a boolean yes or not. The connection was accepted, yes. Was rejected? No. And we don't see
+17:37
+any kind of validation. The the function just returns one meaning that anyone can
+17:44
+talk with the service. How can we stract the protocol or the
+17:49
+interface? It is s it is a simple step because you can just leverage an utility
+17:54
+like class dump and specify the name of the interface in question which is in
+18:01
+this case herer tool protocol. And look this is the definition of the interface.
+18:07
+There are two interesting methods defined. First is open file path mode
+18:13
+with reply which yields a root level file descripttor. And as we already know
+18:20
+that this application runs with disk access. It enables virtually unrestricted access to TCC protected
+18:28
+files as we are going to see soon. also execute process arguments caller with
+18:34
+reply allows system level commands as it as its name implies.
+18:41
+Okay, so this is the minimal proof of concept and how it works. Well, first we
+18:49
+need to define our protocol. For the sake of demonstration, I just um put the
+18:55
+execute process function. But obviously any other function that you would like
+19:01
+you know to to call you need to define in the in the interface itself. Next we
+19:09
+need to create a MAC connection. There is an XPC connection through the init
+19:16
+with Mac service name function. And as you can see here the vulnerable
+19:21
+service is comics helper tool. It is a privilege help her tool. And next I need
+19:29
+to specify what's the interface that supports the different methods that
+19:37
+are allowed during the XPC connection which of course is helper tool protocol.
+19:43
+Next we have to resume the connection. And you may ask why
+19:48
+do we have to resume the connection and that is because all the XPC connections start virtually
+19:56
+suspended. Then we got the remote object proxy.
+20:02
+This is the proxy that basically is an instance of the class that implements
+20:08
+the different methods of the interface. So that's the object that we are going
+20:14
+to leverage to call the different methods that we already saw that are defined in the interface. So in this
+20:22
+example I can just call execute process as you can see in the slide and that's
+20:27
+all privilege escalation. So look
+20:32
+this is the demonstration and let's see this is here in action. If I
+20:38
+try to access the chat database of messages, I will get operation not
+20:45
+permitted. But why? Because terminal does not have for this access
+20:50
+privileges. But what if I abuse this service the acrony
+20:57
+image service? As you can see in the slide, I will I manage to steal this
+21:04
+database without any issues. So through this application we did bypass at some
+21:11
+extent TCC but also we escalated our privileges because this service runs
+21:18
+with root privileges. Okay. So that's the main idea
+21:24
+behind this vulnerability.
+21:29
+Okay. Another vulnerability is Epson web installer vulnerable to missing au
+21:35
+authentication for critical function. This is a good vulnerability.
+21:42
+Okay, first we need to understand what is Mac OS authorization. In simple terms, it is a policybased security
+21:49
+model. And I think that the best way to explain this topic is through an
+21:55
+example. Previously we saw that we got a client that talks with a server
+22:02
+and the server privileges are elevated. I mean it runs with root privileges and
+22:10
+me as a client contact this server telling hey please I need to perform
+22:16
+this operation. Okay, but how does the server validate that
+22:22
+I am allowed to perform the requested operation? So the main idea behind MQ authorization
+22:31
+is let me validate if you as a client are allowed to perform this operation
+22:40
+otherwise me as a server I'm not going to do it by any means. And what are the components
+22:48
+of the security framework or the authorization framework in general? In general, well um authorization is
+22:56
+handled by an agent which is called Apple security agent and this agent is
+23:02
+the responsible one to ask for credentials in case that it needs to
+23:08
+validate who we are. The security server determines who can execute privilege
+23:14
+operations like no one, everyone or just root or a specific users.
+23:21
+And also we got the authorization rules and rights that are stored in a database
+23:27
+a systemwide database which is an SQI3 database and it is found in bar DB O DB.
+23:37
+Let me put you another example. When you want to make some modifications in the
+23:42
+system, you need to click the lock to make the change and the system will
+23:49
+prompt you with credentials like please enter who you are so that I can validate
+23:57
+if you are allowed to make the changes in the system.
+24:04
+Another example, I made this tiny program to demonstrate how
+24:10
+Mac OS authorization works. If I try to perform an operation like I
+24:17
+want to modify a system parameter, the security agent will pop a you know a
+24:28
+prompt like please enter your credentials so that the security demon
+24:36
+can validate if you are allowed to make this change. As you can see here in the
+24:42
+logs, it says UID1337 authenticated as user Guido for right
+24:49
+system pre system preference. That's the right that my client ask then the
+24:57
+credentials are being validated through the security demon and if I am
+25:06
+allowed to perform the operation obviously the the right will be granted to me and I can make the the change that
+25:16
+I want over the system and Okay, Mac OS uh I mean Apple
+25:25
+explains very well how to leverage Mac OS authorization
+25:30
+and when it comes to develop an application there are several models that they recommend but the best one is
+25:38
+the factor model and how does it work? Well, first uh in the left side we have
+25:46
+our client. In the right side we have the server. Okay. So the first step the
+25:53
+client needs to create an authorization reference through authorization create
+26:00
+function. Next next it needs to perform pre-authorization. Pre-authorization is
+26:06
+an optional step but it is recommended.
+26:12
+What's um the idea behind pre-authorization? Well, um you want to make sure that the
+26:21
+client has the required privileges to perform the
+26:28
+operation that it wants because otherwise you will be wasting resources
+26:34
+as you will be calling a server and the server will just reject um your
+26:43
+request because you are not allowed. So pre-authorization is less determined if you as a client are allowed to do this.
+26:50
+That's the main idea. But again, it is optional but recommended.
+26:56
+And pre-authorization can be done with authorization copyright function. In the
+27:02
+same pane, we need to serialize the authorization reference through
+27:07
+authorization make a standard form. Why? because this authorization reference is going to to be passed to another uh
+27:15
+process which is the service. Then we're going to call the helper tool
+27:20
+that is the service through um an interprocess communication mechanism which could be XPC.
+27:28
+The step number five is once the server gets the request it is going to des
+27:34
+serialize the authorization reference through authorization make from external form and basically it is going to
+27:43
+leverage this authorization reference to to obtain the privilege on our behalf to
+27:53
+perform the the the operation. So um this is going to be done with the
+27:59
+authorization copyrights as well the authorization step which is the number
+28:05
+six and once the privilege operation is performed we return to the client and
+28:13
+that's all that's all and okay what's the problem with Epson
+28:21
+web installer well um they leverage the even better authorization
+28:28
+code sample that is provided by Apple. The problem is this sample by default is
+28:35
+vulnerable and we are going to see why. So many applications out there are just
+28:41
+just copy pasting this code and they don't know that they got a vulnerability
+28:47
+in their hands. So how does even better authorization works? Well, the server
+28:52
+just call a couple of function calls a couple of functions to add certain privileges
+29:00
+to the systemwide database that I mentioned earlier. And once these um privileges are added,
+29:09
+basically we are already set up to, you know, authorize any client that wants to
+29:17
+perform a certain operation. But what's the problem? When these privileges are defined, we can specify who are allowed
+29:24
+to obtain such privileges. And as you can see in this code snippet, we got a
+29:30
+privilege or right which is come epsong install native navy helper copy item. It
+29:38
+is a it is a privilege that is in charge to
+29:45
+allow us to copy files in the file system. Literally that's the the purpose
+29:50
+of this privilege. But as you can see here here offright default is equal to
+29:57
+allow. So it means anyone even low privilege users can obtain this
+30:02
+privilege. That's the problem. That's the vulnerability. But on the other hand,
+30:09
+as we can see here in the authorization database, all the different privileges
+30:14
+that are defined by the service, we got a privilege which will grant us copy uh
+30:22
+capabilities, execute system level commands, execute an script or even install a package.
+30:29
+And the other problem is that the interfa um the listener to subn new
+30:35
+connection um does not validate the client's authenticity or nor entirements that is
+30:43
+the same problem that we saw earlier with um acronis through image. So in
+30:50
+this case with Epson we got two problems authorization and SPC connection
+30:58
+and the same steps are repeated. I extracted the interface or protocol.
+31:04
+Next I created my proof of concept. I just you know uh establish the SPC
+31:11
+connection with the server and just execute my function um which was execute
+31:19
+command arguments authorization with reply that's all and
+31:25
+I just sent my serialized authorization reference and the server was happy with
+31:31
+it because anyone can obtain the privilege Another
+31:37
+vulnerability nimble command that allows local privilege escalation and going straight to the point the problem is
+31:44
+okay these servers validates the client's authenticity and entirements as you can see here but it's not does not
+31:52
+validate the short version string I mean the short version of the client meaning that if we manage to find a client which
+32:00
+can be abused through a code injection vulnerability
+32:05
+We can use this signed client as a proxy to talk with the service.
+32:13
+And let me go straight to the point because we are running out of time. This application uh allows multiple
+32:20
+operations such as open uh a file or turn a file descriptor or even changing
+32:26
+file permissions and owner. And what I did like about this
+32:32
+vulnerability is the fact that through osing I found an older version of the
+32:37
+application that was signed with the s same certificate that the service but it
+32:43
+lacked um you know what is called harden runtime. Harden runtime is just a
+32:50
+feature to prevent unauthorized code to affect our code like injecting code or
+32:57
+like debugging the application. So as you can see same certificate but it does
+33:03
+not have harden runtime and this is the exploit and basically I'm just using the
+33:10
+low-level C API to contact the server but the ide is the same it is just
+33:15
+another uh approach but the idea is the same and as you can see here I am making
+33:22
+the dictionary because that's the um data structure that XPC understands And
+33:33
+basically this is the evidence. I just uh injected a malicious die leaf to the
+33:42
+vulnerable client in order to leverage it as a proxy and contact the service
+33:48
+and bypass the client's uh code signature validation and escalate my
+33:53
+privileges. Finally, M clean linear local privilege
+33:58
+escalation via race condition. It is the same thing but
+34:04
+there is a different point. listener to accept new connection
+34:09
+validates the client. But the problem is the way it does it is through the
+34:16
+process identifier and when we leverage this property the service is vulnerable
+34:22
+to a race condition attack or P reuse and we can allow an attacker to
+34:29
+impersonate a client connect and invoke XPC methods. So I think this diagram
+34:35
+explain it very well. The idea is fork a new process with the Cisco fork
+34:43
+with this fork Cisco. Then the attacker sends a message and immediately calls
+34:49
+poses a spawn to cause the legitimate binary to inherit the same P ID. And the
+34:57
+idea is the idea is if the server authenticates after this point it will warmly attribute the attacker's message
+35:04
+to the trusted process. And this is the code fork. Then we
+35:10
+map the new image that is the legitimate client to my virtual address space.
+35:17
+I make the XPC connection and that's all we are allowed and that's all. This is
+35:26
+the P reuse attack. So the recommendation are please use these functions SPC dictionary get audit token
+35:33
+don't rely on the process identifier and these APIs are also available for the
+35:40
+found the foundation framework and
+35:45
+I recommend you for exploration on Mac OS security because this topics are very broad um brain trace discloses multiple
+35:54
+vulnerabilities related to Mac OS also I recommend and the every bit which who is
+36:00
+a security researcher uh that has found too many vulnerabilities in the Mac OS
+36:05
+ecosystem and you can learn a lot from his work and Jonathan Leving who is the
+36:13
+author of the Mac OS and iOS internals books that's all please feel free to ask
+36:19
+me any
+

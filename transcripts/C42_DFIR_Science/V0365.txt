@@ -1,0 +1,974 @@
+0:00
+welcome back everyone today we're going to talk about Velociraptor an inpoint visibility tool this tool lets you set
+0:06
+up a server and a bunch of clients that are on your network and then you can
+0:12
+monitor and respond to incidents on each of those clients through a centralized
+0:17
+server so imagine that you had a network with 500 clients you want to be able to
+0:23
+Monitor and respond to network events or maybe Network attacks this lets you
+0:29
+basically create a centralized server that can very quickly scan through all of those clients okay so today we're
+0:35
+going to get started with setting up Velociraptor both the server and the client and then start to practice with
+0:42
+Velociraptor special features this setup is not necessarily something that you would want to roll out in production
+WARNING
+0:49
+what I'm doing today is specifically so you can start playing with the features and understanding the Velociraptor
+0:56
+language how to get started thinking about Velociraptor before you actually implement it in your network in a more
+1:01
+secure way now we have Velociraptor at velo.com is the blog and then we have
+Downloading Velociraptor IR
+1:06
+the velex Velociraptor GitHub repository and this is where all of the current
+1:12
+code is going on it's actively maintained and we're most interested in the releases section go ahead and click
+1:19
+on that and if we look under the releases I'm going to use 0653 so whatever the most recent version
+1:26
+is at the time that you're downloading this I am installing both both the server and the client as a Linux system
+1:34
+so I need to get the Velociraptor 0653 or whatever the most recent version
+1:40
+is Linux amd64 this is for my server and my client are both going to be running
+1:46
+Linux if you have a Windows system you're probably going to want the windows AMD 64 with the newest version
+1:53
+if you're on Mac OS you probably want Darwin you also want the Sig file so
+1:58
+whichever buying AR you download make sure you also get the file with the same name that ends in
+2:05
+sigsig that's the signature file so I already have the pre-compiled Velociraptor binary downloaded and I
+2:12
+have its corresponding signature file now to get started I'm on my server right now I have a virtual machine I
+2:20
+call it suspect workstation but I have a virtual machine that's running as my client and I have the Velociraptor
+2:25
+binary the same binary downloaded to the client the interesting thing about Velociraptor is that one binary can be
+2:33
+both the client or the server it just depends on how you run it we're still at our our server so I'm going to open up
+Verify Velociraptor IR binaries (IMPORTANT)
+2:40
+bash here so if I do LS I can see my binary that I've downloaded and I have
+2:45
+the signature file that I've downloaded the first thing I need to do after downloading Velociraptor is to verify
+2:52
+that it is the correct binary so the way we can do that is to do gpg D- verify
+3:00
+and then I want to verify the Sig file so gpg D- verify and then
+3:08
+Velociraptor do siig press enter and then it'll say assuming sign so it kind
+3:13
+of found that signature was made using RSA key but I don't have that key and can't check the signature because no
+Download Velociraptor IR developer key
+3:19
+public key was found this is because I have not imported this key yet so the
+3:25
+next thing we can do is copy that key and then I can type gpg D- search keys
+3:31
+and then just paste that key directly in there and I should be able to find it and then data source from keys. openpgp
+3:39
+org is what I have configured Velociraptor team um so that key looks
+3:45
+correct and I would want to go and uh confirm this and I already have confirmed that that's the correct one I
+3:50
+want to enter the number one and then now I have imported the Velociraptor teams key so now I can go back to our
+3:59
+previous command gpg D- verify and then Velociraptor doig hit enter and then
+4:06
+assuming the signed data is in the binary file so we're actually checking the binary file using this key good
+4:13
+signature and the key is not certified or trusted because you know I'm not 100% sure that's from them but I know whoever
+4:19
+owns this key is also the one that signed that so that basically means that the binary is correct if I trust that
+4:27
+key now why is that important understanding that this binary is the real binary that the developers want you
+4:33
+to have is important because you are going to be pushing this out to basically all of the important clients
+4:41
+on your network so you don't want to push out a binary that might be malicious or somebody might have
+4:46
+attached a Trojan to or something like that we need to verify our binaries every single time we download the next
+Setting binary run permissions in Linux
+4:53
+thing I need to do in Linux I don't have permission to actually run this yet um you can kind of tell by the coloring
+4:58
+here but uh if we do ls- lha I can see that I have read and write permissions
+5:04
+but I don't have execute permissions on the binary so if I want to run it on my system I need to change the permission
+5:11
+to be able to run it so I'm going to run pseudo chod plus X and that basically means
+5:17
+plus execute and then Velociraptor binary hit enter give the password and
+5:25
+then if I do LS in Linux it turns green so you can kind of see that you have
+5:30
+permission to run this or it is executable now so now we can run it I can just do do/ Velociraptor and I used
+Velociraptor IR first run
+5:37
+tab to do tab completion so I don't have to type all of that out and then if I want to check that it works I can use
+5:42
+the dashh switch at the end so the binary plus DH if I can run the help
+5:49
+menu that means the binary at least can run and we see that it can run if you see that there's a lot of commands uh
+5:55
+related to Velociraptor and this is what took a while for me to get my head
+6:01
+around Velociraptor has many different commands a one binary can do a lot of
+6:06
+different tasks it can be your server it can be your client you can run it just from the command line to do kind of like
+6:12
+a query you can run it to make a gooey interface kind of a web interface to deal with and that's what we're going to
+6:18
+be doing today you can essentially run everything just from the command line or you can run everything from a user
+6:25
+interface I think it's easier to get started using the user interface first understanding how that works and then
+6:30
+the command line version makes a lot more sense the most important thing that we need to run is the config and
+Creating a client a server config
+6:37
+whenever we start the first time we have to generate a new configuration so I
+6:43
+have my binary I want to run config and then I want to generate that configuration what that configuration
+6:50
+will do is set the configuration for the server and the client for us so we don't
+6:57
+have to manually create those configuration files I'm going to run/
+7:02
+Velociraptor and then config generate dasi the Velociraptor binary I want to
+7:10
+create a config using config generate and I want it to be interactive so I'm going to use- I and then they give us
+7:17
+this menu welcome to the Velociraptor configuration generator I'll be creating a a new deployment configuration for you
+7:23
+which is very handy what OS will a server be deployed on well our operating
+7:28
+system for the server server that we are using is Linux now if you're using Windows or Darwin then you can just hit
+7:34
+up or down to select the operating system we're going to be using Linux here the path to the data store
+7:40
+directory now the data store directory is a really interesting feature of velociraptor instead of using a database
+7:47
+they keep everything in directories and then they kind of have small databases around but basically they have a flat
+7:54
+file system structure you don't actually have to create a special database to be able to use use Velociraptor and keep
+8:00
+all of its data store if you have a lot of systems in your network you're going to be collecting a lot of data whenever
+8:07
+you're doing your hunts or trying to get artifacts from those systems so you want to make sure that you're saving this
+8:14
+data to a place with a lot of storage I'm only dealing with one client right
+8:19
+now so I'm pretty sure I can handle my computer can handle it so I'm going to be putting it in the opt location but
+8:25
+really in a real deployment you'll either be on a cloud service and then you'll have cloud storage so it probably
+8:30
+won't be an issue or you'll want to make sure that whatever your directory you're saving your data store to has enough
+8:37
+space for all of the artifacts you're going to be collecting I'm going to save it into opt Velociraptor because I'm not
+8:44
+expecting a large amount of data since I only have one client so that I've set the data store directory to opt
+8:49
+Velociraptor I'm going to copy that and I'm going to manually create it in another uh command line so pseudo mkdir
+8:57
+and then put in the directory exact L the way that it was so now I've created the opt Velociraptor directory with root
+9:05
+permission so I'm going to go ahead and set my user to own that directory so I don't have access problems later so I'm
+9:12
+going to use pseudo CH own- R which just means recursive and then my user is
+9:18
+Joshua and then SL opt Velociraptor okay so now I have a new
+9:24
+directory created and my user account owns it so I can actually access it so
+9:29
+the next option that we have is whether we want to use a self-signed SSL certificate automatically provision
+9:35
+certificates with let's encrypt or authenticate users with SSO SSO can be something like Google single sign on
+9:42
+GitHub single sign on but you actually have to be deploying it out to a publicly accessible system to be able to
+9:49
+have call backs from whatever your SSO is let's encrypt is similar it only
+9:54
+generates certificates for you if you are have a public domain name so you have to register a public domain name
+10:00
+your IP has to be public and then let's encrypt has to connect to your server to actually generate those certificates
+10:06
+these are more like real deployments out into your network or out onto the cloud we are going to be using the self-signed
+10:13
+SSL because we just want to get this running so we can practice with it so just hit enter for self-signed SSL and
+10:20
+then what's the public DNS name of the master front end and for that I'm just
+10:25
+going to keep Local Host which kind of cut off here but you can see Local Host is is the default so the public DNS name
+10:31
+I'm keeping Local Host for now front end port to listen on so by default This
+10:37
+Server will listen on 8,000 and that'll be the communication for all the clients will basically talk on Port 8000 to your
+10:44
+server uh so we're just going to keep the default port for the guey to listen on and it's 8889 by default I'm going to
+10:51
+go ahead and click enter and are you using Google domains. DNS no go username
+10:58
+or email address to authoriz I'm going to use just admin again if this is
+11:03
+publicly accessible in any way do not use something weak like admin and a weak
+11:08
+password because this admin interface will allow anyone to be able to run
+11:14
+hunts or even run commands on all of your clients using this interface
+11:19
+someone could take over your entire network and run arbitrary commands from
+11:25
+this the password for that and then it'll ask you again goe username or email address to authorize and I'm just
+11:31
+going to hit enter because I only want admin then we have the Velociraptor logo
+11:36
+generating keys and path to the logs directory and by default it's going to be opt Velociraptor logs that's okay for
+11:44
+our uh implementation here but I would change that if it was actually production to um some sort of log parser
+11:51
+so I'm going to go ahead and keep that so hit enter and then I'm going to switch back over to my other command prompt and create a new directory so MK
+11:59
+kd/ opt Velociraptor and logs just to make sure that those directories are
+12:06
+created and I don't have issues later so now inside the op directory we have one directory called Velociraptor and then
+12:12
+under Velociraptor we have another directory called logs and that's just creating kind of the framework for
+12:17
+Velociraptor to run next where should I write the server config file and by default it's server. config yaml go
+12:24
+ahead and hit enter I'm going to keep that and then it also creates the client config f F clientconfig yl so go ahead
+12:31
+and enter in that directory we have two new files and these are generated from everything that we just selected so this
+12:37
+is by far the easiest way to get started is just generating a new config file in the client config yaml we have some
+Client config file - set server local IP address
+12:44
+information about the Velociraptor version and the Go version that was used to compile this and we have server URLs
+12:50
+and I have Local Host 8000 for the server URL that is not necessarily true
+12:56
+because our client is working on a different I IP address so instead of local host for the client I'm going to
+13:03
+go ahead and enter the serers IP address for my system this suspect workstation
+13:09
+virtual machine is going to be my client and it's going to connect back to my
+13:14
+Velociraptor server on IP address 17216 037 okay so we have some certificates
+13:21
+here this is everything that it's the client is using to be able to connect back to the server and validate we want
+13:27
+to make sure that we protect both the client config yaml and the server config yaml because they do have certificate
+13:34
+information and connection information so the next thing we want to do is copy our client config to our client now
+Copy client config to clients
+13:41
+there's lots of different ways you can push this out in a production environment you would package up this kind of client and then install it on
+13:47
+all of your clients and it would already have its config here I have my suspect workstation I'm just going to drag and
+13:52
+drop because this is a virtual machine I can just kind of do that and it'll copy it over and then I want the client
+13:57
+config in the same directory just to make it easy to execute so now we have our server config and our Velociraptor
+Start the Velociraptor IR server GUI
+14:04
+binary that's been verified we have our client config moved to our client and we have the Velociraptor binary also on our
+14:11
+client that's all we need to kind of get started so the next thing I'm going to do is actually start the server and I
+14:17
+can start the server in lots of different ways but I'm going to start it with the guy interface and this is probably the easiest way that I found to
+14:24
+kind of get started so we have our Velociraptor binary and then I want to do --c config because I want to tell it
+14:31
+to the config that I want to use and the config that I want to use is server config.yml and then I want to run the
+14:37
+graphical user interface so GUI so now if I hit enter it's loading the config
+14:44
+file from server config yaml that looks good it's checking the data store starting local Services looking for all
+14:50
+the uh artifact plugins all of that is just starting up the local server you notice it also opened up a window in
+Velociraptor IR interface first run
+14:57
+Firefox and says security risk ahead that's because I have a self-signed SSL
+15:02
+certificate so that could be a type of attack but I know that I just did that so I'm going to go ahead and go to
+15:08
+Advanced and then go to accept risk and continue do you want to go to the website yes okay so whenever you get
+15:15
+everything running you should see the Velociraptor logo so if we go to home we have information about our server so
+15:21
+server status CPU and memory uation currently connected clients if you have no clients connected there's not really
+Start and enroll the Velociraptor IR client
+15:27
+much to see so let's go ahead and go over to our client workstation and here
+15:32
+if I do LS lha we can see that the Velociraptor client I don't have execute permissions
+15:38
+so I have to do the same thing pseudo chod plus X
+15:44
+Velociraptor it turned green so we can basically run it so I'm going to run the same command for the client to start up
+15:52
+the the client it's slash Velociraptor and then for the configuration I want to
+15:57
+do D- config config and then client config yaml and then instead of saying
+16:03
+GUI I want to run client and then- V what this will do is we have the
+16:09
+Velociraptor binary we have our config for the client config that basically connects back to our server and we
+16:16
+basically report back to the server and also look for jobs if it needs to run anything we are running this as a client
+16:23
+so it'll basically run in the background um it won't pop up a GUI for the client or anything like that and and then the
+16:29
+d-v just means that it will be verbose in the output so we can actually see what's going on if you don't use- V for
+16:36
+the client then nothing will print out to the screen and you'll just see reports back at the server which is fine
+16:44
+but if we're testing we really want to see what's happening on the client so I want to keep that- V for testing
+16:49
+purposes so the first thing that happened is we loaded the con uh client config file but then loading right back
+16:55
+from Etc Velociraptor right back yo we didn't have permission to do that because we're not running an as an
+17:01
+elevated privilege user or pseudo so we're going to clear that out we're going to run that command again with
+17:07
+pseudo and what this will do is give veloc the Velociraptor binary root
+17:12
+privileges right so it'll give it top privileges to be able to run all sorts of different commands on the system so
+17:19
+this one looks a little bit different how we have loading config from client and then we were able to uh get right
+17:24
+back from yaml uh starting crypto starting notification service starting query execution so it did run a
+17:32
+couple queries and then here's the interesting thing your first client has to enroll itself so whenever it enrolls
+17:40
+itself if we go back to the interface we should see this is where it enrolled itself so now we have one client here
+17:46
+and we have one connection on the uh interface because it did successfully
+17:52
+enroll itself whenever we go through you would not see any of this if you did not use the dash V or the verb B command for
+17:59
+the client so all of this is really useful to be able to make sure that we are actually making a connection to our
+18:06
+server that's pretty much all you have to do on the client side we know that this is working if our currently
+18:11
+connected clients actually went up so we expect it to be at least one because we do have a connected client how do we
+Velociraptor IR search clients
+18:17
+actually start interacting with this system and I found this guy interface to be a little bit confusing because it's
+18:25
+designed for you know a 10,000 clients right right you should be able to use this interface to filter through 10,000
+18:32
+clients so it's not set up like a normal digital forensics tool where we're looking at one system in depth it's
+18:39
+really designed for Mass client scanning it is a little bit hard to get used to
+18:44
+in my opinion so the first thing that we want to do client's list is not on the left side like you would normally kind
+18:50
+of expect the only thing you can do with clients is actually search clients at the top or there's this drop- down arrow
+18:57
+where we can show all or recent host so if we just do show all then we see our V
+19:02
+client that is the one that we just started our client on okay that's fine and you notice that whenever we select
+19:08
+show all uh we type all into the search menu and it will also show us all so you
+19:13
+can either select the the down menu or just type all and you'll get every
+19:19
+client that you have available now since we see our client we have the client ID
+19:24
+we have its host name uh fully qualified domain name and then its operating system system version so it is reporting
+19:30
+back as Linux Mint 21 we also have labels if you click on the client then we get kind of like a detailed client
+19:36
+page specifically the first scene the last scene last scene IP address labels are currently empty the operating system
+19:43
+and architecture so not a lot of information but you can add more client metadata if you know about it and these
+19:50
+are just any custom values so I could say for example I don't know if I would necessarily do this but user uh defer
+19:57
+science I don't know right you can add any custom met metadata that you want to this
+20:03
+particular client one of the most important things to do though probably more important than even metadata is to
+Velociraptor IR add client labels
+20:09
+add labels so we can do a lot of different search filters with labels and
+20:14
+whenever you get a lot of clients on your network having them labeled helps
+20:20
+to organize them so for example I might want to organize something by front desk
+20:26
+sales it EXE itive something something like that and then those labels I can
+20:32
+specifically filter out and not query everything in my network to make a label we can just click on this kind of label
+20:38
+icon at the top it looks like a tag we can either select a label which we don't have any created yet or add a new label
+20:44
+this is for Linux so I'm going to go ahead and give it a label of Linux and
+20:49
+add it and I'm also going to give it a label of I don't know we'll call it Dev for development Okay add it so now we have
+20:56
+two labels here right so so what I can do is instead of selecting all I can
+21:02
+type label and then it actually autocompletes what labels I might want to use it could be Dev it could be Linux
+21:07
+and then if I select Linux then this is all of the Linux systems that I have as clients right now think of everything
+21:14
+you do in Velociraptor as scale you want to keep everything like very filterable
+21:20
+and keep the amount of machines that you're working on as small as possible
+21:26
+you can set off a very large job for everything in your network and then you might crash your network because you're
+21:32
+requesting just massive amounts of data from every single client think about how you can pair that down to the smallest
+21:39
+form possible maybe I only want to run certain things on Linux clients or only for the dev Team all right so now we
+Velociraptor IR client management interface
+21:45
+have our client uh it's been labeled Linux Dev we have some custom metadata here and we can do SE searches and
+21:51
+filters based on all of this right let's go through uh this interface a little bit you notice it kind of went down to
+21:58
+the host information section automatically so let's look at interrogate interrogate basically just
+Velociraptor IR client - Interrogate
+22:04
+queries the client for basic information again so if the IP address updated maybe
+22:10
+the version number changed or something like that you can see that nothing really updated except last seen at is
+22:15
+now updated interrogate basically just gets the information that you see here if you need to update it for some reason
+22:21
+just click that next is VFS and this is interesting whenever you want to focus
+Velociraptor IR client - Virtual File System (VFS)
+22:26
+on a specific system system so this is the virtual file system we are on a Linux system now so NTFS probably isn't
+22:33
+going to help us too much registry is not going to help us these are for Windows so we want to click Auto and
+22:39
+then you see that there's nothing there but if you click the uh open folder icon this will actually go out and query the
+22:46
+system for its directory structure now this isn't just all of the directory
+22:51
+structure we don't want to query everything because it's going to take a long time what we want to do maybe is query for example home so the home
+22:59
+directory structure we've opened that now we can query it again and get the next next level or we can do a recursive
+23:06
+query and this this is recursive download where we're actually downloading that directory to our server
+23:13
+I wouldn't recommend this unless you really know what you're doing and you need that directory what I would do is recursive query and what that will do is
+23:20
+go through home and then you see now we have client and then we have everything under client because we searched it
+23:27
+recursively so now we can just kind of scroll through here and see uh for example maybe we're examining known
+23:33
+hosts for SSH we might be able to see if there's something uh interesting there I've clicked on known hosts you can see
+23:40
+that we do have timestamps if I click collect from client then it's going to
+23:46
+download that file to my local server to the server that I'm using this on and
+23:52
+then I can look at the text View and I can look at my hex view I can scroll through using the the VFS feature I can
+24:00
+scroll through and look at directory structures and then pick specific files
+24:05
+out of a remote client now remember this is not on the server this is the server
+24:11
+connecting to the client saying give me your directory structure and then reporting that back and then I found a
+24:17
+file collected that file from the uh client system and then downloaded that and now I have a copy on my system
+24:24
+locally so if I'm trying to collect files from a system I can bring them in
+24:29
+locally and then I can analyze them using any digital forensics tool that I that I want now collected if I click on
+Velociraptor IR client - Collected
+24:36
+collected we can see that we've been creating a log of different things we've listed directories listed directory and
+24:41
+then download file we basically have a log of all of that information so uploaded files we have the known hosts
+24:48
+file and where it's currently located inside our VFS path clients uh
+24:53
+collections uploads autohome client. SSH known hosts so let's go ahead and open up opt Velociraptor and just see what's
+A quick look at Velociraptor data store structure
+25:01
+in here we have our kind of server artifacts our log files we have our config clients and then client idx and
+25:08
+then Access Control lists this is mostly server stuff except clients let's go into clients we have our Collections and
+25:15
+then we have pea uploads Auto home
+25:20
+client SSH known host okay so we have our known host file that we downloaded
+25:27
+this is the full path to it but it's also the full path to it on our server
+25:32
+right now so inside here on our local system which is our server we actually have the real known hosts file so
+25:38
+whenever you're doing a download from the client you are actually downloading the file from the client to your server
+25:45
+now imagine these were each like one gig files and you were collecting that from
+25:51
+500 clients at the same time if you're trying to collect all of that data at the same time you're going to slow down
+25:57
+your network and some problems so this is what I mean by thinking about scale you're actually downloading those files
+26:03
+from your clients consider how the impact that's going to have on your remote network if we go to collected we
+26:09
+can basically see what has been collected from the system this is basically an activity log of that particular client here we have the
+Velociraptor IR client - Quarantine Host
+26:15
+option to quarantine host quarantine host currently only works for Windows systems but basically it's running a
+26:22
+script whenever you know that something has been infected or infiltrated or
+26:27
+whatever it is and you want to quarantine that you can click this button to run your quarantine procedure
+26:33
+on that system whatever that procedure is that's up to you I don't have one configured for Linux it comes default
+26:39
+with one configured for Windows but not for Linux all right so quarantine just basically runs an automated script think
+26:46
+about what your quarantine procedure would be whenever you find an infected system or a hacked system uh going to
+Velociraptor IR client - Overview
+26:52
+overview overview is basically just the first page that we see we have vql drill
+Velociraptor IR client - VQL Drilldown
+26:57
+down and vql is the query language that Velociraptor uses it's kind of like SQL
+27:03
+except a little bit easier you kind of mix local commands with SQL um we'll
+27:08
+talk more about that in a second and I'll actually show it and then one of the most interesting things um I'm logged in as an admin account right now
+Velociraptor IR client - Shell
+27:15
+you can also click on shell and then run shell commands for the remote system so
+27:21
+if I do if config uh for bash Powershell is for Windows bash is basically for
+27:27
+Linux and then VQ ql is the query language um if I run let's say this bash command launch it it's running now on
+27:34
+the client and then if I click the eyeball then I can see the results from that so it has two interfaces and its IP
+27:40
+address currently is26 and that's what I expect so this is why I say you definitely want to check
+27:47
+your binaries don't run this publicly accessible because if anyone can
+27:52
+intercept this traffic if anyone can get your admin credentials they can execute
+27:58
+remote commands on all of your clients at the same time this is really dangerous but it's also extremely useful
+28:04
+for incident response so from the homepage I have for example the currently connected clients I've been dealing with vooc client the entire time
+Left Menu Feature Tour
+28:11
+that's our remote um that's our virtual machine client you can see that sometimes vlo client looks like it's
+28:18
+down I find this is totally normal the next option down is the hunt manager it
+Hunts
+28:23
+has a little crosshairs basically what this does is lets us run a query across all all of our connected clients so if
+28:31
+we want to create a hunt this is kind of the core of where everything is going on press the plus sign and then the hunt
+Create a hunt
+28:37
+description let's say I want to find that jpeg image on our client so I'm going to do find jpg now this is going
+28:44
+to run across all of the clients that I select include condition run everywhere
+28:49
+or match by label so for example I could match by label Dev or Linux let's do
+28:54
+Linux uh label so this is where the power of label comes in at if I have
+28:59
+something like like sales and I have a specific attack that's going after our sales department I can just do hunts
+29:06
+against our sales department or against our finance team uh we also have our exclude condition so we can match by
+29:12
+label maybe I don't want any of these hunts going through Dev make sure you are labeling and it will really help you
+29:18
+filter down with your hunts or you can of course do run everywhere or select by operating system so operating system
+29:25
+included Linux in this case but it really could be all but I'm going to specify Linux as the operating system
+29:31
+okay so the estimated affected clients are one again this is basically here just to show you how much of an impact
+29:39
+you're going to have on the network so if you're planning on downloading files from each of these clients if it's one
+29:45
+client it's probably not going to hurt the network too much if it's 10,000 clients and you're downloading a very
+29:50
+big file it's going to be a lot of space uh on your server and it's going to be a lot of bandwidth so one client we'll
+29:56
+just go ahead with that uh and also the expiration time hunts do not finish they
+30:01
+keep running until they expire and the idea behind this is if you have a very large Network maybe even in different
+30:08
+time zones then people are going to be putting clients on and off of the network over time you can basically set
+30:15
+this hunt to expire at a specific time and it will try to connect to any client see if the query has already been run
+30:22
+for that client and if not then run this query against that client so what this lets you do is you can set this hunt to
+30:30
+run for like a week and then what if somebody has been on vacation for an entire week and then they come back the
+30:36
+next week well their computer didn't get queried you get all of the clients that you get during the active time and then
+30:43
+it will stop you can always reset it and do it again later if you want to next select artifacts artifacts we haven't
+Select hunt artifacts
+30:49
+really talked about yet but this is the core of velociraptor artifacts are these scripts that do some particular action
+30:56
+related to your invest vation or data collection or information gathering these scripts are included with
+Velociraptor IR Artifact Exchange
+31:04
+Velociraptor but there is a whole artifact exchange where people upload
+31:09
+custom scripts that they have run so for example quarantine a lytic host using IP table rules so this is actually a Linux
+31:16
+remediation quarantine for rule that you could just download and install directly
+31:21
+in your Velociraptor rule so this artifact exchange is excellent and very active we have the default artifacts
+31:28
+available here and the one that I want to look at is for Linux search file
+Linux.Search.FileFinder
+31:35
+finder so the naming convention here is the operating system program that it's related to and then file finder so under
+31:42
+that we have linux. s. authorized keys and that will download your authorized keys from clients Linux search file
+31:48
+finder just is a FAL finder for Linux so we'll click on that so we have a performance note here we have some
+31:54
+instructions when we would use this thing and then different configur ations like how we can actually configure this
+32:00
+I find this to be kind of useful but the description I don't see is extremely useful you kind of have to play around
+32:06
+to figure it out okay and then we actually have the code that does the thing so sometimes I find the code to be
+32:13
+a lot more enlightening than the descriptions itself in a hunt you can select multiple artifacts that you want
+32:20
+to collect or analyze at the same time so for example if I also wanted to see Linux SSH private keys I can just select
+32:27
+that and then they both turned blue and then I can configure both of them how I want to run them during the hunt to
+32:33
+deselect them just click it again and then it will turn white and um whatever
+32:38
+ones are blue are the ones that you've actually selected so next we go to configure parameters now in the search
+Configure artifact parameters
+32:44
+file finder we can't just run it like it just doesn't work directly you need to click it and then you have the option to
+32:51
+configure how you want to search or whatever options are for that artifact so what I'm going to do is remove the
+32:58
+search files glob table this basically lets you search for several different patterns at the same time just by adding
+33:04
+additional pluses and then putting your search patterns here I'm going to close that because I only want to search for
+33:10
+one thing and that is slome starstar star. jpig now what the heck do all
+33:17
+those stars mean we're using something kind of like a regular expression where if you know regular Expressions star
+Regular expressions
+33:23
+means match anything and if I do star- jpeg I mashing anything that ends with
+33:30
+JPG so it basically is returning anything with a JPEG extension now what to the other stars mean SL slome is the
+33:39
+home directory that you normally see in Linux environments and then slash star star that means search this area
+33:46
+recursively I don't know my client's home user name so for example in my
+33:52
+client I'm looking in the home directory and I don't necessarily know my client's name of this folder so I need to use
+33:58
+star star to just look in every single folder in this directory and then it will also look in subdirectories as well
+34:05
+well what's in the subdirectory desktop is there and inside desktop is our evidence. jpg so I don't know the name
+34:12
+of this file I do know the extension but I don't know the name of the client folder like what their username is
+34:19
+necessarily so what that search lets me do is search in the home directory of
+34:24
+the client and then do a recursive search in the home home directory for any name that ends with JPG okay that's
+34:32
+a little bit about regular Expressions here so if you're searching files glob it's just searching for one file if
+34:38
+you're searching several files then use the glob table and then just hit the plus sign and then add your searches one
+34:45
+line at a time here you can also set up a Yara rule if you're using Yara if you're more comfortable with that and
+34:50
+then uh we have the option to upload file and that means once I find this image am I going to upload it to the
+34:57
+server so we're going to select that because yeah I want to upload that image to the server just to make sure that I'm
+35:03
+finding whatever it is that I'm supposed to find and then you know I come from forensic side so I always want to
+35:08
+calculate hashes and then we have some other filters more recent than modified before just using the file system
+35:16
+information uh file system timestamps for their modified and more recent
+35:21
+exclude paths so proxis run snap this is um places that we want to exclude in a
+35:28
+Linux environment normally you don't want to search through proc for files or CIS or run or snap actually so yeah
+35:34
+local file system only so we don't want to search any like external mounts so I
+35:40
+would keep this on local file system only unless you think that it's on an external mount on your client and then
+35:45
+one file system so if your client maybe has you know an ext4 main partition and
+35:51
+then it has you know NTFS on an external partition do we actually want to go look in the other place if you only want one
+35:57
+then you select that if you don't select that it'll just search everything and then do not follow Sim links is just
+36:02
+specific to linking in Linux so here we are searching for anything that basically ends with jpeg inside the home
+36:08
+directory we're not using Y rules we will upload any files that we find to the server we will calculate the hash
+36:14
+value of any files that we find we don't really have any other filters but we do want to keep it in the local file system
+36:21
+only instead of some sort of mapped device so now I can close that and if I
+36:26
+had more artifacts they would just list here just click on them to expand them set your settings and then minimize them
+36:33
+and keep keep selecting through so next I need to collect specify resources this is the resources of the client that we
+Specify Resources
+36:39
+want to use so if you are running it during the day whenever your client is actually on online and active which most
+36:46
+likely they are because their computer's on unless it's a a server some resource you keep on all the time if it is a
+36:52
+client and the user is using their work workstation you might want to set it to something low like 10% % instead of 100%
+36:59
+that way you don't affect your client too much same for I/O and also maybe Max
+37:04
+megabits uploaded so you can build in a catch so you don't download huge files
+37:10
+from the client by accident and then overload your system overload your network right so maybe one gigabyte is
+37:16
+the biggest you want to download if you have a storage for that over all of your different clients next review so this is
+Review
+37:23
+the configuration for your hunt that you're going to run mine's very simple because I'm just using one artifact to
+37:29
+find JPEG files then launch and it will launch in the paused state so whenever
+Launch hunt
+37:35
+it says launch it's not actually launching it you actually need to click on it again you can see a summary of
+37:40
+everything that you have here requests clients we haven't done anything yet because we haven't run it and whenever
+37:45
+you're satisfied with that hunt over all of the systems that you have selected or
+37:51
+filtered for any Linux systems then we can hit the play button are you sure you want to run this
+37:56
+hunt now it asks you so many times because it's expecting you to query hundreds of clients so are you sure you
+38:02
+want to run this hunt run it and then we can see total scheduled one and finished clients it happened really fast but
+38:08
+finished clients was also one okay so next we can go to clients and then we can see the clients that have connected
+View hunt results
+38:14
+and basically their state whether they've finished or not total bytes sent total rows returned we can see the flow
+38:21
+ID for this specific client I'll come back to that in a second but we also have the notebook and under the notebook
+38:26
+we have everything that was returned for that hunt so we did find something at home client desktop evidence jpeg this
+38:32
+is the one that we wanted to find and the information about the file we have the Sha 256 md5 and sha one calculated
+38:40
+from that the flow ID and we also found another jpeg inside uh what looks like
+38:46
+Mozilla but we did find the jpeg that we're actually interested in here so if I do a search for jpeg I can see inside
+38:53
+file home client desktop we have our evidence JPEG that was automatically downloaded from our hunt so now I could
+39:00
+work with this file directly I could throw that directory into a analysis tool maybe a Sandbox or sandbox or
+39:07
+something like that and then I could analyze that file directly from the server or using whatever other tools I
+39:13
+wanted to use so that's how we can run hunts over all of our clients and you can do this not just for you know
+39:19
+identifying files that are there any logs that are on the system you can analyze contents of files as well so we
+39:26
+can actually go into a log file and look for specific things and if we find that then do some other action we could go
+39:33
+into the Windows registry if we had a Windows system we could go into the Windows registry if we find a particular
+39:39
+key in the registry then we could collect that and then do something with it afterwards so it's a really great
+39:45
+interesting tool for both detection and response because we could run detection scripts whenever we're hunting we could
+39:51
+also respond by basically changing the configurations of any of those clients as we're we're hunting so there's a a
+39:57
+little bit about hunting using different artifacts next let's look at view artifacts and you can see all of the
+View/Edit Artifacts
+40:03
+artifacts that are installed on the right hand side I only have the default artifacts installed you can download a
+40:08
+lot more from the artifact exchange let's go ahead and look at one of them uh linuxis bash history so this will
+40:15
+collect bash history from Linux systems you just click on it you can see documentation parameters required and
+40:21
+then the source code for this particular artifact if we click the pencil icon up
+40:27
+here here you get an editable version so you can actually change this artifact definition based on whatever you need
+40:33
+for your system we can edit these artifacts and we can also create our own we can create a hunt with it directly if
+40:40
+you click this uh target symbol then it will just take that artifact and you can set up a hunt based on that particular
+40:47
+artifact directly so next let's look at server events and by default we have a couple of server events these are things
+Server Events
+40:53
+that are logged on the server side by default so for example we have artifact modification at the top we have the
+41:00
+timeline of things that are going on and we can scroll through this timeline and look at different events that have
+41:05
+happened probably the most interesting here is the system hunt creation so we did create the one hunt called find JPEG
+41:12
+and then we ran that hunt and then you can see details about that hunt so whenever you have a lot of different
+41:17
+users on the system you can use this to make sure that they're not actually abusing particular clients or somebody
+41:24
+didn't get access to your server and start running hunts that you didn't expect or maybe even running malicious
+41:29
+code so you do want to be monitoring some of this stuff these three are created by default but to create a new
+Create a new server monitor
+41:36
+server monitor you can click the pencil and paper icon select the artifacts that you do want to monitor on the server
+41:43
+side again you can write your own custom artifacts here as well and then you can just select the artifact that you
+41:49
+want and then you click configure and then configure the options basically exactly like we did with hunting so the
+41:55
+server events are specifically for things you want to log on the server side it uses kind of like a plug-in
+42:01
+system for artifacts exactly like the hunt manager except it's just for things that are logged on the server side under
+Server Artifacts
+42:07
+server artifacts it's the same concept as view artifacts except these are specifically for Server logging next
+Notebooks
+42:13
+notebooks the only thing that I find notebooks really useful for at least for me so far is working on a new artifact
+42:20
+so let's call it new artifact description and then select a user if you want other people to use
+42:26
+it as other people to work on it as well whatever you click on it then it will try to run if we click on that then we
+42:33
+can edit it and we can see the original code written in markdown or vql or
+42:38
+whatever whatever language we want to use here add a new section that's vql
+42:43
+and then we can actually set up our queries here so these notebooks in my mind are a way to set up a new artifact
+42:49
+and then you can collaborate with other users in the system to like test the artifact and make sure it's working for
+42:54
+writing new artifacts based on what you're searching for specifically and then you can incorporate those artifacts
+43:00
+into your hunts or monitoring or server monitoring next we have the host information we already saw this once
+Host Information
+43:05
+this is where you find a specific host that you're interested in and it lets you do a little bit more specific things
+43:11
+with that individual host remotely next we have our virtual file system this option is available we already have a
+Host Specific Options
+43:17
+host selected here we have everything that was collected from the host that was selected so you can kind of see the
+43:23
+host's history and what kind of information uh changed over time other than than hunting this is probably the
+Host Monitoring
+43:28
+second most important thing so I don't know why they put it at the end this is monitoring so setting up monitoring on
+43:35
+the system so to create a new monitor I'm going to select the pencil and paper and then we need to click the label
+Create a new client monitor
+43:41
+group that we're going to monitor we can do all but then think about there's different operating systems and
+43:47
+different configurations on your network so all most of the time probably doesn't isn't going to make sense something like
+43:52
+our tags are going to make sense Dev or Linux here I'm going to monitor something specifically for Linux so I'll
+43:58
+click Linux and remember those are our tags not the operating system specifically so next select artifacts
+44:04
+that we're going to monitor these artifacts are a little bit different than the artifacts for our hunts so for
+44:09
+example this is things that we might want to monitor over time whereas a hunt is like the current state of the system
+44:15
+right now for example SSH logins or SSH brute force is a really interesting
+44:20
+thing to be monitoring over time and then those monitors will tell you if you need to be looking into something for so
+44:27
+I'm going to go ahead and click SSH login see if I can get some activity here just like before we see the
+44:33
+artifact is using VAR log AOG this is what it's working on on the client this
+44:38
+is the query and this is the actual code for that monitor we can do multiple
+44:44
+monitors at the same time I'm just going to do the SSH login next configure parameters select it like normal and
+44:50
+then we can configure maybe if we're keeping the SSH log or the O log in a different location for some reason then
+44:57
+we can point it to where it needs to go and if we want to configure or change the SSH grock query the SSH grock query
+45:05
+is how information is going to be parsed out of off the log so we might want to change that and then review again we get
+45:11
+our setup and then we have launch okay if we look click the binoculars then we can see the raw client monitoring table
+45:17
+and basically what needs to happen is the client needs to get this information download it and process it and then run
+45:24
+the command so we're setting up a command control center here and we can see we have our query that we've just
+45:31
+added here so it has been added to the monitoring table so notice it took a while for any information to come back
+45:38
+and then the client actually had to upload its information to us so now if we click Linux events SSH login we can
+45:44
+see over time we don't really have any events because I didn't do anything with SSH login but now any client running
+45:50
+Linux is being monitored for SSH login so whenever I go to monitor I should be
+45:55
+able to see any login events from SSH if that monitoring is working properly
+Main Features Review
+46:01
+probably the three most important things that I think you'll use the most are hunts manager the host information once
+46:07
+you find a host you want to investigate and client events which is basically monitoring so immediately you could set
+46:13
+up some sort of client event monitoring and then as you go along and new attacks
+46:18
+are happening on your network then you can write your own custom hunts and Implement them at the time that you need
+46:25
+them using monitoring has a way to be getting in Intel before and after those
+46:30
+events are happening and then the host information to drill down into a specific host that you want to
+46:35
+investigate possibly take it off of the network quarantine it possibly uh do some remote acquisition and Analysis so
+46:42
+now we've basically gone through all of the parts of velociraptor there's a lot to practice here so I hope this at least
+46:48
+helps you get started if you want to learn more about artifacts you can go to the velex Velociraptor artifacts
+Where to find more resources
+46:53
+definitions and then under definitions they have for example Linux Mac OS uh Network reporting server there's a lot
+47:00
+more stuff here that's not included in just the default download so I recommend you go through any artifacts you think
+47:06
+are going to be interesting to you and then also the artifact exchange have a look through that it's on docs.
+47:12
+Velociraptor app and I'll put a link to all of these below so do check them out they also have we've seen GitHub they
+47:18
+have Discord and a mailing list and there is a lot more documentation on doc. Velociraptor doapp specifically
+47:25
+under documentation getting help setting everything up the only thing is I find
+47:30
+these instructions sometimes a little bit difficult because there's so many options hopefully this video helps solve
+47:36
+some of that if you're having any issues with that but there is a lot more that we can do with this remember the way
+47:42
+that I showed you to set up Velociraptor is not for production it is specifically for testing and understanding how
+47:49
+Velociraptor Works trying some Hunts on maybe your local home network and then once you get more familiar with it then
+47:56
+you can go to deployment and then look at like Cloud deployment and specifically how they recommend
+48:03
+provisioning virtual machines there's a lot of things to consider before you actually roll this out but it is
+48:08
+definitely a cool tool for monitoring for hunting and for drilling down into
+48:13
+your systems I hope this helps get you started thank you so much for watching

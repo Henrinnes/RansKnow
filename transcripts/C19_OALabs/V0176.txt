@@ -1,0 +1,493 @@
+0:00
+Hi folks.
+0:00
+And welcome to our OALABS series on YARA.
+0:04
+Now, if you're seeing this, it's because
+0:05
+you're watching this video on YouTube.
+0:08
+So just a quick show for our PATREON.
+0:10
+If you like this kind of content, go check
+0:13
+it out with that.
+0:14
+Let's jump in.
+0:14
+So we've put together a multi part tutorial
+Series Overview
+0:18
+series talking about different aspects of
+0:20
+Yara, how to use it, how we like to use it,
+0:24
+different types of rules that you can build and
+0:26
+different ways that you can use the rules.
+0:28
+So we've put this together in a series
+0:30
+and of course we're not going to be able to cover
+0:32
+every aspect of Yara, but we do also include
+0:35
+a bunch of links to further learning if you
+0:38
+guys want to dive in.
+0:39
+So you might be wondering why are we
+0:41
+doing this series now?
+0:42
+We've been around for a long time.
+0:44
+We use Yara all the time.
+0:45
+If you've caught our streams on Twitch
+0:47
+you know this.
+0:48
+So why are we talking about Yara now?
+0:50
+Well, this is the third year, I believe, that
+0:53
+there is a very cool project that is running
+0:56
+through Twitter, X pretty much, um, where a bunch
+1:00
+of different people, anyone can join, will
+1:02
+get together and share Yara rules for the first
+1:06
+100 days in the year.
+1:08
+It's called #100DaysOfYara, and if
+1:10
+you just search for the hashtag #100DaysOfYara
+1:12
+on Twitter, Then you can find all these
+1:16
+different rules that people are putting out.
+1:18
+There's lots of different ways that
+1:19
+people are using and abusing Yara to make it
+1:23
+do things that nobody ever intended it to do.
+1:26
+I think it's a great project.
+1:27
+We support it 100%.
+1:29
+And it kind of inspired us to put together this
+1:31
+tutorial series for those of you who may not be
+1:33
+familiar with Yara or are just kind of getting
+1:35
+started with Yara.
+1:36
+and want a few pointers.
+1:38
+Also, a quick mention, in this series, we are
+1:41
+going to be using our own platform, UnpacMe,
+1:45
+to be testing and developing YARA rules
+1:48
+and to be hunting for malware with YARA.
+1:51
+Of course, there are many other free open
+1:53
+source platforms that you guys can use.
+1:55
+To try Yara and we've included a
+1:57
+few below the video.
+1:58
+If you want to try those out as well,
+2:00
+we're just using our own because we like it.
+2:02
+We built it and it's free.
+2:04
+So it's a good resource, which anyone can use
+2:07
+as long as using it non commercially use it for
+2:10
+it, you got to pay, but otherwise if using it
+2:12
+for personal use, you can use it for free.
+2:14
+So with that, let's get started.
+2:16
+Okay.
+What is YARA
+2:17
+For our introduction to Yara.
+2:19
+Let's just provide a quick overview
+2:21
+of what Yara is.
+2:23
+Assuming you've never used Yara before and
+2:25
+you're wondering, What is it and how can I use it?
+2:28
+So, basically, Yara is an open source tool.
+2:32
+You can find it on GitHub here.
+2:34
+You can compile it yourself or download one
+2:36
+of the releases here.
+2:37
+It runs on all platforms, Mac, Windows, and Linux,
+2:41
+and it is essentially a pattern matching tool.
+How does YARA work
+2:45
+So what you do is you write some rules, the
+2:48
+rule syntax we're going to talk about in a minute
+2:50
+is very intuitive, and then those rules can
+2:53
+be run in the Yara tool to scan a directory
+2:57
+or a file and identify matches for the rule.
+3:00
+So it's sort of like an AV signature tool.
+3:03
+If you think about old school antivirus where
+3:06
+they had a bunch of signatures and they
+3:08
+would run it on a host and identify malware.
+3:11
+So Yara is an open source generic version
+3:15
+of that sort of concept.
+3:16
+Of course, you don't have to use Yara to
+3:18
+search for malware, but that's generally what
+3:20
+it's being used for.
+3:22
+Now, the interesting thing about Yara
+3:23
+is that it is an open source tool.
+YARA is open source
+3:26
+But that tool has been integrated into
+3:28
+many different EDR and antivirus platforms.
+3:31
+In fact, I can't think of an EDR platform that
+3:34
+doesn't support Yara.
+3:36
+So what this means is that once you write a
+3:38
+rule using the local tool, or if one of
+3:41
+your colleagues or a researcher in our
+3:43
+industry has shared a Yara rule, you can
+3:46
+then use that Yara rule locally in the Yara
+3:49
+tool and most likely in your EDR product
+3:53
+if it's supported.
+3:54
+And again, I think every EDR product I've ever
+3:57
+used has supported Yara.
+3:59
+So it's basically an open source way to
+4:01
+share rules that are matching on malware.
+4:05
+And because there's a local version, you can
+4:08
+run it locally on your own host or on your
+4:10
+servers or whatever you want as a way to
+4:13
+test and build rules.
+4:15
+Also, Yara has become a search engine of sorts
+YARA is a search engine
+4:20
+for malware hunting.
+4:21
+Many malware repositories, such as
+4:24
+VirusTotal or ourselves, UnpacMe, have a Yara
+4:28
+search capability where you can upload a Yara
+4:31
+rule and search the repository of malware.
+4:34
+for matches.
+4:35
+If you're getting into threat intelligence or
+4:39
+malware research, this is a very powerful tool for
+4:43
+finding new malware or searching for different
+4:46
+variants of a sample that you're looking at.
+4:48
+It is in fact one of the most powerful
+4:50
+tools that we have as malware analysts.
+4:53
+So with that, What does this actually look like?
+4:56
+Well, here we've downloaded the open
+4:59
+source YARA binary for Windows, and if we run
+5:02
+on the command line here, you can see it's
+5:04
+asking for a rule file.
+5:07
+So why don't we go ahead and create a
+5:08
+simple rule that we can test locally, and I'll
+5:12
+show you the different components of a rule.
+5:15
+So if we open a text editor here, I'm using
+5:17
+Sublime, and I've actually installed
+5:19
+the Yara syntax highlighting for Sublime.
+5:23
+Just makes it a bit easier to see the syntax.
+5:25
+So we have our text editor here, and
+5:28
+let's go over the core concepts of a Yara rule.
+5:32
+The first part is the rule definition.
+5:34
+So we have the rule keyword.
+5:36
+Then the name of the rule, no spaces in the
+5:39
+name, and then open bracket and close bracket
+5:42
+to contain the rule.
+5:44
+Inside of the rule, there are three main sections.
+5:47
+There's meta, which has metadata, these are key
+5:50
+value pairs that you can add to describe the rule.
+5:53
+You don't have to have a metadata section.
+5:56
+But usually the author name and a short
+5:58
+description of the rule are placed in
+6:00
+the metadata section.
+6:01
+Then we have a strings section.
+6:03
+Now strings is a bit misleading.
+6:05
+Strings are both strings and patterns that
+6:09
+are going to be found in the target file.
+6:13
+So this is where you include strings.
+6:16
+hex encoded binary strings or regular
+6:18
+expressions for things that you want to
+6:20
+match in the file.
+6:22
+The string syntax is very straightforward and
+6:25
+there's almost a pythonic feel to the strings.
+6:28
+Each string is preceded with a dollar sign.
+6:31
+then the string name, then equals, and then
+6:33
+we have the actual string in quotes.
+6:36
+If you want to include a binary string, we include
+6:38
+those in brackets, and it's hex encoded.
+6:42
+And if we want to include a regular expression, we
+6:45
+use the angle brackets.
+6:47
+In this case, for our simple rule here,
+6:49
+we're just going to use one string.
+6:51
+And the string I'd like to use is what
+6:53
+we call the run key.
+6:55
+in malware analysis.
+6:57
+If you're not familiar with the run key, this
+6:59
+is a registry key that a lot of malware uses
+7:02
+to set persistence.
+7:04
+When the system boots, any binary
+7:06
+in this registry key will be started.
+7:08
+It's like an auto runs.
+7:10
+And a lot of malware uses this key.
+7:13
+And because of this, a lot of malware has this
+7:15
+string for the key.
+7:19
+Now you'll notice at the end of the string I'm
+7:21
+including ASCII and wide.
+7:24
+This is because Yara, by default, assumes
+7:27
+all strings are ASCII, but in our case, the
+7:30
+string might be a wide string or it might be
+7:33
+an ASCII string, so we're including both
+7:35
+to make sure our rule covers both of those.
+7:37
+So now we move down to the third part of
+7:40
+the YARA rule, which is the condition.
+7:42
+The condition tells the rule how to
+7:45
+match the strings.
+7:48
+So in this case, we just want to say if a
+7:50
+file has this string in it, then it's a match.
+7:54
+So we would just include the variable
+7:57
+for the string.
+7:58
+Now this is all we need to do to
+7:59
+complete our rule.
+8:01
+And if I save it out here and then run from
+8:04
+the command line, you can see that it runs
+8:07
+no problem, but we haven't found any files.
+8:11
+So here I have a folder of malware
+8:14
+that I've downloaded.
+8:15
+These are just various malware samples.
+8:17
+And if I run the rule again on that
+8:20
+directory, You can see now we have a bunch
+8:23
+of different matches.
+8:24
+So that is basically what a YARA rule is.
+8:29
+Now, of course, I've just touched on the
+8:31
+very surface of what you can do with the rule,
+8:35
+and there are many, many different types of
+8:36
+string configurations.
+8:38
+and conditions that you can use in a rule.
+8:41
+So below I've linked to documentation
+8:44
+for building rules.
+8:45
+I find it quite intuitive.
+8:47
+I write a lot of Python code and I
+8:49
+find the syntax is very similar, but
+8:51
+your mileage may vary.
+8:52
+I also want to note that there are many
+8:54
+shared Yara rules that are shared within our
+8:57
+community through GitHub repositories or posts
+9:00
+on Pastebin, et cetera.
+9:02
+And when I was learning Yara, I found it very
+9:05
+helpful to look at how other people had
+9:08
+constructed YARA rules and steal ideas from
+9:11
+them or get some ideas for how I could use
+9:14
+the format in new ways.
+9:16
+So I've also linked below to a bunch of
+9:19
+sample repositories that have open source
+9:22
+YARA rules that you guys can go take a look at
+9:25
+if you're interested in seeing how YARA is
+9:28
+used in different ways.
+Outro
+9:29
+So that wraps it up for our introduction.
+9:32
+Stay tuned for the next part.
+9:33
+And like I mentioned before, if you enjoy
+9:35
+this kind of content, go check out our Patreon.
+9:38
+Lots more reverse engineering
+9:39
+tutorials like this one right there.
+9:41
+Go check it out.
+9:42
+And until next time.
+9:43
+Keep exposing the mechanics behind malware.
+9:45
+Like and subscribe?
+9:46
+I don't know, do we still do that?
+9:47
+You guys let me know.
+9:48
+Alright, bye guys.
+

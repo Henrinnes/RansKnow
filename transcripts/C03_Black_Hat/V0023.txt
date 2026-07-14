@@ -1,0 +1,694 @@
+0:02
+Hello, good morning everybody. Thank you for joining us here at Black Hat and welcome to breaking out the AI cage
+0:11
+pawning AI providers with Nvidia vulnerabilities. It's my pleasure to introduce Hili Ben
+0:17
+Sassan and Andres Rancho. It's my pleasure to bring on
+0:25
+Eli and address.
+0:37
+All right. Hello everyone. Thank you for coming uh and welcome to our talk. It's called Breaking Out of the AI cage
+0:44
+pwning AI providers with Nvidia vulnerabilities. And in this talk so talk, we're going to tell you about a vulnerability we found
+0:51
+in one of the most fundamental building blocks of AI infrastructure. A library
+0:57
+developed by Nvidia that is so popular, so ubiquitous that when we found one vulnerability in it, we were able to
+1:03
+hack into pretty much every single cloud provider, SAS provider, every sort of service that you think that offers any
+1:09
+AI cloud services was vulnerable to our attack. So we're going to tell you all about uh this library, this
+1:15
+vulnerability we found, what allowed us to do and also more importantly uh some of the real life cloud providers we were
+1:21
+able to hack and what we were able to achieve. So we're going to tell you all about that. But just before we do, quick
+1:27
+introduction. So hi, my name is Hil Sasson. Here with me on stage is Andres
+1:32
+Leancho. Uh we're based in Israel and Argentina. You can guess which is which.
+1:39
+and we work as security researchers as part of the whiz research team which means that uh most of our work relates
+1:44
+to cloud security research researching into platforms like AWS Azure GCP and others but in the past year or two we've
+1:52
+started uh delving into this sort of subcategory under cloud vulnerabilities this emerging new category of AI
+1:59
+vulnerability research during this past year or two we were able to find issues all throughout the AI uh research and
+2:06
+development pipeline from issues in data sharing in companies such as Microsoft to AI services like DeepSseek uh all the
+2:13
+way to what we talked about in last year's black hat which is AI cloud providers and after uh finding these
+2:19
+vulnerabilities in many AI cloud services we've started diving into this uh new sort of lower layer uh uh that
+2:26
+powers all these things which is AI infrastructure all the open source projects that power the AI cloud and this is what we're going to talk about
+2:32
+today so this is what we're going to be talking about uh in the session we're going to start things off by talking a
+2:38
+little about what a infrastructure is, what uh led us to the idea of doing this research. Then we're going to talk about
+2:43
+our research target which is NVIDIA container toolkit and the vulnerability we found which allowed us to escape
+2:48
+every container built with this framework. Then we're going to talk about uh two of the many real life case
+2:54
+studies uh where we were able to run this vulnerability on actual cloud providers and then we're going to sum things up and send you on your way with
+3:00
+some take takeaways on how to secure AI infrastructure. All right, let's begin.
+3:06
+Uh so first things first, let's talk a little bit about what AI infrastructure is and essentially how do people run AI?
+3:12
+So how do people run AI? Well, in order to run AI workloads uh and AI and to do
+3:19
+AI research and development, you would probably use many of these open source projects that are shown right here. Projects like uh vector databases like
+3:26
+Reddus and PG vector uh training frameworks like PyTorch and TensorFlow all the way to inference servers like Olama, Llama CPP, Nvidia Triton. Uh so
+3:34
+many of these projects right here, we've researched into almost every single one of these uh frameworks and in many of them we were able to find critical
+3:41
+remote code execution vulnerabilities and of course support them uh and have them fixed. But after a while of looking
+3:46
+at many of these frameworks, we started thinking what if there's something deeper? What if there's a layer
+3:52
+underneath all this uh that we can also look into and essentially what do all these things have in common? So the
+3:59
+answer to this question was almost a little obvious when we first thought about it. It's GPUs and specifically
+4:05
+Nvidia GPUs because GPUs are pretty much the one common denominator between
+4:11
+everything that is AI between all AI uh vendors, AI providers, all stages of AI
+4:17
+research and development. Everything that relates to AI almost always runs on an NVIDIA GPU. This is the industry
+4:22
+standard. So when we thought about this, the first thing we wanted to find out is because we weren't really familiar with
+4:28
+GPUs is what sort of interfaces does an Nvidia GPU expose to people that want to work with it. And because we're still
+4:34
+security researchers, the more important thing that we wanted to find out is what's the potential attack surface that those GPUs expose to people that work
+4:41
+with them. So the short answer to that is a lot. Uh this is a screenshot from
+4:47
+the Nvidia GitHub page. uh they have almost 600 different open source repositories and this is just the open-
+4:52
+source repositories. So really just scratching the surface. So out of all these many different projects that
+4:58
+Nvidia publishes, we started zeroing in on one particular framework uh which is our research target for today. So
+5:04
+without further ado, I'd like to invite to the stage my good friend and colleague Andress to talk about our research target Nvidia container
+5:10
+toolkit. Perfect. So, Nvidia container toolkit, what is it
+5:16
+and how we hacked it? So, NVIDIA container toolkit is a container runtime
+5:21
+library. It's going to allow you to run AI inference and the AI training inside
+5:27
+containers. A data container toolkit is going to configure your container in
+5:32
+such a way that it allows you to access the GPUs and it's going to do so by mounting
+5:39
+different uh files, tools, general objects inside of the container. But
+5:46
+what happens when you actually start a new container? So if a user wants to use
+5:53
+the Docker CLI in order to create a new container, the Docker CLI is going to
+5:59
+create an OCI spec. This OCI spec is going to be sent to the Nvidia container
+6:06
+runtime, which is a binary that's going to modify the OCI spec to allow AI
+6:12
+inference and AI training. The Nvidia container runtime is going to execute
+6:18
+run C. run C will start with will initialize actually the container and at
+6:25
+some point during that initialization process run C will invoke the Nvidia
+6:30
+container runtime hook. This hook was added by the previous process the Nvidia
+6:37
+container runtime and is the one that's responsible for actually making the modifications on the container. All of
+6:44
+those modifications are the ones that Nvidia container toolkit is responsible for. Once those are done, the process
+6:52
+actually starts, your entry point is executed, and your container is ready to
+6:58
+run. One of the things that we do when performing container escapes, when
+7:04
+trying to do research on containers, is to find and to list all of the mounts
+7:10
+inside the container. In this case, what you are seeing in the screenshot is the output of the mount command inside a
+7:17
+container that was created with Nvidia container toolkit. As you can see, there is a huge list of different files that
+7:25
+were mounted inside the container. In this case, it's interesting for us to notice the usr path and the different
+7:33
+names for the shared objects. But before we do a deep dive into the
+7:41
+research, let's understand the basics about mounts. Mounting in the most traditional way is
+7:48
+to get a disk into the file system. Once you have mounted the disk, it's
+7:54
+accessible and you can perform actions on that file system. But there are
+8:00
+multiple uh bounds at this uh point in time with modern uh Linux operating
+8:06
+systems. And uh the ones that we are going to be focusing on are file mounts
+8:12
+or bind mounts. In this case, we're seeing one from the host file system
+8:18
+into the container. And uh this is one of the things that Docker does by default when starting a
+8:26
+new container. It's using this in order to configure the host name inside the
+8:32
+container. There's a different category of mounts which is going to be interesting for us because it's
+8:38
+associated with our vulnerability which is mounts from the container to the
+8:44
+container. In this case, a resource, a directory, a file is being mounted from
+8:51
+a path inside the container to a different path also inside the container.
+8:58
+In this case, the source is the compat directory and the destination is usr.
+9:06
+And uh this is interesting because if you go into the Nvidia container toolkit logs, you're going to see exactly that.
+9:14
+You're going to see how this software is trying to mount the first path that you
+9:19
+see there to the second path and both are inside the container.
+9:26
+This is interesting because we might be able to do something with it. We still don't know what, but it's promising.
+9:35
+So, what's next? One of the things that we want to do ideally is to trick Nvidia
+9:41
+container toolkit into mounting the host file system inside the container.
+9:48
+And uh ideally we are able to do that by creating a specially crafted image. If
+9:56
+the image has certain paths and symbolic links and a certain structure, maybe we
+10:02
+can achieve that. So let's see how this works. In our
+10:08
+first attempt, what we did was to create inside the compat directory a symbolic
+10:14
+link pointing to the host file system.
+10:19
+And uh what we expected to happen is that on the mount
+10:25
+we expected to have the host file system in us lib.
+10:31
+We created the docker file. We built the image. We run it. We were expecting to
+10:39
+see a container escape and nope was not working. So we got this path error which
+10:47
+was saying that the live video with um shared object which is actually a
+10:53
+symbolic link pointing to the host file system is resolving outside of the
+11:00
+container file system. This is a security check that Nvidia
+11:05
+container toolkit is actually implementing. And uh it's uh interesting because there
+11:12
+are a few things that we can learn from it. First we know that files from the
+11:19
+compat directory are actually mounted into user lib and the file names are
+11:24
+maintained. It's the same file name in compat and in usr li. We also know that
+11:32
+symbolic links are normalized. So based on the previous error, we can
+11:37
+say that the symbolic links that are in the compat directory are actually going
+11:43
+to be followed normalized before performing them out. So that's good and
+11:48
+it's something that we're going to use during our exploit. And we also know that there is a
+11:54
+security control. We sit on aware, but there's something that's preventing our
+12:00
+naive exploit from actually working. So our goal at this point is going to be
+12:07
+to bypass this security control in order to have the host operating the host file
+12:13
+system mounted inside the container.
+12:18
+Let's see how this works. So Nvidia container toolkit is written in C. It's
+12:24
+open source and it has thousands of lines of code. Um, we are not going to
+12:30
+show you all of that code now, but we're going to show you the basics in this diagram.
+12:36
+In based on on our understanding of uh the code and lots of hours of source
+12:42
+code review, we understood that in the first step what Nvidia container toolkit
+12:48
+is doing is it's listing the contents of the compat directory and it's uh using a
+12:56
+filter in order to get a few files that are interesting for Nvidia container
+13:02
+toolkit. This list with live NVIDIA 6 and live NVIDIA 7 are uh the potential
+13:10
+mounts that Nvidia container toolkit is going to process afterwards.
+13:17
+In a second step what it does is to perform the security checks. These
+13:23
+security checks are implemented in the do path resolve function which is the
+13:29
+one that throws that error that we saw before. So for every potential mount
+13:34
+leave Nvidia 6 and leave Nvidia 7 what the Nvidia container toolkit does is to
+13:40
+apply this function and now we have validated mounts.
+13:45
+This validated mounts are then going to be actually mounted. First it's going to
+13:52
+mount live media 6. Then in a second step it will mount live
+13:58
+media 7. That's how it works. And maybe some of
+14:04
+you are already seeing something strange here. There is a time of check time of
+14:11
+use vulnerability. The time of check happens when Nvidia
+14:17
+container toolkit invokes do path resolve. So it is uh applying the security
+14:24
+control once and before the amounts are actually
+14:30
+executed. The issue is that during the time of use
+14:36
+the mount system call is actually modifying the file system structure
+14:41
+and the security check was applied on top of that file system structure. So
+14:47
+the mounts in some way and depending on many factors could actually invalidate
+14:54
+the security assertions that you did in the time of check.
+15:00
+So that's our vulnerability and uh we wrote an exploit for it. Now I'm going
+15:06
+to try to explain that amazing exploit that we wrote for the container escape.
+15:16
+What we did was to create a specially crafted Dogger file with different
+15:22
+symbolic links and paths. So the first two things that we have in our exploit
+15:28
+are the compat directory and the usr directory.
+15:33
+Inside us lib which is the destination for the mounts. We created a symbolic
+15:40
+link. The symbolic link is pointing to the compat directory.
+15:47
+Then inside compat what we did was to create two different folders.
+15:53
+Leave Nvidia 6 and leave Nvidia 7. Those folders have different objectives.
+16:02
+First objective making sure that Nvidia container toolkit is going to perform two mounts.
+16:11
+Second objective is to bypass the security control.
+16:17
+So they are folders. They are not symbolic links. They are going to be that the security check is going to
+16:23
+accept both of those entries. So after performing the security checks,
+16:29
+Nvidia container toolkit is going to mount leave NVIDIA 6.
+16:35
+But when it attempts to mount it to the symbolic link, what actually happens is
+16:42
+that we override the contents of the compat directory.
+16:48
+And uh because we created another symbolic link
+16:54
+with the name Levenia 7, what we're going to see is that on the
+17:00
+second mount, the host file system is mounted inside
+17:07
+the container. And uh this is a
+17:13
+multi-stage exploit which allows us to get access to the host file system.
+17:20
+If you want to see this in a docker file, this is how it looks like. It's
+17:27
+not so complex um most likely because I explain it like step by step. But uh
+17:34
+basically you create the directories, you create the symbolic links, build
+17:39
+that and then you have your exploit. Your image is the exploit. Okay.
+17:46
+So let's do a quick summary of the vulnerability. This is a critical
+17:53
+container escape vulnerability which allows us to mount the host file system
+18:00
+into the container. And after you do that mount, you have
+18:05
+multiple options. You can read configuration files from the host. You can read potentially if
+18:13
+there are other containers running in the host. You can read the file system for those containers. you can
+18:19
+potentially interact with unique sockets which exist inside that file system and
+18:26
+uh there are multiple ways in which you can do privilege escalation based on those accesses
+18:34
+and as I mentioned before if you control the container image you win. So many
+18:40
+services online allow you to upload the image and they are going to run it using
+18:46
+Nvidia container toolkit and we're going to learn more about that in a few minutes.
+18:53
+But let's see this in action. In this uh demo, what we're going to be
+19:00
+showing is how uh we run the W malicious image which has our exploit using the
+19:08
+Nvidia runtime. And uh in this case we create a new container and there are
+19:14
+different things that we can do inside that container. So the first thing is just read etc shadow. It's the one from
+19:22
+within the container. Nothing special. We can also list the processes.
+19:28
+Once again, nothing special, just the processes from my container.
+19:34
+But we are going to see that it's possible to access the etc shadow from
+19:42
+the host using this weird path the USR lib lived
+19:48
+8. So if we do a cut of that, we get the
+19:54
+ADC shadow for the host. So that's
+19:59
+mind-blowing. If you want to clap now, now it's the time. Yeah. All right.
+20:07
+So after that, once uh we had access to the file system,
+20:13
+uh we wanted more. We wanted to escalate our privileges inside the host. So we
+20:20
+can do that using the docker sock. Um the docker sock is a unique socket
+20:26
+which uh you can use to interact with the docker demon and uh you can use the
+20:32
+docker cla in order to create a new privileged container. In this case we
+20:38
+are creating a privilege container that also shares the pit and network Linux
+20:44
+namespaces with the host. And uh we create that new uh privilege container.
+20:52
+And we're going to just attempt to list all of the processes. And we're going to
+20:58
+see something completely different uh from before because now we have access to all of the processes from the host.
+21:08
+At this point in time, we could kill processes, remove files from the file
+21:13
+system, from the host. Uh the possibilities are endless but we are not bad people. We are not going to do that.
+21:21
+Um okay so this was a dream vulnerability. It was a
+21:27
+single vulnerability affecting the entire cloud ecosystem.
+21:33
+It was reliable to exploit. So there were no memory addresses, no potential
+21:39
+crashes, buffer overflows or anything like that. Very reliable. So if you had
+21:45
+Nvidia container toolkit running on the system, our exploit was going to work
+21:51
+100%. The risk critical. We already saw that
+21:56
+on our demo and uh we were very very excited about this vulnerability. Uh we
+22:03
+really felt that it was a once in a-lifetime opportunity to do research
+22:09
+and uh we were so excited. Uh but actually it was not a once in a lifetime
+22:16
+vulnerability. Uh the WHIS research team has an amazing group of hackers and we
+22:22
+found a second critical container escape vulnerability in Nvidia container toolkit just months after this one. Um
+22:32
+we're not going to be talking about that one here but maybe if we get accepted to
+22:37
+the next black hat we can do that. Um, one of the things that we were
+22:43
+discussing while we uh were were researching this vulnerability was how
+22:50
+does each vendor going to handle a critical zero day.
+22:56
+From previous research, we know that every vendor, every service is built in
+23:02
+a different way based on the thread modeling that they have done, based on the implementation mistakes that they uh
+23:10
+made along the way. And uh because of this initial question, we decided to
+23:17
+exploit the vulnerability in more than 10 services across different cloud
+23:23
+service providers. And uh we can't really talk about all of
+23:29
+those because we don't have time. But let's focus on two different case
+23:34
+studies. These case studies are representative of what we found in all
+23:40
+of the other uh case studies, all of the research. In order to do that, Eli,
+23:47
+thank you, Andrew. All right. So, uh after we know what the
+23:52
+vulnerability is and what it allows us to do, let's talk about its real life implications. Uh two, uh cloud providers
+23:58
+out of the many we were able to exploit using this vulnerability and of course, what sort of impact did we achieve using it. So the first case study is about
+24:06
+replicate uh which for those who are unfamiliar is a very popular AI uh model gallery service. It allows people to
+24:13
+upload their own AI models and AI applications and have people interact with them using uh replicates infrastructure. Uh as you can see the
+24:19
+screenshot many big AI players are using it to host their AI models. Companies like OpenAI, Salesforce, Bite Dance XAI,
+24:26
+Google etc etc. So very popular service. So what we wanted to know was of course how can we upload our own AI model and
+24:32
+have it execute our Nvidia container toolkit exploit. So in order to do that we had to upload uh to replicate uh in
+24:39
+one format only which is called the cog format which begs the question. What the hell is a cog format? So cog is the
+24:47
+format developed by replicate which if you go to the GitHub page for cog you see that it's described as containers
+24:52
+for machine learning. So does that mean that cog is just a fancy name for a
+24:57
+docker container? Essentially yes. Uh a cog is just a docker container uh which
+25:03
+runs specific cog code. So we took our Nvidia container toolkit exploit. We added some of the cog code and the way
+25:09
+we built that cog model was actually quite interesting. You build it to act as a shell. uh which means that when
+25:14
+people uh people is us uh go to replicate uh and visit our model in the uh prompt input where you're supposed to
+25:21
+put the prompt for the model we put the ID command we send it to the model and the model executes that command and
+25:27
+shows that that we're running as root great very convenient so now that we have our own AI model shell and we have
+25:34
+our Nvidia container toolkit exploit running that means we have access to the host file system that's great but the
+25:40
+question is what's next so now that we have access to the host file system. We want to try to scan it and try to find
+25:46
+interesting files inside. Uh now the first stop that we had uh in this particular case was /rock the process
+25:52
+file system which is the Linux file system that shows all the processes running on the host. We wanted to see what sort of things are running on our
+25:58
+underlying host machine. If there's anything interesting that pops up and then almost immediately something very
+26:04
+interesting popped up. Uh this is one of the processes that was running uh inside our host machine. Uh and it immediately
+26:10
+caught our eye uh for two reasons. First, it's a password. It's pretty obvious. But the second is actually more
+26:16
+interesting. The real reason this caught our eye is because uh this password here is a password and an address to a radius
+26:22
+database. And we were actually already familiar with this radius database from a previous research project that we did
+26:28
+with replicate. This is not the first time that we looked into replicate. And in the previous time, we were actually able to take over the very same Reddus
+26:35
+instance. And we were able to prove uh what the service instance does. Uh the
+26:40
+service instance is being used as a task Q for replicate which means that whenever user goes to replicate inserts
+26:46
+their own prompt to AI model goes to touchp and asks if the sky is blue uh that prompt will get inserted to the
+26:52
+reddest task Q and the reddest task Q will bring it uh bring it forward to the relevant AI model that can be our own AI
+26:58
+model that can be different AI models uh then it will get the response and return it to the user. Now the reason that this
+27:04
+is interesting is if you take a look at the right side of this diagram, we see that the Reddit task view is connected
+27:10
+to all the models. It's connected to our own AI model but it's also connected to uh all the other companies and customers
+27:15
+AI models which means that this is shared infrastructure. Now when we uh did our previous research project and we
+27:21
+took over this instance, we were able to prove that this gave us access to all the prompts and all the predictions that
+27:27
+exist on the replicate uh platform. And it wasn't only the ability to read those prompts and predictions, it was also the
+27:33
+ability to interfere with them. Meaning that when a user asks a model a question, I could have returned my own malicious answer instead. Now, this is
+27:39
+true for both the public models on Replicate and for the private models as well. So, when we saw this Red instance,
+27:46
+uh we already knew how this story ends. We once again have the password. We know what it leads to. So, we wanted to try
+27:51
+to see if there's any other interesting directions we could take. We noticed that this uh was running on Kubernetes infrastructure. So we tried to chase
+27:57
+that direction, try to see if there's any interesting lateral movement tasks we can do inside the Kubernetes cluster.
+28:03
+And as we were looking into that, we encountered a major plot twist uh in the
+28:08
+form of this error message that appeared on a replicate account shortly followed by a very nice email
+28:14
+from the Replicate security team reaching out to us and basically asking, "Hey, uh, your activity has alerted some
+28:20
+alerts on Replicate's back end. Is this legitimate security research or some threat actor?" Uh so of course at this
+28:27
+point we already knew what our report uh what the impact of our vulnerability was. So we stopped everything and
+28:32
+reported everything to the replicate security team. So kudos to them for having uh some very good alerts. Uh now
+28:38
+let's recap this entire attack flow from start to finish. We started out as attackers deploying our own malicious
+28:43
+[ __ ] container to our own replicate pod. Then we had our we ran our NVIDIA container escape vulnerability which
+28:49
+gave us access to our own to the underlying replicate node. That's not our own. It's the underlying replicate node. that uh replicate node disclosed
+28:56
+the password to the centralized database and we know that from this centralized this database we have access to all the prompts and the predictions the ability
+29:03
+to read them and also the ability to interfere with them so this was our first case study now let's talk about
+29:08
+our second one digital ocean so all of us are familiar with digital ocean I don't think it needs any introduction uh
+29:13
+one of the many services that digital ocean offers is called paperspace that's an AI service allowing once again for
+29:19
+people to run their own AI models using uh digital ocean's infrastructure so once again you already know what's
+29:24
+coming Next, we wanted to upload our own AI model, have it execute our exploit and see what happens. So, this is what
+29:29
+we did and we ran the exploit and we now have access to the nodes file system. This is a Kubernetes uh based
+29:35
+environment. So, we have access to the Kubernetes nodes file system. What's next? So, we once again want to try to
+29:41
+scan it to try to find interesting files inside. This time, because we immediately know that this is Kubernetes, we immediately wanted to see
+29:47
+if we have interesting Kubernetes credentials because obviously our own customer pod does not have interesting
+29:52
+credentials. But the underlying node might have some might have something interesting might have an interesting role in the cluster. So do we have any
+29:59
+interesting credentials? Yes, this is uh as you can see at the top we
+30:06
+access the EDC Kubernetes uh directory not uh from stat etc but from user lib
+30:11
+libidia etc uh kubernetes and in this library existed all the cublet uh credentials for the node. Now we took
+30:18
+those credentials and we wanted to see what sort of privileges do we now have. So the first thing that we wanted to uh take a look at was how many nodes exist
+30:25
+inside this cluster. A node for those who aren't familiar is a virtual machine an actual machine and inside each node
+30:31
+there can exist many different customer pods. So we wanted to get some sort of assessment of how big this environment is. How many machines exist inside it.
+30:37
+The result for that was over 700. So this immediately told us that this is not our own private environment and this
+30:42
+is shared between us and other customers. So this is immediately means that this is an interesting environment. Now that we know that this is not
+30:48
+shared, we want to see what sort of privileges do we have inside the cluster. So we did some testing. We did this only on our own secondary accounts.
+30:54
+We made multiple accounts because we don't want to access any other customers data. But on our own secondary accounts, we tried to see what sort of privileges
+31:00
+do we have on uh our customer pod. So uh we were able to immediately see that we
+31:05
+have access to everything inside the pod. We can get access to all the AI models running inside all the source code running inside. Basically
+31:11
+everything that runs on that customer pod. But another thing that we found very interesting was this field called
+31:16
+image pool secrets because this image pool secrets is a secret that we actually inputed into digital ocean when
+31:22
+we created our account. It's a secret that's being used to pull uh the docker images from our own registry. So we
+31:28
+wanted to see do we have access to those customer secrets and the answer was once again yes. Here in the screenshot you
+31:34
+can see not really see it's blurred but you can believe me. This is uh my actual uh docker image pool secrets. It's a
+31:40
+secret that we input into digital ocean which gives access to uh all the images in our own uh cloud repository uh to
+31:47
+read them and in some cases not in our case but uh some people configure it like that also the ability to write
+31:52
+those internal images. So quick recap of this attack from start
+31:57
+to finish. We started as attackers deploying our own malicious uh container to our own digital ocean pod. Using the
+32:03
+container escape we gain access to the underlying digital ocean node. uh and in that uh node we found access we get
+32:09
+access to those strong Kubernetes credentials. Those credentials allow us to gain access to all the AI models all
+32:14
+the source code running on the service as well as customer secrets meaning not only access to things that exist inside
+32:20
+digital oceans infrastructure but also the ability for attackers to spread from digital ocean to digital oceans
+32:25
+customers using those external secrets. So these were uh our two case studies
+32:31
+for the day. uh one of the uh two out of the many uh different cloud providers that were susceptible to this
+32:36
+vulnerability. Now uh let's sum things up and talk about some of the things you can take away uh from this uh in order
+32:42
+to uh secure your own uh AI workloads and AI infrastructure. So first thing that I want to sum sum up here is in
+32:48
+terms of responsible disclosure of course all these issues have been reported to all the respective vendors.
+32:54
+Uh the vulnerability itself was assigned SCV number by Nvidia and it was fixed in version 1162 meaning that people
+32:59
+upgraded at the latest version are safe. Uh and of course in addition to the uh Nvidia security team uh we also worked
+33:05
+with the security teams of replicated digital ocean to have them fix their own issues in their own environments and we're happy to say uh that those
+33:11
+environments are now uh more secure uh thanks to our work. So kudos to those teams for collaborating with us. Now
+33:18
+let's talk about some of the takeaways that you can take uh from this research. So first thing uh they wanted to uh take
+33:25
+away from it this year is that AI introduces an entirely new software stack to your application because we all
+33:31
+know what uh you all know what your uh infrastructure for web apps look like for web for mobile applications. But
+33:36
+when introducing AI as a feature to those things it comes with an entirely new stack of things like inference servers training frameworks vector
+33:42
+databases etc. And with these uh new software with this new software stack come new attack vectors like the one
+33:47
+we've seen here today. Uh the second thing that we want to build on top of that is that AI security is first and
+33:53
+foremost infrastructure security because the bugs we've seen here today some of them are specifically AI infrastructure
+33:58
+but some of them are just infrastructure bugs. They can happen in AI environments and in non-AI environments alike which
+34:04
+shows the importance of taking care of your infrastructure security keeping uh critical dependencies such as this
+34:09
+library up to date and collaborating with security researchers, pentesters, red teamers to make sure that your environment is constantly challenged. Uh
+34:16
+and the final thing that I can be taken away from this here is that containers and containerization should never act as
+34:22
+a sole security barrier when separating between environments because containerization as a barrier can be
+34:27
+broken in many different ways. Uh things like misconfigurations that we often see in our research, things like kernel
+34:33
+vulnerabilities that are becoming more and more common and of course logical vulnerabilities that like the one we showed you today. uh which really shows
+34:39
+the importance of utilizing stronger barriers like virtualization based barriers for example uh and also the
+34:44
+importance of using safe container technologies like G Visor in order to make sure that even when you use a container it's harder to break out of so
+34:52
+these are these are our takeaways but before we leave I want to leave you with one final thought uh a teaser if you
+34:59
+will for the next episode of uh research because like I just briefly mentioned uh
+35:04
+this vulnerability that we showed you today we found it several months ago Uh and of course it was an entire
+35:10
+process of reporting it coordinated disclosure until we were able to uh publicly disclose it to uh all of you
+35:15
+here. But since uh that vulnerability and actually just several weeks ago just a second before black hat we were able
+35:22
+to disclose another vulnerability in the same framework in Nvidia container toolkit with the CV number. Now the
+35:28
+thing about this vulnerability is that it's both simpler and more powerful than this vulnerability. This is the way the
+35:34
+exploit looks like. You saw the exploit from before. Very big screenshot, very big uh logic of different mounts and
+35:40
+simil in order to make this work. This is a threeline exploit. You provide your own arbitrary code and that code
+35:46
+immediately runs outside the container. So uh my point with this is that this is
+35:52
+not a once in a lifetime vulnerability and it's not a twice in a lifetime vulnerability either. It's an attack vector that can be used to attack cloud
+35:59
+providers using one of the most fundamental building blocks which is the container runtime. So these are the two
+36:04
+vulnerabilities that we were able to find. The interesting question is who's the next person that's going to find
+36:09
+another interesting vulnerability that allows you to escape from every single cloud provider into their internal infrastructure.
+36:16
+Thank you very much.

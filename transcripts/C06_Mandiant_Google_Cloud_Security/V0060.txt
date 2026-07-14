@@ -1,0 +1,2193 @@
+0:00
+[Music] And I mean huge kudos to Google uh for publishing such a blog. You know I think I was I was told it's the lengthiest
+0:06
+blog at least in Mandian Google Mandian history. And it was trying to really
+0:11
+dispel that even like I said they look nasty. They look so in in reality
+0:17
+they're actually very trivial to defeat. Like I did all the actual work for that like not more than 2 days. And that is
+0:25
+part of what makes Nino's approach to unraveling complex obuscation such as that employed by Scatterbrain awe
+0:31
+inspiring. I'm your host Josh Roshine and you're listening to Behind the Binary. In this
+0:37
+episode, Nino Isakovich discusses his essential approach to problem solving, sharing his methodology and toolkit
+0:43
+which he applied to reverse engineering extreme threats like the scatterbrain offiscating compiler. Let's dive into
+0:49
+the discussion. Okay, joining me today is Nino. Nino has been a longtime reverse engineer and uh
+0:56
+if you're familiar with his work, you've likely seen that he is out there tackling some of the really the more
+1:02
+challenging problems that we face in the field. You know, thank you for taking time to join me today. I'm really
+1:07
+looking forward to today's discussion. Um so, welcome. Thank you for having me. Excited to be
+1:12
+here. I think uh you know, maybe we could get started just with a little bit of introductions and background. if you
+1:18
+could maybe tell us a little about yourself, what got you into reverse engineering, maybe where your career has
+1:24
+uh taken you. Sure. So, computing in general wasn't kind of
+1:30
+my thing initially as when I was younger, very young. It was just more sports oriented. And at some point I did
+1:38
+get into uh I get I did get interested into uh like programming engineering asking the question like how does this
+1:45
+thing work on a computer and that actually led me very quickly to reverse
+1:50
+engineering because some of the first code I wrote was CC code and and C++
+1:55
+code and then I caught on quickly that well the text is not actually what gets
+2:01
+executed. In fact, the the text itself in the the what you know we call source code is actually a very very minor
+2:08
+player in the reality of the execution and the um the program behavior and and
+2:14
+and so on and so forth. So for me it's like well what does that look like? And I just kind of started to uh realize
+2:21
+well there is something called ISA an instruction set architecture. It is kind of like a blueprint, a high level
+2:27
+blueprint for what a computer does. And compiler authors such as those that produce C or C++ compilers, they use
+2:35
+those manuals, those guides in order to take that text and then generate uh
+2:40
+what's called assembly code, machine code in some sense as well. And then yeah, from that point on, it was me kind
+2:45
+of uh poking about trying to understand what the reality actually is. And uh I'm
+2:51
+a big believer of breaking abstractions and seeing what actually uh you know
+2:57
+what is behind them. I don't believe there's a such thing as zerocost abstraction. There is just cost for any
+3:03
+kind of abstraction. And the best way that we can evaluate those cost is by looking at like looking at empirically
+3:09
+the reality. So in this case it's seeing uh the lowest level barrier for us as
+3:15
+software folks uh which is kind of assembly machine code creating tooling
+3:20
+creating introspection around that area and and then being able to to reason about properly what a program is doing
+3:27
+whether it was just a regular program like this was completely unrelated to malware or to exploits. It was just kind
+3:32
+of like well what does this actually do? How does the computer run it? And um yeah, and uh fun fact actually like that
+3:39
+kind of kicked off me quickly writing kernel mode drivers. I started on Linux which was a disaster because uh I
+3:46
+realized you can't really debug uh Linux drivers conveniently or it's like it's like a mess to do it and I just kind of
+3:52
+transitioned quickly to Windows cuz they had windbg they actually designed windbg I found out as part of NT like as a
+4:00
+cornerstone to have debugging tools integrated with developing the OS and then you know services and components uh
+4:07
+on top of the OS like in user mode and so on. So I quickly gravitated towards Windows primarily because I could
+4:13
+introspect better into the reality of what my program in this case driver was doing.
+4:18
+Okay. So you you got into uh reversing early got into you know working with the
+4:24
+kernel and and gravitated towards Windows. Um, when did you get drawn to,
+4:31
+you know, software that was intentionally obuscated? Um, malware or exploits or, you know, something that's
+4:38
+just trying to protect its intellectual property. Yes, it kind of was an extension for what I just mentioned kind
+4:44
+of just learning programming, learning computing because once I started to get interested in compilers and how they
+4:50
+produce native code, I realized uh scripting languages, they do something
+4:56
+similar, but they don't produce native code, they produce interpreters. And interpreters are pretty much what at
+5:02
+least a core um software protection especially ones that protect uh IP even
+5:08
+in gaming as well is virtual machine protection and it basically stems from how interpreters for scripting languages
+5:16
+are implemented. Not all of them there's certainly differences but the core theory kind of starts there. So what I
+5:22
+can kind of tldr for you is my main interest in everything computing really
+5:27
+came from just uh wanting to know how a machine works like with the hardware
+5:32
+like how can we do all this stuff in the software how can we have sound devices that don't function like they should you
+5:38
+know occasionally and so on what kind of connects all the dots and so for me it was always kind of trying to see uh
+5:44
+behind glen glass and and see how stuff is implemented and that eventually led to realizing that um This kind of
+5:51
+introspection, I kind of always called it investigative uh reversing is really
+5:57
+uh core to security work, security research, malware analysis, vulnerability analysis and so on. So
+6:04
+then I kind of gravitate gravitated towards that because that was really what my primary interests were with with
+6:10
+computers. Yeah, I mean it's if you've been a a computer user for any time, you
+6:15
+know, even to this day getting ready to do a podcast, you there's still these all these troubleshooting steps that you
+6:20
+have to go and um go through to get things to work, to get the audio to work well and and and to have, you know,
+6:27
+there's no video in this case, but oftentimes, you know, with meetings and other things that you're doing. Um and it seems like understanding the
+6:34
+technology is what allows you to really troubleshoot that effectively. Otherwise, you're just unplugging things
+6:39
+in. and you're just restarting browsers, restarting computers, which is, you know, it sometimes fixes the problem,
+6:45
+but not fundamentally. It doesn't get to the core of what is causing the issue to give you a longl lasting solution. What
+6:52
+what is your approach to like the tools you use in reversing and how you tackle
+6:59
+all these different areas that are are related to dealing with this wide variety of of software that you
+7:06
+encounter as a security uh practitioner? Yeah, my approach is very simple. It's
+7:11
+all code. I kind of don't differentiate the difference. Like I would never refer
+7:17
+to myself as an exploit developer, a malware researcher, a, you know, doing malware analyst. To me, they're just
+7:24
+problems and there's just a subset of problems I'm interested in solving. I don't like to put labels. I don't like
+7:30
+to put classifications over it because I don't like to uh generalize prematurely.
+7:38
+I think that is a common thing I see just in the software space in generally
+7:43
+there is a tendency at least I I I see it this way there's a tendency that there is a notion to quickly label and
+7:50
+classify and categorize things without actually having looked at what you know
+7:55
+said problem is all about so for me it was always breaking abstractions like I never believed the notion that there is
+8:02
+such thing as zero cost abstraction there is such thing as don't worry about how something is implemented, treat it
+8:09
+as a blackbox, learn the API, and then just base your reasoning off of that. To
+8:15
+me, this is in like it's hard for me to articulate how insane this sounds because if we apply that logic to other
+8:22
+fields, like literally what we would say, like I would translate it like this is that off of faith alone, trust me or
+8:30
+the people that I work with and the interface that we've built, trust that alone. Don't actually look at what we're
+8:36
+really doing and what we're really implementing and how we're doing it. Don't do that, right? That's a no no.
+8:42
+Just look at the user face, look at the interface and then reason about that for the problems you want to solve. Like
+8:47
+that to me was just illogical from by definition, you know, because it's
+8:52
+purely faith-based. And so for me, like engineering is empirical based. You need to know how to measure. You need to know
+8:58
+how to introspect into how your abstractions are actually designed. And then you're in the best position to
+9:04
+actually reason about what problems you want to solve whether they're development problems like creating in
+9:09
+some kind of particular software. So let's like let's say like X-rays building the compilers building this assemblers or as like us as reverse
+9:16
+engineers security engineers we want to go inspect in large part uh compiled
+9:21
+binaries and so on. We want to break those abstractions like we know for instance how uh C++ implements uh
+9:30
+classes in virtual inheritance virtual you know dispatch and so on and so forth. We know what those look like in
+9:36
+implementation. We know what go routines for Golang look like in implementation and so on. If we didn't know that,
+9:43
+there's no way we could do malware analysis successfully. You know, there's no way Heterys and Binary Ninja and
+9:49
+products like these companies like these that they could actually build tooling that can help us solve those problems
+9:54
+because we lack the visibility at that level. So, uh yeah, I hope I hope that
+9:59
+answers your question. Yeah. Well, you know, we have it seems like a lot of what you're kind of
+10:06
+describing is that we're just just trying to control the complexity of what you're dealing with. Um, you know, and
+10:13
+obuscation is this, I don't know, intentional layer or or layers of of
+10:19
+complexity and and and a lot of times it's very superficial, but it can be very daunting and even sometimes
+10:25
+intimidating. um when you go to you say I get a sample and I I I start doing
+10:30
+some initial analysis and I see that it's you know just the the maybe the the
+10:36
+graph the the graph the control flow is just really all over the place or you know I mean it can it can kind of set
+10:41
+the stage where I'm I don't know if intimidated is the right word but um you know artificially stunt my my
+10:48
+investigation or my willingness to tackle that that reversing challenge is
+10:53
+how I mean is this is this the is it approach you take to dealing with this complexity? Is it the same just kind of
+10:59
+breaking it down into smaller components, focusing on what is the
+11:04
+actual issue that you're trying to solve and and just I don't know what how do you look at those then?
+11:11
+Mhm. Yeah, definitely I start with like what's the actual issue that I'm trying to solve or ask the age-old engineer
+11:17
+question. What actual problem am I trying to solve? So I definitely kind of
+11:22
+start with that. But I think when I hear like what you're describing,
+11:28
+intimidating I think is is the right term because how can you not be? You know, we just develop um presuppositions
+11:36
+uh pre-notions of how we understand a particular problem for reversing and malware analysis and so on. It's
+11:43
+primarily dictated by the tools that we use. And I think this is a severe
+11:48
+limitation because those tools aren't necessarily designed for the problems that we see and they're certainly not
+11:54
+designed for, for instance, how we operate at Google where we're dealing with malware at an incredible scale. You
+12:00
+know, where it's not really about one file, it's about millions. So, um, I think the way I approach it, and I've
+12:07
+been known to say this a lot, reversing is not an IDA problem. Reversing is not
+12:12
+a binary ninja problem. It's not a Jera problem. I think the biggest uh kind of disappointment if that's the right term
+12:19
+I've seen especially malware analysis is there's a lack of libraries right like decoupled components that together can
+12:27
+simulate a kind of binary analysis framework that we can leverage to solve our problems like ones you mentioned
+12:33
+where you have a scattered control flow graph and it looks crazy it looks intimidating uh because the tooling that
+12:39
+we have to reason about what how it's implemented how it works what we're trying to get out of it is just there we
+12:45
+have the wrong lenses you know so of course we're we're kind of walking blind so for me it also begins from asking
+12:51
+even more primitive questions like well what is a control flow graph what constitutes the execution of a program
+12:58
+right and then you kind of build cfgs on top of that or data flow graphs right data flow analyses between different uh
+13:05
+data structures or just something like that so I feel like defining terms is
+13:11
+key to me to be able to reason about complicated situations and not just defining them in abstraction or in
+13:18
+isolation like you know gemini something and get a nice answer to a kind of term and kind of go with it. It's like no I
+13:24
+need to use my own language my own understanding for actually understanding the primitives and the components in the
+13:31
+problem space that I'm operating in. So I mean that that's definitely very um
+13:36
+high level. I didn't give anything practical with it. But I do kind of have that mental model in my head and then
+13:42
+kind of begin from there. So in the case of let's say offiscated control flow graph I kind of start from the opposite.
+13:49
+Well again like what is a control flow graph? How is this generated? What does this look like? What are the limitations for let's say in this case compilers
+13:56
+generating uh a function because it usually boils down to an individual function. Like let's kind of take a step
+14:02
+back and ask the question well what is binary analysis and all the subsets that come on top of it right m analysis and
+14:08
+so on and so forth like we have binaries and we're doing a kind of analysis on it well what does that actually mean in
+14:14
+practice like what does that look like beyond the abstraction so if we load a binary let's say uh some kind of DL on
+14:22
+Windows and we use IDA to load it what are the uh abstractions that we get to
+14:27
+work with so the way IDA works is it classifies everything into functions. We
+14:32
+have a functions view, which is a view I actually don't use. We can kind of get into maybe how I use these tools later,
+14:38
+a bit later on. But my point really is like, well, how does the tooling that we
+14:44
+rely on to conduct our investigations actually categorize this problem? And
+14:50
+then I evaluate whether those primitives are good or bad depending on the circumstances and kind of proceed
+14:56
+incrementally from there. And usually it just boils down to me having my own libraries, my own code for um problems
+15:05
+that I encounter often, right? So like I have a lot of code that traverses a one
+15:12
+point in in a binary to some end point. So maybe that starting and end point can be the beginning and end of a function,
+15:19
+but for offiscation doesn't have to be, right? It can just be an arbitrary kind of range and and so on. So um yeah, how
+15:26
+I really begin to reason about it is understanding actually what the problem is like what's the issue here? Why am I
+15:31
+feeling intimidated? Why am I lacking the clarity? And try to be as reflective about it, right? And not be quickly to
+15:39
+rush to Google stuff, search stuff, right? Like is there a tool for this quickly or something? I'm not a big fan
+15:45
+of that, you know, unless you're going to go evaluate that tool and understand what it does because you will encounter
+15:50
+these problems again and again and again because we deal with sophisticated threat actors. We deal with nation state
+15:56
+threat actors. We deal with uh individuals or groups that have a serious incentive to uh commit crime and
+16:03
+you know do uh nefarious uh things. So they're invested here. So for me, I
+16:08
+myself need to be invested reciprocally and be prepared and be able to understand what the actual problem space
+16:15
+for boner analysis looks like. And you know, we can get into that if if you want.
+16:20
+Yeah. I I mean I I think you know something that I always find to be a challenge is there's this you know maybe
+16:28
+the the difficulty getting past an initial layer of of intimidation of the
+16:34
+complexity of what you're dealing with and kind of breaking it down into those smaller components or those primitives.
+16:39
+Um, I think there's also a time constraint issue and that a lot of times I know for me when I'm analyzing
+16:46
+something, especially for work, I I feel this pressure to get to the end goal as
+16:52
+quickly as I can and to not take the time, you know, not to take any time I I
+16:57
+feel is unnecessary and really understanding the problem. Like I'm willing to cut corners, you know, can I
+17:03
+throw this in an LLM and get an answer? Great. I'm going to do it. I'm going to provide an answer. I'm going to move on.
+17:08
+that just seems to be though ultimately shortsighted and and really hurt my my my growing as a reverse engineer or an
+17:15
+engineer, you know, however you want to look at that. How do you do I mean do you feel those same kind of pressures
+17:22
+and do you do you deal with how do you deal with kind of balancing that? I don't know. I don't know how else to
+17:27
+look at it like taking more time to really understand the problem or trying to rush to a solution because you think
+17:34
+maybe there's a business need to get there. Yeah, I think this raises several questions you know and one of them let's
+17:40
+let's take the business aspect where you are in a timer there is a clock you have
+17:46
+expectations to deliver on that clock so of course if you can cut corners I mean
+17:51
+that should be kind of the default but the thing is for me uh us as
+17:57
+professionals we don't come to the field so to speak empty-handed you know we
+18:04
+don't just wake up with nothing and then these problems with these deadlines are thrown at us and like kind of go figure
+18:11
+it out like we we come prepared. So for me it's a question really of preparation
+18:18
+because you can prepare in advance for the problems that you deal with and kind
+18:23
+of sharpen your sword and really understand your tooling that you're using to reason about these problems. So
+18:28
+when you do have stuff that's tricky that you haven't seen before that's convoluted or whatever, well your your
+18:35
+tool package is is ready to go, right? So like you save a lot of time in
+18:40
+preparation. So for me it's kind of I've had discussions about because I use
+18:45
+primarily uh you know my variant my quotes of C++ for my personal tooling to
+18:51
+solve all these problems and I've been kind of asked like why don't you use something like Python and so on because
+18:56
+you can pip install you know the universe as far as Python is concerned right and to me I understand that but I'm not
+19:03
+coming again to the playing field with nothing like if I am an expert in this domain well I would have hopefully
+19:10
+thought about how I work been very reflective about how I solve problems uh where I'm lacking you know what I need
+19:16
+to work on what I need to focus on and for me when I reflect like that I'm kind of really describing my workspace my
+19:22
+workflow my environment and I think it's very important to do that because then I can specialize to how I uh approach
+19:30
+problems so I'm again I'm maybe I can't pip install everything but I'm coming
+19:35
+ready I'll have everything kind of prepared to kind of you know and if I know in advance I'm working a tight
+19:41
+schedule, right? There's deadlines for set problems. Well, to me, it's a question of preparation, right? Like it's not again, you just wake up, turn
+19:48
+on your laptop, your computer, your desktop, 100 problems are thrown your way. It's like maybe initially, maybe you're
+19:54
+starting out, you know, you haven't kind of experienced that. So, uh, okay, you know, you got to kind of adjust on on
+20:01
+the fly, but I think as professionals, uh, preparation is is key. You need to
+20:06
+know what your problems look like. you need to know how tooling solves those problems and then create uh you know
+20:12
+like recipes or you know solutions kind of in advance. Uh so once you get these problems you can already kind of uh
+20:19
+navigate through them flexibly and like see endro right see you know where you can cut corners and so on and so forth
+20:25
+and then you can identify also like oh well I didn't have time to investigate this aspect but I kind of didn't need it
+20:31
+to solve my problem but let me just make a like a mental note of that and one technique I use I mean technique in
+20:37
+quotes because it's not a technique is journaling like I I will definitely journal like stream of conscious I won't
+20:43
+try to you know get uh too fancy with getting the grammat grammar whatever like what were my thoughts about this
+20:50
+problem how did I solve it where did I go astray like where did I just do stupid things and just like write it out
+20:56
+without any structure so it comes freely from me and I'll evaluate that on my time afterwards right so I can at least
+21:02
+capture my uh thinking process as I was solving a problem so uh I'm not sure if
+21:10
+that answers it you can you can let me know but for me to summarize it is you should be prepared prepared like if you
+21:16
+know in advance offiscators exist and uh I mean for us we have data we can go categorize uh and see what you know
+21:24
+offiscations we see well we can prepare for that right we can make that a side project we can do that on our own time
+21:29
+we can do that on company time right as part of research and so on and so forth so for me it's um it's a question of
+21:36
+preparation and understanding your tooling and and being adamant that you create a workflow that's actually
+21:42
+realistic to the problems that you're solving and make sure it's stable like you know because pip install one day
+21:48
+will work for something they do an update something happens that you're kind of you know oblivious to uh that
+21:54
+can hinder your workflow right now you may have to troubleshoot that tool and and so on so yeah let me know if if that
+22:00
+answers it you know and it makes me think too there's something that I imagine a lot
+22:05
+of us have experienced over our careers the you don't know what you don't know and that can be sometimes the biggest I
+22:12
+at least for me sometimes the biggest obstacle to overcome is just seeing problems from a different perspective.
+22:19
+In this case, um seeing potential challenges and and knowing kind of
+22:25
+what's out there and and figuring out ways then to help prepare or as you said sharpen that sword so that when you get
+22:33
+into an environment where you just don't know what's going to come your way, you you have the most robust ability to
+22:38
+respond as you can. And with that, I think comes confidence and less intimidation. Is is there anything in
+22:44
+particular that you've experienced that helps in that preparation and and and kind of knowing where are those areas to
+22:51
+look or those corners to peak behind in your preparation? Absolutely. I would kind of go back to
+22:57
+what I was saying earlier about categorizing and classifying binary
+23:03
+analysis. Well, what is this thing that we do, right? Like let's put boundaries around it so we're not just like looking
+23:09
+everywhere, right? Let's create the problem space for the area that we
+23:14
+operate under. And if we kind of do that, let's say with binary analysis specifically, we do kind of get to what
+23:20
+I was saying in the beginning of like, well, how does the computer work? Like what is this ISA, this instruction set architecture? Why are there different
+23:25
+ones? How can we learn about them? And and and so on and so forth. And the way I kind of have a mental model is there's
+23:33
+a computer. We're dealing with the computer, but that's too high level, right? If we just talk like that, we're
+23:38
+not solving any kind of problem. So, we kind of peek a little bit further and we start breaking the computer into parts
+23:44
+and we can let's say start with the ISA at the bottom. And then on top of that,
+23:49
+uh I would say you have an operating system that kind of manages that ISA and provides services to users. Of course,
+23:56
+I'm glossing over stuff because there is stuff between that as well. But, you know, for the sake of mental models,
+24:02
+let's kind of say there is something like an operating system on top of the ISA that provides facilities. And then
+24:08
+on top of that, you kind of have user applications like user specific stuff like sound techn like you know sound
+24:14
+applications, programs like IDA, uh browsers and so on, ransomware like
+24:19
+malware. These are kind of the way I classify them is user stuff on top of what this architecture is that I'm that
+24:26
+I'm describing. So for me, when I build these layers, it's obvious to me where I need to focus on. If I don't understand
+24:32
+how, let's say, the operating system works, I'm going to go investigate that like what is an operating system? What
+24:37
+is Windows like internally? Like what does that even mean? How can I even begin to introspect into here and see
+24:43
+what happens when um I go read a file or when I browse a website and so on. So
+24:48
+having that not just curiosity the realization that it's like this is the problem space the more I learn about how
+24:55
+it works like these layers especially bottom up the more clarity I have as to
+25:00
+what my gaps are where I need to focus on what malware can like for instance do you know and in in our case because
+25:06
+that's what we're primarily concerned with it's kind of again building a boundary a realistic boundary not a
+25:12
+hypothetical imaginary one based on the reality of the constraints that a machine has and then is reasoning about
+25:19
+what level I'm actually operating at. Like when ransomware runs, it starts off as an executable. Well, what does that
+25:25
+actually mean? Well, you know, if you poke a little bit deeper, it's what's called a user mode executable. What the heck is that? You know, and you kind of
+25:32
+like incrementally progress into going deeper and deeper into the layers of
+25:37
+this problem space. And there you just build out a map, you know, of of of what's happening, how it's happening.
+25:43
+And I kind of uh approach it from that angle, right? defining the boundaries of the problem space and I honestly think
+25:49
+it's actually very easy because from what I described I mean there's so much literature there's so much education
+25:54
+there's so much information that you can consume about everything that I just discussed maybe not into detail like the
+26:02
+stuff that we see but uh enough for you to understand what the boundary space
+26:07
+for your problems are and then once you have that then we can get very specific to the user like specific aspects that
+26:14
+I'm describing like malware like but what is malware we can begin classifying behaviors of malware. Like what makes a
+26:19
+program malicious, you know, and begin asking that question. It's a serious question because a lot of what an admin can do in
+26:26
+a computer can be considered malicious? Well, why isn't it? What's the distinction? How do we draw it? And so
+26:31
+on. So, it's kind of just asking the right questions under the problem space in which you're operating and just
+26:37
+proceeding from there, you know? And to me, it kind of starts exactly with that because that's the reality. At the end
+26:43
+of the day, it's a real machine. it really works you know sometimes and uh a
+26:48
+certain way and we just need to understand how that is and no most of that is not specific to knowing how you
+26:54
+know techniques such as process injection you know are or what's an exploit you know what does that actually
+26:59
+look like in reality and so on and so forth because to me once you have your base and your foundation those things
+27:05
+are kind of you can discover them on your own right if you just kind of ask the right questions as you're poking about you'll get to the understanding of
+27:12
+like the reality of a computer. It's really it's just the ISA and it's just code executing, you know, that's it. And
+27:20
+everything on top of that is uh abstractions or qualifications that we impose. So they're like ideas. They're
+27:26
+not technically uh real in a sense, right? Because it's just code executing, you know, like what is a control flow
+27:32
+graph again? Like it's something we stipulate up front, right? Because if you look at like for instance literature
+27:38
+about specifically CFG and how you can write your own algorithms they'll mention you know the problem space of
+27:44
+that and like what words and terms you need to know like a basic block is something that has one input and one
+27:50
+output and you have that mental model and you can kind of make sense about you know putting basic blocks together you have edges and and so on and we kind of
+27:57
+tread towards graph theory and whatnot but that's all cool you know but I know
+28:03
+how to introspect into abstractions So when I go look at like for instance how
+28:08
+a CFG for a function looks like I kind of see things that is not being stipulated from what I just described
+28:14
+like a basic block doesn't have to be something that has a single input and you know one or two outputs. In fact you
+28:21
+can have one basic block going into the middle of another basic block and stuff like that. And once you understand the
+28:26
+ISA that is just one instruction after the another like the ISA doesn't have a concept of a basic block. It just gives
+28:33
+you the concept of an instruction, an individual instruction. And if we poke, you know, if we could poke uh through that and look at the microode
+28:39
+implementation, let's say for Intel or Apple, ARM, whatever, you know, we'd see it's it's another function, right? Or
+28:45
+something similar, right? It's actually deep logic and so on and so forth. So for me, it's really honing in and being
+28:52
+explicit about what is the reality of my problem space and not being uh lost in
+28:57
+rhetoric, not being lost in abstraction, being able to concretely measure, you know, what what it is that I'm that I'm
+29:04
+operating on. And I think it's easy with computers. Honestly, I I had a interesting challenge uh just
+29:09
+happen stance a couple nights ago. I was trying to get Gemini to help me uh work on a a C program to do a a backdoor
+29:17
+basically for some educational stuff and it refused. It said that this is uh used for, you know, this looks like you're
+29:24
+using it for malicious purposes. And I said, "Well, wait a minute. I guess yeah, maybe I am, maybe I'm not. I'm
+29:30
+really just using it for educational purposes." And I I tried messing with the prompting to get around it, but it
+29:35
+eventually eventually gave up and went somewhere else. Um but it was it was interesting because I I really had to
+29:42
+think through and and that was part of my my justification at one point in time. I said, "Well, yes, you know, in some context it's used for malicious
+29:48
+purposes. In other contexts though, uh I I said it's essentially the technology you're using to interact with me." And
+29:55
+um and it's all such a you know, it's such a an interesting exercise of of
+30:00
+that classification and the capabilities of intent behind the software. Um and as you mentioned at the lowest level the
+30:07
+computer has no no real understanding of what it's what its even purpose probably is. It's just executing instructions at
+30:14
+a time for us. That's right. So you know maybe shifting gears a little bit here uh just in in in talking
+30:21
+about solving tough problems and I I found for me reverse engineering has
+30:27
+been and oftentimes is sort of a solo endeavor. I feel I've I've done a lot of my core learning um on my own using
+30:34
+resources that are available across the web and then just you know some toil struggling with code doing research
+30:40
+looking at manuals I find that when I'm reversing it's oftentimes very much a solo endeavor uh how do you see
+30:47
+reversing as a team sport right is what what role does your your colleagues your peers um you know working on a team I
+30:54
+mean we're we're on one of the largest RE teams probably in the world at at Flare um how How does that change how
+31:01
+one how you can go about as a reverse engineer and not only tackling these tough problems but maybe how you
+31:06
+approach your career and your own professional development? Yeah, it's a great question and I think
+31:12
+I don't have a definitive answer. I can just give my experience. I think it's fantastic to be part of a team where you
+31:19
+and I can just jump on a call. I can share my screen and say, "Hey Josh, I'm working on this. What are your thoughts?
+31:26
+You give me yours. We can just bounce ideas off of each other. we can solve problems together very quickly, right?
+31:31
+We're in remote like different parts of the world, but just hop on a call and we
+31:37
+can kind of uh collaborate together. But I think a lot of that is still very ad
+31:42
+hoc. I think you can do that with anything, right? That's not specific to to reversing or engineering, right? You
+31:47
+can do that with anything. So, how do we get specific to uh collaborative reversing, collaborative re
+31:53
+collaborative model analysis? And I think again this goes back tooling because the reality is there's just an
+32:00
+extremely limited commercial like availability of tooling of products for
+32:06
+the work that we do and none of it solves this problem. You know it's a difficult problem in some sense. So uh I
+32:13
+think that would be my initial answer is we just lack the tooling currently. uh maybe we could build our own and and and
+32:18
+so on and so forth. But commercially the tooling to to collaboratively work on reverse engineering problems doesn't
+32:25
+really exist. And when I think about it, it's because I don't think again trying to be explicit in defining terms. I
+32:32
+think once I try to define collaborative reversing, I don't have something concrete. I'd be curious to hear if you
+32:38
+have anything or what your thoughts on a definition for collaborative reversing
+32:44
+looks like because I think that could provide clarity into how we you know can can utilize something uh or build
+32:51
+tooling like something like that like should we have a kind of a git model right where we can push merge pull and
+32:57
+so on and so forth I don't think so I actually don't think this is the right model uh for reversing but even so like
+33:04
+let's let's take that what would that look like one we have implemented. I mean, IDA teams exists and uh you know,
+33:10
+I don't think it it solves that problem. And I'm not sure what Binary Ninja has or other others, you know, products that
+33:16
+that do it have. But I think it's it's a challenging problem really because there's no clear definition on what
+33:21
+you're trying to solve. And once you're in that kind of state, well, you know, flip coin with with with with what's
+33:28
+going on. So for me realizing that it's really I think communication is is
+33:33
+unbelievably underrated in our space because we have so many introverts. We have so many uh you know what's the term
+33:40
+asocial? I don't know. I mean I say this positively not negatively. Like and I get it like if someone tells me hey just
+33:47
+leave me alone. I put on my headset blast my music go in my corner and just you know I'm gonna excel at what I do
+33:54
+and I'm very productive. I will not interfere with that, you know. So, uh,
+33:59
+so for me, I think though, communicating like you and I are doing now, like you've been doing with this podcast or
+34:05
+just in general, like as we solve problems as a team, it's critical, right? I need to know what you're thinking. You need to know what I'm
+34:11
+thinking. We need to share what we're working on. So, we all like are kind of tuned in. We're all part of the team,
+34:17
+right? we're not just individual elements that are classified as a team, but really if you look at the reality is
+34:24
+each one is doing what they want on their time kind of thing and it's very disconnected and and so on. So for me
+34:30
+it's trying to be very communicative communicative excuse me active reaching out to people and say hey I'm just
+34:36
+working on this you're interested let me share my screen and let's just talk about it work about it let me show you
+34:41
+if it's some interesting stuff like hey I just deop offiscated this uh virtual machines you want to see how I did it
+34:46
+you know and just kind of engage in discussion not really much to you know to show any like you know not to appeal
+34:52
+to my ego kind of thing just to share information right just to show you hey this is how I think about problems this
+34:57
+is how I do and uh I love it When people reach out to me and they share stuff, right, and they may even say, "Oh, it's
+35:03
+very simple. This is this is all nonsense." I don't like to judge simple, medium, complicated. Again, they're just
+35:10
+problems. And either we're interested in solving them or we're not. And if we're interested, I think, you know, these
+35:16
+labels of, you know, beginner media, this is all nonsense. This is just deters you, right? It's like, well, I'm
+35:22
+beginner. I kind of No, it's problems. You can of course you can contribute to them especially if you're involved right
+35:28
+with somebody who is more experienced you know who does have that exper but again experience doesn't necessarily mean a hierarchical structure where my
+35:36
+you know intelligence is superior to yours in this problem it's just like I've been engaged in this problem space for a bit longer so I have some data I
+35:43
+can share you know and uh yeah so I kind of try to realize again what the actual
+35:48
+problem is with collaborative reversing and realizing that tooling currently is just not in the state to solve that so
+35:53
+trying to address it at a human level, right? Realizing like we're people that actually do this, well, let's talk to
+35:59
+each other, right? And like, and if you are a certain way, like you're very introverted, I will I will do the adjustment, right? Like I'll adjust to
+36:05
+that because I'd also like to be introverted and just, you know, left alone. But if I need to be talkative and if I need to lead a discussion or engage
+36:13
+individuals like this and I'll I'll more than happily do it because I think that at least kind of creates some kind of
+36:20
+collaboration right within the team and um and and so on and eventually maybe we
+36:25
+can get the tooling here to to uh to pick up and and help us out. But again, I think it's important to state what is
+36:31
+the definition of collaborative reversing. Like what actual problem are we trying to solve when we stipulate
+36:38
+that because if you don't do that, I mean from an engineering perspective, you just won't get anywhere, right? That you don't know what you're doing.
+36:44
+Yeah. I you know, I have a before I got into I guess cyber security and reverse engineering in particular as more of a I
+36:51
+kind of like the term forward engineer. Kind of a cheeky way of saying it. Um but uh so yeah I initially I I hear that
+36:59
+or I bring that up and I think okay yeah we need to have uh git and we need to have some code versioning and um you
+37:05
+know I haven't used teams and IDA. It sounds like it's similar. I know Gedra's got basically an SVN thing on top of the
+37:11
+the database so you can share it with others and that's really cool but I don't I don't yeah I don't think that really even addresses the issue. Um, one
+37:19
+thing that always comes up and when I think about this, uh, you know, example, I I work on a team of incredibly
+37:25
+talented people and I feel a lot of times isolated. What am I what am I
+37:31
+missing? And I think some of it is just the what you were just talking about. It's the knowledge sharing. It's how do
+37:37
+I how do I grow my you know in my profession with my skills and my
+37:42
+understanding of the the different problem areas that I'm interested in based off of the experience that everybody else is is gathered and and
+37:50
+gaining and sharing on from their own work and how do I kind of tap into that and uh we can't obviously have somebody
+37:56
+give a presentation every time they finish analyzing a piece of malware but um I mean that would be to me I think
+38:02
+the piece that would I'm the most interested in and does that make it team you know, team reversing maybe not so
+38:08
+much, but there is a an element of knowledge sharing and communication that I I'd really like to tap into that I I
+38:14
+know I personally feel like I'm just kind of missing out on. So, but it's a tough problem to solve as we've discussed. I mean, it takes a lot of
+38:20
+effort. I you know, I've been in the educational space for a long time now and it takes a lot of effort to put together and and share content. Um, I
+38:28
+don't know if that's a good enough barrier, but it certainly I think it inhibits folks oftentimes because they
+38:33
+they maybe artificially see, well, I've got to I can't just share a little tidbit here or there or maybe it's not
+38:39
+worth sharing or maybe the commitment to create it's got to be a blog post or an educational unit like a course and and
+38:45
+that's just too great and too big of a time commitment. I I'm not really sure what it all is. No, I think it's it's it
+38:51
+raises a great point and I'm curious in your experience especially, you know, mentioned you do have a a big
+38:57
+educational background because one you know in quotes solution or like I think
+39:04
+one initiative that could be done is maybe not presenting right every analysis that you do cuz that's probably
+39:10
+infeasible but categorizing it, cataloging it, structuring it somewhere
+39:15
+centralized that we can all access to so that you can go when you do have interest in something, it's readily
+39:21
+accessible to you. Uh not just as like a quick, you know, summary, but the actual details of, you know, what it took to to
+39:28
+understand that particular malware, what was relevant about it, what was the they know the bigger context around it, cuz I
+39:35
+think people tend to forget malware is cyber weapons. Like this is serious stuff. Like it's not just, oh, this
+39:41
+stupid thing does some kind of thing I've seen 10,000 times and I'm kind of on with my day. Sure, maybe you know in
+39:47
+the implementation of the technical aspects of this program that's what it is but in the context of reality like
+39:54
+somebody is using this to attack an organization or an individual. So it's like can't be understated that these are
+40:00
+cyber weapons you know with intention usually to do serious harm or just to commit harm and and so on. So for me I
+40:06
+think it's very important to to cate catalog excuse me all of that. Like I mentioned, I do I journal uh a lot as
+40:13
+I'm like not in my personal life. I suck there. So I don't do any journaling there. But uh uh I'm journaling because
+40:20
+I often times also my entropy like with problems I'm facing is so scattered.
+40:25
+It's so varied, right? I kind of been dubbed here the garbage man. You know, just get everybody's garbage. So for me,
+40:32
+I need just for my own mental sanity to have structure in this kind of chaotic environment. And so for me at minimum if
+40:38
+I'm invested in a problem even say for like 30 to 40 minutes let me at least um
+40:44
+define explicitly what I did how I did what I need to do and where I will go once I can pick that up and kind of try
+40:51
+to u try to scale that but kind of getting to your point about information sharing and and so on. I think we need
+40:56
+to centralize this. We need to have something like a camb board or or something like obsidian like not exactly
+41:02
+obsidian but some kind of an technology that actually tries to answer those questions and we just leverage them with
+41:09
+malware stuff that we do and u binary analysis as well and just kind of centralize we need to centralize
+41:15
+information and make it readily accessible you know like that would be to me like kind of be again an
+41:21
+initiative a potential solution that we can solve at a more like hum human human level right like we're implementing a
+41:27
+tool. We're just sharing information and we're going to catalog it with existing tools. Simple as that, you know, and I
+41:33
+think even it being that simple, it can be very powerful. I mean, just think about it. If you are dealing with
+41:38
+something like VM Protect, for instance, or some commercial packer and then you have knowledge ready, available, and
+41:45
+accessible to you in order to be able to reason about how to deal with it, especially in the time frame that we
+41:50
+discussed with deadlines that we have to meet and so on. I mean it's invaluable and it cost me nothing really to kind of
+41:56
+add that information and make it presentable for an audience that will consume it like the cost for somebody
+42:01
+who's knowledgeable in that domain to go do that is almost nothing right so it's
+42:06
+just especially with tooling now like with Gemini and you know large language models I mean 98% of the work is done
+42:13
+for you right so it's uh to me I think that could be again um one avenue but
+42:19
+again this would also generalize right so I think you could apply that again I'm curious to hear if you're willing to
+42:24
+share like what that looked like from your experience in education like formal education and and was there something
+42:31
+like that like how did students consume information that you were teaching them and presenting them outside of the
+42:37
+classroom you know were there discussion groups after were there like online chat rooms or like discords or whatever that
+42:44
+you know students can like what what did that look like if you wouldn't mind sharing. Well, yeah. I mean, there's
+42:49
+actually a couple things that um this just it just you sparked a memory and
+42:54
+it's kind of an ironic one because when I first got into really getting getting into reverse engineering, it was while I
+43:00
+was teaching and going through an academic program and one of the things that I found really valuable, I set up a
+43:07
+WordPress site locally and anytime I touched a piece of malware, I did any sort of reversing or analysis on it, I
+43:14
+would I would document it, I would categorize it, and I tag it with relevant things, you know, anti-
+43:20
+disassembly, anti- whatever, malddock, and then then that way six months down
+43:25
+the road when I'm like, I remember I did some sort of analysis here, uh, I don't really want to have to take the time to
+43:31
+relearn what I did. I could go back to my basically my journal entry, my word WordPress blog. And it's kind of
+43:37
+interesting. I've lost that over the years. And um, and I and it was not like these were all blog worthy facing the
+43:43
+public. They were just rough notes capturing the essential the essential elements of the analysis that I did at
+43:49
+the time. And then I encouraged my students to do that. I said build yourself this repository of learning of
+43:55
+your learning of things that you've uncovered that you think are worth recollecting and that will just build over time and it hopefully provide you
+44:02
+with the resources you need to become, you know, really effective in this. And then uh I guess like all maybe good
+44:09
+advice, you don't adhere to it yourself. So, I've kind of gotten away from that. You know, outside of that, you know, a
+44:15
+lot of the students I've taught a lot of online classes and so this the learning
+44:20
+it's I think that's another one of those areas where we've we've embraced informal academic settings, online or
+44:27
+virtual learning, but we just tried to take an old model, the onampus, and shove it into the virtual world and not
+44:34
+really look at it as a whole new problem with different tools and different approaches. And so I've been kind of
+44:40
+frustrated with it over the years. I I you know for students, some of them would just live in isolation. You knew
+44:46
+that they were out there and that they were a part of a course, but you wouldn't it was hard to facilitate uh
+44:52
+asynchronous interaction. Uh some of them would take it upon themselves to
+44:57
+create study groups. Uh sometimes I would try to prompt them. Uh I was always careful to not be too
+45:03
+heavy-handed though and and force people to get together. uh Discords was is pretty popular getting everybody into
+45:09
+Discord and just chat and help each other out. Uh sometimes the software the course education management software
+45:15
+would would help facilitate that again. But you know I guess I've also had this
+45:21
+perception of things just from the way that I grew up and that uh you know you can just figure it out on your own and
+45:26
+I've had to really battle with that over the years because a lot of times that can be an unhealthy approach to a lot of
+45:33
+aspects of life not just not just reverse engineering. So, um I don't know. I'm not sure if that answered your
+45:39
+question, but um you know, it's just a lot of different ways. I don't know if there's one single uniform way that I've
+45:44
+seen students embrace the challenges of a course that I can say. It's just very subjective to the group and their
+45:51
+dynamics and who has what experience. And uh you know, I've got classes I'm
+45:56
+I'm actually teaching again this fall. I've got a class that's undergraduate and doctoral students. Like what a what
+46:02
+a disperate group of people to have in a classroom right now learning reverse engineering. It's a it's a strange
+46:07
+problem. Yeah, definitely. And very interesting. I mean just for the variety that you
+46:12
+kind of just articulated, it's uh yeah, I think education is is incredibly
+46:18
+important. Uh like it again speaking of centralizing and sharing information for
+46:23
+our work. I think right an extension of that and you know society is having such
+46:29
+institutions for everybody for the benefit of u you know so I think it's it's a serious problem and yeah one I'm
+46:37
+also particularly interested in cuz I mean what does it mean to learn something you know like it's just to me a very fascinating question and so much
+46:45
+you can dig into from from that perspective but to kind of keep it more on on in our space yeah I think the best
+46:52
+we can really do is until we learn how we can make tooling that can accommodate
+46:57
+that explicitly uh is just share as much as possible. Even if it's ad hoc. If the minimum that
+47:03
+you can do is just hop on a call and have a discussion and share some information. You don't want to write anything up. You don't want to record
+47:09
+videos. Well, you know what? That's better than nothing cuz I think there's a lot of people doing a lot of
+47:15
+interesting work and it's not really being shared. Like I'll give you one example since I'm very I know you know I
+47:21
+know Windows internals uh very well. Uh I know you know I literally have like
+47:27
+like a mental model of it in my head that I could just like close my eyes and maneuver through it. And uh so and I
+47:34
+bring it up specifically because if you check research like into Windows internals this decade it's incredibly
+47:42
+sparse and almost exclusively limited to certain people. you know, if you go back
+47:47
+a decade, you know, specifically with a guy like, you know, Alex Ionesu and so on, like I mean, it was so much content
+47:54
+just in that case even coming from one individual, but also elsewhere like you can find just weird blogs. You can find
+48:00
+stuff on, you know, back when it was called Twitter and and so on, you know, Reddit, like just uh well, some
+48:06
+individual had some idea in their head, they pursued it and they shared that content. Maybe it wasn't always shared
+48:12
+very well, but there was a plethora of information about like for instance when Windows 10 came and they changed their
+48:18
+architecture within the kernel, they introduced this concept of the secure kernel and VSV virtualization based VBS,
+48:25
+excuse me, virtualization based security. I'm like, what the heck is all that? So much stuff to consume. And if
+48:30
+you go from like two like 2020 onwards, I I struggle to find anything meaningful, right? I mean, I'm kind of,
+48:35
+you know, exaggerating the point. There definitely is spots where people have done some incredible research, but I
+48:41
+feel like the decline is kind of adamant. It's kind of obvious. You can see it if you look. And I think it's a
+48:46
+shame like Windows has certainly evolved, especially in our domain as it pertains to security that I think it's
+48:53
+it's a shame that we aren't getting the actual nitty-gritty technical insights by professionals, you know, uh with what
+48:59
+it looks like as opposed to, you know, us having to do that individually isolated and and so on. So, um,
+49:07
+what this is actually maybe a theme that's come up across the the podcast
+49:13
+and different guests is this this this we need to return to more
+49:18
+written technical content, more whatever it is, social media post, blogging, um,
+49:25
+you know, short of maybe full textbooks, but, uh, that there's just been this market decline in it, and you seem to be
+49:32
+echoing that same thing. Do you c do you think there's any particular reason that we're seeing less written content
+49:39
+especially now with LLMs? You think it'd be easier than ever to help craft you gain the because that's how I find using
+49:45
+them to be the most beneficial for me is I I prompt it with all the technical stuff I need and then it just helps me
+49:51
+polish it up a bit. Yeah. Yeah. No, it raises you rais a great point and maybe it will maybe now
+49:57
+I think people are just really uh relying maybe too much on LLMs for stuff
+50:03
+like that. So maybe we will see that for exactly the reasons that you mentioned. But my opinion at least if I were to
+50:09
+speculate on like the decline of it is I think the medium of text is again in my
+50:17
+opinion horrible. Like imagine if I give you a thousand pages of just text and I
+50:22
+say, "Josh, you're capable. You know how to read. You know how to put, you know, you know how to make mental models and
+50:28
+make connections in the text. Uh, kind of go to town, have fun, and tell me what this is all about." It's like, you
+50:34
+know, in advance what you need to do in order to extract from that medium,
+50:39
+what's relevant, what's benefit. You can kind of go do all of that, but in order you for you to do it, it's incredibly
+50:45
+tedious. you know try to do control F on a physical book you know forget about it it's not going to happen you know so for
+50:52
+me I think technology is in a state where we need just as a society to u
+50:59
+understand how we should communicate information and whether like a textbased medium is really something that we
+51:05
+should like prioritize and kind of uh like why aren't we seeing more books and and so on especially like physical books
+51:12
+and I think honestly that would be a regression because to me it's just data.
+51:17
+It's just some useful data that we may like some kind of information that we think is important and of course we want
+51:23
+to capture it. But the capturing aspect is just related to how we want to define a medium because if we really you know
+51:30
+like books like you know just with with print then why don't we just go back to clay tablets from like 5,000 years ago
+51:37
+right like you know why aren't we uh it's kind of like I don't want to go on this note but you know you'll have parents like worried about screen time
+51:44
+and like hey don't play that Nintendo Switch 2 DK Bonanza it's not good for you and so on and of course I understand
+51:50
+like like like where they're coming from but in some sense it's also kind denying the technological innovations that we
+51:56
+have made as a society that we can have a device like a Nintendo Switch and create just unbelievably rich content
+52:04
+for kids to consume, right, and benefit from and improve from and so on. Of course, there are negatives with that as
+52:10
+well. But my point being is going back to the tech space. I think we've just advanced technologically to the point
+52:16
+where we can ask meaningful questions about well how should we you know uh transmit uh data that we think is
+52:23
+important like when I read when I write uh even my own notes I color everything
+52:28
+like I I'd rather open up like my notebook or like my uh uh obsidian here
+52:34
+or or whatever and just see a bunch of color rather than just raw black and white text just to be able to reason
+52:41
+about you know what something is and so on I kind of love uh like I see like I guess it's rappers or some musicians
+52:48
+they'll release like these I don't know the name maybe you know it where they'll
+52:53
+like release their song and then they'll like color the syllables they'll color the annunciations they'll kind of
+52:58
+capture and it's just like this is excellent like this is a way to transmit this information you know at a textual
+53:05
+level that is very engaging you can like quickly discern what's important what's
+53:10
+not as opposed to imagine you just have raw black and white text like you can do it we can do it you know we have the
+53:16
+skill set but we're imposing on ourselves tedium that I think is unnecessary so I think we need to
+53:23
+explore more about uh not just sharing information it's like what is the best way what's the best medium you know like
+53:30
+say you write a physical book especially a technical one I mean technical topics change so rapidly there's always stuff
+53:37
+you can add on like what's the point of writing even a book a year ago a physical one where you know if you have
+53:43
+make updates. Well, how do you do it? You got to restart the publishing, restart, you know, like, oh, like
+53:48
+imagine just have a website and you just, you know, push an update and and kind of get on with your life and so on.
+53:53
+So, uh, again, not to knock physical books or like physical mediums with text. I just think, uh, again to the to
+54:00
+the question like why has there been a decline? Maybe not for these exact reasons I just articulated, but I do
+54:06
+think that at least society is cognizant that there has been technological innovation. And I don't think we're kind
+54:12
+of I mean it's so easy to just think you will have access to anything, right? I can just open my phone, hop on Reddit,
+54:18
+hop on, you know, mass it on, Twitter X, whatever, and just be filled with information, right? And there's many
+54:25
+stuff like that. So I think we take that for granted because that can easily go away, you know, and then it's it's not
+54:30
+as accessible. So um yeah it's an interesting question but I think it's a societal one where you know I think
+54:36
+society needs to needs to adapt to uh the technological advances that we have
+54:41
+had you know and I don't think it has especially in education you know it to me it's like for instance you know if
+54:50
+you have you have a daughter a son and they go to school and they're learning how to write and they don't write very
+54:56
+neatly and very clearly is this an actual problem that we should be concerned about, you know, I don't think
+55:02
+so. Just type it, you know, like who cares anyway. Like it's really not thing to kind of uh emphasize or prioritize,
+55:08
+but I don't want to undermine like it's a serious problem. It takes uh serious thought and uh investment to go
+55:15
+articulate what actually here needs to be addressed. What are the best ways to address it and so on. So, uh yeah, I
+55:21
+think it's it's a very interesting interesting question, an interesting problem. All right. So we've been talking a lot
+55:27
+about just reversing tough problems and sort of big picture concepts and a lot
+55:33
+of the challenges that we face both both in the field and and then you know things that are kind of universal
+55:38
+problems. Maybe we could let's shift into something a little more uh tangible. uh you've you did some
+55:44
+incredible work earlier this year on what's being called scatterbrain which is a compiler that introduces a lot of
+55:52
+difficulties in analyzing the resulting binaries. Uh can can you maybe take us
+55:58
+through just a little bit of what scatterbrain is and maybe what drew your attention to these samples in the first
+56:05
+place? So scatterbrain is a name that we gave just kind of made sense uh uh given
+56:14
+how the offiscation uh was implemented but what actually is is this scatterbrain it's an offiscating
+56:20
+compiler so something like O LVM so LLVM as in the you know what clang the
+56:27
+compiler is based off it's an infrastructure for compiler technology basically designed in the early 2000s
+56:35
+and um they have or somebody kind of forked that and created an offiscated
+56:41
+LLVM that that's what the O stands for and what it allows you to do is create
+56:47
+offiscated binaries uh through a natural compilation process and what that looks
+56:53
+like is that you have your code you just write your your code however you want to like plain let's say C++ or C or or
+57:01
+something else depending on your offiscating compiler and then the compiler will do the rest for you for
+57:06
+the most part. And what does that actually look like? So as the compiler is transforming your code into a binary,
+57:12
+it can add passes that will let's say deoptimize the output. So instead of
+57:17
+like identifying a hot loop in your code and it's trying to optimize it as much as it can, it's going to kind of do the
+57:23
+inverse. A lot of deoffiscation can be categorized at least at the binary level
+57:28
+as deoffiscation where they try to make inefficient uh sequences and and instructions and so
+57:35
+on to hinder analysis and to break tooling and so on. So this is done
+57:40
+through what's called in LLVM speak passes. So um uh you know you write a
+57:46
+kind of pass which is some kind of logic that says hey take each block and like randomize it around but make sure it's
+57:52
+semantically accurate and so on and so forth. So all this is kind of done beyond you just writing your code in
+57:59
+your source code of choice. So in this case like C++ and so on. So scatterbrain is a variant of that. It may very well
+58:06
+be based on LLVM. Right? That's uh and I also say that as well because I wish I
+58:12
+had their exact names and the exact company but it's you can find it easily.
+58:17
+uh recon like this year uh the the huge re conference. There were some some
+58:23
+excellent guys that um basically read that blog uh read the the offiscation
+58:30
+library that we published and were literally like I confirmed it for them because they asked me to uh before their
+58:36
+presentation uh they literally like verbatim like implemented the actual
+58:42
+obiscator and generated the identical binaries that we kind of saw. That's an incredibly impressive uh achievement and
+58:49
+so on. Again, one of the benefits of sharing this kind of information because it provides especially in the detail
+58:55
+like one of the reasons I made that blog as lengthy as I did it was to quote
+59:00
+another member on our team from what he told me is like I kind of fit an educational course into a blog, right?
+59:07
+And that was maybe I didn't think that exactly but that definitely was kind of the aim because the the content on
+59:13
+deoffiscation is also speaking of stuff that's really not uh existent. Uh yeah
+59:19
+that that's one of them and it's the cases where they do exist it's extremely academic. You can certainly find white
+59:24
+papers from uh you know research institutes and universities on deoffiscation tactics and uh you know
+59:31
+mechanics and and so on and so forth. my personal opinion just being a practical person having to do this with
+59:38
+consequence you know like if we don't do this well there's a repercussion uh it's all like a lot of it is nonsense you
+59:43
+know and that may be a hot take but I I will stand by it because I have tried I have read a lot of these research papers
+59:50
+I'm very interested in offiscation primarily because it breaks conventional tooling so for me that also means it
+59:58
+breaks conventional thinking on how we think about reverse engineering problems so of course I'm interested in that. So
+1:00:04
+for me when I go through these white papers and I kind of see the case studies that they do, it's in some cases
+1:00:09
+it's laughable. I can name names. I won't do that out of respect. And another unfortunate uh caveat is that um
+1:00:16
+they don't share the code, right? Like say you wanted to learn about how to deoffiscate scatterbrain and I write up
+1:00:23
+a lengthy blog. I put fancy pictures and diagrams and so on and so forth. While
+1:00:28
+they may have the appearance of being substantive and substantial, like beneficial, and you're eagerly consuming
+1:00:35
+it, trying to learn because you're interested in this topic, but I don't give you the code to go explore it.
+1:00:41
+Like, it I wouldn't even say this disingenuous doesn't do it to me. Like, it's it's it's almost useless. What's
+1:00:47
+the point? Like, you said this. Kudos. Now, show me how you actually did it. Cuz if you can't show me, you probably
+1:00:53
+didn't do it like you said you did. And I think you tend to find that a lot in in research in our space unfortunately
+1:01:00
+for for whatever reasons you know it just may be difficult you know to share this kind of information I mean a lot of
+1:01:05
+the stuff that I've done uh regarding the offiscation work some which I you know to take real pride in I can't even
+1:01:12
+share I can't discuss it right for you know so there is that aspect of it where
+1:01:18
+it's you know we can't we're limited in the information that we can share at least in detail but yeah scatterbrain
+1:01:24
+again is an offiscating compiler in the likes of OOLVM or perhaps it is even a variant of that
+1:01:30
+that generates um at least from what we uncovered three different uh uh like
+1:01:36
+protections so to speak and what I mean by that is for instance um they can
+1:01:42
+fully protect a binary and what this and what that means in implementation is
+1:01:47
+every function you know like let's say you open a binary in IDA every single function in there is going to be
+1:01:53
+protected in a very nasty way, right, that it won't let you reason about like it's going to break IDA without
+1:01:58
+question, but be ninja dra anything. That's kind of the whole point. It's no knock on those tools. Uh they do that,
+1:02:04
+but they can also just limit it to a single function where you have full visibility into 95% of the function, but
+1:02:11
+this one function that they're interested in, they'll just kind of protect that. And then they also have uh
+1:02:17
+what I remember when I initially was investigating this I thought it was shell code you know because there was
+1:02:23
+just raw code but it turned out what I was looking at was the after effects of removing and stripping a p header and
+1:02:30
+some other data that actually constituted a file and uh packaging that
+1:02:35
+up in an offiscated way that was uh yeah very difficult to initially reason about and how I got interested in this being
+1:02:43
+the garbage man that I They just sent it to me and said, "Hey, go figure it out." So,
+1:02:50
+I I see. Okay. Well, yeah, that that would make sense when you have that reputation that the uh these
+1:02:56
+perplexities just just naturally gravitate towards you. Yeah. And that's it's really it's really interesting
+1:03:02
+because there is uh if you there's a couple blogs out there, I'll make sure to add them to the show notes. Uh and uh
+1:03:08
+one that that probably rivals in length at least. I haven't I've gone through a little bit of it. I don't know about how
+1:03:14
+I could implement their work, but in you know really discusses in detail the the implementation of the compiler that you
+1:03:20
+described in in your research as well. So I I think that's kind of high kudos to the the level of detail that was
+1:03:27
+produced. I mean when you when you blogs don't typically go through the same well I shouldn't say that they
+1:03:34
+don't have to go through the same level of scrutiny that that papers and academ academia do. That's not to say that
+1:03:39
+academic papers are of higher quality. I looked at a lot of stuff that wasn't that great, but reproducibility is
+1:03:44
+always a big part of or should be a big part of that um you know that academic
+1:03:49
+formula. And so it's it's good to see when it's applied to the commercial blogs as well because I think that's a
+1:03:55
+big part of if you're if you're blogging you're technical content you're you know you're likely one of your main
+1:04:00
+motivations hopefully is to share that that knowledge that education and if I can't reproduce what you're doing like
+1:04:06
+you said it's it's very frustrating and difficult and and might almost be counterproductive then to ultimately
+1:04:12
+what the goal is. Um of course if it's just clicks then that's another story.
+1:04:17
+Yeah, there's always agendas and you know other aspects and I mean huge kudos to Google uh for publishing such a blog
+1:04:24
+right they could have um easily not you know I think I was I was told it's the lengthiest blog at least in Mandian
+1:04:31
+Google Mandian history uh I'm not sure if it's still true today at least it was
+1:04:36
+back in earlier this year so um but again it was conscious it was deliberate
+1:04:41
+and it was trying to really dispel that even like I said they look nasty they
+1:04:47
+looks on and in reality they're actually very trivial to defeat like I did all
+1:04:53
+the actual work for that like really not more than two days like two working days but again going back to what we
+1:04:59
+discussed in the beginning being prepared like I you know I was able to quickly discern what this is uh like
+1:05:05
+what it's doing and how I can begin to kind of untangle it of course you you know you take steps that you know were
+1:05:10
+mistakes or like you thought about something incorrectly but again you come prepared your sharp is is sharpened you
+1:05:16
+have your toolkit you can reason about these problems in a very efficient manner that is you know time
+1:05:22
+constrainted and again once you do break it down so not just to say it I mean if you kind of go through the blog while it
+1:05:28
+has the appearance of uh you know just being discombobulated
+1:05:33
+uh it's actually very simple once you understand it so like what is it actually what is the core what is this like again the scatterbrain where the
+1:05:40
+name kind of comes from what this uh what they did when they produced these kind of offiscated binaries is they
+1:05:47
+scatter the control flow. So, so normally control flow at least how we think of it even though it's not exactly
+1:05:53
+true in implementation like in how the hardware does it is sequentially and linearly like there's a push ra there's
+1:06:00
+a you know move ra some some constant and you know there's like a linear
+1:06:07
+sequence of instruction and we kind of reason about that so what they do here is they take either a single instruction
+1:06:13
+or like sequence of instructions sometimes even you know a basic block and they'll move put it all around
+1:06:19
+memory and then they'll connect it a certain way and the way they connect it is through uh what I call dispatchers
+1:06:26
+because it's effectively dispatching from point A to point B and point B is usually somewhere else in memory and so
+1:06:32
+on. So like this is kind of the core of what the protection is. And this is unbelievably prominent in different
+1:06:38
+forms and offiscations we see for malware which is also why I wanted to release this blog to kind of showcase
+1:06:44
+hey like once you understand this approach and how to tackle it you can generalize this a lot because you will see this a lot. So uh that was also like
+1:06:51
+one of the the main reasons for it and again kind of like to my point before that a lot of binary offiscation is
+1:06:57
+deoptimization. If you think in terms of an optimizing compiler like this is atrocious like uh
+1:07:04
+to like one of the main uh barriers for performance uh today is memory access.
+1:07:11
+So how data is accessed in memory if you compare the speed that it takes to do that compared to how an AOU operates I
+1:07:19
+mean it's not even comparable like it's night and day memory access incredibly slow uh CPU uh you know operations
+1:07:26
+incredibly fast even if you have huge instruction count and I bring that up because if you think about going from
+1:07:32
+one location in memory to some other scattered another place this is horrible for uh cache optimizations where
+1:07:39
+optimizing compilers try to uh align data structures and make them local like
+1:07:45
+so it's kind of very sequential. So when the prefetcher or something right goes gets that data it just grabs everything
+1:07:51
+next to it because you know this will execute next and so on kind of given a highle description but my point really
+1:07:57
+is that uh a lot of these offiscations can be literally viewed and classified
+1:08:02
+as uh you know deoptimizations like you'll have constant folding this is a
+1:08:07
+term you know in compiler optimization speak and here we can you know say constant unfolding you know peole
+1:08:14
+optimization pod de optimization loop loop uh unrolling loop rolling and kind
+1:08:19
+of thing. It's it definitely is is a good way to classify uh a lot of these.
+1:08:25
+Yeah. Uh code flattening, right? Kind of a I don't know popular term for it.
+1:08:33
+Disrupting the taking this the the more you know kind of abusing that that more sequential nature of execution and and
+1:08:40
+just redistributing it, reorchestrating it in a way. And and yes, I think that that seems to be one of the more
+1:08:45
+prevalent techniques that you you do encounter. And you know, you talk about an an intimidation layer. Uh it
+1:08:52
+certainly can present that in a lot of binaries uh that you you first encounter if you don't know what you're looking
+1:08:59
+at. And um so very interesting, very great blog. Again, I'll make sure to add
+1:09:04
+it to the show notes and and anyone who's listening is uh definitely encouraged to go check it out and um
+1:09:10
+read more about Scatterbrain. Um some other sophisticated thread actor
+1:09:16
+techniques that I know you've been involved with is um orb and orb weaver and and mandians published that about
+1:09:22
+that uh can you maybe shed a little light into maybe what what orb weaver is and what makes it so unique and what
+1:09:30
+your involvement was I'll try as best as I can here to to uh
+1:09:36
+to speak. So what is oraver? I think there's other term public names like um
+1:09:43
+like red relay networks or um some other ones but yeah orever is the one we've
+1:09:49
+come out with publicly and what it really is is a massive C2 infrastructure
+1:09:56
+for uh almost exclusively uh Chinese like uh threat actors from nation state
+1:10:02
+to a to mercenaries and so on. It is a huge huge huge infrastructure extremely
+1:10:10
+offiscated um primarily as far as what we've you know uncovered uh like IoT
+1:10:17
+devices you know that is comp it's compromised of compromised IoT devices
+1:10:22
+and they kind of form a peer-to-peer network that scatters all over the world everywhere and uh it is this network
+1:10:30
+that is one of the main uh like infrastructures used for not just
+1:10:36
+targeted attacks but kind of any kind of attacks. So that's really kind of like the high level uh core of what you know
+1:10:43
+or reaver is and my involvement in it again given like I said it's extremely
+1:10:48
+offiscated they have offiscated protocols that they speak they update this uh the code is on multiple
+1:10:55
+architectures from MIPS to ARM you know to x86 uh and so on spark I've seen some and
+1:11:02
+and so on so it's very diverse it's uh very varied and uh the complexity als
+1:11:09
+also is in getting this data and being able to reason about it. What is it doing? How are they doing? like uh so
+1:11:15
+especially for uh you know um teams within Google or or elsewhere you know at Microsoft and anywhere they do kind
+1:11:22
+of thread intel uh you try to do attribution right not everybody I mean attribution is also notoriously
+1:11:28
+difficult and this is one of the reasons because attackers can create such a kind of masqueraded camouflaged environment
+1:11:35
+that even if you know it exists and you know what's coming from it uh you know unless you really know how to penetrate
+1:11:41
+it you're speculating right for the most part there's other ways you can probably get telemetry and and kind of pinpoint
+1:11:47
+attribution but uh so this is why something like this is probably desired from a thread actor uh perspective
+1:11:53
+especially again if it's IoT devices it's kind of like almost anything is pawnable anything is able to be
+1:11:59
+compromised so it does have a very um kind of scary scary outlook and so on so
+1:12:04
+my direct involvement was with basically breaking core parts of this offiscation uh seeing how the protocols speaking
+1:12:11
+those protocols you know dissecting them and understanding like how we can gain insight into this network and um I guess
+1:12:20
+I can say like the offiscations I saw were a lot of control flow flattening
+1:12:26
+who they were also probably using uh and are using a variant of OLVM just because
+1:12:32
+it's convenient right just to leverage it and so on and the fun part here from an analyst perspective is while again if
+1:12:39
+you read the theory in academia well it's not big difference you know in the offiscation if it's on different
+1:12:45
+architectures if it's done at the source code level like I mentioned earlier you'll have source code in LVM you'll
+1:12:51
+you know write your source code however you want you'll deploy to multiple platforms and the compiler takes the heavy lifting of distributing the
+1:12:57
+executables for those platforms but then like once you again try to deopiscate these it's extremely specific right like
+1:13:04
+there's stuff that I see on ARM32 that doesn't exist on x86 or myips and there's stuff on myips that I see you
+1:13:11
+know even though the code in in the source code may have been identical. The actual implementation details in each
+1:13:18
+platform and how they're offiscated vastly differ. So much so I could never write a generic deoffiscator for all of
+1:13:25
+this. I did a lot of research into this. Almost in every case my deoffiscation had to be specific right to that case.
+1:13:33
+And uh that speaks also a lot because you'll hear u claims and and so on like
+1:13:40
+like I know some personally that like well I can deopostate all of the VM because no you can't you can't predict
+1:13:46
+what you don't know it's just that simple and there's just stuff that you don't know until you see the implementation of it. So uh yeah that's
+1:13:53
+kind of what ORB is that was my work into it and um yeah again don't think I
+1:13:59
+can share much more unfortunately. All right. So, you know, it sounds like we're
+1:14:05
+we're talking about, you know, problems that are they're there they're there are different kind of context and different
+1:14:12
+use cases, maybe network and compromised devices, but then we still have code running and so there's a lot of overlap
+1:14:18
+in the type of problems that we're dealing with, the type of obiscation that we're dealing with. Um, we've talked a lot about tooling so far. Is
+1:14:25
+there you know is there what I mean what are what do you see as maybe ways in
+1:14:30
+which tooling could better help um and maybe it is just custom tooling I know you you've mentioned that now as a big
+1:14:36
+part of your toolkit um or other technologies it seems like uh we have time travel debugging which is certainly
+1:14:43
+not a perfect solution but it you know it's one of those technologies that is has changed the way I look at reversing
+1:14:52
+uh you get an execution tray I at least with debugging because you get an execution trace of a program and it's it
+1:15:00
+doesn't I don't have to go through and investigate everything. I don't have to set break points and take execution of
+1:15:06
+the program to that point to look around. I can now take the trace and ask questions to the trace about what
+1:15:12
+happened during execution. What memory was accessed? What were the allocations? What when was this data read or written
+1:15:18
+to? And and so it's it's sort of changed the way I definitely changed the way I I approach debugging. So, um, yeah. So,
+1:15:25
+what what kind of tools help help you with that or are tools like TTD becoming a larger or have they been a large part
+1:15:31
+of your approach to these problems? Oh, they absolutely have and I think it
+1:15:36
+is I I love what you just said because what I took you to say I mean you
+1:15:42
+mentioned it in the context of debugging. I would extend it again in the context of of program analysis,
+1:15:47
+binary analysis that we're treating let's say reversing as data analysis
+1:15:55
+where we run structure queries on structured data in order to gain information and insight. And the way we
+1:16:02
+really progress in our analysis is joining data, making connections between
+1:16:07
+u certain data, you know, merging them and and and so on and so forth. So we're
+1:16:12
+basically acting as a data analyst where we have this database. So in the context of of time travel debugging as as
+1:16:19
+Microsoft has implemented it, you have a database of the execution state of a user mode process and you're able to
+1:16:25
+query it. you're able to uh not just query it but also u I won't say
+1:16:30
+visualize it but you're able to uh explore the execution in a very very
+1:16:36
+powerful manner and I think there needs to be more innovations for tooling such
+1:16:42
+as this like for instance I know some game companies when they make game engines they create I mean incredibly
+1:16:47
+sophisticated pieces of of software they make time travel game engines right so they can reason about the complexity of
+1:16:54
+the state of the engine when there's something wrong with it, when they need to investigate it and so on as part of
+1:16:59
+their development process. So I I think it is an extremely powerful tool that
+1:17:05
+has been around for quite a while actually and there's other variants. There was a company I think they got
+1:17:10
+acquired by Eshart called Tetrain and their product was Raven Reve
+1:17:16
+which did the same thing but did it at an entire operating system level. So you can go capture the execution of Windows
+1:17:23
+itself you know and which means any processes on top of it and I actually
+1:17:28
+had a demo to this while I was at employed at Microsoft where uh we explored this technology another
+1:17:35
+individual and myself who I don't want to name here uh but uh speaking of this
+1:17:40
+guy he came from a team in Microsoft that kind of uh or that organization
+1:17:45
+created time travel debugging TTD and what they call it or these particular
+1:17:51
+engineers. I love this name. I'm curious to see what you think about it. They're called escalation engineers and they're
+1:17:58
+literally the the front like line for dealing with any kind of crash, any kind
+1:18:04
+of customer failure of a product, which includes Windows itself. So, blue screens and so on and so forth. They get
+1:18:10
+sent to this team for them to troubleshoot, to like investigate, well, what happened? Why did this crash happen? And then they'll relay that
+1:18:16
+information to a developer who will go fix it and so on. Sometimes they can also fix it themselves I guess but it's
+1:18:24
+uh because I I bring it up because I think a lot of what teams like that do is what we do right in the sense that we
+1:18:31
+require similar tooling and time travel debugging came out of kind of that organization to help uh customers
+1:18:39
+instead of sending crash dumps. Well, hey, if you can replicate that behavior, go capture a recording of it instead and
+1:18:45
+send that to us because it's more convenient for you. It's definitely more convenient for us. Maybe it's not so
+1:18:50
+convenient for the customer cuz now they they have to go go do that. But for the analysts, it saves in invaluable time.
+1:18:57
+You know, the only thing that's really lacking with time travel debugging uh currently is there's no frameworks on
+1:19:02
+top of it to automate analyses to automate what you described in uh queries and so like I have my own that I
+1:19:08
+built off of it kind of naturally. Um I know that Microsoft had one internally. They deprecated it. I can't reveal the
+1:19:15
+name, but we're missing features of that. So, we can kind of scale and automate like for instance, like let's
+1:19:21
+say we capture the trace of 10 different binaries related to a malware sample
+1:19:26
+that we're dealing with. Well, how do we investigate all of them, you know, like we need to to answer that that problem?
+1:19:33
+Because the reality is most analysis is not done individually and isolated.
+1:19:38
+You're like really never looking at a single file, right? it's usually in the context of something larger or it's part
+1:19:44
+of a file that has a thousand different relations as well. So I think reversing and tooling uh needs to adapt to the
+1:19:52
+reality of what it looks like for for enterprises and companies you know like like Google and and so on because we're
+1:19:58
+doing analysis at a massive scale. I don't want to look at one file. I want to look at millions. Well, how do I do
+1:20:04
+that through a reversing lens? And I really think what I mentioned with like what I took you to really say with uh
+1:20:10
+querying the execution when you're debugging it is we need to have data analysis for reversing and we need to
+1:20:17
+develop like technology that that that that can do that and uh yeah I'm kind of
+1:20:24
+going a bit more than the time travel aspect because to me uh the reason actually I do that for me the big
+1:20:30
+takeaway when I got introduced to it like meaningfully and usefully is it wasn't so much about the debugging. It's
+1:20:37
+like, man, I've been doing reversing horribly wrong. I need to I need to query data. I need to structure the
+1:20:43
+data. I need to cluster the data. And I just need to be able to ask the right questions or merge the right data sets
+1:20:49
+in order to answer the questions of my analysis. And for me, that was a profound difference in how I how I
+1:20:55
+approached analysis, especially for offiscated malware and so on. If it's on Windows and it's user mode, um by the
+1:21:01
+default without even like looking at it statically, I'll just go generate uh what's called a TCD trace. So the the
+1:21:08
+trace is uh what uh you know the the the terminology that they use when they
+1:21:13
+capture this execution run and so on. It generates a run file. That's like the trace file. It's a database and then
+1:21:20
+wind DBG can load this and you can maneuver and and so on and so through
+1:21:25
+it. And uh the console debugger can also load it. Most people don't know this, but you have to pass the minus zed the z
+1:21:34
+switch to have it load like a crash dump file and it can do it because under the
+1:21:39
+hood it's a little bit the same here of how how windp does it. And I bring that up because I primarily use the console
+1:21:45
+debugger for for windbg. It's one of the you can definitely tell the techn I mean an escalation engineer
+1:21:51
+makes a lot of sense to me. you you look at at a lot of the official Microsoft literature and documentation and there's
+1:21:57
+there's not a lot out there when it comes to TTD, it really is geared towards I think what you just described,
+1:22:03
+you know, triaging bugs. It's great because it's a unified data set too. Uh
+1:22:09
+so if I get a good trace, I can share it with anyone and we're all looking at the same exact thing. there's removes some
+1:22:15
+of the nuance and variation that you get I'm I'm sure with all the Windows
+1:22:20
+distributions that are out there and uh and so you know it's a great it's a great use case for that and it's you I
+1:22:29
+think there's been some issues here and there I know you've discovered some emulation bugs and some other uh you
+1:22:35
+know issues in looking at malware I don't know if those were necessarily because you were looking at malware or just because they just were overlooked I
+1:22:42
+mean all I suppose all software has bugs to a certain degree, but I think the adoption will will certainly grow and um
+1:22:48
+and then just having that additional data set. I I do think that's an interesting perspective because
+1:22:56
+I don't know when you stop and think about it, it seems like a lot of uh a lot of my analysis is just
+1:23:02
+contingent upon reading one line of assembly at a time and then trying to understand that and
+1:23:09
+build that bigger picture. Um, and that's of course what makes it feel like such a monolithic and and
+1:23:15
+sometimes very tedious task. And uh, having this execution trace makes that shifts that and makes it a little bit
+1:23:21
+easier because now I I can query at a higher level and get down into the weeds as necessary and pinpoint program
+1:23:27
+execution in a way that's different than when I approach things traditional debug, traditional static analysis and
+1:23:35
+IDA. Absolutely. I think doing what you just described and we all do it and we kind
+1:23:40
+of don't have a choice because again the tooling is structured in such that that is kind of the go-to abstraction that we
+1:23:47
+have to deal with. But the reality is unless we're microode level like microode as in like how does Intel
+1:23:53
+implement the actual ISA. Unless we're those kinds of researchers, we don't really care about the instruction,
+1:23:58
+right? Like I don't want to read sequential instructions one at a time in order to build a mental model, you know,
+1:24:05
+of what this modelware is doing. It's horribly inefficient. It's a waste of time and it doesn't address like what
+1:24:12
+you as an analyst, as a reverser bring to the table as it pertains to your skill set. Again, kind of going back to
+1:24:18
+reading text and like, yeah, we know how to do it. I was just gonna say, I mean, we're we're kind of talking about reading textbooks,
+1:24:24
+aren't we? Yeah, exactly. And it's just like we know how to do it, but like no matter how good you are, it's it's always
+1:24:30
+inefficient, right? And it's like there needs to be better abstractions and primitives that build off of it. And
+1:24:36
+time travel debugging is certainly one aspect of it, but it's also very limited. You know, like it's in in the
+1:24:42
+context that initially it didn't really target security researchers and malware analysts, which I think was uh was a
+1:24:49
+shame because that's probably outside of you know what I described the escalation engineers who solve real problems with
+1:24:55
+with serious consequences. uh researchers, security researchers benefit the most from this kind of
+1:25:01
+technology because we also deal with critical cases of of malware of exploits
+1:25:06
+that we just would love to be able to one speed up one uh just be more
+1:25:12
+efficient in the way that we do analysis and they definitely help uh aid in in solving those problems. So uh I think in
+1:25:19
+general we need to shift or help companies and products that like that solve binary analysis uh shift in a
+1:25:27
+direction of thinking large scale and by that I mean again you don't want to look
+1:25:33
+at individual instructions you don't want to look at individual files in my opinion why can't we take a million
+1:25:40
+files and be able to automate the analysis of them cluster and tag kind of
+1:25:46
+what you mentioned before and when you were doing you know as as a professor like tag and classify information put
+1:25:53
+that in in clusters of databases and allow us to query from it what we need in order to answer our goals I think
+1:26:00
+that's the direction that binary analysis needs to go to especially in how we do it at companies like Google
+1:26:05
+and others I mean there's the reality is that binary analysis mo analysis I mean
+1:26:10
+it's it's almost directly related to thread intelligence and so to me thread
+1:26:15
+intelligence is almost exclusively done through data analysis like like you know with SQL queries where you have clusters
+1:26:21
+of database like Microsoft they have their own language KQL custoto query language they have the custoto explorer
+1:26:28
+and you can kind of just go crazy you have clusters of databases you query and so on and so forth to do your thread
+1:26:33
+intelligence to do your incident response uh investigations and so on where is reversing in that field I have
+1:26:41
+to go open up IDA you know and you know when it's it's it's incredibly antagonistic to that workflow. And uh
+1:26:49
+again, no no shades here at all. I mean, for me, I think I have huge respect especially for for products like like
+1:26:55
+Hexrays and IDA because they basically commercially invented decompilation. Like they didn't just, you know, be
+1:27:02
+theorized about it. There was an actual company that was put together, right, to solve this problem. They had to make
+1:27:08
+money. they have to I mean it's an incredible task and to still innovate as you're doing that and doing this over
+1:27:14
+two decades ago and the product is like what three decades it's amazing like it is there's no real shade to throw in
+1:27:20
+anything like that it's incredibly impressive but it's not 2005 right it's
+1:27:26
+2025 uh and we need to adjust with how we do analyses especially at scale like again
+1:27:32
+if you're looking at something individually uh while maybe it's you know interesting And you can learn from
+1:27:38
+that. Absolutely. I think we're missing uh the productivity and the impact that
+1:27:43
+we can provide with the work that we do for you know for the reasons that we do it. And I think it can be done like one
+1:27:51
+thing we can segue to quickly if you wouldn't mind is like decompilation. It's another thing that again praise to
+1:27:57
+X-rays who kind of introduced it to the commercial space. Well, let's go back to
+1:28:02
+defining terms and asking you know simple foundational questions. What is decompilation and in hexra speak? What
+1:28:09
+is pseudo code? What does this actually do? Like what is the point of this abstraction? And how do they implement
+1:28:15
+it? And how is this uh in conjunction with how a malware analyst actually
+1:28:20
+solves their problems with this product? What does all that look like? And I again want you again not to take shade
+1:28:26
+here anyway, just kind of thinking out loud. Um when you look at it, you realize pseudo code is also incredibly
+1:28:33
+inefficient. Like I in order for IDAP to generate pseudo code, they do incredible
+1:28:41
+stuff. They take that raw disassembly. They know how to structure it. They have their own intermediate representation,
+1:28:47
+their own IR. They incidentally call it microode and they have at least eight
+1:28:52
+stages of maturities in their speak where they kind of transform that code
+1:28:58
+into what is eventually the end product which is this decompiled output which most malware analysts use to to to
+1:29:04
+reason about their problems. Incredible abstractions being made very rich data
+1:29:10
+structures like you have a micro block which captures a kind of basic block of
+1:29:16
+micro instructions. These are uh lifted, you know, lifted as in you transition
+1:29:21
+the syntactical structure of the disassembly to something more convenient and you have very rich abstractions
+1:29:28
+here. But the conclusion of this decompilation process is literally dumb
+1:29:34
+text, right? The pseudo code output is just text, raw text, dumb text. It's useless. Like in the sense that as a
+1:29:42
+primitive for an abstraction, it's just raw text. the best you can do is grab it, you know, or rag exit and so on.
+1:29:48
+Whereas, for instance, right below it, you have something they call the C tree, which is their abstract syntax tree,
+1:29:54
+their a for how they represent the actual pseudo code once they kind of transition through their microode uh
+1:30:00
+maturities. And it's very semantically rich, you know, like for instance, one thing I have asked is what's the comp
+1:30:07
+how do you measure the complexity of a program? And a lot of times you'll hear stuff like word count, line count, this
+1:30:15
+project has a million lines of code, but that doesn't necessarily give you a real understanding of the complexity. You can
+1:30:20
+have a million lines of trivial code, right? Maybe tedious to process, but is it really complicated? And then I
+1:30:26
+watched the talk from a language developer uh with a particular language called J AI and he was asking the same
+1:30:34
+question and he was like well hey I'm building my own compiler and I'm also asking like what is a complicated uh
+1:30:40
+piece of code? Well I have this a I have this abstract syntax tree. So compilers generate a you know transitioning their
+1:30:48
+the code to to to binary. And he's like well why don't I just measure each expression that I'm using? it's more
+1:30:55
+semantically rich in answering this question. And I was like, well, wait a minute. I have the C tree. I have the
+1:31:00
+exact same thing in essence. And so I kind of wrote a a heat map for each
+1:31:05
+function that counts the complexity. And I can kind of tell you what what that means if you're interested. And I have a
+1:31:11
+visual mapping, a kind of like a like a mini map, a heat map specifically for
+1:31:16
+the complexity of a function. And in the case of obiscation, we can easily answer questions such as like, well, how do you
+1:31:22
+know a function is offiscated as opposed to one that is not? And you just have this this vibrant color basically that's
+1:31:29
+like this just the entropy here is insane. Uh something's off here kind of thing. Again, it kind of minimizes and
+1:31:35
+speeds up your analysis with identifying points that are interesting to follow and so on and so forth. But not not to
+1:31:42
+go on a tangent. I I really think our tooling with how we reason about malware analysis, binary analysis and and so on
+1:31:49
+just problem solving problems around program behavior. We are in the dark ages in some sense and I think we we
+1:31:56
+kind of you know need to need to uh evaluate what getting out of it looks like. Again going back to pseudo code
+1:32:02
+like if I were to ask you what problem does it actually solve? Like what would be your response? Because why do you
+1:32:08
+need C like text? Like there's another decompiler called revenge rev.ng
+1:32:15
+and one of their biggest selling points is like hey we produce valid C code. Awesome. Like that that that's that's I
+1:32:21
+can understand that but I'm not sure why this is important. Like because the reality is I if you just had a C project
+1:32:28
+let's just take the inverse. Let's say we're doing source code analysis. It's a huge C project and like we just start
+1:32:34
+off with text raw text. There's a reason we need idees. We need the language server protocols. We need stuff like um
+1:32:41
+Gemini code assist cursor etc and so on because the raw text just sucks as a
+1:32:47
+medium for us to it's not semantically rich. Like that's my whole point. So generating valid C code while it may
+1:32:53
+have the appearance of solving a problem. It's, you know, I'm not sure what problem it actually solves because
+1:32:59
+really what we're asking is what syntactical representation is most beneficial to us and that can be
+1:33:07
+anything, right? That's kind of to be determined. It's not necessarily C code, C pseudo code and so on. I mean, the
+1:33:13
+reason most decompilers do this, it's just easier to generate, right? And you can mimic a lot of languages with C.
+1:33:20
+It's just, you know, C is very close to the hardware. mimics really how you interact with, you know, the ISA. So, it
+1:33:26
+kind of that's that's a logical reason why they kind of do it. But all we're talking about is syntax like a
+1:33:33
+syntactical representation. And I bring this up and I'm kind of emphasizing it because to our theme of offiscation
+1:33:39
+really when you're deoffiscating something you need to preserve the semantics, right? Like you need to
+1:33:45
+preserve what actually is going to happen. You can't change that. But uh what you need to change is how you view
+1:33:51
+the problem and that usually means viewing it in a different syntax. So very common uh to deoffiscation even
+1:33:58
+though we didn't discuss it and I didn't deliberately do it like this with the scatterbrain blog uh is you want to
+1:34:06
+create IRS intermediate representations of your problem because when you
+1:34:11
+categorize that at a high level of what you're doing what you're actually doing is not creating an IR. You're creating a
+1:34:17
+different visualization for the syntax of your problem. And that's an incredibly powerful primitive to build
+1:34:24
+off of and on top of and it's actually very easy to make you know IRS for
+1:34:29
+particular context you know and so on like if you want to make a product like LVM okay that's different problem but
+1:34:35
+for individual use cases for the offiscation it's actually pretty straightforward on on what makes the
+1:34:41
+most sense to do this and usually it amounts to also a custom kind of a uh
+1:34:46
+that you would build out a kind of logical relationship between nodes that are that is hierarchical
+1:34:52
+structured. But u I digress in case you have any thing to say to any of that.
+1:34:58
+I no I don't know. There's a number of things that that popped into my mind. Um
+1:35:03
+I mean just kind of going back to the beginning of the conversation thinking about uh you know data and and just
+1:35:10
+comparing larger groups of uh you being able to I guess work at scale. uh that
+1:35:16
+that was something that when I I you know I kind of ran across this issue early in my career in maybe a a slightly
+1:35:23
+more trivial context but it still shocked me at how difficult it was. I you know parsing PE files is a very
+1:35:29
+common task looking at different properties characteristics you know I know there's you know vashes and virus
+1:35:36
+total are buil built loosely off of that I'm not sure all the details there you know when I wanted to to say okay I'm
+1:35:42
+just interested in how I have a sample and I think there's something about it that is that that is familiar maybe it
+1:35:48
+relates to another sample I looked at I had absolutely no way of of drawing that
+1:35:54
+distinction or that correlation And we have all these PE parsing utilities out there and they're great in what they do,
+1:36:01
+but they're only one file at a time. They they're just continuing to kind of propagate this problem in a way. And so
+1:36:07
+I had this idea. I don't know if you're ever heard of or familiar with the Archammy project, but it's it's network
+1:36:13
+traffic capture and it it parses like a network parsing tool would, but then it
+1:36:19
+it it indexes a lot of the important aspects of say the headers and um and
+1:36:26
+different parts of the packet and puts it in elastic. And so it makes your ability to now look at this large
+1:36:31
+mountain of network traffic data almost I mean it just it just is easier much
+1:36:37
+easier to to group things into buckets and to look for patterns and to look at
+1:36:43
+things that connect and are related. And I thought man this has got to be I've got to have this for files. So I started
+1:36:50
+building this this project for PE files. I just like let's just we'll parse it. We'll maybe generate some new data.
+1:36:56
+we'll put it into something like Elastic and we'll put this nice UI that just basically says I'm not really doing
+1:37:03
+anything more than allowing you to take any any property, any field, anything that's inside of the database and now
+1:37:09
+you can make that part of your search and your query and just looking at the data connecting the dots. And um
+1:37:15
+unfortunately the project never took off, but it's out there on GitHub if anybody wants to check it out. I still
+1:37:21
+kind of wish I had that because there still just isn't great tools that allow me to do that. And I don't know if that solves things at Google scale. Uh but
+1:37:28
+certainly I think it would you know it would certainly help my individual
+1:37:34
+analysis that I think would then ultimately help my larger scale analysis. Um so I don't know it's just
+1:37:41
+it's just interesting as you're talking you know as we're talking about this this single a lot of reverse engineering
+1:37:47
+is just a single file uh approach and the limitations inherent
+1:37:52
+with that kind of work and just um oh it's just uh it's just a different way
+1:37:57
+of thinking about it. I'm glad we've been able to talk about it for so long. Well, what else? I I guess now it's
+1:38:03
+we're getting we're kind of rounding into two hours. Um I mean we've we've covered a lot of what was on our agenda.
+1:38:09
+Is there any area that we I haven't you know taken us into that you wanted to spend more time in or any new topics?
+1:38:17
+Yeah I mean again your call I I can go for hours. There's so much to talk about
+1:38:22
+so much interest like everything we just especially what you mentioned about this project that you mentioned you were the
+1:38:28
+one who built this right this or or Yeah. I mean credit where credit is due. Um, it was
+1:38:35
+it was kind of born out of uh uh that frustration that I just described. And
+1:38:40
+it also then I was able to because I was at was at the university at the time. I was I was actually able to get a little bit of funding for it from the NSA um
+1:38:49
+and was able to hire at least one student I believe who did a phenomenal job of just designing and and helping
+1:38:57
+build some of the the framework. and he was a big fan of Docker and other things
+1:39:02
+that I wasn't really using all that heavy at the time. And um and actually it was kind of an extension. I had a a
+1:39:07
+project that I had worked on previous with a colleague at HP and uh I had found this this wealth of I mean kind of
+1:39:15
+going back to the orb weaver discussion when uh when I was first getting into u you know malware analysis and reversing
+1:39:22
+I I just I had no idea where to start and part of how I was trying to figure
+1:39:27
+out where to go was just emulating what I was seeing on social media and at the time Twitter had this very active infosc
+1:39:34
+community and and exploit kits were this big thing and um I saw this guy Brad
+1:39:39
+Duncan and his malware traffic analysis. So he's posting about exploit kits and I actually reached out. I didn't I wasn't
+1:39:45
+able to get a response but I thought okay how do I how do I find these exploit kits and so I started hacking
+1:39:52
+together Python scripts. I was a you know previously I was a web developer so I had a lot of experience with web
+1:39:57
+technologies and it wasn't that hard to hack together some atrocious Python to just start crawling the internet but
+1:40:03
+it's I can't just crawl the internet. have to have some intentionality behind why I'm crawling the internet. But the
+1:40:09
+crazy thing about these exploit kits was they were so prolific. I mean, you you I could scrape I could pull chunks of
+1:40:15
+websites from the top 1 million most trafficed sites and I would find exploit
+1:40:20
+kits active on those sites. It was it was insane. But I was just surprised. I was surprised at how prolific they were
+1:40:26
+and and just the dead end then that that provides. Well, how did they how did they get on this site? Well, they
+1:40:32
+compromised it in some way, shape, or form. Where did the compromise come from? You know, at one point we were theorizing it was compromised WordPress
+1:40:38
+packages and plugins and themes that people were downloading. I mean certainly they're not all just
+1:40:43
+vulnerable WordPress sites that are getting compromised and all these research questions that I wasn't able to really answer but I guess the the it's a
+1:40:51
+long answer just to say that I started building and this is also out on GitHub um you know a web crawler because
+1:40:58
+simultaneously I was finding open directories and how much stuff at least
+1:41:03
+at the time some of these thread actors were leaving in these open directories and made a very modular system to I I
+1:41:11
+guess it really ties into what we were discussing. I wanted to not only be able to uh identify them, but then classify
+1:41:18
+what we were looking at, use things like Yara and others to identify payloads and
+1:41:23
+identify content that was hosted there and try to put it into buckets of interest. Um, and then ultimately I
+1:41:29
+wanted that to fit into this PE parsing framework that I wanted to be much broader than just PE files. I wanted to
+1:41:36
+be office documents and and then you could connect the dots. You know, now we have this PE parsing thing that was
+1:41:42
+actually I've got it's got a cape integration. So now you can get dynamic analysis. You can see if maybe you can
+1:41:48
+get it to talk on the network where it was connected to. Now did I scrape that site earlier? Did I associate a web
+1:41:54
+panel with it because I was able to identify some of the web panel and I I I had this whole grand vision of things
+1:42:00
+that I wanted to pull put together. So um I guess that's kind of the whole backstory there. Welcome to the podcast
+1:42:07
+about me. No, this is amazing and I'm glad you're sharing this especially when
+1:42:12
+you're saying like okay you want to do like PE file parsing but what about office documents and then you know other
+1:42:18
+other file formats because definitely we've been at least I have been trying to be like okay binary analysis and um
+1:42:25
+offiscated compiled binaries that was also intentional because there's scripting languages there's office you
+1:42:32
+know document files there's you know word document files and so on so there's
+1:42:37
+there's a whole plethora of um interesting uh components, let's say,
+1:42:43
+that attackers can leverage for nefarious purposes. And I think it's also illuminating to point out what you
+1:42:49
+said like you can just like find these exploits like you know like anywhere on the internet kind of thing. And I think
+1:42:55
+that the relevance of that is because a lot of perception I think uh just you
+1:43:01
+know people not in the industry in the space uh like they think like everything related to malware or everything related
+1:43:08
+to uh cyber attacks is extremely sophisticated you know it's very well
+1:43:13
+thought out and you know a lot of times it's just some kids you know wrecking havoc that also is true most of them not
+1:43:19
+probably sure what they're even trying to achieve and so on and and some text.
+1:43:25
+You may have like dedicated um like resources to it like nation state actors
+1:43:30
+that are still kind of just like that because they don't care. They target so many on mass. They know parts of it will
+1:43:37
+stick or the parts that they kind of care about whatever they do. And uh yeah, you you'll find a lot of stuff
+1:43:42
+like that out and about which also makes it u again scary because the average
+1:43:48
+user may not be, you know, uh perceptive to that. and then can, you
+1:43:54
+know, easily get compromised or their machines, their devices and and so on. But no, this is this is excellent stuff
+1:44:00
+and I I support it. I love what you do as as far as sharing information. I know
+1:44:06
+I have been critical here of academia, but I have not been so critical of like
+1:44:12
+you mentioned, you were finding stuff basically on social media. It's fantastic. It's amazing. You know, I
+1:44:17
+love these decentralized platforms like that where just any individual can contribute to and anybody across the
+1:44:24
+world with internet access to that can benefit from it. It's incredibly powerful where I think a lot of stuff in
+1:44:29
+academia is extremely centralized. It's around you know pompous degrees and that
+1:44:34
+don't mean anything like you know I've done interviews too many to count. I've never looked at educational background
+1:44:40
+as a meaningful criteria right like it's you know because I'm not sure what it would tell me. Whereas if let's say I
+1:44:47
+discuss it with you and you kind of give me the context that that you had as you were exploring like you said you didn't
+1:44:53
+even know where to start with my analysis you saw some uh social media pickings and just kind of followed a
+1:44:58
+trail made your own trail and so on. And I think this is really what is realistic
+1:45:03
+to how people learn this stuff. And hearing this, hearing it from a professional, experienced individual, I
+1:45:09
+think is very impactful or or can be. And kudos to all the others who share information on YouTube, on you know, X,
+1:45:16
+Masttodon, Reddit, whatever, Blue Sky, whatever the platforms are. Too many to count these days and got to be sensitive
+1:45:22
+with which ones you name. But, uh, it's it's all good for me. It's like sharing information like that which you
+1:45:28
+think is valuable is an incredible learning opportunity for individuals and huge kudos to those that put serious
+1:45:34
+effort behind it you know in the presentation in organizing everything creating GitHubs or sites or or whatever
+1:45:41
+because it's an incredible amount of work like I highly respect that you know and uh yeah it's it's no I'm happy that
+1:45:48
+you that you share that. Yeah. Yeah. You know, it's it's um I think for me for me personally, it's it
+1:45:54
+it feels like a way of paying it forward to to say thank you to all of the folks that did it before me because there was
+1:46:01
+so much scattered information out there. There were times where I'd pick up a Windows internal book and it'd be one
+1:46:07
+paragraph that saved my day. Another time it would be a blog post. Another time it'd be a conference talk. Um, and
+1:46:13
+so it's it's just such a such a big part of our profession and it's easy to take
+1:46:20
+for granted. It's easy to to overlook. Certainly as the years have gone by, while there may be less written content,
+1:46:27
+I there's there's still more content out there than there's ever been. Uh, and uh, and you know, I would say to anybody
+1:46:33
+who's anyone who ever asked me, you might get some haters, but don't let
+1:46:39
+that be a barrier. more people will appreciate the effort and the sincerity
+1:46:45
+of wanting to share knowledge that it doesn't nothing needs to be perfect. You don't have to worry about somebody that
+1:46:51
+is, you know, top of the field going out of their way to come and and criticize you. And if they do, well, then that
+1:46:58
+speaks about them. So, you know, share, just get it out there and and do your best to make it comprehensible and
+1:47:04
+thorough and thoughtful and it'll it'll take care of itself. So, yeah. I mean just quick point to that
+1:47:09
+like to me if you're genuine about it, you're passionate about it, it means something for you to do it.
+1:47:16
+Sure, we should listen to critique. I think it's it's not uh wise to just ignore critique. Uh if it's slander, I
+1:47:23
+mean, you know, like you said, it's too many to count. You can just uh of course ignore that. But I think it's good to
+1:47:29
+hear genuine uh critique. But even then, like if you want to be oblivious to it
+1:47:34
+because what you're doing matters to you and you know you're genuine about it. Like you're doing this uh sincerely
+1:47:40
+because you care about it. And you know, maybe people also do it to kind of stroke their egos. What's wrong with that? We all have egos, you know. Like
+1:47:48
+there's a great book uh I don't know if it's in the book, but um like it's from the 2008 like Olympic uh basketball
+1:47:54
+team, like the NBA, not the NBA, Olympics, so the US uh men's basketball league in 2008 with Coach K from, you
+1:48:01
+know, uh Duke University. And I loved what he said about ego. He's like,
+1:48:06
+"Well, I'm a college coach and, you know, I'm dealing primarily kids, you know, so I kind of have this uh
+1:48:11
+father-like figure that I can in a sense impose on them and and so I'm not quoting him verbatim. I'm kind of
+1:48:18
+paraphrasing some parts, but uh I say that because well, now you have grown men, right, in the NBA making a lot of
+1:48:25
+money, right? Like who are you to kind of tell them anything?" And well, he's like, "Well, I have a problem. I'm
+1:48:30
+trying to win this Olympic medal and we need to be a team." kind of like what we discussed earlier about being in a team
+1:48:36
+environment and so on. And he was like, well, a lot of these individuals have egos naturally. So, they're probably the
+1:48:43
+best at what they do. So, there there's something that comes with it. And it was just profound to me when he was just
+1:48:48
+like, well, don't leave your ego at the door. Otherwise, we're not getting the real authentic genuine you. Bring your
+1:48:55
+ego through the door. If your ego has to take a seat next to you, well, so be it, right? like we're here to solve a
+1:49:00
+problem as a team and for us to be successful in that endeavor, we need transparency. So if that baggage comes
+1:49:07
+with you, well, it better be right next to you cuz then we get a real glimpse of that. And so to me, even individuals who
+1:49:13
+may share content and and so on, not just in our space, but in general for that purpose, you know what? So what I
+1:49:18
+don't see the issue with that so long as the content that you're delivering is, you know, genuine and you care about
+1:49:24
+what you're what you're doing and you should take pride in what you're doing. And I think education is is is an
+1:49:30
+amazing thing that people invest time into and it's a shame particularly in the US how little money is invested in
+1:49:37
+that regard. Maybe you can blurt that out on the podcast but um because to me
+1:49:42
+it's unbelievably critical for exactly the reasons you mentioned. It's such a powerful medium and uh I think having
+1:49:50
+this this this space through the internet I mean the internet to me is just an incredible invention and like
+1:49:56
+just opens up so many doors right for us as a global society to interact
+1:50:01
+communicate share knowledge with us grow as as human beings and so on. So anybody
+1:50:06
+partaking in that genuinely and willing to put their time, their effort into that, in my opinion at least deserves a
+1:50:13
+huge amount of respect and I wish we could start investing a lot of money into those people. So they could do it
+1:50:20
+more often and we could get more to join him and build institutions out of it and and so on. But again, I I digress.
+1:50:28
+Yeah. Uh you know, it's it's interesting because if you if you're not, you know, I'm not saying everybody needs to go set
+1:50:34
+up a blog. there's tons of overhead, there's cost, all that stuff, but um you know, if you're not contributing it,
+1:50:40
+you're you're you know, you're not having a voice in the collective internet knowledge and discussion and
+1:50:46
+conversation. And so, um you know, it seems like something that we all have to be at least aware of, especially in our
+1:50:53
+professional capacities. So, uh it is it is a it is a for a lot of people though
+1:50:59
+a labor of love and uh yeah, I don't I don't know the right answer to I know for me personally my I have a desire to
+1:51:06
+to just you know just share share what I learn and hopefully it is you know helps
+1:51:12
+illuminate paths quicker for others. You know we've had a nice a great long conversation here covered a lot of
+1:51:18
+ground and um I think it's it's probably time safe to say time to wrap it up. Thank you again for your time and all of
+1:51:25
+your insights and all of the work that you've been doing and and and you know I know it's had a profound impact for a
+1:51:31
+lot of folks out there. Um last thoughts, words for you if anyone wants to get a hold of you. Is there uh any
+1:51:37
+way that you uh that you like to be contacted or um I guess just yeah the
+1:51:42
+floor is yours to wrap things up and take us out of the episode. Yeah. No, thank you Josh and and thank you for the opportunity and and you know
+1:51:48
+sharing the space here together for for the time that we did. I really appreciate it. I appreciate you having
+1:51:55
+uh pushed this and made this something public, this whole podcast and exposing people to I think a reality most are
+1:52:03
+just not privy to for kind of obvious reasons because a lot of the work we do is is you know secretive in nature and
+1:52:10
+so on which u is kind of again antagonistic to what we discussed about sharing information and knowledge and so
+1:52:18
+on but kind of unavoidably. So, so it's it's actually amazing that you uh kind
+1:52:23
+of adapted to what is a modern medium, right? This podcast medium and presented
+1:52:29
+our work, our discussions in that manner and so on. So, no huge kudos and massive
+1:52:35
+respect to you for that and uh everything that you do. As far as contacting me, rather don't, you know, I
+1:52:42
+I I prefer to uh lurk here in in the shadows, so to speak. And uh so not much
+1:52:49
+really to add uh from from me. Um but no, I really appreciate uh the time and
+1:52:54
+the effort and the commitment on your part uh for putting all of this together.
+1:53:00
+Okay, that sounds great. Well, I'm going to hit end. Thank you, Nino. It was a great conversation. I can't wait for the
+1:53:05
+rest of the world to hear it. And that's all for this episode of Behind the Binary. Thanks so much for tuning in. If
+1:53:11
+you enjoyed the show, please consider subscribing and leaving a review. It really helps us to reach new listeners. Until then, stay curious and keep
+1:53:18
+exploring.
+

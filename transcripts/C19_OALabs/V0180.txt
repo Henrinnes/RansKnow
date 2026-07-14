@@ -1,0 +1,453 @@
+0:00
+do it live uh the anti-imulation stuff
+0:03
+looks pretty cool might go back and take
+0:05
+a look at this and it's not that cool
+0:07
+unfortunately hi folks and welcome to
+0:09
+open analysis live or rather a twitch
+0:11
+clip from our twitch stream we're
+0:13
+streaming Thursdays and Sundays go check
+0:15
+us out if you like this kind of stuff
+0:17
+and also a reminder that we have over
+0:18
+200 hours of live stream recordings on
+0:21
+our patreon as well as in-depth reverse
+0:24
+engineering tutorials if you like this
+0:25
+kind of stuff go check it out now let's
+0:27
+get back to the clip uh
+0:30
+you can stop me if I talked about this
+0:31
+before but basically
+0:34
+um new emulation that we're doing now
+0:36
+like all the emulation work that we're
+0:38
+doing now uh didn't exist it wasn't even
+0:40
+in the minds of anyone uh reverse
+0:44
+Engineers or malware analysts uh back in
+0:48
+the day when malware was first becoming
+0:50
+a business
+0:52
+however most AVS probably all of them
+0:55
+all the ones that I ever looked at have
+0:57
+an internal emulator that they use to
+1:00
+run the first X number of instructions
+1:02
+in a piece of malware to get better
+1:05
+signature identification and those uh
+1:10
+those emulators because they're
+1:12
+basically and I'm talking like
+1:16
+2005
+1:17
+2008 from then on those emulators were
+1:21
+pretty much standard in all AV so if you
+1:24
+wanted to build some malware that
+1:26
+bypassed the AV you really had to have
+1:28
+some simple
+1:29
+anti-amulation stuff but it has but it
+1:32
+could be very simple so those types of
+1:35
+emulators are nothing like the ones that
+1:36
+we're using
+1:37
+they're like super paired down they have
+1:40
+a very small subset of instructions that
+1:43
+are apis that they support based on you
+1:46
+know based on which whichever emulator
+1:47
+the Windows Defender one by the way
+1:49
+there's some research done on it is is
+1:51
+pretty robust there's lots of tells in
+1:53
+it but it's pretty robust so
+1:56
+in order to emulate past
+1:59
+um uh stuff that they don't they don't
+2:02
+have implemented in the in the emulator
+2:03
+the way that the AV guys do it is they
+2:06
+just return it's all good if they don't
+2:09
+have or usually they do they return it's
+2:12
+all good if they don't have that API
+2:15
+implemented which is why these uh
+2:19
+emulators these emulator checks that uh
+2:24
+that are for AV are usually like very
+2:27
+very weird sort of
+2:30
+um checks like uh let me see is it is it
+2:33
+here where's the [ __ ] where's the
+2:35
+check for it it was like a create pipe
+2:37
+or something like that
+2:39
+um
+2:41
+yeah if you guys didn't know this I've
+2:42
+talked about this on stream before but
+2:44
+if you didn't if you didn't know this
+2:46
+um yeah there's no way to know this
+2:48
+without actually having some like
+2:50
+background in the in the industry this
+2:52
+is a good example so
+2:55
+if you try and like uh open a file use
+2:57
+create file to open a file for this this
+3:00
+random file uh this isn't this isn't
+3:03
+going to work right you're going to get
+3:05
+an error and if you try and like call uh
+3:08
+erase tape on that file uh you're gonna
+3:12
+get an error uh right like there's that
+3:15
+just this doesn't exist right however in
+3:17
+an emulator like they don't know that
+3:19
+that file is not supposed to exist so
+3:22
+oftentimes the emulator will be like
+3:24
+cool here's a handle
+3:27
+the handle is two
+3:29
+right because they just want that they
+3:31
+just want the code to run as far as
+3:33
+possible so that they can get their
+3:34
+signatures on the memory of the of the
+3:36
+code and then like and then they're
+3:38
+gonna call like erase tape which is what
+3:41
+I was saying before but that probably
+3:42
+didn't make sense to you guys before
+3:43
+when I was saying that so yeah I'm glad
+3:45
+I'm explaining it now so the reason why
+3:48
+when you see an obscure API call in
+3:50
+malware why I always kind of think of
+3:52
+emulation is because like these things
+3:54
+are rarely implemented in an emulator
+3:57
+right like if you want to implement
+3:59
+every single Windows API call your
+4:01
+emulator is going to be too big and
+4:02
+unpredictable right so probably they
+4:06
+don't have [ __ ] erase tape
+4:07
+implemented
+4:09
+so if you call a race tape on a file
+4:11
+that doesn't exist the emulator is going
+4:13
+to be like I erased it cool I did it so
+4:18
+you're gonna get a zero so a status
+4:21
+success back from erase tape and that
+4:24
+zero is not going to pass this if
+4:26
+statement and it's gonna not run the
+4:29
+code right it's going to kick you out so
+4:31
+you see that kind of you see this type
+4:33
+of behavior a lot in malware that was
+4:37
+like uh they still use it today but you
+4:41
+used to see it a lot in like older
+4:43
+malware because they really were trying
+4:44
+to evade like antivirus now you see
+4:47
+other tricks being used like the giant
+4:48
+files and stuff like that or they're
+4:50
+more clever about wasting the emulator
+4:52
+time but these types of like hilarious
+4:56
+like obscure API calls or like expecting
+4:59
+error codes that's the other thing like
+5:01
+here they're expecting see how they
+5:03
+actually check
+5:04
+the error code and they expect it to be
+5:07
+something like this is another thing
+5:09
+that happens a lot with emulators this
+5:11
+this is actually one of the worst um
+5:12
+ones we see this used to see this
+5:14
+everywhere it's like they would call a
+5:17
+API that's with something that will
+5:20
+cause an error right like there's no way
+5:22
+that this is going to work under normal
+5:23
+circumstances and then they'll check the
+5:26
+last error to see whether it matches
+5:29
+what they expect and of course if you're
+5:31
+writing an emulator
+5:32
+there is no way in hell you're going to
+5:34
+write every like 10 000 [ __ ] if
+5:38
+statements for every type of corner
+5:40
+error case that could happen for each
+5:43
+API right it's just it's not possible
+5:45
+you either are going to emulate the deal
+5:47
+and let it do it do that for you uh
+5:50
+which does happen now right that happens
+5:51
+in Windows Defender that's why it's so
+5:53
+much better but but these smaller AV
+5:55
+companies that don't do that that just
+5:57
+implement the apis from hand like some
+6:00
+guy just writes like if if argument one
+6:04
+is this then set error code this right
+6:07
+with those guys they're not writing out
+6:09
+every error case so you'll see a lot of
+6:11
+times like they'll check the error and
+6:13
+like obviously under normal
+6:14
+circumstances you're going to get an
+6:16
+error that you expect but if you're
+6:18
+running in an emulator the error will be
+6:20
+like uh generic error you know it'll be
+6:24
+like or sometimes it will be no error at
+6:26
+all sometimes they'll be no like for
+6:28
+example like the erase tape like it'll
+6:30
+be like No Air
+6:32
+so checking that is like usually how
+6:35
+they how they defeat these these
+6:36
+emulators in uh in AV just to give you
+6:40
+the whole backstory of how uh how it all
+6:43
+works yeah four or four yeah exactly I
+6:46
+mean there's
+6:47
+um this this used to be a pretty taboo
+6:49
+thing
+6:50
+um you have to remember I'm kind of old
+6:52
+so so things were really different they
+6:55
+were a lot more
+6:56
+um they're a lot less uh open when I
+6:59
+first started in the industry and it
+7:00
+used to be pretty taboo to analyze
+7:02
+antivirus and like talk about it like
+7:04
+people would get quite angry at you if
+7:06
+you did that
+7:08
+um so if you looked at it you usually
+7:10
+kind of just told your told your friends
+7:12
+about it or whatever
+7:14
+um and I I had personally looked at a
+7:16
+few antivirus stuff and like some of
+7:19
+them uh it was very complicated and it's
+7:22
+hard to make sense of but some of them
+7:23
+have very self-contained small emulators
+7:27
+like the emulation
+7:28
+surface is very small so unless like the
+7:32
+malware is basically really behaving
+7:35
+well uh it's pretty easy to detect that
+7:38
+you're inside an AV emulator first for
+7:40
+some AVS and again things could have
+7:43
+changed I mean this is like over 10
+7:44
+years ago or whatever when I was looking
+7:45
+at this stuff but like
+7:47
+no well yeah let's let's say over 10
+7:49
+years ago but anyway things are
+7:52
+different now I mean now people publish
+7:53
+research on on AVS right there's all
+7:55
+that nice stuff written about Windows
+7:57
+Defender and stuff like that but anyway
+7:59
+a little bit of history there anytime
+8:00
+you see stuff like this uh you know
+8:03
+where they're where they're expecting a
+8:04
+specific error you know you're like why
+8:06
+would you write code to cause an error
+8:08
+and then check that that error is
+8:09
+correct is this is the One You're
+8:10
+Expecting well that's usually
+8:12
+anti-amulation Behavior
+8:15
+hopefully kind of summed it up for you
+8:17
+guys all right I hope you guys enjoyed
+8:19
+that just a reminder that we are live on
+8:21
+Thursdays and Sundays on Twitch and if
+8:23
+you like this kind of stuff go check out
+8:25
+our patreon we have lots more reverse
+8:26
+engineering content over 200 hours of
+8:28
+live streams as well as in-depth reverse
+8:30
+engineering tutorials all right until
+8:32
+next time keep exposing mechanics behind
+8:33
+the malware stay curious
+
