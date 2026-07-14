@@ -31,7 +31,22 @@ ROOT        = Path(__file__).resolve().parent.parent
 TRANSCRIPTS = ROOT / "transcripts"
 STATE_FILE  = TRANSCRIPTS / "_state.json"
 REGISTRY    = ROOT / "rubrics" / "Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx"
-API_KEY     = (ROOT / "rubrics" / "youtube_API.txt").read_text().strip()
+def _load_api_key() -> str:
+    # Prefer environment variable; fall back to local key file (not committed to git)
+    key = os.environ.get("YOUTUBE_API_KEY", "")
+    if not key:
+        key_file = ROOT / "rubrics" / "youtube_API.txt"
+        if key_file.exists():
+            key = key_file.read_text().strip()
+    if not key or key == "YOUR_YOUTUBE_API_KEY":
+        raise ValueError(
+            "YouTube API key not found. "
+            "Set the YOUTUBE_API_KEY environment variable, "
+            "or put your key in rubrics/youtube_API.txt"
+        )
+    return key
+
+API_KEY = _load_api_key()
 
 KEYWORDS = [
     "ransomware", "extortion", "double extortion",
