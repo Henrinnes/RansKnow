@@ -4,12 +4,18 @@ Usage:
     python3 Scripts/fetch_transcripts.py
     python3 Scripts/fetch_transcripts.py --per-channel 20 --scan 150
     python3 Scripts/fetch_transcripts.py --channels C25 C12 C27
+    python3 Scripts/fetch_transcripts.py --retry-missing
+    python3 Scripts/fetch_transcripts.py --retry-missing --whisper-model small
 """
 
 import argparse
 import json
+import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -18,21 +24,35 @@ import isodate
 import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from youtube_transcript_api import (
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
     CouldNotRetrieveTranscript,
     NoTranscriptFound,
     TranscriptsDisabled,
-    YouTubeTranscriptApi,
 )
 
-# ── Paths ────────────────────────────────────────────────────────────────────
+# ── Paths ─────────────────────────────────────────────────────────────────────
 
 ROOT        = Path(__file__).resolve().parent.parent
 TRANSCRIPTS = ROOT / "transcripts"
 STATE_FILE  = TRANSCRIPTS / "_state.json"
 REGISTRY    = ROOT / "rubrics" / "Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx"
+YTDLP       = shutil.which("yt-dlp") or os.path.expanduser("~/.local/bin/yt-dlp")
+
+KEYWORDS = [
+    "ransomware", "extortion", "double extortion",
+    "encrypt", "encryption", "decrypt", "data leak",
+    "incident response", " ir ", "lockbit", "alphv", "blackcat",
+    "conti", "ryuk", "cl0p", "clop", "akira", "revil",
+    "sodinokibi", "ransomware-as-a-service", "raas",
+]
+
+PREFER_LANGS = ["en", "en-GB", "en-US"]
+MIN_SECONDS  = 300  # 5 minutes
+
+# ── API key (lazy — only needed for fetch(), not retry_missing()) ──────────────
+
 def _load_api_key() -> str:
-    # Prefer environment variable; fall back to local key file (not committed to git)
     key = os.environ.get("YOUTUBE_API_KEY", "")
     if not key:
         key_file = ROOT / "rubrics" / "youtube_API.txt"
@@ -46,21 +66,8 @@ def _load_api_key() -> str:
         )
     return key
 
-API_KEY = _load_api_key()
 
-KEYWORDS = [
-    "ransomware", "extortion", "double extortion",
-    "encrypt", "encryption", "decrypt", "data leak",
-    "incident response", " ir ", "lockbit", "alphv", "blackcat",
-    "conti", "ryuk", "cl0p", "clop", "akira", "revil",
-    "sodinokibi", "ransomware-as-a-service", "raas",
-]
-
-PREFER_LANGS = ["en", "en-GB", "en-US"]
-MIN_SECONDS  = 300  # 5 minutes
-
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _sanitize(s: str, max_len: int = 80) -> str:
     s = re.sub(r"[^\w\- ]+", "", s, flags=re.UNICODE).strip()
@@ -79,7 +86,6 @@ def _save_counter(n: int) -> None:
 
 
 def _existing_youtube_ids() -> Dict[str, Path]:
-    """Map YouTube video ID → meta.json path for every video already in the dataset."""
     index: Dict[str, Path] = {}
     for meta_file in TRANSCRIPTS.rglob("*.meta.json"):
         try:
@@ -93,25 +99,20 @@ def _existing_youtube_ids() -> Dict[str, Path]:
 
 
 def _resolve_channel_uc(youtube, url: str, name: str) -> Optional[str]:
-    # 1) UC id in URL
     m = re.search(r"(UC[a-zA-Z0-9_-]{20,})", url)
     if m:
         return m.group(1)
 
-    # 2) @handle
     m = re.search(r"/@([a-zA-Z0-9_.-]+)", url)
     if m:
         try:
-            resp = youtube.channels().list(
-                part="id", forHandle=m.group(1)
-            ).execute()
+            resp = youtube.channels().list(part="id", forHandle=m.group(1)).execute()
             items = resp.get("items", [])
             if items:
                 return items[0]["id"]
         except Exception:
             pass
 
-    # 3) Name search fallback
     try:
         resp = youtube.search().list(
             part="snippet", q=name, type="channel", maxResults=1
@@ -126,9 +127,7 @@ def _resolve_channel_uc(youtube, url: str, name: str) -> Optional[str]:
 
 
 def _uploads_playlist(youtube, channel_uc: str) -> Optional[str]:
-    resp = youtube.channels().list(
-        part="contentDetails", id=channel_uc
-    ).execute()
+    resp = youtube.channels().list(part="contentDetails", id=channel_uc).execute()
     items = resp.get("items", [])
     if not items:
         return None
@@ -157,7 +156,6 @@ def _list_video_ids(youtube, playlist_id: str, max_n: int) -> List[str]:
 
 
 def _search_video_ids(youtube, channel_uc: str, query: str, max_n: int) -> List[str]:
-    """Fallback: search within a channel for ransomware-relevant videos."""
     ids: List[str] = []
     page_token = None
     while len(ids) < max_n:
@@ -195,15 +193,13 @@ def _video_metadata(youtube, video_ids: List[str]) -> List[dict]:
             pub = s.get("publishedAt", "")
             dur_iso = v["contentDetails"].get("duration", "PT0S")
             rows.append({
-                "video_id":        v["id"],
-                "title":           s.get("title", ""),
-                "description":     s.get("description", ""),
-                "published_at":    pub,
-                "year":            int(pub[:4]) if pub else None,
-                "duration_iso":    dur_iso,
-                "duration_seconds": int(
-                    isodate.parse_duration(dur_iso).total_seconds()
-                ),
+                "video_id":         v["id"],
+                "title":            s.get("title", ""),
+                "description":      s.get("description", ""),
+                "published_at":     pub,
+                "year":             int(pub[:4]) if pub else None,
+                "duration_iso":     dur_iso,
+                "duration_seconds": int(isodate.parse_duration(dur_iso).total_seconds()),
             })
     return rows
 
@@ -214,45 +210,215 @@ def _keyword_match(title: str, description: str) -> Tuple[bool, str]:
     return bool(matched), ";".join(matched)
 
 
-def _fetch_transcript(video_id: str) -> Optional[str]:
-    """Return transcript in timestamped format, or None."""
+# ── Transcript methods (cascade: API → yt-dlp captions → Whisper) ─────────────
+
+def _fmt_segments(segments) -> str:
+    """Format a list of transcript segments into M:SS\\ntext lines."""
+    lines = []
+    for seg in segments:
+        start = seg.start if hasattr(seg, "start") else seg["start"]
+        text  = seg.text  if hasattr(seg, "text")  else seg["text"]
+        text  = (text or "").strip()
+        if not text:
+            continue
+        m, s = divmod(int(start), 60)
+        lines.append(f"{m}:{s:02d}")
+        lines.append(text)
+    return "\n".join(lines)
+
+
+def _fetch_via_api(video_id: str) -> Optional[str]:
+    """Method 1: youtube-transcript-api (fastest, works when not IP-blocked)."""
     try:
+        api = YouTubeTranscriptApi()
         for lang in PREFER_LANGS:
             try:
-                segments = YouTubeTranscriptApi.get_transcript(
-                    video_id, languages=[lang]
-                )
-                return _format_transcript(segments)
+                t = api.fetch(video_id, languages=[lang])
+                return _fmt_segments(t.snippets)
             except Exception:
                 pass
-        segments = YouTubeTranscriptApi.get_transcript(video_id)
-        return _format_transcript(segments)
+        t = api.fetch(video_id)
+        return _fmt_segments(t.snippets)
     except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript):
         return None
     except Exception:
         return None
 
 
-def _format_transcript(segments: list) -> str:
-    """Convert youtube-transcript-api segments to the dataset's timestamped format."""
+def _parse_srv1(xml: str) -> Optional[str]:
+    """Parse yt-dlp's srv1 subtitle XML into timestamped text."""
     lines = []
-    for seg in segments:
-        start = seg["start"]
-        minutes = int(start // 60)
-        seconds = int(start % 60)
-        lines.append(f"{minutes}:{seconds:02d}")
-        lines.append(seg["text"])
-    return "\n".join(lines)
+    for start_ms, text in re.findall(r'start="(\d+)"[^>]*>([^<]*)</text>', xml):
+        m, s = divmod(int(start_ms) // 1000, 60)
+        text = re.sub(r"<[^>]+>", "", text).strip()
+        for esc, ch in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+                        ("&#39;", "'"), ("&quot;", '"')]:
+            text = text.replace(esc, ch)
+        if text:
+            lines.append(f"{m}:{s:02d}")
+            lines.append(text)
+    return "\n".join(lines) if lines else None
 
 
-# ── Main pipeline ─────────────────────────────────────────────────────────────
+def _fetch_via_ytdlp_captions(video_id: str) -> Optional[str]:
+    """Method 2: yt-dlp auto-generated captions (works when API is IP-blocked)."""
+    if not YTDLP or not Path(YTDLP).exists():
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run([
+            YTDLP, "--write-auto-subs", "--skip-download",
+            "--sub-langs", "en,en-orig,en-US,en-GB",
+            "--sub-format", "srv1", "--quiet",
+            "-o", str(Path(tmp) / "sub"),
+            f"https://www.youtube.com/watch?v={video_id}",
+        ], capture_output=True, timeout=60)
+        for f in Path(tmp).iterdir():
+            if f.suffix == ".srv1":
+                return _parse_srv1(f.read_text())
+    return None
+
+
+_whisper_model_cache: dict = {}
+
+def _load_whisper_model(model_name: str):
+    """Lazy-load a Whisper model, caching it for reuse across videos."""
+    if model_name not in _whisper_model_cache:
+        try:
+            import whisper
+            print(f"  [Whisper] Loading '{model_name}' model (one-time download if first use)...",
+                  flush=True)
+            _whisper_model_cache[model_name] = whisper.load_model(model_name)
+            print(f"  [Whisper] Model ready.", flush=True)
+        except ImportError:
+            print("  [Whisper] openai-whisper not installed. Run: pip install openai-whisper",
+                  file=sys.stderr)
+            _whisper_model_cache[model_name] = None
+    return _whisper_model_cache[model_name]
+
+
+def _fetch_via_whisper(video_id: str, model_name: str = "base") -> Optional[str]:
+    """Method 3: download audio with yt-dlp and transcribe locally with Whisper."""
+    if not YTDLP or not Path(YTDLP).exists():
+        return None
+    model = _load_whisper_model(model_name)
+    if model is None:
+        return None
+
+    with tempfile.TemporaryDirectory() as tmp:
+        audio_path = Path(tmp) / "audio.m4a"
+        r = subprocess.run([
+            YTDLP, "-x",
+            "--audio-format", "m4a",
+            "--audio-quality", "5",   # ~128 kbps — sufficient for speech
+            "--quiet",
+            "-o", str(audio_path),
+            f"https://www.youtube.com/watch?v={video_id}",
+        ], capture_output=True, timeout=300)
+
+        if r.returncode != 0 or not audio_path.exists():
+            return None
+
+        try:
+            result = model.transcribe(str(audio_path), fp16=False, verbose=False)
+        except Exception:
+            return None
+
+        lines = []
+        for seg in result.get("segments", []):
+            text = (seg.get("text") or "").strip()
+            if not text:
+                continue
+            m, s = divmod(int(seg["start"]), 60)
+            lines.append(f"{m}:{s:02d}")
+            lines.append(text)
+
+        return "\n".join(lines) if lines else None
+
+
+def _fetch_transcript(video_id: str, whisper_model: str = "base") -> Tuple[Optional[str], str]:
+    """
+    Try all three methods in order.
+    Returns (transcript_text, method_name) or (None, "").
+    """
+    t = _fetch_via_api(video_id)
+    if t:
+        return t, "youtube_api"
+
+    t = _fetch_via_ytdlp_captions(video_id)
+    if t:
+        return t, "ytdlp_captions"
+
+    t = _fetch_via_whisper(video_id, whisper_model)
+    if t:
+        return t, f"whisper_{whisper_model}"
+
+    return None, ""
+
+
+# ── Retry missing ─────────────────────────────────────────────────────────────
+
+def retry_missing(whisper_model: str = "base"):
+    """Re-process every video that still has [NO TRANSCRIPT AVAILABLE]."""
+    flagged = []
+    for meta_file in sorted(TRANSCRIPTS.rglob("*.meta.json")):
+        txt_path = meta_file.with_name(meta_file.name.replace(".meta.json", ".txt"))
+        if not txt_path.exists():
+            continue
+        if txt_path.read_text(encoding="utf-8").strip() != "[NO TRANSCRIPT AVAILABLE]":
+            continue
+        try:
+            meta = json.loads(meta_file.read_text())
+        except Exception:
+            continue
+        flagged.append((meta, txt_path, meta_file))
+
+    if not flagged:
+        print("No missing transcripts found — nothing to do.")
+        return
+
+    print(f"Retrying {len(flagged)} missing transcripts "
+          f"(API → yt-dlp captions → Whisper {whisper_model})...\n")
+
+    recovered = still_missing = 0
+    method_counts: Dict[str, int] = {}
+
+    for i, (meta, txt_path, meta_file) in enumerate(flagged, 1):
+        yt_id  = meta["YouTube_Video_ID"]
+        vid_id = meta["Video_ID"]
+
+        transcript, method = _fetch_transcript(yt_id, whisper_model)
+
+        if transcript:
+            txt_path.write_text(transcript, encoding="utf-8")
+            meta["Transcript_Available"] = True
+            meta["Transcript_Provider"]  = method
+            meta_file.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+            recovered += 1
+            method_counts[method] = method_counts.get(method, 0) + 1
+            print(f"  [{i}/{len(flagged)}] {vid_id} ✓ ({method})", flush=True)
+        else:
+            still_missing += 1
+            print(f"  [{i}/{len(flagged)}] {vid_id} ✗ (no transcript available)", flush=True)
+
+        time.sleep(0.3)
+
+    print(f"\n{'─'*40}")
+    print(f"Recovered:     {recovered} / {len(flagged)}")
+    for m, n in method_counts.items():
+        print(f"  via {m}: {n}")
+    print(f"Still missing: {still_missing}")
+
+
+# ── Main fetch pipeline ───────────────────────────────────────────────────────
 
 def fetch(
     per_channel: int = 10,
     scan_recent: int = 100,
     channel_filter: Optional[List[str]] = None,
+    whisper_model: str = "base",
 ):
-    youtube  = build("youtube", "v3", developerKey=API_KEY)
+    api_key = _load_api_key()
+    youtube  = build("youtube", "v3", developerKey=api_key)
     df       = pd.read_excel(REGISTRY, sheet_name=0)
     existing = _existing_youtube_ids()
     counter  = _load_counter()
@@ -261,11 +427,9 @@ def fetch(
     print(f"Next Video ID:       V{counter:04d}")
     print()
 
-    # Filter to included channels only
     if "Included (Yes/No)" in df.columns:
         df = df[df["Included (Yes/No)"].str.strip().str.lower() == "yes"]
 
-    # Optional channel filter
     if channel_filter:
         df = df[df["Channel_ID"].isin(channel_filter)]
 
@@ -276,7 +440,6 @@ def fetch(
         ch_name = str(row["Channel_Name"]).strip()
         ch_url  = str(row["Channel_URL"]).strip()
 
-        # Count how many this channel already has
         ch_folder = TRANSCRIPTS / f"{ch_id}_{_sanitize(ch_name)}"
         already   = len(list(ch_folder.glob("V*.txt"))) if ch_folder.exists() else 0
         need      = max(0, per_channel - already)
@@ -287,7 +450,6 @@ def fetch(
 
         print(f"[{ch_id}] {ch_name} — has {already}, fetching up to {need} more ...")
 
-        # Resolve channel
         ch_uc = _resolve_channel_uc(youtube, ch_url, ch_name)
         if not ch_uc:
             print(f"  [WARN] Could not resolve channel UC id — skipping")
@@ -299,7 +461,6 @@ def fetch(
         else:
             video_ids = []
 
-        # Fallback: search API when uploads playlist is unavailable or empty
         if not video_ids:
             print(f"  [INFO] Uploads playlist unavailable — using search fallback")
             video_ids = _search_video_ids(
@@ -314,7 +475,6 @@ def fetch(
 
         meta_list = _video_metadata(youtube, video_ids)
 
-        # Filter: duration, keyword, not already fetched
         candidates = []
         for m in meta_list:
             if m["duration_seconds"] < MIN_SECONDS:
@@ -337,47 +497,47 @@ def fetch(
         saved = 0
 
         for m in candidates:
-            yt_vid  = m["video_id"]
-            vid_id  = f"V{counter:04d}"
+            yt_vid    = m["video_id"]
+            vid_id    = f"V{counter:04d}"
             txt_file  = ch_folder / f"{vid_id}.txt"
             meta_file = ch_folder / f"{vid_id}.meta.json"
 
-            transcript = _fetch_transcript(yt_vid)
+            transcript, method = _fetch_transcript(yt_vid, whisper_model)
             transcript_available = transcript is not None
 
-            if transcript is None:
-                transcript = "[NO TRANSCRIPT AVAILABLE]\n"
-
-            txt_file.write_text(transcript, encoding="utf-8")
+            txt_file.write_text(
+                transcript if transcript else "[NO TRANSCRIPT AVAILABLE]\n",
+                encoding="utf-8",
+            )
             meta_file.write_text(
                 json.dumps({
-                    "Video_ID":            vid_id,
-                    "Channel_ID":          ch_id,
-                    "Channel_Name":        ch_name,
-                    "Channel_UC":          ch_uc,
-                    "YouTube_Video_ID":    yt_vid,
-                    "Video_Title":         m["title"],
-                    "Year":                m["year"],
-                    "PublishedAt":         m["published_at"],
-                    "DurationSeconds":     m["duration_seconds"],
-                    "DurationISO":         m["duration_iso"],
-                    "Matched_Keywords":    m["matched_keywords"],
+                    "Video_ID":             vid_id,
+                    "Channel_ID":           ch_id,
+                    "Channel_Name":         ch_name,
+                    "Channel_UC":           ch_uc,
+                    "YouTube_Video_ID":     yt_vid,
+                    "Video_Title":          m["title"],
+                    "Year":                 m["year"],
+                    "PublishedAt":          m["published_at"],
+                    "DurationSeconds":      m["duration_seconds"],
+                    "DurationISO":          m["duration_iso"],
+                    "Matched_Keywords":     m["matched_keywords"],
                     "Transcript_Available": transcript_available,
+                    "Transcript_Provider":  method or None,
                 }, indent=2),
                 encoding="utf-8",
             )
 
-            status = "transcript" if transcript_available else "no transcript"
-            print(f"  {vid_id} | {m['title'][:60]} [{status}]")
+            status = f"✓ {method}" if transcript_available else "✗ no transcript"
+            print(f"  {vid_id} | {m['title'][:55]} [{status}]")
 
             existing[yt_vid] = meta_file
-            counter += 1
-            saved   += 1
+            counter  += 1
+            saved    += 1
             total_new += 1
 
-            # Update state after every video so progress survives interruption
             _save_counter(counter)
-            time.sleep(0.3)  # be gentle with the API
+            time.sleep(0.3)
 
         print(f"  Saved {saved} new video(s)")
 
@@ -390,20 +550,34 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch ransomware transcripts from YouTube")
     parser.add_argument(
         "--per-channel", type=int, default=10,
-        help="Target number of videos per channel (default: 10)"
+        help="Target number of videos per channel (default: 10)",
     )
     parser.add_argument(
         "--scan", type=int, default=100,
-        help="How many recent videos to scan per channel (default: 100)"
+        help="How many recent videos to scan per channel (default: 100)",
     )
     parser.add_argument(
         "--channels", nargs="+", metavar="C##",
-        help="Only process specific channel IDs, e.g. --channels C25 C12 C27"
+        help="Only process specific channel IDs, e.g. --channels C25 C12 C27",
+    )
+    parser.add_argument(
+        "--retry-missing", action="store_true",
+        help="Re-process all videos that have [NO TRANSCRIPT AVAILABLE]",
+    )
+    parser.add_argument(
+        "--whisper-model",
+        default="base",
+        choices=["tiny", "base", "small", "medium", "large"],
+        help="Whisper model size for audio transcription fallback (default: base)",
     )
     args = parser.parse_args()
 
-    fetch(
-        per_channel=args.per_channel,
-        scan_recent=args.scan,
-        channel_filter=args.channels,
-    )
+    if args.retry_missing:
+        retry_missing(whisper_model=args.whisper_model)
+    else:
+        fetch(
+            per_channel=args.per_channel,
+            scan_recent=args.scan,
+            channel_filter=args.channels,
+            whisper_model=args.whisper_model,
+        )
