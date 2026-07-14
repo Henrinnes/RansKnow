@@ -1,6 +1,6 @@
 # RansKnow: Ransomware Knowledge Dataset
 
-A curated dataset of **440 video transcripts** sourced from **50 cybersecurity YouTube channels**, built to support knowledge extraction, NLP research, and threat intelligence analysis focused on ransomware.
+A curated dataset of **761 video records** (424 with full transcripts) sourced from **50 cybersecurity YouTube channels**, built to support knowledge extraction, NLP research, and threat intelligence analysis focused on ransomware.
 
 ---
 
@@ -16,7 +16,7 @@ Videos were selected using keyword-based inclusion criteria (ransomware-relevant
 
 ```
 RansKnow/
-├── transcripts/                  # 440 videos across 50 channels
+├── transcripts/                  # 761 video records across 50 channels
 │   ├── C01_The_DFIR_Report/
 │   │   ├── V0001.txt             # Raw transcript (YouTube timestamped format)
 │   │   ├── V0001.meta.json       # Video metadata
@@ -186,7 +186,7 @@ The full dataset (including transcript zips, scripts, and rubrics) is also avail
 | Version | Date | Description |
 |---|---|---|
 | v1 | May 2026 | Initial release — Knowledge Agent CSV (307 rows) |
-| v2 | July 2026 | Full dataset — 440 transcripts, all scripts, rubrics, figures, and documentation |
+| v2 | July 2026 | Automated fetch — 761 video records, 424 transcripts, all scripts, rubrics, figures, and documentation |
 
 ---
 
