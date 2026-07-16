@@ -37,6 +37,7 @@ ROOT        = Path(__file__).resolve().parent.parent
 TRANSCRIPTS = ROOT / "transcripts"
 STATE_FILE  = TRANSCRIPTS / "_state.json"
 REGISTRY    = ROOT / "rubrics" / "Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx"
+REGISTRY_B2 = ROOT / "rubrics" / "Dataset_Channel_Registry_Batch2.xlsx"
 YTDLP       = shutil.which("yt-dlp") or os.path.expanduser("~/.local/bin/yt-dlp")
 
 KEYWORDS = [
@@ -419,10 +420,11 @@ def fetch(
     scan_recent: int = 100,
     channel_filter: Optional[List[str]] = None,
     whisper_model: str = "base",
+    registry_path: Optional[Path] = None,
 ):
     api_key = _load_api_key()
     youtube  = build("youtube", "v3", developerKey=api_key)
-    df       = pd.read_excel(REGISTRY, sheet_name=0)
+    df       = pd.read_excel(registry_path or REGISTRY, sheet_name=0)
     existing = _existing_youtube_ids()
     counter  = _load_counter()
 
@@ -573,7 +575,13 @@ if __name__ == "__main__":
         choices=["tiny", "base", "small", "medium", "large"],
         help="Whisper model size for audio transcription fallback (default: base)",
     )
+    parser.add_argument(
+        "--registry", metavar="PATH",
+        help="Path to channel registry Excel file (default: Batch 1 registry)",
+    )
     args = parser.parse_args()
+
+    registry_path = Path(args.registry) if args.registry else None
 
     if args.retry_missing:
         retry_missing(whisper_model=args.whisper_model)
@@ -583,4 +591,5 @@ if __name__ == "__main__":
             scan_recent=args.scan,
             channel_filter=args.channels,
             whisper_model=args.whisper_model,
+            registry_path=registry_path,
         )
