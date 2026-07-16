@@ -48,6 +48,7 @@ RansKnow/
 │   └── populate_video_registry_from_transcripts.py
 │
 ├── rubrics/                      # Scoring rubrics and channel registry
+│   ├── Dataset_Channel_Registry_Batch2.xlsx  # Batch 2 candidates — C51–C101 (51 channels, pending)
 │   ├── Dataset_Channel_Registry_Populated_25.xlsx
 │   ├── Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx
 │   ├── Ransomware_Family_Coverage_List.xlsx
@@ -134,6 +135,22 @@ All **718 videos** with real transcripts have been processed through the Knowled
 | C50 | Darktrace |
 
 Most channels contribute **10 videos** each, selected to maximise ransomware family coverage and technical depth.
+
+### Batch 2 — Planned Expansion (C51–C101)
+
+A second batch of **51 candidate channels** (C51–C101) has been curated to expand coverage to ~100 channels, targeting gaps in the current dataset:
+
+| Category | Channels |
+|---|---|
+| Threat Intelligence / Vendor | SentinelOne, Check Point Research, Trend Micro, WithSecure, Rapid7, Malwarebytes, Group-IB, Prodaft, Anomali, Kroll, NCC Group, Emsisoft, Intezer, ZeroFox, ReliaQuest, Binary Defense |
+| DFIR Practitioners | 13Cubed, HuskyHacks, TCM Security, Josh Stroschein, ANY.RUN, Cado Security, Cyb3rWard0g |
+| Conferences | Virus Bulletin, Hack In The Box, Wild West Hackin' Fest, SecTor, CactusCon, GrayHat, ICS Village, Hack.lu, Troopers, BlueHat, CYBERWARCON, OffensiveCon |
+| OT / ICS / Government | Claroty, Nozomi Networks, S4 Conference, CISA, Waterfall Security |
+| News & Analysis | Risky Business, Security Weekly, Darknet Diaries |
+| Blue Team / Detection | Florian Roth, Eric Zimmerman, LetsDefend |
+| Consulting | GuidePoint Security, ThreatConnect, Optiv, CanSecWest |
+
+Channel selection rubric and URLs: `rubrics/Dataset_Channel_Registry_Batch2.xlsx`
 
 ---
 
