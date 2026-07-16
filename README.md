@@ -38,6 +38,7 @@ RansKnow/
 ├── Scripts/                      # Data pipeline notebooks and scripts
 │   ├── knowledge_agent.py                # v2 feature extraction pipeline (current)
 │   ├── fetch_transcripts.py              # Transcript fetcher with Whisper ASR fallback
+│   ├── ransknow-getting-started.ipynb    # Getting Started notebook (Kaggle-ready)
 │   ├── 01_Transcript_Dataset_Construction.ipynb
 │   ├── fetch_transcripts_keywords.ipynb
 │   ├── Data_extraction_inclusion.ipynb
@@ -183,6 +184,11 @@ Each `.meta.json` file contains structured metadata:
 
 The full dataset (including transcript zips, scripts, and rubrics) is also available on Kaggle:
 [https://www.kaggle.com/datasets/henrykabuye/ransknow-v1](https://www.kaggle.com/datasets/henrykabuye/ransknow-v1)
+
+A **Getting Started notebook** is available on the dataset's Code tab, covering feature exploration, tactic/tool plots, transcript reading, and family filtering:
+[https://www.kaggle.com/code/henrykabuye/ransknow-getting-started](https://www.kaggle.com/code/henrykabuye/ransknow-getting-started)
+
+The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`.
 
 ---
 
