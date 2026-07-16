@@ -1,1 +1,1018 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Welcome back everyone. Today we're talking about how to start a digital forensic
+0:03
+investigation with autopsy. And I'm using autopsy 4.19.3, but really any version of
+0:09
+autopsy 4 will be very similar to this. Before we begin, we have to get a couple
+0:13
+things ready. First we need to go to autopsy.com and click the big download button,
+0:17
+follow the instructions. It's very straightforward. Next, I recommend you get HXD.
+0:23
+It's a freeware hex editor and it does have integrations with autopsy.
+0:27
+A full featured hex editor is much nicer whenever you're trying to dig down into
+0:31
+specific data structures. So I recommend getting both of those and installing them
+0:35
+and they do work together. Now once we have autopsy and HXD installed, the next thing
+0:40
+we need to do is set up where our data is going to be located. We don't want to
+0:43
+save data to our C drive on our forensic workstation because we don't want to mix
+0:48
+suspect data and our forensic workstation files. So what we want to do is always
+0:53
+have a separate drive where you're going to be saving your case data. This could be
+0:57
+an external hard drive. It could be a specific internal hard drive set up
+1:01
+specifically for your case data or it could be a network share at your
+1:04
+organization. The drive I'm going to be using is the W drive. So again, I'm not
+1:08
+saving anything to my forensic workstations C drive. I'm going to be saving
+1:13
+everything to my W drive to keep everything separated. In W drive, I have a
+1:17
+couple things already. One is a hash set and we'll talk a little bit about
+1:21
+hash sets later and I have my cases file. So inside the cases file, I'm going
+1:26
+to create a new case in most organizations. If we're already in doing an
+1:31
+investigation, then a case number has probably already been created for us. So I
+1:36
+will create a new folder with a case number. So whatever that case number is,
+1:39
+let's just say it was 001. I also like to give it some sort of indicator of
+1:44
+what type of investigation I'm doing. That way I can look at the case, I might not
+1:48
+recognize the case number, but I can really quickly recognize the tag. So I'll
+1:52
+just put like a H here and for me, that will represent hacking. I might also
+1:57
+usually include some sort of information, like a tag about its location, a tag
+2:03
+about the investigator that's starting it. Maybe the investigating members
+2:06
+initial, I'll just say XX here. So this structure would tell me for example, case
+2:11
+number assigned by our case management system. It's a hacking case. This is the
+2:15
+investigator who is looking at it and then this is the investigating member
+2:19
+requesting the case. Come up with your own standard. You want to be able to look
+2:23
+at this file and understand really quickly what it's about, even if you don't
+2:27
+recognize the case number. And then always use that standard for the rest of your
+2:30
+cases, just to keep everything consistent and try to use the same standard
+2:34
+through your entire organization. Inside this case folder, I'll create a
+2:37
+couple more folders. My basic structure is going to be docs, images, temp, autopsy,
+2:41
+reports. While I'm here, I'm going to go ahead and go into docs and I'm going to
+2:45
+create a new text document called case number docs. Text. Now I have my case
+2:52
+documentation open up and notepad hit F5 to insert a timestamp and then say
+2:57
+case started by. So now we have our documentation notes ready to go. I'm going
+3:05
+to go ahead and keep that up for images. The investigating member by this stage
+3:09
+has probably already given you images or you're about to create images. So let's
+3:13
+say that we have some suspect data and the suspect data is in exhibit 001. So
+3:20
+let's say a computer was brought into you or a thumb drive was brought into
+3:22
+you. That thumb drive is classified as exhibit 001. So I will just use that
+3:29
+exhibit number directly exhibit 001 images. Double click on that. And then I
+3:34
+already have my suspect data here that I've that's already been collected. So I'm
+3:38
+going to move that into this directory. Now all of my image data for all
+3:42
+exhibits plus all of my reports plus all of my temporary files and everything
+3:46
+like that are in a single place inside this case folder. So if anyone's accessing
+3:51
+any of the data, they know that they can just find it directly in that case
+3:54
+folder. Everything is constantly kept together and I'm never going to save
+3:57
+anything outside of that folder. And I'll have a link to this data below if you
+4:00
+want to follow along specifically with my data set suspect data.DD. Next I'm
+4:05
+going to do F5 and then say started autopsy 4.19.3 because we need to know which
+4:13
+version of autopsy we're using whenever we're processing something to process
+4:17
+case data. Now why am I keeping notes like this? This is basically a diary of
+4:22
+everything that I'm doing to make sure that I don't forget how I've started
+4:26
+everything and to make sure that I'm processing and documenting exactly where
+4:30
+all of my data is located. And a lot of this will be relevant to my final report.
+4:33
+Go ahead and open up autopsy and now we have a couple options. First is a new
+4:37
+case or open a case. I haven't created a case yet. So I'll do new case. Click on
+4:42
+new case and then we're asked for a case name. So I'm going to go ahead and
+4:46
+copy and paste the case name in there and then the base directory I want is
+4:50
+W drive cases and then the case name and I'm choosing autopsy as my base
+4:56
+directory. That way all of the autopsy case files are stored inside that autopsy
+5:00
+folder. Click select. So now I have the case number, I have cases and autopsy and
+5:05
+then the case type is single user. There's also multi user that's possible.
+5:09
+You have to set up a network including some servers on that network and then
+5:14
+multiple people can connect to the same case at the same time and start
+5:17
+processing and analyzing different data sources in that case. It takes a little
+5:21
+bit more to set up but it is very useful in real laboratories. For now we're
+5:25
+just going to do single user which means everything is going to be processed
+5:28
+locally and only you will have access to that data. Confirm that the case
+5:31
+data will be stored in the following directory. I'm going to go ahead and
+5:34
+copy this string and then in my documentation say F5 autopsy case data
+5:41
+directory set to this location. So I give the full path consistently and one
+5:47
+reason that I'm using the case number for my path is because I want whoever's
+5:51
+reading these notes to see that it's always in the same directory. I want to be
+5:55
+able to very easily show that I'm saving the data in the right location.
+5:58
+Next our case number we should just put the number instead of the identifiers
+6:02
+and then the examiner phone number email and then any notes about this
+6:06
+particular case. We have to include the case number because we want to
+6:09
+reference it back to this case number that was assigned by our case management
+6:13
+system. The examiner information is necessary because we need to know who to
+6:16
+contact if anyone has questions about these cases plus this will end up on
+6:21
+reports. Next is the organization and this is the organization that you're doing
+6:25
+the investigation for and that way whenever your processing data sets across
+6:29
+the organization you can do comparisons of data within that organization. If you
+6:34
+need to add an organization I already have the FBI added here just for fun but
+6:37
+we can just go to manage organizations click new we already have FBI so let's do
+6:41
+CIA point of contact, Dando email phone. Alright so now we have a CIA contact
+6:47
+and an FBI contact so click close our organizations are set so now we can
+6:52
+select which organization it is that we're processing this case for. Okay so I'm
+6:56
+gonna select CIA. Next thing we want to do is figure out a host name so a
+7:00
+computer can have multiple hard drives in it so we can specify a host name and
+7:05
+then attach multiple data sources to that host so if you have a network dump if
+7:10
+you have a RAM dump and you have a hard drive image you add them under one
+7:14
+host so I'm going to go ahead and specify the host and I'm going to call it
+7:18
+exhibit 001 so under exhibit 001 which somebody has obviously already seized
+7:23
+and imaged for me I'm going to add our disk image so our new host name is exhibit
+7:29
+001 if I had a different computer or another device it might be exhibit 002
+7:34
+or whoever was making the initial documentation I would use that exhibit
+7:38
+number. Click next now we can choose if I want a disk image or VM file. Disk
+7:42
+image is what I currently have it's a raw disk image so if I go to images who
+7:47
+are exhibit 001 and I have our suspect data dot DD DD is almost always a raw
+7:53
+disk image it's an exact copy rather than some type of compressed format like
+7:57
+expert witness format so I have a disk image this is also a virtual machine file
+8:02
+you can feed it basically a virtual machine disk image directly next is a
+8:05
+local disk if I've connected the suspects disk to my forensic workstation using a
+8:11
+hardware right blocker then I can select local disk and then I have the
+8:14
+ability to pick that suspect disk and read the data directly this is much
+8:18
+much faster the problem with this is that that suspect disk the hardware could
+8:23
+go bad while I'm analyzing it so it's always better to work off the disk image
+8:27
+and specifically a copy of a copy next our logical files if we've only collected
+8:32
+files from some suspect device or maybe cloud service or something like that we
+8:36
+can dump all of those logical files directly into autopsy instead of having an
+8:40
+image file so the way we access these are a little bit different unallocated
+8:44
+space image file is specifically looking at on a locate space images and then
+8:48
+autopsy logical image results autopsy does have a logical image and you can
+8:52
+import the results directly and there's also X our Y text export which is from
+8:56
+mobile phone analysis software X our why we're going to do a disk image click
+9:01
+next and then where is this disk image located so I'm going to go to browse and
+9:05
+we are in cases case number images exhibit one and then suspect data that
+9:10
+DD so that looks okay the next thing we have is the time zone I don't
+9:14
+necessarily know where this suspect data DD came from which time zone it was
+9:19
+in normally it's going to be your local time zone especially if it's you
+9:23
+know the suspect was living in your time zone most likely their system will be
+9:27
+set up for your time zone but if you don't know I always said it to GMT plus
+9:31
+zero UTC if you do know then click on it and then select your time zone from
+9:35
+the region but I'm just going to use UTC here anytime I don't know I always use
+9:39
+UTC sector size keep that it auto detect although if you do know it you can
+9:43
+select it specifically hash values now hash values are used to do some
+9:48
+verification and end up in your final report so we do want to enter them here
+9:52
+so I'm going to go to the suspect verification report that was given to me
+9:56
+I was created with hash deep and it has two hash values in it the MD5 hash
+10:00
+value in the shot to 56 hash value I'm going to copy the MD5 hash value and you
+10:05
+can usually find these in whatever reports was given to you paste that directly
+10:09
+into MD5 the next hash value is shot to 56 and copy that and then paste that
+10:15
+in like I said this ends up in reports and it can be used to do some image
+10:18
+verification later but it says these values will not be validated when the
+10:22
+data source is added so you have to explicitly verify the source okay click
+10:26
+next now we have our ingest modules and this section is how we're going to
+10:31
+process the data that we just gave it so the suspect data dot dd we're going
+10:35
+to pick through it and get out any interesting information that we possibly
+10:39
+can so let's take a look at these default modules you can add additional modules
+10:43
+and you can even write your own modules if you want to so the recent activity
+10:47
+goes through and looks at things like web browsing activity recent documents
+10:51
+recently installed programs any recent activity from a system especially a
+10:55
+Windows computer it will try to extract that recent activity and then have a
+11:00
+special category easily accessible for the investigator so this is a good
+11:04
+module to always run because we're usually interested in user activities
+11:08
+whenever doing an investigation next is hash look up and what this does we can
+11:13
+set hash databases of known good files and known bad files and with known good
+11:18
+files we can use that hash database to filter files that we know are good so we
+11:24
+don't necessarily want to see them in autopsy we can also add known bad hash
+11:29
+databases where if any file matches a known bad hash then it's automatically
+11:35
+flagged for us for review so it makes investigation really easy if we can share
+11:40
+these hash values and then it'll help us to reduce the amount of data we have to
+11:44
+look at and also flagged things that we know are definitely going to be
+11:47
+suspicious I don't have any hash databases set right now but what I do always check
+11:51
+is calculate md5 even if no hash set is selected so the md5 hash value of the
+11:57
+files that are being processed we do want to create a hash value so when
+12:00
+we're talking about those files or extracting them we can give that hash
+12:04
+value as well so make sure that calculate md5 is checked it will take a little
+12:07
+bit longer to calculate those hash values but in most cases it is worth it if we
+12:11
+want to add a hash database we can go to the global settings button and then I
+12:16
+can either create a new hash set or import hash set if it's a new hash set
+12:19
+then I need to add hash as manually otherwise it'll be empty and then import
+12:24
+hash sets is what we normally use and I'll talk about hash sets in a different
+12:28
+video the next file type identification so matches file types based on binary
+12:33
+signatures we can set file types that we want to match in the global settings so
+12:38
+custom mime types let's go ahead and create a new file type identifier so the
+12:43
+mime type that we want and in Linux you can use a command file dash I to get
+12:49
+the mime type of a particular file so I'm going to do file type dash I and then
+12:54
+I have a hash database here I'm going to find its mime type its mime type is
+12:57
+application CSV I'm gonna copy that and then I'm going to add a signature and
+13:04
+the signature in this case is bytes in hex I'm going to use xxd with the
+13:10
+hash database and then pipe that into head so we can get the first bytes here
+13:15
+and actually this is just a header so it's not going to be that interesting but
+13:18
+let's say that I know that this signature 2253 is going to be interesting for
+13:24
+multiple files and what I can do is say signature 2253 in hex and the
+13:29
+by offset here is zero so I'm essentially looking for a header and then
+13:33
+relative to the start or the end I'm gonna say start okay so now I have
+13:38
+application CSV mime type with a signature 2253 and if I find that I can flag
+13:45
+it automatically so for example we can check alert as an interesting file when
+13:50
+found click okay and then I have application CSV and my signature so you can
+13:54
+make custom signatures based on any data structure if you give it a hex or
+13:59
+binary value find the data structure that's interesting and then flag where
+14:04
+that data structure is it is interesting if you want to do advanced file
+14:08
+structure analysis and then automatic detection next we go into extension
+14:12
+mismatched director this one's a little bit more easy I think to understand
+14:15
+basically we have a file signature and then we also have a file extension so next
+14:21
+I have test hwp and hwp file is a hungle word processor file it's basically a
+14:27
+doc file for Korean characters if we do file dash I test hwp I can see it's an
+14:34
+application slash x hwp file type and then we have the hwp extension so that's
+14:41
+actually what we would expect to see but if I find the x hwp file type and the
+14:46
+extension is not hwp then I know something is suspicious that's essentially
+14:50
+what this extension mismatched detector is doing so here I can select what types
+14:55
+of files I want to check check only multimedia and executable files will make
+14:58
+things run much faster but if somebody's trying to hide a file you might want
+15:03
+to check all file types they might be naming like a doc file to a JPEG and
+15:07
+then whenever you double click on the JPEG it doesn't open because it's
+15:10
+actually a doc file macOS and linux use the file header to understand how to
+15:15
+open the file but windows uses the file extension next go to global settings
+15:19
+and then we can see the file types this is the file header type and if we click
+15:24
+on PDF for example then we can see the extension that we will accept I know
+15:29
+that hunger word processor is not usually in the extension mismatched identification
+15:33
+setting so I'm going to add hunger word processor I'm going to click new type
+15:37
+and then the mime type that I want is application x hwp and then paste that in
+15:43
+okay application x hwp and then I want to add a new extension that's acceptable
+15:48
+and it's hwp so now if it finds an application x hwp and it doesn't have a
+15:55
+hwp file extension it will flag it as suspicious file extension would go okay
+16:00
+now we have our extension mismatched detector next embedded file extractor this
+16:05
+is fairly straightforward there's a lot of files that are actually compressed
+16:10
+like zip files essentially and what this will do is go in and decompress
+16:14
+everything take everything out of the file and then index all of the files
+16:19
+that were inside the compressed file so we want to keep that checked pretty much
+16:23
+all the time picture analyzer same thing we're looking at images and
+16:27
+extracting things like xf information from JPEGs xf information is really useful
+16:33
+because it might have locations it could have timestamps it could have you
+16:37
+know editing programs that were used to modify the picture the camera settings
+16:41
+so we definitely want to keep picture analyzer in most cases it's very relevant
+16:45
+next is keyword searches and you can do quite a few things with keyword searches
+16:49
+by default they have phone numbers IP addresses email addresses URL's credit card numbers
+16:53
+and credit card numbers URL's email addresses and IP addresses are all fairly
+16:59
+universal phone numbers by default are set up for the US style phone numbers so
+17:03
+you might want to modify that if you're looking for other phone numbers by default
+17:07
+it's also only looking for Latin basic so we will need to modify that if we
+17:12
+want to support other character sets okay then we have the option to enable
+17:17
+optical character recognition and this looks at images and attempts to extract
+17:22
+text from those images really most the time we want to turn on optical
+17:27
+character recognition the problem is that optical character recognition takes
+17:31
+quite a bit longer so if you enable it it will take longer to process all of
+17:36
+this but you will be able to search for images with text in them which is
+17:40
+extremely useful in most cases if you know you're looking for certain types of
+17:43
+keywords make sure you select these boxes I usually turn on optical character
+17:47
+recognition because I found it so useful and then now we need to go into
+17:50
+global settings and configure some settings for this what we can do is set up
+17:54
+first off our keyword lists so I might create a new list and it might be called
+17:59
+for example drugs so I want to search for any keywords related drugs and I can
+18:03
+add as many keywords as I want here and I can do for example a new keyword so
+18:08
+I added two keywords here and then I can do exact match substring match or
+18:12
+regular expression to make sure I don't get too many false positives I'm going
+18:16
+to do exact match you'll get a lot fewer results but also fewer false
+18:22
+positives and then we have regular expression matches regular expressions are
+18:25
+an advanced form of pattern matching across keywords and extremely powerful
+18:31
+tool in digital investigations will just do exact match in this case click
+18:34
+okay and then we can see the the keywords that we have associated with our
+18:37
+keywords list as you do more investigations you'll find there are patterns and
+18:42
+keywords that you get for certain case types whenever you detect those patterns
+18:46
+create a new keyword list for that type and then add those keywords to it and
+18:51
+then reuse it in all of your cases it will save you a lot of time if you're
+18:54
+just looking for English keywords just click okay but before we leave we can go
+18:58
+to string extraction and this is where we can select other character types that
+19:02
+we want to include so for example I sometimes search in Hanga Korean
+19:06
+characters so I'm going to enable Hanga Korean character sets and you can also
+19:10
+enable a lot of other character sets so if you're trying to search for any
+19:15
+other character sets using keyword searching make sure you enable this first
+19:19
+and this is a global setting it will be there for the rest of your cases so
+19:23
+make sure string extraction you're selecting the health of bets you want to
+19:26
+use and then lists make sure that you create lists for any keywords that you
+19:31
+know tend to show up for certain case types click okay next is email parser and
+19:35
+this just parses out PST or OST files and any other email types that it can
+19:40
+try to find so we usually want to keep that enabled encryption detection this
+19:43
+tries to find encrypted container files using entropy testing this takes a
+19:48
+very long time if you have a good reason to suspect that encryption is being
+19:53
+used you might want to keep it on otherwise if you uncheck it it will save you a
+19:57
+lot of time interesting files finder you can set up what you think are
+20:01
+interesting files by default we have cloud storage cryptocurrency wallets
+20:05
+encryption programs and privacy programs only for windows hosts so this is by
+20:11
+default setup for interesting files on windows we want to change that we can
+20:15
+either select which categories we actually want to include or go to global
+20:19
+settings and then we can see each category and add or remove programs to it and
+20:24
+we can also create a new set of what we think are interesting files if there's a
+20:28
+programmer set of programs that you're looking for and they're always
+20:32
+involved in the cases that you're investigating you definitely want to make a
+20:35
+filter to automatically scan for them using these interesting items settings
+20:40
+okay central repository this is a really interesting feature in autopsy what this
+20:45
+does is creates a local database that keeps track of some of the files and
+20:49
+activities that you've seen in past cases if there's a file that you flag in one
+20:53
+case there's another case that you don't think is related to the first case
+20:57
+central repository can pop up and say hey you've already seen this file and you
+21:01
+flagged it in another case do you want to take a look at it now so it can really
+21:05
+help you to find patterns over cases so I highly recommend using the central
+21:09
+repository because it can show you when there's connections to other cases that
+21:14
+you might not have known were there now none of the original suspect data is
+21:18
+saved it's all going to be via hash value so a hash value of files going to be
+21:23
+created stored in the central repository and logged which case it was involved in
+21:27
+but you won't be saving original suspect data now we have central repository we
+21:31
+can save items in the central repository I highly recommend you do it and then we
+21:35
+can do things like flag items previously previously tagged as notable so if we've
+21:39
+seen them in a past case and tagged them as notable then flag them and I would
+21:44
+definitely check that flag devices and users previously seen in other cases if
+21:48
+you've set up and you're managing devices and users across cases then I would
+21:53
+select that just so you know if they're related to this new case and then flags
+21:56
+apps and domains not seen in other cases so what this can help you do is find
+22:01
+applications that you've never seen before which basically helps you to focus in
+22:05
+on things that are unique to this case so I would also select that this is such a
+22:09
+useful feature here next is photo rec carver and this carver is used to find
+22:14
+additional data that has been deleted or unallocated removed whatever it will
+22:19
+try to carve out any of that data and then basically present it back so we have
+22:24
+a couple options here keep corrupted files or focus on certain file types a lot
+22:28
+of people just want to focus on for example jpeg png or zip I'm going to just
+22:32
+carve everything carving everything does take longer but you possibly get more
+22:37
+data back the photo rec carver is basically for deleted data recovery it's a
+22:41
+really interesting program next is the virtual machine extractor if the image
+22:45
+that you're analyzing has a virtual machine inside of it the virtual machine
+22:48
+extractor will extract that virtual machine and then treat that virtual machine
+22:53
+as a separate disk so it's very similar to the embedded file extractor except
+22:57
+it's specific for virtual machine files next is data source integrity and this
+23:02
+is calculating the source hashes verify existing data hashes verify data source
+23:07
+integrity is just verifying the hashes that we're dealing with are okay remember
+23:12
+we already copied in the md5 and shot 256 hashes so it will try to verify
+23:16
+against that next is android analyzer our disk image does not have anything to
+23:20
+do with android so I'm going to uncheck that but if you are analyzing an
+23:24
+android device make sure it's selected a leap is a great tool for parsing out
+23:28
+android data structures DJI drone analyzer we're not looking at drones today so
+23:33
+I'm going to uncheck that plasso is a another forensic tool that's really
+23:37
+comprehensive and trying to extract a bunch of different things I usually
+23:40
+keep it unchecked because it does take a long time to run and they do say that
+23:44
+it duplicates autopsy modules if you want to be very thorough you can enable it
+23:48
+but it will take much longer to run your processing yara analyzer yara is a
+23:53
+really interesting pattern matching tool we can write yara scripts to try to
+23:57
+analyze a file structure and then flag those files it's really similar to
+24:02
+file type identification we use it a lot for malware analysis so if you're
+24:07
+doing any type of malware analysis people share yara scripts or yara
+24:10
+patterns you can just add those yara patterns to autopsy and then detect new
+24:15
+malware in a system it's really interesting next iOS analyzer using i-leap
+24:18
+we're also not looking at iOS devices like iPhones so we're going to leave that
+24:23
+uncheck and then gpx parser if we do find any gpx files then we can get some
+24:28
+potential location information I know there's not any other image but it won't
+24:32
+take that long to analyze we also have another Android analyzer so again if
+24:35
+you have a Android suspect image then you want to select those are all the
+24:39
+default modules you notice that I kept most of them on but I tried to remove
+24:43
+anything that I know that I don't need or that's going to take much too long so
+24:48
+the more modules you enable the longer processing is going to take usually we
+24:53
+want to find a good balance between processing everything and taking a very
+24:57
+very long time so if you don't suspect encryption remove encryption detection if
+25:01
+you're not analyzing analyzing Android devices remove Android device analyzer
+25:06
+things like that just be conservative with how you're running your modules so
+25:09
+now we've selected everything we want to select we can click next and now it
+25:13
+starts to add the data source and starts processing you can see in the back we
+25:17
+have some messages popping up and we have this progress bar if I click finish the
+25:22
+progress is going to be really quick because this image is very small but now
+25:26
+it's processing and now it's done a normal disk image will take a very long
+25:31
+time so you can expect like a one terabyte hard drive of a normal windows
+25:36
+computer to take at least several hours to process and sometimes up to 24 or
+25:41
+maybe even more we have our data sources if I expand that we have exhibit 0 0
+25:46
+1 and that is the device name that I gave it and then I have one hard drive
+25:50
+under exhibit 0 0 1 called suspect data dot dd by select suspect data dot dd I
+25:56
+can also expand it and see the file structure or I can see the files in this
+26:00
+main view in the main view I can see things like the file name special attributes
+26:05
+modified time change time access time size any flags MD5 hash shot to 56
+26:13
+hash mind type extension and the location relative to the disk image if I
+26:18
+click on any of these files and I get the main view in the bottom where in the
+26:22
+application view where it tries to show what the data actually looks like we
+26:26
+also have the hex view where I can see the raw data of the image plus the
+26:31
+ASCII view next to it you notice whenever I'm selecting this I can launch in
+26:36
+HXD if I have HXD installed if we click that then HXD pops up and I get a
+26:42
+lot more flexibility in searching with a hex editor like this so next I have
+26:47
+the text view and we have the indexed text so this is information about the
+26:51
+indexing and the file itself if I go to strings then these are the raw strings
+26:56
+that I find in the text that are also indexed and I can do keyword searches
+27:00
+over you can also go to file metadata and see everything like modified time
+27:03
+again it's in UTC because that's the time zone that I set other occurrences so
+27:08
+if we've ever seen this file before if I have correlation set up we can know
+27:12
+when this file was seen so in case X that I had previously I had source name
+27:18
+suspect data dot dd it's the same suspect image we have the same file name and
+27:21
+hash value so I have seen this before in a prior case so once I see this I can
+27:26
+say that maybe our current case and case X are related especially if this
+27:31
+file was a suspicious file okay so other occurrences can be interesting whenever
+27:35
+looking at suspect files most of the time you're going to be looking at things
+27:38
+in application view or hex view at least that's where I spend a lot of my time
+27:42
+so we have our data sources tree we have exhibit one and we have one image
+27:47
+under exhibit one suspect dd we have all of the files available in the file
+27:52
+view and then whenever I click on them I have the detailed view in the bottom and
+27:55
+most forensic tools are set up in this kind of workflow if I was processing a
+27:59
+bigger case we'd also have a lot more things showing up over here so let's go
+28:02
+ahead and look at these views first so under file views we have some filters
+28:06
+that are automatically created we can filter for example by extension so
+28:11
+images based on their extension we can also do documents if there's any
+28:15
+documents in the folder so many times in investigations we want to see all of
+28:20
+the images in the system or all of the documents in the system we don't really
+28:24
+care where they're located but we need to scan through them to see for example
+28:28
+PDFs and see if anything suspicious so using these filters is a really quick
+28:31
+way to focus in on just the file types you want we also have executable file
+28:36
+types as well like maybe we want to know all of the dot exe files that are in
+28:40
+the system and then just look for anything suspicious there after that we can
+28:43
+also do it by mine type we've talked a little bit about mine type so far so
+28:47
+we can either do applications images or text so same principle as by extension
+28:51
+except this is using the file header instead of the extension so next is by
+28:56
+deleted files so we can have files deleted from the file system that were
+29:00
+able to be recovered or at least partially recovered we have all data that was
+29:04
+recovered whether it was in a file system or not but under file system we have
+29:07
+four items under all we have six items and you'll notice that those four
+29:12
+items are also in the all items but we have these two extra carved files that
+29:17
+are available that were probably carved out of unallocated space if you have
+29:21
+carving enabled you might see more in all make sure you check what data has been
+29:25
+carved next we can also filter by file size so by default we can do 50 to 2
+29:30
+at a meg one gig and one gig plus so sometimes it's interesting to filter and
+29:34
+say hey only show me the devices that are over one gig because maybe they're
+29:38
+encrypted containers containing a lot of interesting information or you know
+29:42
+if you have an excel file that's like 16 gigabytes that's very suspicious so
+29:47
+you might just want to take a quick look at anything over one gig and sometimes
+29:51
+it can lead you in a direction all these are meant to give you a quick view into
+29:54
+odd situations and odd data that might stick out at you next is data
+29:59
+artifacts I didn't have very much data inside this disk image so we don't
+30:03
+really have any data artifacts that were carved out but every all of the
+30:07
+ingest modules that we selected if any of them got a hit it will show up in
+30:11
+data artifacts or analysis results or OS accounts so since we don't have an
+30:16
+operating system on this disk image they don't show up here but this is
+30:19
+essentially the filters that will show all of that information so one workflow
+30:22
+that I normally do once an exhibit's been added we have our suspect image and
+30:27
+it's been indexed processing is mostly been done then what I tend to do first
+30:31
+is keyword searches we might have already had our keyword lists but now I'm
+30:34
+going to do keyword searches specific to this case keyword lists have general
+30:39
+keywords that might be relevant to a similar case type keyword searches will be
+30:44
+specific to my individual case so I know for example that this disk image has
+30:49
+something related to cats so I'm going to do cat I'm going to do an exact match
+30:55
+and then I want to search suspect data dot dd and I'm going to save the results
+31:00
+I'm going to click search and then what happens is we have our analysis results
+31:04
+we have our keyword hits for cat show up so the string literal keyword search
+31:09
+we can expand that and then we have our search for cat and it's a string literal
+31:14
+so now I have a filter set up for that particular keyword and now I can go
+31:18
+through and look for anything that I think you know might be interesting so let's
+31:22
+say that I think this image is interesting the next thing that I would do if
+31:26
+it's related to our case is right click on it and go to add file tag if I know
+31:33
+it's related to the case I would probably do either bookmark or notable
+31:38
+depending on what type of file it was depending on how it was related to the
+31:42
+case let's just go ahead and bookmark it and then we find another picture let's
+31:45
+say that I know that this image is definitely related to the case and it is
+31:49
+notable so I'm going to add file tag and then go to notable what we tend to do
+31:55
+is tag items that are related that way we can filter out the related things and
+32:01
+then build our story around those tag items so your report will refer to those
+32:06
+tagged items and then say why they're relevant to your case all right next so
+32:11
+keyword search cat it gave us eight results next I'm going to do a keyword
+32:16
+search again for cat but it's going to be a sub string search so I'm not going
+32:20
+to save the results search and a new tab is created so in this search we got
+32:25
+10 results in cat we got eight results and the difference is when keyword
+32:30
+searching doing exact match cat must be by itself so you can have dash cat and
+32:37
+it can be capital or locate or lower case but it must be essentially on its own
+32:42
+there can't be other characters around it except things like dashes or
+32:45
+something like that but with a sub string match we can have things like cats so
+32:50
+cat is a substring of cats so we actually returned to additional results by using a
+32:56
+substring match so let's say that this one might be relevant to our case but I'm not
+33:01
+really sure if it is so I need to come back to it I'm going to add file tag to follow up so I tend
+33:07
+to go through everything and tag everything is follow up unless I absolutely know it's relevant
+33:13
+to our case and then I'll mark it as notable but I use follow up a lot and then I go back again
+33:18
+once I've done my preliminary examination and then we'll follow up now you might be thinking why
+33:24
+am I tagging things well now I can close these searches and we can go into this tags folder and in
+33:31
+the tags folder I'm going to expand it under bookmarks I have one picture bookmarked and then I have
+33:37
+the picture view so I can access that picture directly along with all of its data for follow up
+33:43
+same thing so I can go back to follow up and say oh all of these could have been related now I
+33:47
+need to do a little bit more analysis on each of them and I have access to them directly I can
+33:52
+right click on a file I can do for example extract a file and then work with it in other tools if
+33:58
+I need to or I can just start to do some analysis on it directly I can also see its hex view and
+34:04
+everything just like before and then the same for notable items I already have notable items and
+34:09
+then I can start to use this to build up my report I can say that these are related and also how
+34:14
+they're related how the suspect was using this data at when did the suspect access this file when
+34:21
+did the suspect download this file things like this is or what I'm going to need to answer in my
+34:26
+report so I would start to use tags for images and then probably probably go into like windows registry
+34:33
+artifacts and things like that to try to get user activities to say what this user was doing with
+34:38
+this file so we did a keyword search we started tagging things based on the keyword search we found
+34:43
+one bookmark one follow up and then one notable item so the next thing I might want to do is go to
+34:48
+generate report and what this will do there's a couple different report types but the most basic is
+34:53
+going to be our HTML report click next I'm going to process the suspect data dot dd click next
+35:01
+and then I want to do which data to report on we can either do all results all tagged results or
+35:07
+specific tagged results so I'm going to do specific tagged results and I want to make a report that
+35:12
+includes books marks and notable items so I'm going to uncheck that click finish this will generate a
+35:19
+report about our data that we've already tagged if I click on this link here I can see the report
+35:26
+file and it has some of our metadata from one of we started the autopsy for ends at case all of our
+35:31
+locations that should match our documentation and then on the left hand side we can see tagged files
+35:37
+and we have our bookmark which is one of the cat pictures with its metadata and then the notable
+35:42
+item also bookmarked with its metadata and if I click on any of those links then I can see the file
+35:49
+directly so it's been exported with our report I can get this kind of overview so I would have all
+35:53
+of my notable images for example and if I click on them I can access them I can now copy this report
+35:59
+out and give this to anyone who I'm reporting to and say here's the things that we found that are
+36:04
+this fits along with the report that I'm writing so my final investigation report I can refer back
+36:11
+to these images in this exported report file and say here are the images that I'm referring
+36:17
+back to please see them in this report now if we open up our directory structure again
+36:23
+I am going back to our case folder go into autopsy and then we have our case file for inside autopsy
+36:30
+and I have our reports folder and our report that we generated are in this file directly
+36:37
+so the report plus all of the content which are all of the bookmarks images everything like that
+36:43
+thumbnails that were created so all we have to do is make a copy of this folder and I'm going to
+36:50
+take it out of the autopsy folder and then put it into my reports folder and then I'm going to name
+36:56
+supporting evidence so supporting evidence so I would have some sort of like word document or
+37:02
+PDF for my main report article like the write up of my report and then I would
+37:07
+referring back to this supporting evidence inside these HTML reports with the HTML report it's
+37:14
+very easy for people to see exactly what you're talking about and then I would also potentially
+37:18
+include these images in my report while referring to this case okay so once you're done with your
+37:23
+report go ahead and click close and then under reports you can see the report that you generated
+37:28
+and when you generated it and then if you right click on it you can also open report and then
+37:32
+get the report back so so far we've edited data source once it was done processing we did a keyword
+37:38
+search for cat and found some responsive files to cat we also looked at our file views our analysis
+37:45
+results for search terms we tagged a few items and then we generated a report based on those tagged
+37:51
+items and that's really a workflow that will work in most investigations there's also quite a few
+37:56
+other tools that are useful here for this data set the one that's probably going through the most
+38:00
+interesting are images and videos if you click on that we open up a new utility and this will give us
+38:06
+a gallery view of all of the images and also let us flag things really quickly so if you do with a
+38:12
+lot of images and video this image video gallery editor view really helps so really if you can add
+38:18
+a data source do some keyword searching sort by images and videos and then do some filtering if
+38:23
+you understand about tagging items and then if you can generate reports based on things that you tagged
+38:28
+then you can do at least a basic investigation that's really all it is is loading up the data
+38:33
+searching through it usually using keyword searching first and then finding anything interesting
+38:39
+flagging it and then building a story around those things that are interesting usually the
+38:43
+story is about why a user was doing a specific thing so that's it for today thank you very much

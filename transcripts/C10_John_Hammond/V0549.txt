@@ -1,1 +1,714 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+I received this email. It says, hello Mr. Hammond. Hi, you can call me John. While searching for the remote tool any desk,
+0:06
+I came across a link that redirected me to anydesk.ink. Part of me wonders if that was like a
+0:12
+Google malvertising, like an ad that's placed higher and like a sponsored result while trying to search for Google search for something.
+0:18
+The page displays only a single button that immediately starts a file download. For your review,
+0:23
+I've attached the website link below, would appreciate your analysis and any guidance.
+0:26
+So if we go visit the page that they link to anydesk.ink is just a blank page. Just a home page. It's all white.
+0:32
+There's literally no contents there. But any dink, sorry, anydesk.ink slash download slash anydesk.html brings you
+0:41
+to this page, which looks hysterical, if I may say. It looks pretty awful. The black text on a gray background,
+0:48
+it doesn't really just have the right contrast that you need for what looks like a cloud flare turn style.
+0:55
+Like the verify your human, oh, click the submit button to say you're not a bot.
+0:59
+And our knee jerk reaction might say this looks like click fix. This looks like the verify your human.
+1:05
+I'm not a robot checkbox that normally now has led to some malware and social engineering
+1:10
+lawyers. My bad, sorry. But if I were to click the button for verify your human,
+1:14
+this actually does something interesting. It prompts, do you want to open Windows Explorer?
+1:19
+Verification.anydesk.ink wants to open this application.
+1:23
+And that is not the usual click fix setup. So this has some other cool components to it. Before
+1:28
+we fall down that rabbit hole, I do want to look at the page source here because this is another
+1:33
+awesome funny thing that I thought you might like. You can see the title of this is encoded page
+1:39
+and the actual HTML contents are practically nothing. It just says loading. And then there's a
+1:43
+lot of JavaScript that handles the actual rendering of what's displayed to you. Let me paste this into
+1:49
+a text editor so we could get an idea for what it really looks like with syntax highlighting.
+1:53
+Obviously there is a giant base 64 blob at the very top of the file. And that is probably the
+2:00
+contents of the page as it is decoded or decrypted or whatever we want to call that with these
+2:05
+functions below. We have a convenience function that's basically just running ATOB or the JavaScript
+2:11
+equivalent to base 64 decode variable or parameter that's passed in. And it looks like that is only
+2:16
+used once down there. So we could basically just call that ATOB and we don't need to care about
+2:22
+that function. The other one looks like it's doing some XOR operations. You can see the carrot symbol
+2:27
+for the XOR operator and actually using the modulus are the percent sign as it wraps or loops
+2:33
+through the material of a given key, which is probably that actually looking for the occurrences of
+2:39
+that variable. It's never even actually used. So that one doesn't matter and I was wrong if we look
+2:44
+back the call that runs getting the page content using this decrypt or XOR routine is actually using
+2:51
+the OOEVAC variable. Things I never thought I'd say in a YouTube video. So what we could do to unravel
+2:57
+this to even just see the actual source code letting the JavaScript do its thing. We could just
+3:02
+grab these variables and the function that it will use. And while we could get back in the web page
+3:07
+and try to right click or inspect to see this all in the HTML sort of interactive elements section
+3:14
+here. This is neat, but we can also dump that the same way that they do when they actually kind of
+3:19
+let the code unravel itself. So when we see them add this event listener for the DOM content loaded
+3:24
+or the page is ready because they decode the base 64 and then use the XOR operation, we could just
+3:30
+retrieve the page content variable on its own. Let's paste those in and now we'll have page content
+3:37
+for us to work with. There's all the material. Let's display that out. Let me use console log and then
+3:43
+display inside the parentheses that page content. That will display in an easy way for us to copy and
+3:48
+paste and look inside of our text editor. Pasting all that in. Now obviously this is HTML, but there
+3:54
+are some interesting things here. We get the HTML structure and CSS or cascading style sheets to
+3:59
+sort of design and look like a regular cloud flayer turn style with a secure access verification
+4:06
+and all the cloud flayer links. But the JavaScript down below is actually where this gets a little bit
+4:10
+more interesting. They have a redirect helper. They have a browser detection capability and then
+4:15
+the check and redirect which even will force you in to a specific browser whether or not you're
+4:20
+using Chrome or Microsoft Edge. They get a fake cloud flayer ray ID or the unique sort of verification
+4:27
+ID thing. And that's actually kind of neat because now that we know that that is JavaScript rendered,
+4:31
+we could refresh the page and we run it one more time. Refresh the page again. Down below you can
+4:36
+see that ray ID is changing refresh the page again. Obviously that's because that's dynamically
+4:41
+determined to look random by JavaScript. But let's get to the real neat code here. Once the checkbox
+4:49
+is clicked, it redirects or doesn't even use the redirect function that it made. Okay, just window.location.href
+4:56
+setting to verification.ne disk.ink to recapture v2.php. Now here's the thing. We could copy this,
+5:04
+we could go to this page and if I navigate it to that in the browser up here, that will pop open
+5:10
+the Windows Explorer prompt to open something like in your file explorer. That's the functionality
+5:16
+of that page. Like if I were to open up the network tab even in our browser developer tools,
+5:21
+whenever I were to click that button, you can see it brings us to recapturev2.php. But take a look
+5:27
+here. That's actually making a 302 redirect or an HTTP status code to send you to a different location.
+5:34
+Of course, just as we saw in the code. What that redirects you to though in the location header
+5:39
+is this thing. We can copy that value because we will want to take a look at it. But obviously if we
+5:44
+saw in our network traffic trying to go to that location, that request URL is the exact same thing.
+5:50
+So back in our text editor again, just because I want to take a look at this, this is actually one of
+5:56
+the Microsoft Windows different protocol handlers. Like when you're used to going to HTTP colon,
+6:02
+slash slash something, or even if you were to interact with a normal file, you could use file
+6:07
+slash slash something. Now there are a lot of these FTP, whatever SMB blah blah blah, but you also
+6:13
+have other opportunities in Windows to do or invoke something else with another protocol handler.
+6:19
+We've covered these in a couple of other videos, but I'll add some links in the video description.
+6:23
+If you're interested, these are Adam or Hexacorn on his blog. A whole lot of the cool opportunities
+6:28
+when you add a colon just following some other sort of prefix again, like file HTTP as hours
+6:35
+referring to. And we could probably see search dash MS and those as those potential opportunities.
+6:42
+Now I'm inside of a Windows 11 virtual machine. And if I were to open up the file explorer,
+6:46
+whenever you run a search like that search bar at the very top right of the window,
+6:52
+that's basically what you're doing. If I search for CVE, okay, we see some nonsense there,
+6:56
+but if I were to click enter in on this, it'll bring us to a search results page.
+7:00
+When if I go to the very beginning, it's that exact same protocol handler using search dash MS
+7:06
+with a display name for what shows the title bar, crumb for a location of what you're actually
+7:11
+searching for, etc. So the neat thing here is that they were actually using that feature,
+7:17
+search MS with the display name to look for search access, percent 20 results, percent 20 in
+7:23
+blah, blah, blah, with a crumb location being set to percent 5C, percent 5C secure view.neDisk.inc
+7:33
+at SSL, percent 5C secure access. Now some of you might clearly be able to see that as of URL
+7:39
+encoded when we have the percent signs and then two values that follow like decimal, but actually
+7:45
+hexadecimal because you can see a letter C in one of those. That's base 16, not base 10, like we're
+7:51
+used to counting 0 through 9, but 0 through 9 and then a through F. So quick and easy we can
+7:56
+URL decode that to see what those characters are. There are some command line tools that can do
+8:00
+that pretty easily, but honestly we'll just keep it super simple and let's use cyber chef. So let
+8:04
+me look for URL decode and then now that will be decoded. Let's look at that new value and okay,
+8:10
+here you can see backslash backslash to secure view dot anyDisk dot ink at SSL. So the backslash
+8:18
+backslash clues us in that this is a network location like an SMB share like a file share. You
+8:24
+might be used to it. I don't know maybe a corporate office environment where you oh access the
+8:28
+network file drive mounted to like your x drive or your z drive or whatever, but all that really is
+8:34
+is just a backslash backslash network location. Those can be totally open out on the internet. It's
+8:40
+just like a web server essentially serving HTTP, but this was serving SMB. And a funny thing here,
+8:46
+I think they missed a percent sign because you could barely see it. There is one dangling leftover
+8:53
+i've see character that was missing the percent sign. Obviously this is all URL encoded because it
+8:59
+came through your web browser as you were interacting with that anyDisk.inq page. But if we were to try
+9:04
+to go to this location just as we had inside a vial explorer, if this were invoked as the website
+9:11
+in the lore intended us to, well, it's down right now. Gotta be honest, take this thing probably
+9:16
+lived and died for a few days. Now it's offline. Obviously the anyDisk.inq website was still up,
+9:22
+we got to play with it. But this portion or segment of the attack chain offline. But I did get a
+9:27
+chance to save a copy of what was stored and shared on that network drive while this malware was
+9:32
+live. Hey super quick, before we go any further, please let me take just a few moments to tell you
+9:36
+about the sponsor today's video. Let's be honest, passwords are still a mess. For gotten logins,
+9:43
+weak credential reuse, reset tickets, clocking up the helpdesk, it's a nightmare, and attackers know it.
+9:49
+That's why I'm a fan of spec ops software. They take password security from reactive to proactive.
+9:56
+With their breached password protection, you're blocking over 4 billion compromised passwords,
+10:02
+updated daily from real-world leaks, live attacks, and even malware botnets. And it's not just
+10:08
+password reset. Spec ops actively scans your active directory environment and flags compromise
+10:14
+passwords. The same day they show up in the live. You can even build custom block lists, so users
+10:20
+can't set passwords with your company name, object code names, or that one sports team but
+10:25
+everyone's obsessed with in the office. And for the end users, they get dynamic feedback that helps
+10:31
+them choose strong passwords that meet policy. Without the guessing game, fewer bad passwords,
+10:37
+fewer helpdesk tickets. Throw in self-service password reset and built-in multi-fac
+10:42
+authentication, and suddenly passwords aren't your weakest link anymore. They're just one more
+10:48
+thing you've locked down smart. Check out Spec ops software and get started with my link below in
+10:54
+the video description. Jh.live slash spec ops. Huge thanks to spec ops for sponsoring this video.
+11:00
+So if you were to fall for this, if you were to follow through, click the button to verify your
+11:06
+human and then open Windows Explorer, you would be presented in that search pane with this
+11:12
+network share. With a readmeanydesk.pdf file presented to you. But you might notice this little
+11:18
+arrow icon and symbol in the bottom left of the icon, clues us in that that's not really a pdf.
+11:24
+That's actually a Windows shortcut file or a .lnk that couldn't point to something else.
+11:30
+And realistically, run computer code. Now because that's a Windows shortcut, I'm actually
+11:35
+going to hop over to my Cali Linux virtual machine. Really, I should be using like Remnux,
+11:40
+a better distribution for actually looking at malware and stuff, but any Linux distribution,
+11:45
+if just so while I'm handling these weird sketchy malware files, I don't ever accidentally detonate
+11:50
+or execute or run this malware on a system that would handle and execute that code. So let me open
+11:56
+up sublime text just as I have with the text editor previously. And let me show you what the payload
+12:01
+was that was ran by that .lnk file. Now this is all batch script. They're like Windows commands that
+12:08
+could be run from cmd.exe or the command prompt. And we have a couple neat things to take a part here.
+12:13
+So this is using comm spec or the environment variable that points to cmd.exe. Quick aside,
+12:19
+let me pop back over to my Windows VM just so I could show you that. If I were to open up the
+12:24
+command prompt, obviously trying to echo out a variable like comm spec, you can see that that
+12:29
+one already has the value of the absolute path c colon Windows system 32 cmd.exe. You can see all
+12:36
+of the environment variables with set as the command with no other arguments. And that will give you
+12:41
+a ton of the other stuff that's present here. Obviously at the very top, comm spec being listed as that.
+12:46
+So that means they're basically running cmd.exe slash k with an argument to mean, okay,
+12:52
+we're going to run other commands here that are provided as a string. So this double quote and
+12:57
+the very ending trailing double quote, basically are just the second payload or really subsequent
+13:03
+stage that's now executed. So we start a new process, MS edge or Microsoft edge, your web browser,
+13:10
+at least installed by default on Windows. And that's interesting. It takes us to the real actual
+13:16
+legitimate any desk download any desk comm slash the end slash downloads slash Windows latest.
+13:23
+Obviously is going to pull down that binary for the real any desk installer just to make it look
+13:29
+like, oh, you're not falling for a trick a scam malware in this case. But if you were to be
+13:35
+none the wise or oblivious, you did download any desk at the end of this. Now the ampersand acts as
+13:41
+another like command separator. So we have one command that follows where we're using curl curl
+13:46
+tack s lower case for silent tack capital L to follow redirects in case this would bring us
+13:52
+anywhere else and then tack oh to denote, okay, we will output a file here. We'll have a destination
+13:58
+where we save the contents and it uses more environment variables for batch wrapped in those
+14:03
+percent signs for the temporary directory based off of your computer name trailing percent sign
+14:10
+there with six dot PDF. That would be the eventual file name noting your actual devices host name.
+14:17
+But that's the output file. Keep in mind that is just where the response from the website is going
+14:22
+to be saved. So the actual website that we go to this is kind of neat. I think you might like this.
+14:28
+It goes to HTTPS percent computer name percent six dot chat one dot store slash update slash
+14:36
+six dot PDF. Do you see what they're doing there? The real domain for this website that they're
+14:42
+going to is chat one dot store. But they have percent computer name percent six in there. So
+14:50
+would they have a domain that's set up for your victim host name? How is that possible? Would they
+14:56
+know that? There's no way they could tell where this lands or how this runs and infects on a victim
+15:01
+computer? Well, no, this is kind of clever. I think they use the environment variable here for your
+15:08
+computer name as a sub domain and a sub domain could respond to anything. You don't have to have a
+15:16
+static strict defined and explicit sub domain. You could make that a variable. It could be super dynamic.
+15:22
+So in a way, they have only reached one domain because chat one dot stores the actual website
+15:29
+they're going to. But now they're exfil trading and leaking and getting to know what your computer
+15:34
+name or host name is so they can keep track of oh, that that ID to victim and target has now been
+15:40
+compromised by including it as a sub domain that they could still capture and keep track of.
+15:45
+Neat. Anyway, that is the download that they run from that site. And let me see is chat one store
+15:51
+still alive. Let's get back to tour just so we are not giving anything away for our p address and all.
+15:57
+Hmm, nope. What if we were to add a fake little low, low, low, low, fake host name dot six or six dot.
+16:05
+And I do want to do HTTP here is that still alive? Ooh, Cloudflare response, but no content there. Anything.
+16:14
+That might be like similar to the other one where it has something only at that end point and not
+16:19
+at the homepage. So let's go to our low, low, low six dot chat one dot store at update six dot pdf.
+16:26
+Well, I'm sketched now. How's that rendering is a real pdf? Yeah, failed to load. Okay, let's try
+16:32
+anything chat one store update pdf still trying. Obviously this six dot pdf is not a real pdf
+16:41
+because the following command the subsequent again ampersand to add something new they use MSI
+16:46
+exec or one of those living off the land binaries to be able to run and execute further code with an MSI
+16:52
+package one of those Microsoft installers they use slash I as the argument to install with the
+16:58
+actual file name that they saved this at remember that's our output argument for the curl command
+17:04
+to download. Tag QN for very quiet and I think N is also no restart we could look at low bins if
+17:09
+we wanted to. But then they pipe to another command which is also clever because that means the
+17:15
+output of MSI exec will be piped into task kill following that which means it's still going to
+17:20
+execute this after MSI exec were to finish or succeed and task kill is going to force killing a
+17:27
+process based off an image name CMD.exe which if you remember is where we started with if we bring
+17:34
+this all the way back conspeck was realistically CMD.exe so now they're just covering their tracks
+17:40
+but that meant the very end of this little stager was to pull down and install a six dot pdf or
+17:47
+whatever your host name would have been we're just going to call it six dot pdf knowing that it's
+17:51
+not an actual pdf so let me move into an any disc directory here for us and I do have the original
+17:58
+saved when I got to kind of explore experiment with this the first time I don't even wonder if there
+18:03
+is a different payload up since that portion of the attack chain is against long line let's curl
+18:08
+it down kind of the same way that they did follow redirects save an output directory we'll call
+18:13
+this other six dot pdf based off of a fake computer name again we'll can use please subscribe just
+18:21
+so the threat actors know that they're on a YouTube video will pull it down okay seemed like it did
+18:27
+no did it not don't follow redirects just tell me everything you're doing anything take a wild
+18:32
+a download big file oh yeah it's still going okay oh the other one was like how many megs is that
+18:38
+let me run that with tack age for humor oh all right we got a little bit of time to kill and this
+18:43
+is totally just like a five minute adventure because I want to see if it's the same hash are they
+18:49
+giving us a different binary or is there a different payload now this part okay so this is taking
+18:54
+a lot more time than it needed to and I'm pretty sure the download kind of just got sniped because
+19:00
+time is passing and we are no longer getting any data back when I try to go look at the page on
+19:04
+a browser again I no longer have that maybe they didn't like the please subscribe joke let's just
+19:11
+reconnect with a tour edge and try to get that one more time how about this okay I didn't need to
+19:18
+earn all that time but now we do at least have a another nerf file that we could use that is
+19:25
+much bigger 17 megs and I'm curious is that still an MSI yeah and might just be bloated a little
+19:33
+bit more because the original looks like the very almost same structure here I guess different
+19:40
+metadata barely number of pages 200 number of words 12 we see all that the very same oh but wait
+19:47
+look this is a key pass installer and this one was a docu sign edit document well for the sake of
+19:54
+this video not taking eons let me hone in on one let me remove the the very very latest and I'll leave
+20:00
+that as an exercise for the reader if anyone wanted to follow along and play but let's keep working
+20:05
+with our OG original from last time I got to pull this thing down 6.pdf now knowing that this is
+20:11
+an MSI installer realistically that's an archive like that's essentially a bundled up archive of
+20:18
+files we could use something like seven zip to extract that out there are other MSI utilities and
+20:25
+tools you could get I think MSI info is one that's from some package MSI tools perhaps like can
+20:31
+you tell me the summary of the info what we're looking at MSI info here and we could extract things
+20:37
+out if we wanted to pull out binaries let me MSI info extract oh we need to know the specific
+20:43
+streams can we get these streams yeah so we could list those out just as well before using like
+20:50
+7z to extract it all 6.pdf tells us we have a custom action dll a wrap setup program and some
+20:57
+summary information and document summary information so let's get those just to see what they are
+21:02
+I don't think that pulled anything out can I do the document summary information pretty please
+21:08
+no how about the custom action dll that one oh yeah okay that adds stuff and let's do the very same
+21:15
+when we look at the dreams I just want to be able to get now the wrapped setup programs so let's
+21:21
+extract that one and that is a binary by ls what do I have here one executable a dll and a cabinet
+21:28
+file now gentle reminder the reason why I'm doing this and walking through these steps within
+21:35
+caliletics to try and carve out or extract the executables or files inside of the fake pdf and
+21:42
+.msi file is so that I don't have to install it or run msi exec and therefore infect myself this
+21:49
+is just how we can carve all this out and having the portable executable dll and the setup program
+21:56
+as a cab file actually what I want to do is just make a directory for like extracted and then let me
+22:02
+move the custom dll and the wraps that a program in there just so I can show you we code it just
+22:09
+as easily extract all of this with seven zip as I mentioned we can use seven zx to extract six
+22:15
+dot pdf and that will just dump out everything that was in there bread and there's a lot more stuff
+22:20
+some of the different things that may or may not be helpful to you because a lot of it could just be
+22:26
+boilerplate msi packaged file things like if I try to look at the string data I think that was one
+22:34
+that was able to pull out there is this stuff but again I don't know if that's immediately helpful
+22:40
+for you some of these kluosin okay it's probably built with wix which I think is one of those
+22:44
+packaged builders msi file creators and really a lot of this is overwhelming we could use sublime
+22:50
+text to try and like click into any of these and make that easy for us but not all of them will be
+22:55
+super duper valuable for us so I really like to just try and carve it out with msi info and the
+23:02
+command line tools that we used already rather than trying to dump all of this out even though we
+23:07
+will get the binary dot bz custom action dll and rapset a program as you can see here obviously sublime
+23:15
+text we're just looking at bytes so that's not helpful but another option and alternative for you
+23:19
+let's get to that clean extracted directory where we had those two files the custom action dot dll
+23:26
+is actually a like full natural native pe32 executable it's not like a dot net assembly or
+23:35
+something we could crack open with dnspy or ispire dot peek so we would need to crack open a real
+23:41
+disassembler and debugger like gidra or aida or binary ninja whatever you really want I'll admit
+23:47
+that might be jumping off the cliff for this video but we will do some dynamic analysis in just a
+23:52
+moment otherwise let's take a look at our wrapped setup program now this is a microsoft cabinet
+23:58
+archive file or a dot cab file that means it could also include a couple other sub components like
+24:04
+one dot j s which you might not be able to see and ls 26 dot exe so we could pull those out with the
+24:12
+cab extract utility and that will work pretty well for us on our wrap setup program now that will
+24:17
+pull out one dot j s and ls 26 dot exe easy peasy let's take a look at what we have here okay one dot
+24:24
+j s is pretty small and simple and that's probably going to be human readable ls 26 dot exe is
+24:30
+seven hundred and seven megabytes granted a lot of that is probably bloat that is another hardcore
+24:37
+actual real portable executable not a dot net assembly that's nice and easy for us once again you'd
+24:42
+have to do the legit reverse engineering let me go take a look at one dot j s though just so we
+24:48
+know what that is oh okay so this is j script not java script I know that's kind of something that I
+24:55
+a hill that I will die on because this is natural and native code that will run on at windows by
+25:00
+default it has that handler set up to run c script or w script dot exe and it could access an open
+25:07
+active x objects or w script shell objects which allow you to potentially work with the file system
+25:13
+do more damage and run code etc so what this looks like it's doing is just looking through the
+25:19
+temporary directory as it is extracted that out or expanded the environment variable string like
+25:24
+we've seen before sleeping for five seconds just to wait a little bit of time that's in milliseconds
+25:29
+here and then getting a file system object so that it could retrieve the folder of the temporary
+25:35
+directory and then loop through all the files inside of it and then there's a little convenience
+25:41
+function down here to delete files and everything else in the sub directories that is all coming from
+25:47
+our temporary directory so probably just like a simple cleanup script right oh trying to remove
+25:52
+any traces stuff that might have been left in temp much like the stager for this malware payload to
+25:58
+begin with so consider it cleanup the question is how does this get ran I'm not positive if MSI
+26:04
+and executing MSI exec would run that because I don't know the order of all of these things please
+26:09
+do genuinely school me I'd love to know a little bit more of that MSI unpacking unraveling and
+26:14
+analysis but let's go take a look at what our ls 26 dot exe might be along with our rap dl so now I
+26:21
+have moved both of these into a windows virtual machine and our ls 26 program has the microsoft
+26:28
+edge icon which is kind of funny I do want to look at the properties here the description is a
+26:33
+Microsoft edge pwa or portable web app launcher security info in details though I'm not thinking it
+26:40
+is actually assigned at Microsoft executable it's it's not there is no signature here but at least
+26:46
+they filled out all the file version metadata product name info stuff to be able to make that you
+26:51
+know somewhat believable let's take a look at our custom action dot dl that one missed the mark
+26:57
+totally failed filling out the metadata that would have been helpful now I did bring us into windows
+27:02
+because I did want to show you something I'll admit I don't think we're going to just fall
+27:06
+down the rabbit hole to do a lot of the hardcore reverse engineering crack and open ida
+27:10
+geedra binary engine or whatever to rip apart what these files are so we'll do some dynamic
+27:16
+analysis but I at least wanted to run these through detected easy because that will probably help
+27:21
+us understand and see what at least these are packed with considering ls 26 dot exe is like a bloated
+27:28
+707 megabyte file so could this tell us a little bit about our custom action dot dl opening that up
+27:35
+hmm nothing fancy here we'll explore that in a dynamic sandbox I'll use any run in just a moment
+27:41
+but normal same file size I think let's go take a look at ls 26 dot exe oh chugging along
+27:48
+through potential pie installer maybe all right detected easy is still chug chug chug chug
+27:52
+along deep load I do have ready for us I just made a copy of the ls 26 binary just in case
+28:00
+detected easy had whatever handles on it stuff so let me see if this can carve anything out I don't
+28:04
+know and I don't want to be wrong okay file was reduced 98.5 percent it comes in clutch single
+28:12
+repeated by an overlay you know what we probably if we looked we could we would have seen it all right
+28:17
+can I open two instances of detected easy now just because I want to see if this one can just rip
+28:22
+through our l26 copy patch and that has a uac icon on it that's a little bit faster than the
+28:30
+other one yeah yeah yeah okay here it is this is really what I wanted to show you this uses a
+28:36
+protector this uses the private exe protector he ristic kind of signature tracking there's a packer
+28:42
+compressor pack data imports like upx with a strange overlay high entry section dot wegeem
+28:48
+so this being 10 megs heck a lot better than the 707 if I put this on the desktop we'll make it
+28:53
+windows 11 we'll amp this up I think this will run I don't know because the dll really depends on
+29:00
+the entry points and evolve this right and it may very well be trying to execute what could be
+29:06
+included in the rest of the cabinet file or the msi and yeah that just died immediately so it might
+29:12
+need the whole rest of the you know what why don't we actually take a step back why don't we do
+29:16
+this from the entire six dot pdf or it would have been the msi file so that includes everything right
+29:25
+this is what appeared alongside a valid legitimate and genuine any desk install so if I extract this
+29:34
+I set a password on it and then we might even be able to see at least what this thing looks like
+29:40
+as word was infected as it usually is from our samples so this has a dot nerf file extension because
+29:47
+that's what I tend to add on there and I know this is pretty tough to see inside of any run can I
+29:52
+full screen this not that that's going to give me any better view that just looks more jpg look
+29:57
+docu sign edit I don't know if you can see that at all but msi exec is now running what else we got
+30:03
+going on sr task system restore tasks oh it's creating oh it's inhibiting system restore okay so
+30:10
+we can no longer create system restore I rerun that pretty please maybe I just didn't give it enough
+30:15
+time okay so right now I've uploaded just the msi file and you can see that it's trying to configure
+30:22
+docu sign edit which is what we were tracking previously msi exec runs and that should end up oh
+30:29
+you can see it expands the cab files an lsa 2 6 dot exe is running quiet slash quiet are there any
+30:36
+other connections that are being made from any of the processes ls 2 6 dot exe or any of the others
+30:42
+not yet oh there it is metastieler http activity observed and that was then determined to be metastieler
+30:51
+process creates files with names similar to system file names starts a Microsoft application
+30:57
+it ran it used winver computer default study xe oh they use that to bypass user count control neat
+31:04
+do they do that based off of for probably a dropped file like written font host study xe then they
+31:10
+used w script to execute the one dot j s that we were looking at earlier just as we expected yep uses
+31:15
+the sleep deletes the script accesses environment variables and now font host is the one that is
+31:22
+probably the what it has dropped and is now going to be communicating as metastieler hmm you track
+31:28
+down the config or anything and we say metastieler because this is pulling out a lot of the different
+31:35
+profiles from your web browser trying to extract out different credentials maybe cookie is or
+31:41
+anything that would have been present there actions stealing of personal data yet okay so all the
+31:45
+browsers that were there and added path to the windows defender exclusion list so it can run
+31:52
+it without any guardrails and yeah modifies defender neat funny interesting so look at the end of
+32:00
+the day this is commodity malware this is just metastieler again as we have seen plenty of times
+32:06
+before but i think the build up some of the attack chain had some kind neat cool interesting parts
+32:11
+and what i wanted to show you especially with the detected easy was this pat or p e p get over
+32:17
+pository for the private exe protector i guess there's a website private dash exe protector dot com
+32:24
+and this is a old old old it looks like capability to encrypt obfuscate protect hide and
+32:34
+huck away what the actual program does this is written in like delfy look at the uh languages
+32:41
+that are noted here pascal whatever you say 92% assembly 7.7 so that would be pretty hardcore to
+32:50
+uh reverse engineer if anyone wants to sit through that torture you're more than welcome to but
+32:54
+i don't think we need to for a youtube video now this is just kind of a cool fun fact um but this
+32:59
+is one that i thought was just neat and i was able to share it with huntress uh work so i walk
+33:05
+through kind of the same similar stuff that i have here with you in the video and then i was just
+33:10
+talking about look these are now compiled binaries and i got a run i got to go do meetings and calls
+33:17
+gah ma ma bizzy guy no one believes me and a couple good friends and teammates were willing to tag
+33:22
+in kind of where i left off and all that i think was the one that tracked it down his sought and
+33:26
+detected easy that that is the private protector obfuscating packer there presumably the custom action
+33:32
+dll would do some dynamic dll resolution which i don't think msi boilerplate like msi installers
+33:38
+just naturally do and then we're just thinking oh hey you know it's it's metastieler again uh there
+33:44
+was cool a little c2 though i guess that's new or what some of the callback domains were and then
+33:50
+aldon schooled me like yeah detected easy just like tracked it down pretty easy for the protector
+33:54
+so honestly i thought this was really cool because this is probably one of the first time to
+33:58
+were kind of able to make this a little bit of a double whammy right hey we got a youtube video
+34:02
+out and about to showcase it and we actually were able to get this into a huntress blog so
+34:07
+chatting a little bit about that click fix lore the beginning the start of this how this kind of
+34:11
+unfolded kind of neat that was just a sweet story something cool to tell and we walk through the
+34:16
+same screenshots and explanation as everything that we've done here in this video but uh cool to
+34:20
+be able to hey get a little two birds one stone kind of thing for this and that got a little bit
+34:25
+of PR hey you know public relations some news news articles out and about sweet to be able to see
+34:30
+that shared uh and tell the story a little bit more in a broader audience so sweet all good
+34:34
+thanks hey that's it for this video thanks so much for sticking with me i know this was a little
+34:38
+bit of a long one you know i tend to ramble but it's just so much fun it's so cool it's uh i
+34:43
+enjoy getting the chance to dig into some of this and learn a little bit more as we all go through
+34:47
+it so thank you so much for watching thank you for tuning in doing all those youtube algorithm
+34:51
+things please pretty please click that like button subscribe leave a comment blah blah blah and do
+34:55
+give some love to our sponsors all right i'll see you in the next video i don't know how to do
+35:00
+outros anymore you can end the video

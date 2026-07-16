@@ -1,1 +1,302 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Today we're going to be talking about two topics that are near and dear to my heart,
+0:03
+cyber attacks and Linux.
+0:06
+So after this thing, come on up, tell me your favorite Linux distro.
+0:10
+If it's Gen2, we'll have questions for you, but I really want to talk to you about what you guys like.
+0:15
+Like Linda mentioned, back in the end of November, a researcher discovered this vulnerability in the React JavaScript framework.
+0:23
+Within a few days, we started seeing mass exploitation of this, so we'll dive on in.
+0:30
+And Linda kindly introduced me so we can skip that.
+0:33
+Alright, so before we dive in, the things that I'm going to be talking to you about today come from two, two talks that were given before.
+0:41
+So my colleagues Anna Femme was a senior hunt and response analyst Craig, who's a principal detection engineer,
+0:48
+Michael who's a senior hunt response analyst and our friends over at Grey Noise, Bob gave a talk on Tradecraft Tuesday a couple of weeks ago.
+0:57
+Spout an hour long, it goes even farther in depth than I will today.
+1:00
+Today's a 15 minute whistle stop tour, but that's up on YouTube.
+1:04
+We also have a blog on this that Anna Craig and Michael wrote too that also goes fully in depth.
+1:10
+So don't need to bother taking notes today, just come check these out on our blog and the YouTube and we can follow along.
+1:19
+Alright, so let's start at the top.
+1:21
+What is CVE 2025 551-82?
+1:25
+It's got a catchy name, there'll be a quiz at the end of this thing on what that is.
+1:29
+Basically what it is is a vulnerability in the react framework.
+1:33
+It's a JavaScript framework, it's a really popular.
+1:37
+It powers 7% of all websites on the internet and you might be thinking Chris 7%, that's not a lot, but like my colleague Michael said,
+1:46
+think about 7% of every JavaScript based website on the internet.
+1:51
+That's a ton of websites, that's millions of websites.
+1:54
+The second thing about this vulnerability is it got a 10 out of 10 on the CBSS score.
+1:59
+It's the worst possible story you can get.
+2:01
+It means it's an incredibly dangerous vulnerability, there's no authentication needed.
+2:06
+And once it's exploited you can get direct shell access, which is a bad day for defenders.
+2:12
+And then the last thing is just there's no off needed, it's remotely exploitable.
+2:16
+It's not a fun one.
+2:18
+So on the left here we've got the CEO of Versel, who is a big contributor to react.
+2:24
+And he posted this proof of concept exploit on the internet.
+2:30
+And this kind of gets to the core of what this exploit is.
+2:33
+And so right here under this four we have this prefix, Stanza.
+2:37
+And even though it's just a basic console.log JavaScript here, what that does is it's a deserialization bug.
+2:44
+So whenever a threat actor sends a crafted packet to a react server,
+2:49
+it will run whatever arbitrary code is in that line.
+2:53
+And the double slashes at the end prevent the legitimate code after from running.
+2:57
+It's basically like a JavaScript comment character slash slash.
+3:01
+And so the threat actor can run whatever code they want at that point and get shell access.
+3:06
+So let's take a peek at what that looks like.
+3:10
+And so this is kind of where we started seeing some of that initial poking,
+3:14
+those raptors at the fences.
+3:17
+Once they sent that initial packet, we started seeing all these different commands come through.
+3:23
+So they got shell access.
+3:25
+So the first command we saw them run is this weird math command.
+3:28
+You know, echo is the unix Linux command for printing something to the command line.
+3:33
+And they would just put a math command.
+3:35
+If that returned with a number, that told the threat actor, I'm in.
+3:39
+So they just used this as a check to see if they got in.
+3:42
+The second is similar.
+3:44
+They would echo out this bone test 1, 2, 3, 4, 5, 6.
+3:48
+And they would pipe it through a base 64 W0 means don't word wrap.
+3:53
+And what they're doing is again, they're checking, did my shell command run?
+3:57
+And does this computer have base 64 so they could encode and decode some of their payloads?
+4:02
+So they're checking what's on the system.
+4:04
+The next one down is even weirder.
+4:06
+They said ver or ID, the double pipe being the or command.
+4:11
+Version is a Windows PowerShell command.
+4:14
+And ID is a unix command, both determine what's on the operating system.
+4:19
+So they put both on the system.
+4:21
+If version ran, they knew it was Windows.
+4:24
+If the ver command failed or didn't exist, it would go to ID meaning it's a Linux system or a Mac system.
+4:30
+And so that would tell the threat actor where they landed.
+4:33
+So now we're seeing automated tooling.
+4:35
+This is them just throwing stuff at the wall seeing what sticks and seeing where they can get.
+4:39
+The last command is even weirder.
+4:42
+It's a command.exe process in Windows.
+4:46
+But then inside of that they're trying to execute W get.
+4:49
+They're trying to hide as VIM, which is a, you know, the command line editor.
+4:54
+They're running no hub to hide it, piping it through DevNull, and then trying to RMRF that.
+4:59
+None of those commands would work on the TrishPraditional Windows machine.
+5:02
+So they're just kind of throwing everything at the wall here to see what sticks.
+5:06
+So again, kind of indicative of automated tooling at scale and just seeing what happens here.
+5:13
+So now we know that they have shell access.
+5:15
+We might be thinking, all right, how does this apply to me?
+5:18
+And so what? Why should I care?
+5:20
+And both of those would be two good questions.
+5:22
+So let's take a peek and see where they went with this.
+5:26
+So post exploitation, we saw these threat actors dropping a number of different types of data.
+5:31
+A number of different malware families on these machines.
+5:34
+Not all of them were present at the same time.
+5:37
+But over time we saw individual and combinations of these.
+5:41
+The first thing we saw them drop was XMRAG crypto miners.
+5:45
+So they got in, started dropping their crypto miner and started at least attempting to mine it.
+5:50
+Thankfully we were able to catch that a little early.
+5:53
+The second one is a little even a little weirder, which is this pure blight malware.
+5:58
+It's a Linux backdoor.
+6:00
+And what this backdoor does is it tries to set up a C2 communication using a hard-coded IP address.
+6:07
+It's like, you know, 1, 8, 5.
+6:09
+We saw it in the slide a minute ago.
+6:11
+And so as a defender, it's really easy to play Wacomal with one IP address.
+6:16
+And so the threat actor had planned for this.
+6:18
+So if you're able to determine that C2 path, you can block it at your firewall.
+6:22
+You can prevent it at your network devices.
+6:25
+So they had this domain generation algorithm that came next.
+6:29
+So it used a Mercen twisting to get random words.
+6:33
+So it's two words, it's like a noun and a verb.
+6:35
+And then they would use the date as the seed.
+6:38
+So it's pseudo-random.
+6:39
+So if you know the date the threat actor used to create those domains,
+6:43
+you would always get the same 200 word list.
+6:46
+And so you'd be able to predict.
+6:48
+And so you could just guess that the dates the threat actor wanted and you could get that same list.
+6:52
+So they took that into account too.
+6:55
+They said, all right, the defenders got my first IP.
+6:57
+Now they have all 200 of my random domains.
+7:00
+And then the third thing they did is created this distributed hash table.
+7:05
+And it's what BitTorrent uses.
+7:08
+It's the same thing that you, like, peer to peer, bit torrenting networks.
+7:11
+And so they would send the C2 communications to all peers and a BitTorrent network.
+7:17
+And that's way harder to kill.
+7:19
+That's way harder to block.
+7:20
+And they would use that as their final C2 method.
+7:23
+And so that's where a peer and peer blade comes from.
+7:26
+That P2 communications.
+7:28
+The next is cow tunnel.
+7:30
+Cow was a string that they used inside the malware.
+7:33
+And that was basically a reverse proxy.
+7:35
+And the idea of being is when you're in a certain environment, like a netted environment,
+7:40
+they allow traffic out.
+7:43
+But traffic in is a little more difficult.
+7:45
+It requires poor forwarding or, you know, a direct rule.
+7:48
+So this reverse proxy allows the threat actor to communicate directly to the box.
+7:53
+The last is Zenfok or Zenfok, I forgive me for the name, but this is another implant that we saw in Linux.
+8:02
+This had reverse shells.
+8:04
+So the TA was able to have the infected machine communicate back out through their host.
+8:10
+It had a SOX5 proxy so that they could come out from the different infected machines
+8:14
+and you wouldn't be able to see their infrastructure.
+8:16
+And they had some anti forensics capabilities, particularly time stamping.
+8:21
+So what the TA would do is any time malware would drop, they would change the time stamps on the confiled malware.
+8:26
+I think that was a go-lang binary.
+8:29
+And then the last thing we saw is just commodity malware, commodity frameworks, the sliver.
+8:34
+It's a free and open source red team framework.
+8:36
+You can download on GitHub.
+8:38
+So we saw them trying to drop those sliver payloads.
+8:42
+With those sliver payloads came a persistence mechanism.
+8:48
+That persistence mechanism came in the form of these processes that looked like regular system demons.
+8:54
+So live system D, Polkit, Audit D, Satisfatch.
+8:59
+These look like legitimate things, but they were processes that were renamed.
+9:04
+The second thing they did is they dumped both an upstart and a system D service at the same time.
+9:11
+You wouldn't find both of those on the same system.
+9:14
+The top one is most modern Linux's run system D.
+9:17
+The bottom is the older style.
+9:19
+And you can see they gave these lame names to them like system Damon.
+9:22
+Like that doesn't exist. It looks legitimate.
+9:25
+So if you're looking quickly through your system D stuff, you're not going to think that's suspicious,
+9:29
+but that doesn't exist normally.
+9:31
+So these are some of those persistence mechanisms that they were able to use to stay on the system there.
+9:37
+And so with that, we started our work of kicking them out of the system,
+9:41
+trying to figure out where these were hidden and help us.
+9:44
+So thankfully this wasn't super widespread.
+9:47
+We saw about tens of thousands of attacks initially and then over time it started dying down.

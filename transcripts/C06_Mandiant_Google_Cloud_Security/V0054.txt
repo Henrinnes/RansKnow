@@ -1,8 +1,1290 @@
-[NO TRANSCRIPT AVAILABLE]
-Provider: local_asr_whisper
-Reason: no_local_audio
-CaptionFlag(contentDetails.caption): false
-Notes:
-- API key-only access cannot download transcripts for channels you do not control.
-- Official captions download requires OAuth authorization for that video/channel.
-- Local ASR requires local audio files you provide (named <video_id>.<ext>).
+0:00
+Well, Windows internals were actually pretty much a fluke that I got to write it.
+0:06
+I was most cases just one of the readers of Windows internals.
+0:11
+Inactivity does a fun story behind it.
+0:14
+A fluke, and yet that fluke led to the definitive resource used by every serious system programmer
+0:20
+and security researcher on the planet.
+0:23
+Welcome to Behind the Binary.
+0:24
+Have you ever wondered what's really happening inside the Windows operating system?
+0:29
+In this episode, we get an inside look from the definitive source, Pavel Yosef Ovich.
+0:34
+We'll discuss what led him to author the Windows internal series and explore the foundational
+0:39
+changes that have shaped Windows into what it is today.
+0:42
+And now my conversation with Pavel Yosef Ovich.
+0:46
+Joining me today is the one and only Pavel.
+0:50
+Long time Windows internals, I don't even know how to describe it, but just expert prolific
+0:56
+and sharing knowledge with the community.
+0:59
+And it's a real honor to be able to talk to you today, Pavel.
+1:02
+So welcome to the podcast.
+1:04
+As usual, I'd like to start with just, I mean, I'm sure a lot of folks will know who you
+1:08
+are and recognize your name and a lot of your contributions.
+1:11
+But it's always interesting to get an introduction from you and just a little bit about your
+1:15
+background, maybe what got you into Windows and Windows internals.
+1:19
+And I suppose there's just a ton of stuff that we'll discuss from there.
+1:24
+Yeah, sure.
+1:25
+Thanks, Josh.
+1:26
+Happy to be here.
+1:28
+Well, my name is Pavel.
+1:30
+I've been around in the IT space for many years, like almost 30 years now.
+1:36
+I've always been interested in how things work.
+1:39
+And Windows was kind of my first operating system after DOS.
+1:45
+And then I kind of got into it.
+1:47
+I wanted to know how to make it work.
+1:49
+It was very different than DOS where it just wrote a main function and did whatever you
+1:53
+wanted to do it.
+1:54
+It was done with Windows.
+1:55
+You got these event-based things when you wanted to create some good.
+1:59
+You couldn't just write things in a straightforward way.
+2:03
+You had to know what is happening.
+2:05
+When are you going to be called in what context, all that kind of stuff.
+2:09
+And it made me get more interested in how these things actually work.
+2:15
+And I'm a developer at heart.
+2:17
+I really like to write code.
+2:18
+I still do that every day.
+2:22
+And obviously I've also done other things like write books and teach a lot because I like
+2:29
+to express what I know.
+2:31
+I like to share what I can.
+2:35
+And that's basically it.
+2:38
+I mean, I never had a standard kind of career like being a developer and moving around
+2:45
+in some company, one or another.
+2:48
+My career has been pretty messy.
+2:51
+I wouldn't recommend it normally.
+2:54
+But it's just who I am probably.
+2:58
+Pretty messy.
+2:59
+I look back at my career.
+3:01
+I guess you get that benefit as you get older and you can look back on a longer period
+3:05
+of your life.
+3:06
+It feels, my career feels very messy and unpredictable.
+3:10
+And I don't think at any point in time.
+3:12
+In fact, I wonder about this even sitting here right now talking to you.
+3:15
+I still have my own book.
+3:16
+We'll solve some time to go.
+3:18
+What's next?
+3:19
+I can't, if I couldn't have anywhere near predicting how I got to where I'm at, what is
+3:23
+the next stage?
+3:25
+And you throw in this, I don't know, the changes with AI and LLMs and how that's kind of rapidly
+3:31
+changing things.
+3:32
+Maybe we can come back to that topic a little bit later because I'd like to get your thoughts
+3:35
+on development and AI assist to developing by development.
+3:39
+I suppose you could call it.
+3:41
+But it's certainly an interesting, it's interesting to hear.
+3:45
+Did you, you know, I have your books on the shelf.
+3:48
+The Windows Internals have been something that as a person who's taught and also spends
+3:53
+a lot of time reversing Windows-based binaries, particularly malware.
+3:57
+Did you anticipate that your work would feed and help that whole community of folks grow?
+4:04
+Well, Windows Internals would actually pretty much look that I got to write it.
+4:10
+I was in most cases just one of the readers of Windows Internals.
+4:16
+Inactivity does a fun story behind it.
+4:18
+I'm not sure if you want to hear it.
+4:20
+Yeah, absolutely.
+4:21
+So the thing is that after the sixth edition came out that covered Windows 7, I remember
+4:27
+Mark Rusinovich had an interview and he said that he's done those books.
+4:31
+He can't really write anymore, he's done, it's just too hard writing these books.
+4:35
+So I wasn't expecting any new addition to appear.
+4:39
+And then a few years later, I saw on Amazon that there is a seventh edition in the works
+4:45
+by two guys that I know from the Colonel Driver Space, Brian Catlean and Jamie Rihanna
+4:52
+Han.
+4:53
+And it was supposed to come out and I was seeing that the dates were continually moving
+4:59
+forward in time, like being delayed and delayed and delayed.
+5:04
+And then in 2015, roughly, that's where I started working for Microsoft for a little
+5:09
+bit.
+5:10
+And so I thought, well, now I'm working at Microsoft, Microsoft, which is working at Microsoft.
+5:14
+Maybe I can talk to him in Microsoft, which is like when you think about it like kind
+5:17
+of a god, those demigod who don't talk to Microsoft, which unless you're at least at
+5:23
+that level and I was just a software developer.
+5:27
+So I decided to contact Mark anyway and I wanted to add a feature in Process Explorer that
+5:32
+always wanted to add.
+5:33
+If you're familiar with the handle table, there's the access mask, which is just a hex decimal
+5:38
+value indicating the power of that handle.
+5:41
+And so there was no textual description of that.
+5:43
+So you have to go to the documentation or whatever and see what that one, two, three, five,
+5:48
+seven, F mean.
+5:49
+And so I thought it would be nice to add a column that actually has a text representation
+5:53
+like process terminate, process dop handle or whatever.
+5:57
+And I asked Mark whether it would allow me to add that.
+6:02
+And surprisingly said yes.
+6:04
+So I added that feature.
+6:05
+That was the first feature I added to Process Explorer.
+6:08
+And then I thought, well, since I've already got some kind of connection with Marvel's
+6:13
+innovation, so I noticed that at that point, the Amazon book that was supposed to be out
+6:21
+simply disappeared.
+6:22
+So after all these delays, it just disappeared from Amazon.
+6:26
+And so I thought what's going on.
+6:27
+So maybe I'll ask Mark.
+6:29
+I asked him, he said, I have no idea, but let me find out.
+6:33
+And he looked up Microsoft Press, talked to some people there.
+6:37
+And apparently these authors that were supposed to generate the book decided to bail out of
+6:42
+the project.
+6:43
+So basically there were two years and nothing to show up for it.
+6:46
+So it was kind of dead in the water.
+6:48
+So I said to Mark, you know what?
+6:50
+I'm happy to write a book.
+6:52
+And he said, okay, fine.
+6:54
+He connected me to Microsoft Press.
+6:57
+We did a little contract.
+6:59
+And that's it.
+7:00
+It started to write.
+7:01
+It kind of was really weird.
+7:03
+I'm writing Windows Interno.
+7:05
+I mean, that's like crazy.
+7:08
+And so I started working on that.
+7:10
+And several months after that, Alex Yunesco realized that someone is actually working on the
+7:17
+next version of the book.
+7:19
+And he contacted me and asked if he could help out.
+7:22
+And I said, sure.
+7:23
+I mean, there's so much work there to do.
+7:25
+It's like a crazy project.
+7:27
+So yeah, he joined me and did some nice work as part of the book.
+7:33
+And it got out in 2017.
+7:35
+It was very happy about that.
+7:38
+That was a very weird stuff related to Windows internals.
+7:41
+I mean, it's a book that obviously many people know.
+7:45
+Nobody actually reads that cover to cover unless they're really like a crazy person.
+7:50
+But there are a few of those.
+7:52
+Sometimes, teaching people to tell me, I want a guy to tell me, well, I read that from
+7:57
+cover to cover.
+7:58
+Well, that's your better man than me.
+8:00
+I don't read that cover to cover.
+8:03
+And then the other book, like Canon programming, it was completely different.
+8:07
+I realized there was no good kernel book for many years.
+8:11
+I mean, the last one that was any good was from 1999 by the Oursar guys.
+8:17
+And there were a few more books a little bit later in 2001, but they're really bad.
+8:22
+And 2006, Microsoft actually did create a book.
+8:25
+Well, actually, there was a good book from 2001, 2003 as well, for WDM drivers written by
+8:34
+Walter Oni.
+8:35
+So it was really good, but it only covers Windows XP at the time and only focuses on kernel
+8:42
+on hardware drivers.
+8:44
+So I wanted something more generic that is more appropriate for the security space, where
+8:49
+you don't care about hardware directly.
+8:51
+You care about in hooky intercepting things happening in the system, things like that.
+8:56
+And there was no book on that and definitely nothing more than that would use Visual Studio,
+9:01
+the modern tools that we have today.
+9:04
+So I decided it's time to just start writing.
+9:07
+And I used LinPap for that, which is a very good, nice platform.
+9:12
+We can just write and publish the book all the time.
+9:15
+Like, continuously, people can buy and people can provide their feedback while you're writing
+9:21
+that.
+9:22
+If something needs to change, you just fix it.
+9:23
+And so I decided to kind of go all the way and wrote that kernel programming book.
+9:29
+And then subsequently wrote a few more again, trying to give really about programming,
+9:35
+not really about security per se.
+9:38
+Security is kind of in the way.
+9:40
+People usually think that I'm a security expert.
+9:43
+Well, I'm not.
+9:44
+I like programming.
+9:45
+I actually hate security.
+9:46
+Don't tell anyone.
+9:48
+Security is like a necessary evil.
+9:51
+We have to have it.
+9:53
+I remember the Windows 98 days where they got to use them password to log in.
+9:58
+And you could do that, but we just press escape and just go into the system.
+10:03
+So I missed those days.
+10:06
+I think I had the first real, I don't know if I would call this hacking experience, but
+10:11
+I was, I was, I was on a laptop.
+10:13
+It was Windows-based.
+10:14
+I don't even remember the version.
+10:15
+I was fairly young and I, it was not my laptop.
+10:19
+It was an on-cure and uncles or something.
+10:20
+And I wanted to play a game.
+10:21
+They'd let me play a game and install a game on it.
+10:24
+And they were off to work that day.
+10:25
+And I was just home alone.
+10:27
+And I went to log into the system and the password, the screen saber had come on and it prompted
+10:31
+me with a password.
+10:33
+And I thought, oh, shoot, I don't know their password.
+10:35
+I don't know their username password.
+10:36
+I can't get past this.
+10:37
+But then I realized I could launch whatever was the task activity, the task monitor at
+10:42
+the time.
+10:43
+And I just killed the screen saber process.
+10:45
+And I was right there into the desktop.
+10:47
+And so it worked out pretty well.
+10:48
+I was able to play my game and nobody was in the way.
+10:51
+Already a version engineering at the young age.
+10:54
+Yeah, yeah.
+10:55
+So yeah, it was a fun game.
+10:57
+I really wanted to get in there and play it.
+10:58
+Spirit of 76, I think is what it was called.
+11:00
+Driving around on a car and it was, I don't know, it was fun.
+11:04
+Okay, so I have some experience.
+11:08
+The authors you were talking about earlier, I have some experience of endeavoring to write
+11:12
+a book and not being able to deliver.
+11:14
+You've delivered and not just on books, but these very monolithic, you know, industry,
+11:20
+leading, very technical, in-depth technical writings.
+11:24
+How do you go about organizing the content, making sure you're staying up to date, making
+11:30
+sure that everything is technically accurate, you know, just how, what is your process like
+11:36
+for creating these textbooks, these books?
+11:40
+I say textbook because I do agree.
+11:42
+It's kind of like you're, and I use them all the time as a great reference.
+11:45
+I mean, sometimes I'll open them.
+11:47
+I'll get one sentence that's all I needed.
+11:49
+A confirmation of something and that's great.
+11:51
+I have tried to read them cover to cover, but I don't think I've gotten very far.
+11:55
+That's okay.
+11:56
+Nobody does that.
+11:58
+Especially for the Windows Internals MOOCs.
+12:00
+The Windows Internals was actually pretty difficult in that respect because I did have the
+12:06
+like the text for the sixth edition, but since in this case, I wanted to cover Windows 10
+12:12
+in Windows 2016 and also cover a little bit Windows 8 and 8.1, which were in between and
+12:17
+nobody actually covered them.
+12:20
+I wanted to be up to date because the earlier Windows Internals version were always like
+12:24
+one version behind.
+12:27
+Windows 8 was almost out only then the sixth edition was out.
+12:31
+It only covered Windows 7.
+12:34
+I wanted to cover Windows 10 and the updated version is possible.
+12:38
+It was pretty difficult because you have to double check everything.
+12:43
+Even things that seem to be probably would be the same.
+12:47
+That's not a good assumption.
+12:48
+You have to actually dig into the code and try to see what is going on and things get
+12:54
+much more complex, especially if you have multiple versions to cover.
+12:59
+It's difficult and I'm not sure I got everything right.
+13:02
+I'm sure there are errors here and there.
+13:07
+It's really difficult to make sure that everything is perfect.
+13:11
+In any case, Windows is moving targets.
+13:14
+Once the book is out, some parts are probably outdated.
+13:18
+Things change all the time.
+13:21
+It's never perfect.
+13:23
+But I try to do what I can with the tools that I have in my disposal.
+13:27
+For other books like the kernel programming and the system programming, Windows 10 system
+13:32
+programming, it was mostly about writing the code, see how things work, debug stuff,
+13:37
+look on the user mode side, on the kernel mode side.
+13:40
+See what is going on and try to get to something that I can explain to myself and then just
+13:46
+get it out on the page.
+13:48
+But as always, I try to put that in the introduction that this is just the state of things as far
+13:54
+as I could test in the current versions of Windows and things could change.
+13:59
+But one thing that goes, I think, for Windows is that its design was very powerful from the
+14:05
+very first Windows NT version in 1993.
+14:08
+So the fundamental pieces are still the same.
+14:11
+The same idea of processes and threats and how the LEDs work in virtual memory is basically
+14:15
+the same.
+14:16
+So it doesn't really change.
+14:18
+So you have this good foundation.
+14:20
+This is something that I always try to emphasize when teaching.
+14:23
+If you have a good understanding of the foundations, you can tackle anything.
+14:28
+Any change is going to happen in the future.
+14:30
+It's just a thing you have to learn.
+14:32
+But you don't have to start from scratch.
+14:34
+But if your foundation is shaky, then any new future and you kind of bounce around,
+14:39
+you don't know where to start, what to hang on to in order to learn that something new.
+14:46
+I don't know where I heard this, but I came across this years ago and it's just,
+14:52
+it seemed to once I understood it made my Windows experience, especially looking at malware
+14:58
+and reverse engineering a little bit easier and the Windows was developed for developers.
+15:03
+And so that's why you find all of these crazy powerful capabilities in technology that
+15:08
+maybe you wouldn't expect.
+15:11
+I think of, and this is a little dated now, but like Excel for macros that go back to
+15:15
+the late 90s and the fact that you can, I mean, there's just so many things that you're
+15:19
+able to invoke the Windows API directly from technology that I wouldn't expect.
+15:23
+I wouldn't expect to be able to load a DLL in Excel spreadsheet cell.
+15:28
+It just seems kind of crazy to me.
+15:30
+It seems like that's the case though.
+15:32
+It's a powerful operating system with the development.
+15:35
+Yeah, I mean, it's a big one.
+15:37
+And for these kinds of things that you mentioned, there's the component object model in
+15:41
+common.
+15:42
+With common, you have the ability to expose something in a language neutral way.
+15:46
+And that's what made all the macros in office so much, so powerful.
+15:50
+You can do almost anything.
+15:52
+And that's also a reason for malicious activity coming from these word documents or whatever,
+15:58
+because you can do crazy things and you're not really limited to what VB script is providing
+16:04
+for you.
+16:05
+So it's a double edge sword like many of these kind of cases.
+16:10
+Well, you know, talking about the evolution of Windows than the operating system and some
+16:16
+of the security features, what is maybe some of the most significant architectural changes
+16:22
+that you've seen either in Windows as a whole or maybe at the kernel level.
+16:28
+If not in recent years, just over the last, I don't know, a couple of decades maybe
+16:33
+of the evolution.
+16:34
+I don't follow most of my work as user land.
+16:37
+So it's the kernel mode is still a bit of a line I don't oftentimes have to cross.
+16:44
+So I haven't been following how much has changed there over the years.
+16:47
+So maybe there's more, maybe there's less.
+16:49
+I'm not entirely sure.
+16:51
+Well, obviously, the kernel is where the operating system runs.
+16:56
+And over the years, the fundamental concept was you have user mode, you have kernel mode,
+17:01
+the kernel is all powerful and user mode is limited and the kernel dictates what it
+17:06
+can or cannot do.
+17:08
+This was true in most, like for most of the Windows years until 2015 when the processing
+17:17
+basic security came out, which changed the equation, something that was really different,
+17:23
+which is very different than the other operating system that follows the basic model of user
+17:28
+mode kernel mode.
+17:29
+Carmo is all powerful, user mode is limited.
+17:32
+Here we have another level like a super kernel.
+17:36
+So to speak, the secure kernel that really is the thing that is now super powerful and
+17:41
+the normal kernel is no longer super powerful.
+17:44
+It's still very powerful, but it's not all powerful.
+17:47
+There are things that it cannot do or access the center memory that it cannot access.
+17:53
+And this is a new way to try to mitigate attacks because if you think about the basics
+18:00
+of user and kernel, then if you are in user mode and you have some user mode malicious
+18:04
+activity, then you're in the same footing there.
+18:07
+But if you have a kernel component, then maybe you can have the upper hand.
+18:12
+But sometimes malicious code can also be entered into the kernel.
+18:17
+In this case, then your driver and that malicious code again are on equal footing, which means
+18:23
+you can't really win necessarily.
+18:26
+It's, well, anyone can win.
+18:28
+You have to be somehow at a higher ground.
+18:31
+This is what virtualization basically allows you to do.
+18:34
+Because when you're virtual in VTL1, the virtual trust level one, which is the higher of the
+18:39
+two that officially exist, then some things you can do that nothing can actually stop you.
+18:46
+And you can prevent certain things from happening, which I think is the right way to go.
+18:53
+You have to have a higher power than the kernel.
+18:56
+The kernel is no longer trusted enough in all circumstances.
+19:00
+I think this is the major shift that we're seeing.
+19:04
+Is this the future then?
+19:07
+I mean, is this going to continue in terms of the underlying architecture that Microsoft
+19:11
+has?
+19:12
+Do you have any?
+19:13
+Yes.
+19:14
+I think so.
+19:15
+I mean, I have no idea.
+19:16
+Obviously, Microsoft is not consulting with me on these matters.
+19:22
+But I will say that this is, I think, the way to go and the way that it will continue
+19:27
+forward, those already VTL2 that is being used in Azure as another super, super powerful
+19:35
+level.
+19:36
+And I think at the end of the day, it will actually, and it's all fueled by the hypervisor.
+19:40
+So the hypervisor is the real, like, controller, well, real as much as we can describe is the
+19:47
+real controller of the system.
+19:48
+It's the one that actually loading the kernel and also the secure kernel.
+19:52
+So the hypervisor in itself, by the way, it's an operating system.
+19:55
+It has its own kernel.
+19:57
+It's just a smaller one that doesn't have everything.
+20:00
+It doesn't need everything.
+20:01
+It wants to be as small and as efficient as possible and also to reduce the attack surface.
+20:06
+But the thing that's the way to go because now in order to attack that kind of system,
+20:10
+you have to have control of the hypervisor, which means that you have to load maybe before
+20:15
+the hypervisor, the stage like UEFI.
+20:18
+But that's definitely more difficult.
+20:20
+You have to have some physical access to the machine usually.
+20:23
+And it's much more difficult.
+20:25
+And I would even go and guess that the next step of that evolution would be to have a hardware
+20:32
+based security.
+20:34
+Just like you have things like GPUs for graphic acceleration and doing things on the hardware
+20:39
+level, you might have a processor that is designed for security.
+20:44
+Something that looks at a lower layer that can't be really bypassed.
+20:49
+No one can bypass that hardware layer.
+20:51
+And so it can control anything on top of that, like UEFI, hypervisor, whatever that may
+20:56
+be.
+20:57
+So I think the security mitigations are going to go down to the hardware level.
+21:05
+You know, I kind of, my mindset, I think, and around, you know, we've got the, the
+21:10
+arm seems to be making a lot of inroads into, you know, chip design and who just where
+21:16
+devices are going, Intel seems to be, of course, still pretty dominant in terms of legacy.
+21:23
+I guess I don't know where cloud runs on what step of chipsets they run on.
+21:27
+I know LLMs are consuming a lot of GPUs now.
+21:30
+So I guess the crypto boom is this GPUs are still serving their purpose.
+21:36
+Where do you see all of this headed, I guess, with the hardware and is there going to be
+21:42
+a fundamental shift in just then this underlying, you know, these architectures that we're developing
+21:48
+and the chips that we're producing and just how the operating system itself is running
+21:52
+it because it seems to me like over the years, you know, Windows is, it gets a, it's a
+21:58
+refresh kind of a new UI and a little bit of new themes and a couple of features here
+22:02
+and there.
+22:03
+I always had this suspicion that under the hood and me and you kind of alluded to it earlier
+22:07
+that it's a lot of the legacy code is a lot of the same things that are just running in
+22:10
+their year after year after year and nothing really significantly fundamentally changes.
+22:15
+But then, you know, things like this, this virtual kernel that you've been describing.
+22:19
+I don't know if you had any thoughts on just the landscape of the chips and the architectures
+22:23
+and then where everything is moving.
+22:25
+Yeah, I mean, GPUs today are used for LLMs but really just for training and to actually
+22:31
+run LLMs, you can run that on your local machine.
+22:33
+It's not such a big deal.
+22:36
+It's mostly about the training stuff and training is definitely is going to continue and only
+22:41
+like really big companies with lots of cash on their hands can utilize this number of GPUs
+22:47
+to get these trainings going.
+22:50
+But I think from a system perspective, things won't change in any radical way in that
+22:56
+perspective.
+22:57
+It's still going to be like chips like we have today, like Intel, AMD, ARM and all those.
+23:04
+I think that's not going to fundamentally change because the end of the day, the operating
+23:09
+system should be as lean as possible.
+23:11
+The kernel should be as lean as small and efficient as possible.
+23:15
+So it would be definitely things move forward in terms of security.
+23:19
+Like I said, I think the hardware is going to play a role but it's not about like having
+23:24
+a gigantic data centers or anything like that.
+23:27
+This is going to be mostly for training.
+23:30
+What do you think are some of the remaining security challenges for a secure operating system
+23:36
+when those may be in particular?
+23:41
+Well, I mean, at the end of the day, the technology can get you to a certain point but most
+23:49
+attacks occur because of the human factor.
+23:52
+Someone has to press some link or download some file and then things progress from there.
+23:58
+So technology is not really necessarily the solution to all the security problems.
+24:03
+It's about education a lot.
+24:06
+People be aware of what is going on, what they should and shouldn't do.
+24:12
+And obviously, companies are doing what they can like Microsoft in terms of technology
+24:16
+because that's something they can control.
+24:19
+They can't just control every person on the planet.
+24:22
+But I think the idea of trying to make sure that the normal operating system is not as
+24:29
+accessible as it is today, starting with which transaction-based security, as I mentioned,
+24:35
+is the way to go to try to change the playing field.
+24:39
+So you don't fight on the same playing field, which is still mostly the case.
+24:44
+Not everyone uses the features that VBS allows and more features will probably be provided
+24:51
+in the future.
+24:52
+So credential, God, things like that and there's device God.
+24:56
+You can technically create rules to indicate what the system could run.
+25:02
+I have no idea in the world how much it's actually used in practice.
+25:06
+But it would be nice if people in the security space would be able to do that.
+25:12
+People in the security space would be aware of that and be able to protect organizations
+25:17
+using these capabilities.
+25:19
+I've reflected on that over the years as well and that we have these powerful devices and
+25:25
+a lot of times the training on how to use them and use them not just properly, but securely
+25:31
+doesn't come or it only comes after the fact.
+25:34
+One of my kids is starting to drive right now and I didn't just throw her in the front seat and say,
+25:39
+there's the key, here's the pedals, go have fun.
+25:43
+It's taking an extensive amount of training and education and preparation and here's when you need to be defensive
+25:48
+and here's when you should maybe be a little offensive.
+25:51
+But yet you can give them a phone or put them in front of a computer and maybe not the same level of training.
+25:57
+So I've often wondered about that that maybe there's just the sex dictation that users have that the security of the device,
+26:05
+that they should roll the play, it just should work and they shouldn't have to do anything,
+26:09
+they shouldn't have any responsibility or accountability there.
+26:12
+Hopefully that mindset changes.
+26:14
+I don't see it changing in the foreseeable future, but hopefully that's something that does shift.
+26:19
+Yeah, I mean, the standard person buys a TV, things that well, that's a TV, you just operate it and that's it.
+26:27
+And you expect that to work and like I said security, nobody likes security really.
+26:32
+Well, maybe some people like security, but the average person doesn't like security.
+26:36
+I hate security.
+26:38
+So I don't want to worry about that.
+26:40
+I have my phone, I want to use it.
+26:42
+I don't need to worry, but unfortunately that's not where we live and things are getting worse and getting worse.
+26:49
+We all the deep fakes and all these things that people can do and imitate voices and all the stuff that AI allows us to do.
+26:57
+This opens up a whole new kind of warmth and makes things much more difficult to handle.
+27:03
+Yeah, it does.
+27:05
+I suppose it's probably partially due to the fact that I'm in this industry, but that is something that I know trying to teach at least my family and anyone I can get in front of at a young age,
+27:16
+the risk inherent with all of this technology and not just the normal use case.
+27:21
+And so I guess we'll see where that takes us.
+27:24
+You know, and kind of we're talking about operating systems.
+27:27
+Again, I've always had this sort of naive thought of mobile devices kind of bringing in a slightly different era, maybe maybe a completely different era of operating systems because they were, you know, from my perspective.
+27:39
+And again, I don't spend a lot of time in that realm.
+27:42
+They're developed for devices that are in these inherently much more hostile less controlled environments.
+27:48
+You know, were they are they are they developed differently? Do they have features as an operating system on a mobile platform that's different than say windows and things they do well or things they don't do so well.
+27:59
+Maybe things that windows could learn from.
+28:02
+I know windows had a phone for a while. I don't think they still do do they.
+28:06
+They're very rarely are replicated. But yeah, it was actually running windows 10.
+28:11
+So it was it was basically the same operating system like desktop, just stripped out of certain features that don't make sense in a small form factor.
+28:22
+But I think in terms of operating systems, mobile platforms are practically the same in the basic, fundamental way that they work.
+28:31
+They have user mode, they have kernel mode and basically is the same thing. The purpose of the kernel is to manage resources like memory threading file IO and all that kind of stuff.
+28:42
+So nothing really different there. It's more constrained in terms of memory and such.
+28:47
+So you have to write things perhaps in a more efficient way than you would perhaps do on a desktop system that has like lots of gigs of RAM.
+28:57
+But fundamentally, fundamentals are the same like Android is is basically Linux with some changes even other platforms like Xbox or PlayStation.
+29:08
+They still run something very similar Xbox running windows 10 and PlayStation runs some variation of freeBSD or something.
+29:16
+So they're all kind of part of the same set of like families either the Unix family or the windows family and their tweaks, their changes.
+29:25
+But the fundamental parts of an OS are still the same.
+29:31
+When I when I first got out of college, I wasn't sure what I was going to do with my life. And I found myself at one point, programming at a credit card processing company.
+29:42
+And it was early 2000s and it was here that I had my first real introduction into secure coding.
+29:49
+And it was through the old was the open web application security project in their top 10 and it was really eye opening to me because up until that point while I was not that far in my career, I had gone through a four year, five year college program and been doing some consulting work writing some simple web applications and some PHP servers and things.
+30:10
+But it was really eye opening because I had never thought about attacking my code or my applications.
+30:17
+And I then realized how poorly I was writing a lot of my code applications where it maybe had performed exactly the way I wanted it to.
+30:24
+I know I had applications that were wide open to many at the top 10 because I never thought about the abuse case.
+30:31
+You mentioned your developer. How how have you seen secure coding evolve over the years.
+30:38
+Well, I think the problems of secure coding started because of the languages we were using.
+30:44
+It was the classically see and then maybe C++ things like that. And these languages provide lots of power and control.
+30:52
+But with that, you are practicating to anything and that means you're probably going to do some things wrong.
+30:59
+And there's all these buffer overflows kind of things and then double freeze and all these nastiness that happens in those environment, which is still the case.
+31:08
+Many bugs that we have in windows, for example, are based around memory around these kinds of things exactly.
+31:15
+And that's one of the reasons that new languages were created to try to mitigate that started with maybe something like Java.
+31:23
+And from talking about the languages which are fairly popular and in the mainstream.
+31:28
+So Java is technically safe. If you just work with the pure Java, you can't really mess things up.
+31:35
+But there's always the ability to go to the native interface and then just kind of go back to a Cland where nothing is guaranteed.
+31:43
+And the C sharp does something very similar. In recent years, we have one language that seems to take security or hold to a whole new level, which is a thrust.
+31:52
+So with the rest, there's really assuming you're working with safe routes, which is default.
+31:58
+There's no way you can mess things up just no way. There's no way you can leave a buffer kind of overflow potential state or any dangling pointers.
+32:10
+These things just cannot happen and you can't even get like synchronization or concurrency errors.
+32:18
+And all that is done at compile time, which is something that no other language knows how to do.
+32:23
+And that's why Lenox starts writing now started writing and certain code with Rust in the kernel.
+32:29
+Microsoft is doing that as well because they realize that there's so many memory errors that still probably lurk around in the kernel and in user mode.
+32:39
+Then putting Rust in there will automatically mitigate all of them in like immediately and it's only just just need to code to compile that's it.
+32:48
+You don't have to run it to test it for that. It's just not going to compile if there is any potential for such a such a problem.
+32:58
+I've seen a lot of projects converting to us, especially those that are in running in high demand or needing high security environment.
+33:08
+So it's been an interesting transition. I also know that Rust binaries are total are very notoriously hard to reverse engine here because of all of the compiler additions and this runtime checking.
+33:22
+And so it's sort of this weird paradigm, I guess that we live in and that it's it's good for security.
+33:28
+It's has this added benefit from our authors and threat actors of making their stuff tougher to look at as well.
+33:34
+Yeah.
+33:35
+I mentioned maybe at the beginning of the session here, we're talking a little bit about how we live in this air now of AI assisted everything and coding certainly is being impacted and that I guess vibe coding is sort of the vote term and using LLMs to help generate code.
+33:51
+I know, you know, LLMs are still just mathematical models and statistics and probabilities and calculus and so we're what is your experience been so far with using LLMs and code generation or assisting in the code development process and is this the future?
+34:11
+Are we going to be seeing that the LLMs are writing the vast majority of our systems and our kernels and
+34:18
+well, I should say unfortunately, I think yes.
+34:21
+I say unfortunately because I like to write code and don't like others writing that for me in most cases right now the state of the LMs is not yet very good in terms of writing code.
+34:33
+I wouldn't just trust an LLM to write the code and then just go home and tell it right to write.
+34:39
+Personally, I don't use LLMs today to write my code. I tried it but I don't like it not just because I'm not actually writing the code but because there are arrows and then of the day I need to actually check the code that the LLM has generated.
+34:57
+I'd rather just write it myself and write it in my own style and the thing that I am using LLMs for today is to generate tests.
+35:05
+That's I think something that is pretty like boring to do usually but very important from practical perspective.
+35:13
+So I let the LLM generate some initial tests and then I tweak them as needed but at least I get some of that boilerplate away from myself.
+35:23
+I think this is a good compromise of using LLMs these days to generate code.
+35:29
+But I expect these things to continue to evolve and be better and better.
+35:34
+At the end of the day I think we'll be using natural language or not having to write just talking to a microphone and say hey I want this thing and if it doesn't work exactly right say no let's fix that and eventually you won't have to write that much code for most applications.
+35:53
+But still some things like writing operating systems and kernels and very low level code you have to write it yourself.
+35:59
+No LLM will be able to do that probably but at least the most of the more common applications like web and and goo and stuff like that the LLM will be able to do it.
+36:10
+It's not there yet but I'm sure it will be in some years.
+36:14
+Yeah I think so as well.
+36:17
+And there's some aspect of I just kind of reflect upon this I spent a lot of my early career writing cascading style sheets and browser based JavaScript and the CSS was particularly.
+36:31
+I don't know just it felt toil some always to me I'm not I'm not much of a designer and I just was always having to wrestle with.
+36:38
+I imagine the state of the browsers is much better but I was always wrestling with the different layout issues and how different browsers rendered the CSS and what properties they supported and so there's a part of me that says okay that you know that taking away that toil in development is great educational I use LLMs to help create educational content because it will.
+37:00
+I have to be perfect it's not running anywhere in a production setting it can I made some labs for a class I'm teaching just recently and I mean it.
+37:09
+I knew exactly what I wanted to do but it cut the time it took me to do it into a fraction of what it would have otherwise and so it's just been a great.
+37:17
+A great capability but I enjoy doing this work as well same same with the reversing side I think it reversing is just boils down to analyzing code.
+37:25
+So it's good I don't know the you know the obfuscation complicates things and that when you have code that's written in a way that's supposed to be hard to follow I imagine that's going to take longer time for the models to really understand how to unravel but you know I see our role is being able to leverage them and kind of prompt them along the way to just they're like a like a new era of decompiler almost at this point and that they can really just quick in the time it takes to get the answers that you're looking for but something that you just you know.
+37:54
+You just you know can't trust quite yet but 100% anyway.
+37:57
+Yep these are tools and they'll get better and how we use those tools that the end of the day matters to do whatever we need to do.
+38:08
+You're talking I guess talking a little bit about reverse engineering one thing I've always found you a part of the dauntingness of the learning curve there.
+38:18
+I think it can be challenging just to become a forward engineer I somebody likes to use that term a friend of mine I think it's a fun term but just writing software in windows as a reverse engineer I usually don't have to worry about implementation details i'm just looking at what what was already written and I'm trying to understand how it's supposed to function whenever I try to write code in windows it's always it's I don't know it's always kind of amazing to me because there's so much that you have to know.
+38:46
+How do you see some of the biggest challenges for reverse engineers or for someone just wanting to write windows applications today understanding how to make those applications work and understanding the appropriate level of detail I mean we talked about it with the books you could read through all of the windows internals and you know a lot you'd be challenging to retain at all but oftentimes you don't need to know everything you just need to know little pieces here and there and the knowledge has been so.
+39:15
+So sometimes it's taken me an amazing amount of time to find that like I mentioned earlier that one sentence for that one paragraph that explains how something in windows works to unlock the you know the binary on reversing or the software i'm trying to make how do you I mean you wrote books on this how do you manage getting into an understanding the operating system to be effective at reversing or engineering or whatever your goal is with windows.
+39:41
+Well it takes perseverance it takes time I've seen people in the industry when I'm teaching that try to like be reverse engineer like immediately they want to start a version engineering they don't know anything but they want to start a version engineering and like I always say you always have to start with the foundation I don't think they are really good shortcuts I mean I've seen also other students like try to tell the LLM just ask the LLM something and then they get some kind of answer.
+40:11
+But don't we understand the answer how to put that into perspective even that answer if it's correct they can't really tell so the thing is in order to reverse engineer in order to forward engineer to to write code you have to know a lot of things you have to know the fundamentals of computer architecture you have to know the understand some basic assembly basic C some operating system stuff there's really a lot to understand I don't think there's a way to get around that.
+40:39
+And I think this is where education is really important because if you just some person starts wants to be in this it space whether a developer or a versus engineer or both they don't know where to start necessarily and I think it's important to give a good.
+40:58
+Like path is how to get to where you want to go it's not going to take a week or a month or not even a year it's really unlikely to happen it takes many years of experience and doing things and even books books are great but they're not the end of just the beginning because at the end of the day we learn by doing and not just by reading or watching this is nice to get you started but it's not enough.
+41:24
+And so there's just a bunch of things you need to know before you can actually attempt to do the next thing and so I wouldn't recommend someone that wants to program to immediately start to build windows applications with goo your stuff start with something simple like writing a main function that just out for something to the console works with the console only.
+41:46
+It takes time and it takes the experience and to get more and more knowledge and of course operating system don't make it easier because they're evolving so depending what you want you can.
+41:59
+And today they are shortcuts I would say for example you don't have to write an application C++ or C.
+42:06
+You can just go to .net which is easier to use you can even go to JavaScript and write something that's then hosted in some browser hosting application there are ways you can get around that but if you really want to be good at what you're doing you can't work at these high level abstractions and just have no idea what's happening underneath and main people are in this state just go to the high level abstractions they know to do how to do certain things.
+42:34
+And that's it if you ask them how to debug that what's going on behind the scenes that just have no idea and and this is where we're thinking the glass ceiling is over some kind of ceiling is you have to know what's going on underneath you can just skip all the steps and and go to the final thing and say hey I'm here there's no way you just can't do that.
+42:58
+So I don't think there's a there's no magic here I didn't just learn Windows internals in one day and there's still many things I don't know and that's fine I'm not I don't pretend to know everything but if I need to learn something I know how to go about doing that because I have the foundations that's I think most important thing.
+43:22
+Yeah, I think that's one of the key I don't know strategies I've developed over the years is figuring out how to learn these topics and knowing like you said knowing the foundations to to know where to begin so that I can I can chart a successful or hopefully successful path to figure out whatever it is that I'm challenged with.
+43:43
+It's something I've also been curious about over the year that yeah we were talking about memory safe languages and I you mentioned and you mentioned.net you know in college I learned Java and then I really almost immediately and in kind of the real world my first job was all.net was an entire.net company that was built off entirely using.net and it wasn't until I got into reverse engineering that I really had to pick up a lot of low level concepts and.
+44:13
+Finally look beyond this managed execution environment to the unmanaged code and all the perils that lay there and and I suppose I think you a part of what maybe sheltered me a bit was the fact that I was being taught a safe language in a way and then I was in these environments where we just didn't have to worry ourselves about that.
+44:32
+And so it was a bit jarring when I finally started reversing that I just I found that ultimately at the end of the day the and this is something I've recommended over the years if you're going to be a technical person the lower levels of technical understanding you can gain the more doors it opened up and the more that you'll actually understand what you're doing so how low do you go I guess is the question you get asked and see you goes lows it's like playing a game of limbo you just these lows you can go.
+44:59
+Because you eventually understand it all and it makes everything else so much easier.
+45:04
+Yeah completely agree I mean there's always a one level below you can you can go you can stop at some point but I've really I've seen the things you describe that people starting with dot net they think like C sharp is the greatest language and they're working everything is fine but when things start to go every they don't know what to do.
+45:25
+Sometimes they see their memory memory leaks and even if they can identify that and say hey how's that possible dot net does have memory leaks how could I have a memory leak but dot net does have memory leaks it just they're based around something different what about a locating memory that you kind of forgot like you would in C for example and forgot to free that it's about the fact that you're still holding on to a reference to something that holds a reference to something to something to something and that keeps it a lot because the garbage collector knows that it's so should they be able to do something.
+45:54
+So it's not that it's so shouldn't destroy that object and you don't know what is going on so even in those relatively high level environments there's still low level stuff that you need to understand you really want to be good.
+46:07
+You can start you can build your applications and web APIs and all that kind of stuff beyond the surface that's fine and then will replace you at the end of the day because it's not it's not that difficult but when troubles start when problems arise then you have the power because of your memory.
+46:23
+Because you are understanding how to approach that what to do how is it actually built and and that's just if you really if people really want to be graded something you have to understand things really at a low level and that will open up whole new things or new avenues for your thinking and the way you understand technology in general.
+46:47
+I generally go through these I know these kind of these exercises of trying to craft and I and I still work with a lot of assembly directly on by no means a great assembly.
+47:02
+I'm not really a really writer but I can I can I can read it and understand it is kind of another one of those weird phenomena as I think in the world of reversing and that there to me there's like two buckets that you have to be that you can focus on there's proficiency and writing in a language and then there's proficiency and reading and oftentimes I just need to be proficient reading.
+47:21
+In reading or like take a you know take a high level construct a switch or a series of if statements and try to convert that into assembly or look at what the compiler is done once is translated that into machine code you can learn an awful lot about the code that you're writing, especially if you care about things like performance you know switch switches and switch tables I know these are old concepts but it's just such a it's such a cool thing that I remember getting years ago getting into debates with other developers.
+47:51
+What's more performance you know if statements with a series of else ifs and or switches and I never knew how to really argue or answer them but then once I got into assembly I'm like well now I can't answer you because I can actually show you what the machine is doing and what it thinks is is optimized and jump tables are just a significant optimization when they're relevant so it's a fun it's a fun exercise to do and definitely definitely a completely agree.
+48:16
+But just we have to remember that CPUs are really crazy I mean even things that look like simple like sequential they might happen in parallel like processors are really complex these days and for performance I always say you have to measure you can't really guess what is happening even if you see the code it's not it's not guaranteed not by long shot today.
+48:41
+So we kind of touched on backwards compatibility earlier within the operating system that's another area that I've always found sort of fascinating and it becomes I think in some regard the reverse engineer superpower when you when you learn about not only windows internals but the undocumented capabilities or features.
+49:00
+I hope you've seen this play out over the years you know like for example using Microsoft it provides the windows API and then they try to guide your interaction through the different layers and they say that OK NTDL is by and large off limits don't use it's not for for normal development purposes but then.
+49:19
+Now authors of course will go right to that you know i'm seeing projects now for the longest time I thought oh you know show code running in windows is kind of not.
+49:29
+I mean show codes ability to run or any I guess any program in that matter ability to interact directly with the kernel via system calls is so much more complex on windows and is an easier thing to do on Linux because those those call numbers are stable but now there's some pretty cool projects out there that show there's there is a level over lines they can get on.
+49:48
+Making those calls so how do you think Microsoft's approach to these undocumented things has helped or hurt the industry and our ability to reverse engineer or to secure the operating system and our users.
+50:02
+I mean the original idea of NTDL was was to be a common layer for this idea of subsistence because in the first windows anti version actually supported always two and posics which is in the 1000s.
+50:17
+In the 1000s.
+50:19
+The standard posics standard least subset of that and the idea was that you could compile a call posics application on windows and it will run so each one would have their own API's but they all would call to NTDL and that's why NTDL was supposed to be off limit and wasn't supposed to be used directly by developers but later on the other subsystems always two and posics eventually were dropped.
+50:46
+Nobody was using that the windows 8.1 dropped.
+50:50
+Posing so at the end of the day now we only have the windows subsystems we have these two layers we have NTDL and we have on top of that the windows API like what we find in current 32 GDI 32 user they doing so on and so it's kind of a historical thing and Linux doesn't have that.
+51:08
+It's just you just call the system call you have an open system call you call that and that's it and here you're using a higher level API so I think it became kind of an historical thing and I would really like Microsoft to drop all the charade and give us full access to NTDL like documented access.
+51:26
+Those were the reason I wrote the native API programming book to expose more of the NTDL API because there's some stuff that you just cannot do in the usual windows API some things are just not provided for you even if you really really want them.
+51:43
+In fact the NTDL error native API is used by Microsoft on applications like task manager and process explorer they are using those APIs so even though they're not stable in the sense that Microsoft makes no guarantees they can potentially disappear some day or change in their prototype whatever in practice this doesn't really happen because Microsoft's own applications depend on that so they they're not going to change things unless there's really really very good reason to do that.
+52:12
+So I would really like Microsoft to drop the windows API act and just use NTDL as the system collared it's much more consistent by the way if you look at the windows API it's a gigantic mess it's like thousands of functions many thousands and naming convention is almost nonexistent.
+52:33
+Even the types are the naming for the types is different between components. Now I can understand that because they were written by different teams at Microsoft Microsoft is a big company it's not that easy to synchronize perhaps but still it's a mess that I wouldn't expect a company to provide to its developers and that's why people find it very difficult to start with the windows API because there's so many functions what should I call now and they're all C flat functions there's no name spaces or anything like that.
+53:03
+I think with some hierarchies you know this belongs to that you have nothing so you really you have to have some someone guiding you saying no this is what you need to do for this and for that.
+53:15
+So NTDL became really I think at the end of the day it's practically public we have the PHNT project the process hacker which built on top of that I think it's called the system informer now not as cool name as it was but still and so it's using the system.
+53:32
+And so it's using only those APIs and provided like unofficial documentation in the header files so people are using that I just think think it adds the complexity of working with windows and I would rather these to our merging some way unfortunately it's not up to you.
+53:53
+Yeah well maybe we could start a campaign on social media and see if we can't get it to start well let's start the campaign first to eliminate windows 11 after we do that.
+54:04
+No, talk about an active API.
+54:06
+Is there I have yet to so I'm again I'm I'm normally not on Windows systems unless I'm in a VM doing some sort of analysis and I'm I guess I'm I'm starting to feel that we we went through this transition as like malware analysts in that our window.
+54:21
+7 VMs we held on to for very long time because everything just worked and then transitioning to windows 10 was kind of a pain.
+54:28
+But then once you got through it okay all things are good windows 11 feels that same way I'm with the flare team we have this flare VM.
+54:36
+You know you can't just get a call or I'm next for windows you have to have a bunch of installation scripts and it's a phenomenal project.
+54:44
+Last time I tried to stall windows 11 I just run into all these issues disabling defender and all the same stuff that I seem to run into every time I try to transition.
+54:54
+What is it about windows 11 that makes you say that.
+54:58
+Well I mean at the the kernel level it's still windows 10 also the version numbers are 10.0. Something something really not new operating system but they just watch the UI I'm sorry I'm sorry to say it's just so bad.
+55:13
+Removing features and making other features that nobody really wants it's like it's amazing and sometimes it just they don't listen and they don't listen insist on let's continue maybe we'll make it better in the next version.
+55:28
+But you can't you have to remove that that thing it's just just so bad and in the end of the day it's also slower and that's really inexcusable look at explore for example.
+55:40
+I mean I can go in for many hours the renting but windows 11 just to get explore it's like it's junk like really it's junk it's so much slower than the one in windows 10 it's buggy and it's been like four four years since windows 11 came out I mean come on.
+55:58
+There are other like explore like applications out which are fast they're slick they work great and Microsoft can't get explore to work properly it's just amazing to me.
+56:11
+Is it windows your daily machine are you on windows and yeah I really work on windows yeah I still prefer it over Linux although I'm getting a bit warmer with Linux.
+56:25
+Because I I see the from an operating system perspective it's it's much cleaner it's more straight to the point more uniform I see some really good design decisions in the operating system.
+56:42
+But still I find it well most of the color right is for windows so I'd rather have like a local windows machine that does what I need.
+56:53
+But yeah I think there's lots of things that could be improved in windows and for the Microsoft is not always doing the right thing or focusing on the right things.
+57:04
+That's just life I guess is so in talking just going back just for a moment with the the sub components and the positive and though although I know this isn't I guess maybe new now I don't remember when this was released but the window subsist subsistence for Linux I find that to be helpful to install.
+57:24
+Yes it's actually it's fantastic it's really fantastic it came out in beta form in Windows 10 version 16.070 the anniversary update in 2016 and then a few versions later it became a release form and now we have WSL 2 which is even better.
+57:40
+So I think this is really nice and I use that all the time so I used it all the time for at least testing purposes and for working with Linux without having the necessity to have a VM I also have a VM but I don't have to in most cases but that's working really very differently than the classic subsystems because the classic subsystem required you to recompile your application and generate a PE for that to actually run.
+58:03
+But here WSL you take an actual binary in ELF binary just runs so it's built in exactly in a very very different way so it's a true Linux system it's not just some code you have to recompile does not need for source code for WSL it's actually pretty magical and did the recently a video about how WSL 1 works WSL 2 is more sophisticated but the final the final result is really impressive and today WSL 2 can even.
+58:33
+So I think it's really very powerful and I think it's a work with Linux right beside Windows and of course they're interacting they're on the same file system and using the same hardware resources same memory and so on so I think it's really great.
+58:53
+Yeah yeah I found it to be I hadn't really been using it very often just because I'm in I'm oftentimes in a Linux host anyway so I don't yeah I just if I need to do something in Linux I'll just shuffle some files around it's a bit of a hassle but I recently installed it I was really surprised was do the entire installation through a command prompt and it just seems to work really well.
+59:16
+Alright so we've talked a lot about Windows and Windows internals and the operating system if we you know let's turn our attention back to security the main product today out there I think that folks are using and depending upon our EDRs endpoint detection response that seem to be this
+59:33
+is the automation of AV engines and you know behavioral analysis and heuristic detection log shipping and all that good stuff.
+59:41
+You know I know you've got some trainings on EDRs out there that are available.
+59:46
+Can you maybe just give us the high level overview of what is an EDR system and how does it protect the operating system or how does it help protect the operating system from exploits or more malicious activity.
+59:58
+So yeah so EDR is an end-pointer detection response of the term endpoint here means that most of the heavy lifting is done on the endpoint itself and not in some server out there.
+60:10
+So the idea here is that you have some components that are listening to things happening in the system and try to figure out whether the behavior that you're seeing is malicious or not.
+60:21
+Typically you have a current driver that current driver is talking various events in the operating system like process crew.
+60:27
+This thing like process creation or files being open things like that and then they usually communicate this information to use a more service that does the behavior analysis so to speak tries to figure out whether the combination of things that are happening might point to something that is malicious.
+60:46
+This is the case they might have some response and that's where the R comes in the EDR that might be like a quarantine a file or try to terminate a process if they think that this is bad.
+61:00
+And there's always some kind of component that pushes things to some kind of server for further analysis because sometimes you need a broader view you might have the entire set of machines that domain and then you try to correlate things that are happening.
+61:16
+So EDRs try to protect the system indeed these are the kind of involvement of the classic antivirus engines and they actually it's very difficult to write one that does things well because one of the things you have to avoid is false positives.
+61:35
+We have false positives people not going to be very happy also you have to leave it the resources you're using if you're consuming too much memory too much CPU and so on people won't want to use your product.
+61:48
+So there's always these clash between the analysis you'd like to do is an EDR you'd like to do more but you have to take into consideration that you're not alone.
+61:59
+And this is one of the cases where I mentioned that maybe a hardware component would help here because you can offload some of the processing to a different component doesn't affect the actual system.
+62:12
+So this is basically an EDR and this is what basically we have today but again EDRs don't today don't actually take advantage of the newer stuff for example they have a kernel driver but as we mentioned if an attacker has a kernel component then your equal food.
+62:28
+And you can't really stop it it's you're going to lose an attacker just needs to succeed once don't succeed many times defenders have to succeed all the time.
+62:38
+And so that's one thing and and still this is the way they do things I think one of the reasons is that to work with like the most common systems not everyone can afford a hypervisor and things like that but there's lots of innovation that is still possible to do on the hypervisor.
+62:57
+On the hypervisor level you can create a type to hypervisor and then intercept certain things like system calls in a way that the another kind of component wouldn't be able to to actually attack you so does still I think innovation that could be done in this space I have no idea what the actual companies are doing in that respect although Microsoft has now changed their tune because of the very famous crowd strike a blue screen of last year.
+63:26
+Now they want to kick everyone off the kernel so all ideas would be like completely in user space and Microsoft would provide something about to for them to work with I have no idea where it's going to actually go and how that is going to actually happen but if even if it does it will take years for that to materialize some fashion is there then what so what do you see as the you as the primary risk for organizations still that are.
+63:55
+So I think that's the basic basic their security on on EDRs to protect their endpoints it it's always kind of fascinated me that we have these we have all these systems and log aggregations and Sims and sores and I while is track with all but we're all looking at events after the fact yeah I think yeah the thing is because of those false positive in many cases what you get from EDR is just gigantic set of logs of various.
+64:24
+How to the to us humans to figure out what is going on whether anything suspicious actually happening and the thing this is one of the problems that you can just see through like endless set of events that are coming on various systems and try to figure out what's going on even if you can do that it might be like days or even more after the actual attack and maybe by that time it's it's basically too late and that's why many companies are thinking
+64:53
+of investing trying to do those behavioral analysis in a some kind of better way using AI and all these kinds of fancy things in the hope of catching things sooner and not generating false positives which is which is something that every every EDR has to some extent.
+65:14
+So yeah it's it's a challenge for sure.
+65:16
+Do they still have we have they up the security game then for your you know for your threat actors out there do they make it harder a system if I say you and I decide to plan some offensive operation and we've got organization a that has robust EDR like crowd strike without any bugs and organization be that has no real EDR system in place maybe some legacy A.V.
+65:39
+or I don't know what Windows Defenders actually classified as does that change do we pick one over the other because of their their posture.
+65:47
+Yeah probably yes we will because they're not the same they're not the same they don't have the same powers the same capabilities and the same visibility.
+65:57
+We definitely if we know what is running on those systems will and both companies are like good targets.
+66:05
+It's easier one. Yeah. Okay one so they still they do play a role. I maybe last question then something to wrap up you've again you've been involved with Windows internals now for a very large portion of your career.
+66:18
+Is there a particular bug or vulnerability or something that was was was discovered or introduced in windows or in the kernel that really taught you were profound lesson and system design or programming or how operating system works something that is not a good thing.
+66:34
+So the system works something that just really stands out.
+66:38
+Not in the in the sense of a kind of a bug or a vulnerability I like I said I'm not really that interested in vulnerabilities per say.
+66:48
+These are just bugs to me so definitely they were bugs in windows and there are still bugs and they will probably be bugs in the foreseeable future.
+66:58
+Mostly for me learning about system design is is new our new features that really stand out like the visualization basic security that I mentioned were really taught me something very important about what can be done.
+67:11
+It always reminded me the fact that Intel in originally has these rings of protection. They're actually four rings but windows uses only two and so I think it's kind of a miss because you could use one ring to for let's say kind of drivers and then a more powerful ring for the kernel itself.
+67:27
+So the kind of could protect itself from from drivers but that has never really been done. I think it's kind of a miss and VBS is really trying to kind of solve that but in a different way not relying on the processor.
+67:39
+Also sort in exactly the same way but instead relying on a hypervisor.
+67:45
+So I think these are some of the decisions that I would perhaps made differently if I had like to design something something like that for me in those days.
+67:55
+It's actually a good reason why they stick we're sticking just with these two levels because of compatibility with alpha processors always reason for something but it doesn't the reason is no longer practical and things just sometimes stagnate because of compatibility or some other things.
+68:12
+Microsoft really cares about compatibility.
+68:15
+Yeah, I know that that the backwards compatibility it's it's something that has always been important to them and it shows in all of the legacy software and undocumented features and things that maybe we're at one point in time like the NTDL design.
+68:33
+Now this is just this legacy that we have to live with so for better or for worse.
+68:39
+Well, I think we've definitely had a great conversation really interesting to hear your thoughts and perspectives on everything we've discussed today.
+68:47
+I imagine I know I could keep asking questions but we covered everything that we set out to and we were chatting beforehand.
+68:54
+So I think this is a great place to call it an episode. Thank you so much for joining today and for your time.
+69:00
+If there is anything that you'd like to end with the floor is yours and thank you again and hope we can do this again sometime here in the near future.
+69:09
+Yeah, thanks Josh was really fun to talk about these things so I'm just thankful to be here in the podcast.
+69:18
+Okay, great. Anyone wants to get a hold of you? Is there anything you would suggest or recommend to you?
+69:23
+Yeah, I mean, Twitter LinkedIn these are the usual channels just hit me up. I'm there.
+69:29
+Okay, well, and I can attest to that because I reached out to you on Twitter X and I think you responded within minutes of me reaching out.
+69:38
+So thank you for doing that.
+69:40
+Okay, I think that's a wrap then. Thank you, Paolo.
+69:44
+Thanks, Josh.
+69:45
+And that's all for this episode of Behind the Binary. Thanks so much for tuning in.
+69:49
+If you enjoyed the show, please consider subscribing and leaving a review. It really helps us to reach new listeners.
+69:54
+Until then, stay curious and keep exploring.
+70:19
+Bye.

@@ -1,1 +1,990 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+All right. Howdy, everybody. So, yeah, so a couple of weeks ago, we went through
+0:24
+when we talked about DNS Cat 2 and that seemed to go really well. So we wanted to kind
+0:29
+of do a follow-up on that. Brought to you by Black Hills and ACM, where we're brother
+0:34
+sister companies. This works out really awesome because Black Hills really, really good at
+0:41
+red teaming, really good at breaking in and we make it tool to try and catch folks like
+0:45
+that. So they're constantly trying to sneak past our stuff which gives us the ability
+0:49
+to kind of pivot and do modifications before anything hits the wild, which is just it's
+0:55
+fun. People should not get paid for this and yet. So like I said, we did DNS Cat a couple
+1:01
+of weeks ago. There's a lot of interest in that. I wanted to do another one. GKAT's one
+1:06
+of my personal favorites. So I wanted to go through on this one and go through and dissect
+1:10
+it. I noticed a couple of ideas come through in questions that's awesome. We'll go through
+1:15
+and kind of parse those afterwards. But if you've got any other ideas for command and control
+1:18
+channels you want to go through like Cobalt Strike or you know whatever. It's quite a few
+1:23
+out there. I'm more than happy to go through and kind of work through a decode just drop
+1:27
+us a tweet and we'll kind of take it from there. So this is going to be a deep dive on GKAT.
+1:33
+There's a couple of things about GKAT that makes it really interesting to make. One is that
+1:38
+it's brain dead simple. GKAT for all intents and purposes is an email client. It's pretty
+1:44
+simplistic. It's an email client built on Python. So it's very simplistic. It's hard to
+1:49
+catch in that it does a really good job of matching normal traffic patterns more so than
+1:55
+most other tools. So we'll talk about where you can have problems where might you be able
+2:01
+to grab this. The other reason I wanted to talk about it is because oh my god way too many
+2:05
+vendors ignore this. We've seen a lot of folks in this space where they're trying to detect
+2:12
+beacons based on timing only. They're not looking at anything like session size, number
+2:16
+of packets or that type of thing. They're looking at timing only. They're looking at very
+2:20
+brief periods of time like two minutes or less. So when you get into that and I'll show you
+2:25
+why it's really hard to distinguish this from just a regular normal email client. So since
+2:31
+they can't tell the difference they say screw it just ignore it. So if you get whacked
+2:36
+and this is the covert communication channel they're not even collecting the data you need
+2:39
+for after the fact forensics if you figure out this is what's going on. The content I'm
+2:45
+going to go through today we're going to make all of this available to everybody. So the
+2:49
+I'm actually going to be working with bro logs as opposed to pcaps this week. So we'll
+2:53
+make all those bro logs available. The slides will be available. I've got all my commands
+2:57
+on the slides. So if anybody wants to kind of walk through this process after the fact
+3:01
+we're going to give you everything you need to be able to go through and do this. So like
+3:05
+I said command a control channel built on built on Python. What this does is it reaches
+3:11
+out to gmail via imap4 or protected with tlfs and it uses that as it's kind of called home
+3:20
+channel. It then goes through and uses smt any smtp any time it needs to send back some sort
+3:25
+of response. So it's again it's not really that different from like a user that might be going
+3:32
+in and checking mail. Well this makes it really hard to deal with. You know I've got my internal
+3:37
+system here and it's just going out checking mail on a gmail server. Now we're calling out gmail
+3:43
+and I'm calling out gmail because gcat not surprisingly is designed to work with gmail
+3:47
+specifically at gmail.com addresses. But this can work with Yahoo this can work with office
+3:54
+365 this can work with you know just about any mail client you can or a mail server a mail service
+4:00
+you can think of including private servers. So if you're thinking well I'll just block all
+4:06
+e-mail to gmail and that'll take care of the problem. Okay that'll take care of gcat but it wouldn't
+4:11
+take if you take a look at the code it doesn't take much to modify this to have this work with a
+4:15
+different server. If you think okay I'll block imap yeah okay that'll take care of gcat but it
+4:20
+wouldn't take much to convert this over to you know pop three your hdps or you know something else
+4:25
+instead. So we want to make sure that if somebody creates a variant whatever process we do to catch
+4:31
+this are going to catch the variance as well you know we don't want to always be playing catch up
+4:35
+type of thing. So as I said we can go through when we can you know block what we know this uses
+4:42
+and a lot of this comes down to policy you know for some companies they go through and they say yeah
+4:47
+we're not going to let you use private e-mail so we're going to block you know we're going to block
+4:51
+imap for we're not using it internally you get no reason to use it so we'll just block it.
+4:55
+And if you can do that yeah that helps that that removes it doesn't again it doesn't fix this
+5:01
+because someone could change and use office 365 or Yahoo or something else instead it does reduce
+5:07
+your tax surface if you can go through when you can go down that road. So locking it down definitely
+5:12
+helpful but when you start going down the rabbit hole of what could come but somebody come up with
+5:18
+where variance off a gcat and how do I block that trying to handle it in a reactive format is
+5:23
+really difficult. And this is why it's hard to detect so what you're looking at here is this is
+5:29
+actually one of the graphs from AI Hunter we're looking at a time graph here so on the right
+5:34
+hand side the x-axis is time so this is number of seconds my y-axis is quantity so we're looking at a
+5:43
+24 hour period of time and we're looking at groupings of timings how often did this thing go off
+5:50
+at 10 seconds how often did it go off at 12 seconds you know it was how often was there a 10
+5:55
+second gap between each session how many was there 12 was there a 14 and so on 10 seconds is
+6:02
+probably where our major peak is here again this is how a regular email client works so with a lot
+6:08
+of beacons you know like DNS cat that we we covered last time you can go in and you can analyze
+6:14
+that from a timing perspective and you know things usually don't be getting over DNS so you can
+6:19
+go in and analyze timing over DNS and pull out DNS cat or a variant anytime any given time because
+6:27
+again that's not normal for that protocol but here we're looking at something a little different
+6:31
+we're looking at an email client checking in checking for mail that is designed to happen in a
+6:37
+you know very programic fashion it's have it's designed to actually happen every 10 to 15 seconds
+6:42
+whatever the case may be so again email client you use by a user email client being used by a
+6:49
+backdoor the gun to have the same timing you can't look at the timing between sessions to distinguish
+6:55
+between the two that that's really the big thing to kind of pull out of this graph
+6:59
+so let's work with ZEEK last time I was working with some raw pcaps I want to kind of mix it up
+7:04
+on occasion just to make sure we got good coverage some awesome open source tools and ZEEK is a
+7:09
+very much an awesome open source tool ZEEK goes through grabs packets as they go by on the wire
+7:15
+it doesn't do a full packet capture you know it's not a pcap it's going in stripping out for the
+7:21
+most part it's stripping out header information you can extract files if you want to it does give you
+7:26
+the application layer as well but what I love about ZEEK is that from a security person's perspective
+7:32
+when you think about what's interesting in a packet what might I want to keep track of it does
+7:37
+a pretty good job of grabbing all that stuff so it writes things out to a number of different logs
+7:43
+based on you know what it's looking at so like there's an HTTP log which has hey you guessed it
+7:48
+HTTP traffic in there there's a SSL log that goes through and records your SSL TLS negotiations
+7:55
+you know you can see digital certificates but one in particular we're looking at here is the
+7:59
+conlog so this is keeping track of information regarding connections between systems quick run
+8:04
+down or what some of this output is the first thing we have is an absolute timestamp and you can
+8:09
+see we get some pretty good fidelity here there's a unique ID number for this particular session
+8:14
+we see source IP source port destination IP destination port transport the application layer
+8:21
+if it's recognized so bro I excuse me ZEEK I'm going to keep doing that sorry it's been bro for
+8:26
+so long ZEEK does not go through and just say oh it went to port 53 it must be DNS ZEEK says
+8:35
+hey I need to see a DNS header in there to actually label this as DNS which is cool because if
+8:40
+you've got somebody tunneling things over a port that you don't expect you're going to be able to
+8:45
+tell the difference between those two and then we get a lot of other fields in here that kind of
+8:49
+identify our absolute timing how many packets went back and forth was this initiated internally
+8:55
+versus externally we got some really good data to go through and parse noted to be able to figure
+9:00
+out what's going on with our connections so here's where I started I went in and I just said ZEEK
+9:06
+cat because these things are compressed by default you know bro will go through and compress
+9:11
+it's data to try and reduce the amount of storage it's taking up I go through and I use ZEEK
+9:15
+cat and I just say list out everything in every single con law so the con logs are con dot 0 0 con
+9:22
+dot oh one con dot oh two and someone up from there over a 24 hour period of time so I'm grabbing
+9:29
+every connection that took place on 216 2018 and I'm just extracting that out rather than just
+9:36
+printing it out to the screen I'm pumping it through another tool which if you're not familiar with
+9:40
+oh my god you get to play with this thing bro cut bro cut just makes life so much easier a lot of
+9:46
+us are really good at using like aocon saddened pearl to go through and cut out different fields that
+9:50
+were interested in bro cut is actually bro aware so you can go in and you can define the bro
+9:56
+field that you actually want to see and it will go through and print that out so that's what I
+10:00
+did here so after bro cut you can see the next thing I specify is T.S. T.S. is short for time stamp
+10:05
+so that's that absolute time stamp you see at the bottom ID dot or ridge dot or excuse me underscore
+10:11
+H that's the source IP address I don't think I need to read the rest of those you can get a
+10:16
+figure amount from there the response port the result response host and so on but then I'm
+10:21
+piping it through graph and I'm looking for one specific IP so when we go through and we do
+10:26
+an analysis looking for beacons what we wanted to is work with IP pairs we want to say okay for this
+10:31
+internal system let me go through every IP address it talk to and let me look for signs of beacon
+10:37
+like activity now there's some stuff you can do to kind of minimize that so that you're not looking
+10:42
+at everything you can look at you know was there less than 20 sessions in the day if there was
+10:47
+less than 20 connections made in the course of a day it's probably not going to be a beacon it
+10:51
+could be somebody who's going really slow you know where they're only beaconing twice a day but
+10:56
+quite honestly you're not going to catch it which is two data points in a day anyway so I usually
+11:01
+go through and say yeah anything less 20 connections just get rid of it and that actually cleans out
+11:05
+a lot of craft makes it a whole lot easier but we're focusing on one I when it's specific internal
+11:10
+IP address talking to one external IP address so that's the reason for the graph command
+11:16
+and then I'm dumping it through TR so aziko's through and gives you this tab separated format
+11:22
+which is kind of a pain to go through and work with and manipulate what TR allows me to do is it
+11:27
+allows me to just go in and do a quick replacement so I'm saying replace all tabs with commas and now
+11:32
+you and I get the output that you see down at the bottom here so now I've got everything
+11:36
+and come separated format it's a whole lot easier to go in and work with my last three my last four
+11:41
+columns I've got TCP so that's my protocol 993 that's the port that we're seeing a communicating
+11:48
+two on the system out on the internet 991 is the number of bytes that my internal systems sent
+11:54
+to the host on the internet 41 93 is the number of bytes that that host sent in response back
+12:00
+to my internal post so I it breaks out bytes in each direction which is kind of nice too and we'll
+12:06
+play more with that in just a second so I got a couple of options here one is I could try and
+12:11
+force the hey I really want to do a time analysis between them and if we're looking specifically for
+12:18
+G for G cap we I already mentioned it's a waste of time because you're not going to be able to tell
+12:23
+the difference between that and a regular client so we're not good I'm not going to go down that road
+12:27
+in this presentation I'm going to give you one slide that's you know kind of talks through how to
+12:31
+solve that but we're not going to use that here so we can do time analysis like I said that's
+12:36
+the popular way to go through and find beacons but hey when do we ever want to do things the popular
+12:41
+way right you know what are some of the other possibilities we can work with well we just notice
+12:46
+that we see the number of bytes going back and forth that's something we can look for in consistency
+12:51
+if we're seeing our internal host is very consistently sending the exact same number of bytes in every
+12:57
+session in this many many sessions over the course of the day that could be a beacon if the response
+13:02
+back is consistent that might be a beacon if the number of packets going one way or the other is
+13:08
+consistent that might be a beacon so we have a couple of things we can clue in on here to try and
+13:12
+figure out is this is G cat or not and I'll come back into those as we go through I did want to know
+13:18
+that you know if we want to see Delta time if we're working with some of the other bro logs like
+13:24
+packet loss I know is one of the ones it supports a field named T.S. underscore Delta it'll actually
+13:29
+print out time deltas but for the con logs specifically you can only print out the absolute time
+13:36
+stamp so if you want the Delta you need to figure out some way to calculate this yourself versus
+13:42
+actually you know letting the tool do it for you and here's one possible option throw it in a
+13:47
+spreadsheet you know and here I just got a simple formula saying hey let's subtract the time stamps
+13:52
+so I can go through and figure out my deltas and if you look here you can see yeah we're kind of
+13:57
+bouncing back and forth between you know a little over 10 and a half seconds up to about 12 seconds
+14:02
+just in a little bit snippets of data we're seeing here and you know again I could do the analysis
+14:07
+on time but again user backdoor timings going to be the same not worth going down this road there's
+14:14
+a couple of ways you can do this on the command line as well with Python and a couple of other tools
+14:19
+I'll leave you to kind of go through and kind of tease that one out okay so can use timing so
+14:25
+we're going to go in we're going to focus on number of packets and number of bytes that are going
+14:29
+back and forth I've added in a couple of fields here as you can say so that's the top circle
+14:35
+identifies the additional fields I've added into my to my bro cut output and the bottom circle is
+14:41
+just showing you hey here's an example of that output here's what we get out of this whole thing
+14:45
+so same command is before I just you know pulled a couple of additional fields into this whole thing
+14:50
+now I want to go through and do an analysis so basically what I end up with as you see here is I end
+14:55
+up with a column with a bunch of numbers so if I look at that second alas column 991 that's the number
+15:01
+of bytes that was sent from the internal system to the host on the internet so I want to look at
+15:06
+a couple of things the first thing I want to look at is how many sessions took place in the course
+15:12
+of a day because again if it's like 20 or less yeah probably don't care about that I may also want
+15:17
+to start breaking these out based on time interval I may want to go in and say okay for every hour
+15:23
+how many were sent so you know if mad if this is going off every 10 seconds I should be seeing
+15:30
+about six of these a minute okay that's about 360 of these every hour am I seeing consistently 360
+15:39
+sessions taking place at per hour if so yeah okay that's probably beacon that's something I need to
+15:45
+go in and take a look at so if I want to do a time analysis you know I can do it based on the
+15:50
+entire 24 hour block I can break it out in a smaller sessions I can also go in and I can look at
+15:55
+it statistically I can do the same thing with number packets I can do the same thing with my bite sizes
+16:00
+so we've got 991 bytes here being sent from my internal system to this host on the internet
+16:06
+let's say I go through what I look and I see yeah it transmitted 20,000 times yesterday okay how often
+16:13
+was 991 used because if there was 20,000 sessions established from the internal system to that external
+16:19
+system and let's say 98% of them are more are were 991 bytes exactly guess what that's a beacon
+16:28
+that's something we need to go in and you know further analyze same thing for the bytes in return
+16:33
+although we can see that's changing up a couple of bytes here and there same thing for the number
+16:37
+packets which we can see are fairly consistent but you know it's plus and minus packet here or there
+16:42
+that's going to happen so again we can break it out into little timing buckets and analyze it that
+16:47
+way or what I did here was I just said okay let me take the whole 24 hour block and I'm going to go
+16:52
+through I'm going to run this through our script if you're not familiar with our script one of the
+16:58
+problems we've had and kind of the scientific field is repeatability of data meaning that I go
+17:04
+off and do a study so I you know look at how you know mice react when they're forced to watch you know
+17:10
+DC based movies and you know when I go through when I collect up my data based around that you know
+17:16
+and then someone wants to try and reproduce my results well it's kind of obvious that they would
+17:20
+need to you know take the mice force their eyes open and make them watch a really bad batman movie
+17:26
+but the the way I go through and calculate the data actually pays plays a big part in what I come
+17:32
+up with for answers and believe it or not that was something that hasn't was standardized for
+17:37
+a long this time it kind of came down to which software package did you use because every software
+17:42
+package looked at things like you know means and standard deviations differently well that's where
+17:47
+our script came from our script is just a standard way to go through and do this analysis so if I do
+17:54
+this and you do this we will always come up with exactly the same numbers so what I went through and
+17:58
+did here is I ran our script and I said all right I want to go through when I want to cut field five
+18:04
+so cut field five is if we count over that is the number of packets that I'm sending off to the
+18:11
+remote system and I went through and said okay show me the minimum okay the minimum was one so we
+18:17
+had at least one session where one packet went by what's the maximum it's 18 what's the mean what's
+18:23
+my average okay that was about 13.3 or around 13 to 14 which again if we look at the beginning of
+18:29
+the data we see about your 13s we see 114 in there that's my average and then we have our standard
+18:35
+deviation and for the first purposes of trying to tag beacons the standard deviation is the one
+18:41
+that we want to play I'll pay the most attention to small numbers indicates a beacon large numbers
+18:49
+indicates probably not a beacon so what we're saying here is that if my mean or my average is 13.3
+18:57
+and my standard deviation is about 0.5 okay I'm running about plus or minus 0.5 around 13.3 that's
+19:05
+a pretty tight window so from me looking at the number of packets leaving as part of each session
+19:12
+it's looking to me like it's a beacon the bottom of the screen we're doing exactly the same thing
+19:17
+but with the number of packets coming back and return and again it's about a 0.5 standard deviation
+19:23
+that's pretty small so again we're looking at something that looks like it might be a beacon
+19:28
+now I go in and we're doing this again only this time with session set so remember our last two
+19:33
+columns are a number of bytes sent number of bytes received so we're going through and doing an
+19:38
+analysis based on that we've got a zero in there so we had my guess is we probably at some point
+19:43
+got a reset packet or we got something that got transmitted that just you know wasn't processed
+19:48
+on the other side hopefully we got our zero packet as a response so yeah we probably got a reset
+19:53
+in there for some place so maybe a system got busy maybe you know something went south but we've
+19:58
+got a session with no data in it that took place we'd want to go through and kind of dig into that
+20:02
+one a little bit if we look at our standard deviation that is a larger number but we're also if
+20:08
+you look at your average the average number is also a whole lot bigger so we're still varying around
+20:14
+a very small point the the deviation off of both of these is about the same you know we've got an
+20:21
+11.8 up top of 51.7 down the bottom but my bottom number is about four times bigger than my top
+20:28
+number which is you know four times 11 yet it's going to get me up around close to 50 so you know
+20:33
+you get the idea the deviation is about the same on both of these you're going to get that most of
+20:38
+the time however some of these things some of these backdoors are actually asynchronous so you might
+20:45
+actually see differences on occasion and that's something that's worth taking in on again it's always
+20:50
+good to kind of keep an idea on what is the protocol I'm looking at you know here we're analyzing
+20:55
+I map four is is I map for asynchronous do I expect to see a ton of packets going one way and not
+21:01
+so much the other no I really don't okay so now if I ever see that type of activity that tells me
+21:07
+something suspicious is going on I need to go in and pay attention to that but this is showing me
+21:11
+that from a data size perspective I'm seeing some pretty solid consistency here it's not flat solid
+21:17
+so not every session is exactly the same but it's close enough from my standard deviation to tell me
+21:24
+yeah I'm probably looking at a beacon here and because there's some variation here it's a beacon that
+21:29
+may have been activated over this data set okay so that's using just standard rscript tools command line
+21:37
+stuff what if I want to step this up a little bit make it a little bit easier well you could use
+21:41
+read it for that read is our open source tool that allows you to go through and it's specifically
+21:45
+designed to go in a look at beacons looks at timing looks at size you know it makes it determination
+21:50
+based on that as to whether yes this beacon yes or no and if I look at my reader output my very first
+21:59
+column we see that circle that is our score if you will of the beacon like act of how beacon like
+22:08
+the connection was between that internal IP address 10 5500 dot 11 and that external IP we've
+22:15
+been looking at 108 177 112 108 we're calling it 0.874 which is about an 87% so we're saying 87
+22:24
+we're 87% certain this is a beacon meaning that yeah this this some timing and various this
+22:31
+some variation in the timing and the packet size that we're looking at that we're saying we're not
+22:35
+100% certain it's a beacon but it's pretty close now I'll be honest with you usually at 90 and
+22:41
+above is actionable meaning that the way we we kind of maintain reader is we want read it identify
+22:48
+something is 0.9 or higher if it's something that you really need to make sure you go in and pay
+22:54
+attention to and as you can see here it's just below that threshold is 0.874 again she can't
+23:01
+really hard to catch so even tools that are designed specifically to go after command to control
+23:07
+can kind of struggle with this thing on occasion so this is up high enough that yeah you would notice
+23:12
+that you'd see it you may go in and take a look at it but it's still not quite hit in the 0.90
+23:16
+that we want we actually get some changes in the tool that we've gotten the queue to go through and
+23:20
+kind of help resolve this real quick I'm throwing the link to Rita in the chat for those and
+23:27
+then we'll make it available in the recording if if people want to click in the description so yeah
+23:31
+it's also going to be on my last slide where you can download Rita from awesome I got a link to
+23:36
+I get up for that cool so yeah just so again just as a reminder why this is hard it looks just
+23:44
+like an email client so this is again another plot out a hunter this is connectivity between
+23:50
+these two IP addresses over a 24 hour period of time this could be a user end user this could be
+23:57
+a backdoor it really depending you know regardless of which one you're looking at it's going to be
+24:01
+hard to tell so I've been giving you a lot of g this is hard g this is hard g this is hard g this is hard
+24:06
+g this is hard come on Chris give us something we can actually work with here there are some distinct
+24:11
+differences between how email works and how a backdoor works that you can actually go in and try and
+24:17
+key in on one is look at the number of data sessions that match the heartbeat versus have some
+24:26
+additional amount of data in them so what are we looking at here again we're looking at another
+24:30
+a hunter graph what this this big peak on the left what that's telling us is a majority of the time
+24:37
+so I'm going to call that around 7600 times it went in and it checked in the session was that size
+24:44
+you know I'm going to call that around 3,000 keg somewhere in that range there that's indicative
+24:49
+of a heartbeat that's indicative of you know checking in and saying hey do you have anything for me
+24:55
+to do no go back to sleep but it could also be hey do you have any email from me no I don't you know
+25:01
+there's no email to send what we're looking at here is actually an end user system and what makes
+25:07
+this look like an end user system is the number of peaks that you're seeing along the bottom here
+25:12
+the average you end user sends and receives about 130 emails per day so with that in mind I would
+25:19
+expect to see about a hundred plus little peaks along the bottom here showing me that some different
+25:27
+session size besides that know there's no mail for you was actually being used now there is a false
+25:33
+positive for this you know you could have an end user that just never receives or sends email nobody
+25:38
+likes them no one wants to send them anything that they don't want to talk to anyone themselves
+25:42
+they're a hermit so you know you could end up in a situation where for that user all you have is
+25:47
+this peak and that's it and that could happen but for most users you're going to get data kind
+25:52
+of similar to this sometimes you'll get more peaks out here you know it really depends but the
+25:57
+real key is that one of the what we're showing is the size of the session that session size changes
+26:04
+every time you like out of word or ad punctuation or at anything to a message so a one sentence email
+26:11
+versus a two sentence email that's going to be two different message sizes the attachments are
+26:16
+there that's going to be a different size there's a couple of paragraphs there that'll be a different
+26:19
+size so we're saying 130 emails per day but all 130 of those on average are going to have a unique
+26:27
+size to them so i'm going to have some large number of points so i wanted to give you this is a
+26:32
+baseline so when we look at this from a size perspective what should email look like email should
+26:38
+look like this i'll see some number of nope there was no mail but i'm going to see some number
+26:45
+around 130 or so obviously there was mail and there's a bunch of different message sizes here to
+26:50
+work with okay now let's compare that to this what's odd here well the odd here is we only have our
+27:01
+you know calling home hey is there any email for me now again this could be that hermit user that
+27:07
+could be someone who never gets mail or more likely this is a backdoor that hasn't been activated yet
+27:14
+it's very rare to have an email account that is constantly being checked that never receives mail
+27:21
+you know i might set up an email account that i use very rarely you know i might use it to like
+27:27
+subscribe to a couple of things and that's it but if it's not an active account i'm certainly not
+27:32
+going to sit on it 24 hours a day right that that that's almost kind of sad if you think about it if
+27:37
+I was like checking mail constantly knowing i will never get mail and you know let's break up a
+27:41
+little tiny violence so if accounts that tend not to get used usually don't fall into that category
+27:47
+being monitored all day long this one is you know we've got 24 hours worth of data that we were looking at
+27:54
+so something or someone is monitoring this account in the hopes that there's something there
+27:59
+and there never is it's probably not going to be an end user now there's a variation off of this
+28:05
+notice what i have here i have that same heartbeat but i've got three additional data points i'm
+28:10
+showing along the bottom gee what i wonder what that is that tells me that three times over this 24
+28:17
+hour period of time this back door was activated now again if there was a hundred plus yeah this
+28:24
+might fall under the radar you know so if you're listening to this and you're trying to figure out
+28:28
+how to use gmail and how to like avoid everybody from being able to detect you yeah just make sure
+28:32
+you activate at least a hundred plus times a day and now you're going to look more like an end user
+28:36
+you know that that would make it fall into the noise but until that happens this gives us
+28:42
+some method of being able to go in and detect this or more importantly variations off of this
+28:49
+meaning that if someone says oh okay everybody's looking to this go into gmail so i'm going to use
+28:54
+office 365 instead or i'm going to use Yahoo instead this will still work this process will still work
+29:01
+because we're looking at the behavior of the communication protocol itself so e-mail versus gcat
+29:08
+like said similar timing for both of these it's the session size that really allows us to call this out
+29:14
+and you know as we saw packets number of packets can be used as part of this again a lot of attention
+29:21
+is paid to try and tag beacons based on timing people kind of immediately fall to that as well
+29:27
+but if you kind of stop and think about you know what characteristics do i have to work with
+29:32
+quantity of packets quantity of data being transferred as part of each session those are things we
+29:37
+can go in and we can try and key in on for consistency as well that's something i can also go in and
+29:42
+try and leverage so what have we learned well we've learned that some back doors you can't go after
+29:49
+using timing some of them are really good at hiding their tracks dns cat you know we looked at that one
+29:56
+last time and dns cat we talked about can use text it can use mx and it can use c names
+30:03
+as part of the covert communication channels but those are not the only tools out there that are
+30:09
+communicating over dns we've had customers for a hunter come back to us and say hey so we've
+30:17
+just caught this new dns bag door variant and it's doing this one of the ones we saw i so i have
+30:23
+two personal favorites and i have two personal favorites from a while that's neat and i hope never
+30:28
+used to somebody never uses it against me perspective one of them was quad a queries the command
+30:35
+of control channel was actually encoded in the 128 bits coming back and the way they tagged that was
+30:41
+we're going in again we're looking at how should dns be working versus how it's not and i can kind
+30:47
+of walk folks through this in a demo if you want a demo just type demo into questions and we'll
+30:52
+kind of run with it from there i can give you a deep dive on how this works but you know we went
+30:57
+in and we identified hey this domain here is odd this is something you need to take a closer look at
+31:03
+and when they looked at what type of traffic was involved it was quad a queries okay so they saw a
+31:09
+bunch of ipv6 addresses coming back and the first thing that caught their attention was they were
+31:15
+for different subnets when you think about ipv4 it's not uncommon for a company to have ip addresses
+31:23
+that are out of different ranges like hey you know 10 years ago i got my 202 dot something address
+31:30
+and now it here is it's 10 years later and i need a couple more addresses so somebody's going to
+31:35
+give me an eight dot something address so you know i might have ip addresses that are all part of my
+31:41
+network but are out of completely different ranges well one of the benefits of ip6 is oh my god
+31:46
+I hope we never run into that problem again everything's supposed to be hierarchical so you're
+31:50
+supposed to be able to get a block of addresses that are huge that you'll never run through all of
+31:55
+them that you can just go through and use so they were seeing ip's out of different ranges and it
+32:00
+was odd that a host was being queried within a domain and all these different ipv6 ranges was coming
+32:06
+up so that was the first thing that kind of caught their attention the second thing that caught their
+32:10
+attention was with that when they started doing a reverse look up on these ipv6 addresses
+32:15
+they were finding out they hadn't been allocated anybody yet well wait a minute why is my system querying
+32:21
+an ipv6 address that hasn't even been allocated yet this makes no sense yeah it turns out that was
+32:27
+a command and control channel the other one we saw now the other one we've seen out of a customer
+32:32
+and I thought this was really creative was using decim so with decim I can go in and I can say
+32:39
+I want to validate that remote name server is actually authoritative for this domain so I want to grab
+32:45
+a copy of the public key so I can go through and use that to check the signature and validate that
+32:50
+that private key you know issued and signed to this so I know it's all valid think digital
+32:55
+certificates on a web server and you know it's basically the same thing over DNS well what was
+33:00
+coming through was an invalid public key and when they dug into it a little bit further it was
+33:05
+obviscated command and control channel so they were using decim a tool we created for good to
+33:11
+make DNS more secure and they were leveraging it to make DNS less secure by making it a covert
+33:18
+communication channel so you know I think the irony is kind of funny but that's another one where I
+33:23
+say you know I just never want to see that being used against me but again those were all ones you
+33:29
+can kind of pull out from a timing perspective but session size yeah sometimes you get a fall back
+33:34
+on that we saw that today which e-cat our timing was the same between our end with between our end
+33:39
+user software and the command and control channel our only option is to go in and try and hit it
+33:44
+based on based on size so you know understand that normal versus what you're actually looking at
+33:50
+that makes a big difference and like I said if you want to see more covered hit us up on Twitter
+33:56
+you know drop us a note hey this is what we're interested in seeing you know we're happy to go
+34:01
+through and cover them we've got a pretty good archive of pcaps on different command and
+34:06
+control channels just as part of the testing we do so we've always got something we can go through
+34:10
+and fall back on if you want to go through any of this stuff that I went through and covered today
+34:15
+that a a cm.ar read link you can go to that link and you can grab a copy of all the bro log files
+34:22
+that were here that I went through when I used we'll also make the slides available would be a video
+34:27
+available for this on YouTube within about a week or so so basically everything you need to go
+34:31
+through and kind of try and reproduce this for yourself if you're trying to build internal processes
+34:37
+it's a good way to go through and say here's a known data set I should be able to you know whatever
+34:41
+process I want to use to check my own stuff let me check it against this stuff first because I know
+34:47
+what's there I know what I should be seeing and if I'm seeing that as well great if I'm not seeing
+34:51
+that okay I need to go in and tweak my processes yeah and that be it that be it oh yes in the link
+34:58
+for reader so you got the link for reader there as well and at that point let me take some questions
+35:05
+say Chris there's one here from Jerome is there a way to detect the command being sent by the attacker
+35:12
+okay so the question yep I actually yeah sorry I'm used to presenting live I'm used to repeating
+35:17
+every question but no everybody heard that so the actual command itself it so again it depends
+35:25
+normally no so when you think about I want to monitor every packet that's going by and I want to be
+35:31
+able to have a large data set like 24 hours or more and order to be able to catch you know let's
+35:39
+say slow beacons that have a lot of jitter built it built into them trying to keep full pcapsis
+35:44
+hard in that type of situation so we tend to kind of strip them down like I was showing with bro you
+35:49
+know keep the minimal information we need to go through and do this if I go through when I figure out
+35:54
+okay I've got a I've got a backdoor you know here's a command and control channel and here's where
+35:58
+it was activated I may not have a payload to work with to be able to go look at to see what was
+36:04
+that command set even if I do it may be obviscated or encrypted most of the time these things are
+36:11
+encrypted to be able to figure out so what was that command now one of the things you can do however
+36:18
+is you can usually enumerate a little bit about what's going on within the session sizes that are
+36:24
+taking place so imagine I see it's a beacon you know it's sitting there it's beaconing it's beaconing
+36:30
+and then one of the times it calls home that causes I don't know a hundred megabytes to get transferred
+36:38
+from the local system up to the system you know up to the out to the system on the internet so what
+36:43
+happened okay I didn't see what control took place but somebody just grabbed a hundred megs worth
+36:48
+of files it shouldn't be too hard to go to that system and say hey if I catalog all my excel
+36:54
+spreadsheets and all my word documents that are on here and then add those two numbers together
+36:59
+I'm probably going to come up with about a hundred megabit in other words to see a hundred megabits leave
+37:05
+that's a pretty clear indication to me that the command and control channels said start grabbing local
+37:09
+files the most interesting are usually you know business related documents if I see it go the other
+37:15
+way if I see it call home and I see a big data transfer take place from the external system with
+37:21
+data pushed down towards the internal system okay that might be additional tools an additional
+37:26
+backdoor they may have just pushed down an additional toolkit they may want to have a second
+37:30
+root kit on the box so if you catch the first one they still remain to control the system they may
+37:35
+push down additional tools to try and start moving laterally to be able to go after other internal
+37:40
+systems so even though I can't see the command just based on the amount of session data taking place
+37:46
+I can usually make some pretty good educated guesses on what actually was in that command set
+37:51
+cool what else we got for questions Bill I've got a couple of thank yous
+37:56
+and uh both Jason and I were answering questions during the course for presentation
+38:05
+well here's one what's keeping you us from doing a multi-dimensional statistical analysis whoa
+38:13
+packet size versus packets it basically comparing packet sizes and then the time between the sessions
+38:21
+so nothing part of Rita and a hunter that's actually something that's being done we are looking at
+38:30
+you know multiple criteria to go through and kind of identify you know session size and packet size
+38:36
+now whether it's whether it's in the same array being processed at the same time I'll be honest
+38:42
+there's there's much smarter people than myself they work the back end that would know how we
+38:47
+actually kind of lay it out in code and actually read his open source so that that code is there
+38:51
+and like I said we have patents on this so you always go read one of the patents that'll kind of
+38:55
+define out what processes we're using as well but uh absolutely you can go through and you can do that
+39:01
+and that's something we actually do go through and do hey Chris we had a question that was answered
+39:05
+but I wanted to get you to answer it to everybody since the numbers you're showing are interesting
+39:10
+is it normal for C2 to go back so often multiple times per minute what other intervals would be
+39:14
+considered normal for C2 so it depends on who you trying to catch are you trying to catch a red
+39:21
+teamer are you trying to catch a bad guy because those that's one of the other distinctive patterns
+39:26
+we've noticed as well red teamers are much quieter than bad guys and I can kind of walk you through
+39:34
+this is it's pretty easy to kind of understand why when you think about a red teamer you know you're
+39:39
+you have a you have uh two focuses of your job break in and go undetected and that's it so you're
+39:47
+going to put a lot of effort into what exploits am I using to gain control of the system and you're
+39:52
+going to put a lot of effort into how covert can I make make my backdoor channel to make sure
+39:57
+somebody doesn't catch that so as far as like you know be getting home something like once per
+40:02
+minute once every 10 minutes is more common when it's red teamer if however it's a bad guy
+40:09
+god we've seen some that are like three times a second they tend to be very noisy and the reason
+40:15
+for that is as a bad guy I have many different problems I'm trying to solve you know the red teamer
+40:22
+is almost a little bit like the underwear notes they break in they set up that covert
+40:27
+communication channel accounting does something they don't know what and then a paycheck shows up
+40:33
+so they can focus on those two things and money shows up to them from for a bad guy's perspective
+40:39
+it's totally different they need a business model and to kind of work around how am I going to get
+40:44
+how am I going to make money off of this you know am I going to encrypt the person's drive and try
+40:49
+and hold it is extortion you know am I going to go through and steal files and threaten to give
+40:54
+them away if they don't you know pay me money am I going to just steal their CPU time and use that
+40:59
+to try and go through and mine bitcoins or you know some other sort of digital currency that is
+41:05
+usually the big problem I'm trying to solve as a bad guy the covert communication channel the
+41:10
+secondary to me again put yourself in the seat of an attacker when you think of this as an attacker
+41:16
+your focus is on what's my inhibitor to making a profit well we haven't gotten good enough
+41:22
+at catching command and control yet the industry average is still based on you know data over just
+41:28
+like the last 30 days we're still like 190 days to detection and even that number quite honestly
+41:34
+is misleading because usually when you when someone finds out they've been compromised over half
+41:41
+the time they find out they've been compromised through a third party usually it's law enforcement
+41:45
+and you know I keep picking on them but it's a good example Citrix you know Citrix found out in
+41:51
+January when law enforcement went to them and said hey so we found a terabyte at data that we
+41:59
+think is yours and it was probably stolen off your network and that was the first indication they
+42:04
+had that they had been backdoored so they didn't detect the backdoor command and control channel
+42:09
+they didn't find the bad guys on the network they learned about the after effects from a third party
+42:14
+so that you know 190 plus days to respond that is still an industry problem and it's one of the
+42:21
+things we're focused on trying to solve but you know not everybody solved it yet so is it for again
+42:27
+from the perspective of a bad guy until that until I'm losing control of my systems faster than 190
+42:34
+days that's plenty of time for me to monetize it until that number drops by down to something
+42:39
+insignificant I've got bigger problems to solve in my business model like how am I going to make
+42:44
+money off of this so they're going to stay focused on that so I know that was a really long answer
+42:49
+but to kind of summarize it and bring it back to the original question when it's actual malware
+42:54
+yes it tends to be very noisy you know like once per second is I'd say probably pretty close to an
+43:01
+average when it's red teamers when it's people getting paid to do this as testing they tend to be
+43:06
+quieter more patient and Jack more jitter you know also it's fun stuff like that Chris another question
+43:13
+here asking about attempts to fool Rita or AI hunter by padding the content to make it look more
+43:21
+legitimate so you can try so you can try it and if it works oh my god let's talk because that is
+43:29
+actually one of the things that we go in and look for so we talked about jitter you know we talked
+43:33
+about how jitter is that you know beacon once per minute plus or minus 50 percent so now my beacon
+43:39
+is going off 30 seconds or 90 seconds you can do similar with the padding you can go in and you can
+43:44
+say add some random amount of padding between zero and some value when you analyze it it's almost
+43:52
+like half of that jitter time you know in other words the the math you use to take something when
+43:57
+it's doing jitter is actually pretty close to when somebody's actually going in and doing padding
+44:02
+there's also limits on how much padding you can do meaning that if you're thinking well I'll just
+44:07
+make it a big number I will you know pad anywhere from you know zero to you know 10 gigabits or 10
+44:14
+gigabytes well yeah you could do that but now if you're padding 10 gigabytes you've now become the
+44:20
+top talker on the network the net admins are going to catch you you don't need the security people
+44:25
+to catch you so you kind of limited in how much padding you can put in there but from an analysis
+44:30
+perspective yeah it's basically like half a jittering the timing to be able to go through and try and
+44:35
+catch it that way does gcats send a male client agent string in the traffic it does it actually
+44:44
+looks it's it's it's kind of funny because when you look at like where did this come from you can
+44:50
+find many different forums talking about hey I need to be able to set up a process that checks
+44:58
+male to solve this technical problem I want to write it in Python here's what I've got for code
+45:05
+here's what I'm seeing for errors can anybody kind of help me out so this really kind of looks like
+45:10
+this was out there is a solution to solve other problems and then kind of got adopted as part of
+45:16
+this so yeah it's it looks like a regular email client now how it identifies itself I mean that's
+45:25
+a text string you can go in and you can change in the code. John is asking if you are going to be
+45:32
+at San San Diego West I am not my next trip to San Diego is for the Cisco conference in June
+45:41
+I'll be doing some presos there. So Chris any final thoughts final words for the audience?
+45:48
+Yeah just if if the you do come up with any more questions hit us up on Twitter if you
+45:54
+figure out how to break things oh my god let's talk again hit us up on Twitter I know a lot of
+46:01
+vendors get really sad when their stuff gets broken and like to threaten lawsuits and also it's
+46:06
+an asky stuff like that that that's just not us we actually we actually had someone come up with a
+46:11
+way to kind of covertly avoid our long connection detection that I just thought was brilliant
+46:19
+but actually absolutely loved it so yeah if you if you break our stuff oh my god let's talk that
+46:24
+that's just cool well like send you a amazon gift cards or something we'll we'll figure out
+46:29
+some way to say thank you we got cool t-shirts we'll send you lots cool t-shirts too
+46:35
+all right everybody look for the recording on our youtube we always have that available so if you
+46:39
+haven't found our youtube feel free to do a search for active countermeasures and then we'll look
+46:45
+forward to see you on the next black kills information security webcast or the active counter
+46:49
+webcast thank you all very much for being here have a good day hey thank you folks thank you
+46:58
+yeah we had a thousand people in the webcast last weekend John started talking about some things that
+47:04
+no one should ever google and I had people come up at b-such farm over the weekend and he said
+47:11
+so I never knew what that was and I googled it now I was like watch a googling

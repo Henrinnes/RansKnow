@@ -1,1 +1,746 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+So thanks everyone for coming. My name is Ben, together with me is Mayan and this is boot
+0:08
+stopping trust. So first a little bit about the company we work for. We work at Firefox.
+0:14
+Firefox provide digital or infrastructure for institutional players. So banks, fintechs,
+0:19
+and you probably recognize some of the logos on the screen. And in order to do it, we need
+0:24
+to operate at a significant scale and meet very strict security standards. So while most
+0:30
+people think about Firefox, that's what they see. That's what Mayan and I see. There
+0:34
+isn't being that for blockchain transactions, you have a private heat that corresponds to
+0:39
+the blockchain wallet. Say you have 100 bitcoins there. And in order to transact those
+0:44
+funds to another wallet or destination address, you need to sign the transaction with the
+0:49
+wallet's private key. So this together with the fact that we help our customers secure billions
+0:55
+of dollars in their wallet, make it a very desirable attack target for nation state
+1:02
+actors. North Korea or maybe China or Russia because once the transaction is finalized on
+1:10
+the blockchain, there's no reversing it. You can just call the blockchain CEO or Bitcoin
+1:15
+CEO and ask to revert it. So once the private keys are stolen, basically the funds are gone.
+1:21
+So they are within our threat model at Firefox. We design against those kinds of threats. So
+1:26
+today's focus is going to be about build server attacks and how to secure the build pipeline
+1:31
+and the deployment to production with very strong goods of trust and chains of trust. So
+1:36
+if you don't really get what I mean by it, right now hopefully you will, as the presentation
+1:41
+goes on. But first let's talk about more usual methods of protecting infrastructure or production
+1:47
+services. So one would be maybe installing some type of agent on your developer's machine
+1:52
+that would help protect against Malvo's being installed all credentials getting leaked.
+1:58
+So that's one thing people usually do. Another thing would be restricting or limiting the
+2:04
+attack surface of your supply chain by maybe scanning packages you use as dependencies
+2:09
+or using a law list for what dependencies your code is code rely on. And it's especially
+2:15
+relevant nowadays with the shy collude attacks and it's not a solved problem but there are
+2:19
+ways to reduce the attack surface of your supply chain. And if you operate in the cloud, you
+2:25
+probably know about a virtual private cloud or maybe VPC as it known in the cloud where you
+2:31
+are able to segment and segregate your internal production services network from the public
+2:37
+internet. So those are all good. They are great. We use those methods and you should probably
+2:42
+too. But are they enough, especially when you take into account nation state actors as a threat
+2:48
+to your infrastructure? So the answer is that they're not always enough though they usual
+2:53
+bag of tricks. And at Firefox we try to find more ways to secure and build infrastructure
+2:59
+and our deployments to production. So first let's see what lengths some project to go to in order
+3:05
+to protect their secrets that are not fire blocks. So anyone even knows where this picture
+3:10
+is taken from with a show of hand? Okay, most of you don't. So it's a DNS sec root signing
+3:16
+key ceremony. I'll explain what it is in a bit. But first I need to explain what DNS and DNS
+3:21
+sec is so you can understand what the ceremony is all about. So it's important for me to stress
+3:29
+that this presentation is not about DNS. It's not about DNS sec. This is just used as an
+3:34
+example so it doesn't worry if you don't get all of the details. It's going to be a simplified
+3:39
+explanation. Might use some terms interchangeably but I need to explain DNS and DNS sec so you can
+3:45
+understand what that ceremony is all about. So when you type www.blackat.com into a browser behind
+3:53
+the scene you need to translate that domain into an IP address because computers work with IP
+3:58
+addresses not with English words. So your query a recursive DNS resolver that is able to
+4:04
+recursively traverse Samarach until it gets the IP address of that domain. So it will first
+4:11
+query the root server. So basically the DNS namespace is separate into zones that are just
+4:17
+logical separation. Each zone has an operator that is in charge of it and servers that respond
+4:23
+to queries for that zone. So we query the root zone server and it says oh blacka.com you're
+4:30
+looking for the dot com server it can lead you to the right direction so we query the dot com server.
+4:37
+Then it says www.blacka.com you are probably looking for the blacka.com zone server it should
+4:43
+have your answer because that's the authoritative server for that DNS entry and eventually when
+4:48
+we query it it is able to retrieve the right DNS record that maps the domain to its IP address.
+4:54
+So that's how DNS works with some hierarchy with Overse with a recursive resolver.
+5:00
+And DNS sec adds another layer of integrity on top of DNS. So now we also have a private
+5:06
+key that corresponds to each zone. So the blacka.com zone will have a private key that is used to
+5:11
+sign the DNS entries of that zone. And we get the signature back but I can just generate a private
+5:19
+key on my laptop and sign DNS records. Why would I trust that specific key? Why would I?
+5:24
+You know what makes it different from any other signature? So in order to trust that key we do a
+5:29
+similar recursive trick. So the key that signs the DNS record is itself signed by the dot com zone
+5:36
+key. So dot com also has a key. And the dot com you probably guessed it is signed by the root is on
+5:42
+key. But I may maybe you think you are thinking that as well. Well this does this stuff. Well
+5:49
+there are recursion hearts. We need some halting criteria because we can't keep signing keys forever.
+5:54
+So the answer is this. That's the DNS sec root signing keys ceremony. That's where the root
+5:59
+key is being signed. And it's organized once a quarter by ICANN and it's involved many people
+6:06
+from across the industry that gather in a predefined location. I won't go into the whole protocol but
+6:12
+they open a bunch of saves and assemble hardware devices that contain the cryptographic material
+6:18
+that is used to sign the root key. So if we have trust in that process if we think that it's secure
+6:24
+and not compromised and they don't just sign anything they sign the root key that we are
+6:29
+later verifying then we can trust the root key. We have trust in the root key and we chain it all
+6:35
+the way to the DNS record records we use every day. So if that process we trust is secure we can
+6:43
+have trust in the whole chain of trust there. So the big question for today for us is what if we
+6:50
+could do the same thing for the code we ship. What if we could have this type of chain of trust
+6:55
+all the way through the build process and the deployment to production that is very strong and
+7:00
+that relies on a very strong root of trust similar to the DNS sec ceremony. Wouldn't that be great?
+7:06
+So it's not a new sort of actually. Ken Thompson talked about it decades ago in reflections on
+7:14
+trust and trust. So there what Ken Thompson was talking about basically boils down to say you
+7:20
+have the most perfect code in the world. It has no bugs you audit it you reviewed it it's completely
+7:28
+perfect. You still have a very big leap of faith when you compile that code to build artifact or
+7:33
+binaries. There isn't being that the compiler itself might have a bug right it might produce code
+7:39
+that is incorrect even though the source code is completely fine or even worse the compiler could
+7:44
+be back door or somehow compromised. If the compiler has a back door that you know once it builds
+7:50
+your code it injects some vulnerability or back door into your build artifact it's very very
+7:56
+difficult to know it because once the code it compiled compiled it just zeros and ones. So while
+8:02
+the source code is valid a malicious compiler can produce malicious artifact.
+8:09
+So the reason we focus on build servers today is two for actually one they are a very popular
+8:15
+way of building code most of you probably have some type of CI infrastructure in your organization
+8:20
+or some automated way to build your code and the second reason is that it is known to have been
+8:26
+target of nation state act or that are within our threat models so that made PowerPoint came
+8:33
+here very excited and I'll give you examples from the real world where build servers and CI infrastructure
+8:39
+were targeted. So we'll go over the solar winds incident from 2020 and the team city remote
+8:46
+code execution execution vulnerabilities from 23 and 24 they've been a bunch of them. So first the
+8:52
+solar winds incident. So a malware by some group called that is believed to be encolated with
+9:00
+Russia authorities called Cosibar have got some malware to the solar winds build server.
+9:08
+Some of the got the malware there that is called sandspot. What sandspot will do is that every time
+9:13
+it will observe the build process taking place the build process spawning it will de-inject the
+9:18
+back door into the source code of solar winds then the injected source code would get built and
+9:24
+sandspot will revert the code back to its original valid state. So that incident actually got the
+9:30
+cease of solar winds persecuted by the sec and the charges were dropped only recently last
+9:36
+month in November. Another example would be the team city remote code execution vulnerabilities.
+9:43
+So for example one of those vulnerabilities you could craft a URL maliciously and post a request
+9:50
+to that URL on the team city CI server. The team city is a very popular CI implementation.
+9:56
+As a result you'll get back and admin token even if you yourself didn't authenticate to the
+10:00
+team city server you get an admin token back. Using that admin token you can obviously cause
+10:06
+some remote execution on the target CI server and this actually is known to have been exploited by
+10:12
+North Korea in the wild in this type of bag. So if all you want is just to build your code what are
+10:19
+your options because you know it's all scary and stuff but eventually who we have to build code you
+10:24
+can just say I'm not building anything for now on it's not practical. So what are your options
+10:28
+when building code? So one option would be let's do a DNS style ceremony every time we want to build
+10:34
+our code let's gather people from across the world it might take weeks let's have a very
+10:39
+elaborate protocol that takes all day and eventually we'll have a build artifact we have a lot of
+10:44
+trust on like it's very difficult to compromise that process but obviously it's not practical we
+10:50
+need to build code sometimes many times a day it's not practical to have such ceremony each time and
+10:56
+it's also not very secure when you think about it because say you have some bag in your code bugs
+11:02
+do happen and that bag lead to some security vulnerability you want to patch immediately you can't
+11:07
+wait for days or weeks until you are able to patch that vulnerability you might already get
+11:12
+exploited so it's not a practical solution and maybe more practical would be some air gap to build
+11:19
+machine so you could have some spatial laptop or other kind of machine that is inside the safe
+11:26
+on premise in your offices and each time you want to build some authorized personnel from your
+11:31
+company unlocks the safe gets the laptop out typing a bunch of password and build a code
+11:37
+so it's more agile and sane than the NSX style ceremony and it also still has pretty compelling
+11:44
+security properties we'll go over it later and then maybe the most typical popular option is
+11:52
+VPC only CI runner where you know you just commit your code it pulls the latest revision builds it
+11:59
+push it to some artifact registry and then you are able to deploy to production it's very convenient
+12:05
+it's very fast and it's also a very popular option and the worst one is probably
+12:11
+open or misconfigured build server and you might say it won't happen to me but you know
+12:16
+misconfigurations do happen and bugs do happen it might not even be your code as we saw
+12:21
+in the team city vulnerabilities so it's not always plausible to say to this one
+12:26
+happen to me because it does happen so at Firefox we chose the LGAP to build machine option
+12:32
+and it worked well for many years we manually headed to unlock that machine and build it there
+12:38
+and it worked and it also has several very desirable properties for that LGAP to build machine
+12:45
+so one is very strong isolation guarantees so both physical isolation like it's inside a safe
+12:52
+you can't adjust you know put your hands on it and try to hack it in in in any manner because it has
+12:58
+some physical guarders and also you can easily segregate it and segment it from any external
+13:04
+network and harden it as much as you want so it's very isolated in that regard and also you're
+13:11
+able to produce signed artifacts with a key that only resides on that LGAP machine because if we
+13:17
+trust the machine is sufficiently isolated we are also able to have a private key there and once we
+13:22
+finish building our code we can say the crypt that key use it to sign the build artifacts and then
+13:29
+just before we deploy to production we are able to verify that the artifact we are about to deploy
+13:33
+or the image we are about to deploy was assigned by that key that never leaves the offline machine so
+13:39
+we can use the public key to verify that it was signed by a private key that never leaves the
+13:44
+offline machine or the LGAP machine and we have a very strong form of access control in this case
+13:51
+physical access control so not just anybody can build and not at any time not you know and arbitrary
+13:58
+times only when you physically unlock that machine get to the safe but it also has undesirable
+14:04
+properties like machine gets wet they get broken we need to maintain them and they are difficult
+14:10
+to audit because they are so isolated that off the chef tools usually don't work or you don't
+14:16
+want to install them on that machine so it's hard to audit what went on on the machine and you
+14:21
+know that isolation from the previous slide cuts both ways in this regard it's sometimes too
+14:26
+isolated to audit and so incredibly slow I mean it's limited by the bandwidth of reality someone
+14:33
+need to physically go open the safe type of bunch of password it takes time it's very very slow
+14:39
+not compared to DNS but obviously compared to CI servers so our goal here today is to keep
+14:46
+the security guarantees of the LGAP machine but eliminate the operational pains associated with it
+14:52
+we want a more continuous build process so in order to do it I want to introduce you a concept that
+14:59
+is called confidential computing so it's actually a family of technologies it had implement similar
+15:04
+concept with different techniques or methods so one concept will be an enclaves so an enclaves is
+15:10
+a memory region where we are able to load our application to and our application will run in
+15:15
+that isolated memory region so it will have the code the stack the heap everything will be there
+15:22
+and even a privileged actor on the host the kernel itself is not able to observe or affect the
+15:28
+calculation the text space inside the enclaves so interlaced gx for example is one such confidential
+15:35
+computing technology and the way it implements an enclave is by encrypting the memory area of
+15:41
+the enclave where we loaded up to with an encryption key that only sits on chip inside the CPU
+15:49
+so even privileged or root users or even the kernel itself is not able to decrypt that enclave
+15:56
+because the key sits inside the CPU so usually when PowerPoint came gets on your machine it's
+16:02
+game over especially if they have root privileges but with confidential computing there is another
+16:07
+layer they need to somehow bypass in order to compromise their workload and the second concept I
+16:13
+want to introduce today is remote attestation so once we have loaded our application to the
+16:19
+isolated memory region to the enclave we are able to ask the hardware to produce some report
+16:24
+that report will include several things one will be the identity of the application that was loaded
+16:30
+into the enclave so for example Hashover the code and another property will be inside the report
+16:37
+whoever signed the workload that was loaded so in our case far blocks signs the image and once
+16:43
+the image is loaded into the enclave the report will show us that far blocks is the signer of that
+16:49
+workload and why do we trust the report because the report itself is signed by the hardware so for
+16:57
+example for AWS title enclave and other confidential computing technology the application is able to
+17:03
+ask the hypervisor and the night hypervisor to produce an attestation report and the report is
+17:09
+signed by a key that can be traced all the way back to some AWS public key so external workloads
+17:16
+and external services can verify whoever they are communicating with by verifying that AWS
+17:22
+attestation report and attestation report contains whatever they expect it to contain the identity
+17:29
+of the workload they want to communicate with so now I'll pass the touch to my anir for the rest of
+17:34
+the app presentation all right can you hear me yeah good all right so well everyone thank you Ben
+17:46
+so we've seen some very powerful building blocks from the realm of confidential computing
+17:51
+and we use a lot of them in fire blocks already so we'll see again how exactly we use them in more
+17:57
+detail and build upon that in order to do secure image building so as we saw we have the
+18:02
+ergot machines and the ergot machine is isolated it's an on premise physical device it's isolated so
+18:10
+we trust it meaning that an attacker cannot easily influence its behavior so once we start to run
+18:18
+something there we know that it's doing what it is intended to do what isn't thank to do and
+18:24
+that's great and we use it specifically in order to build image files and ten as Ben said we
+18:30
+signed them using a private key that is saved inside the ergot machine and then we can take those
+18:35
+image files and start them as an enclave in a cloud provider so many cloud providers say
+18:42
+WS GCP Azure provide their own confidential computing environments and we use them to start
+18:48
+and run in claves and those in claves because of the isolation properties that Ben mentioned are
+18:54
+and also because of their monetization where we can verify that the image was not modified in
+18:59
+some way are trusted as well so that's really how we do microservices today in fire blocks and
+19:08
+no that's good that's great that's a valuable working software engineering pipeline but as we
+19:13
+saw there are some issues with it so if you take for example Michael and a typical typical
+19:20
+fire blocks engineer one day he got this new task where he needs to build this new very secure
+19:27
+microservice inside fire blocks and he got excited it's things to himself oh wow I got all of this
+19:32
+extra responsibility I'm now in charge of the critical service good for me unfortunately that's
+19:38
+Michael after one year and the reason is that for us as a dual service means confidential computing
+19:46
+confidential computing means using the ergot machines for building deploy and this means you
+19:54
+lose all of the benefits of CI or repeat the builds and deployments that we had in the last decade or
+20:00
+because the ergot machine is a scarce resource in the organization and whenever you want to
+20:04
+push some change you need to get all of it and because the ergot machine is a bottleneck in
+20:09
+the organization you become a bottleneck in the organization and that creates a lot of stress
+20:15
+and that's what happens so we wanted to see what we can do differently and if we take a step back
+20:21
+and look at how we do microservices at the end of the day we build code inside the ergot machines
+20:28
+and then we run that code inside an enclave in a trusted way and the building process is called right
+20:35
+at the end of the day it's just a set of building scripts maybe we have integration with GitLab or
+20:39
+some other Git provider you fetch dependencies do all of that stuff but all of that is code so the
+20:44
+main idea is to create a new service that will run inside an enclave a builder service we will
+20:50
+build an image for it inside the ergot machines that will contain everything that we need for the
+20:55
+building process 10 in turn we can inside the builder enclave do everything that we wanted to
+21:00
+do inside the ergot machine so we can build image files there we can sign them and 10 later
+21:06
+start them again as an enclave so just like we did before so that's the main idea and it's a very
+21:13
+interesting one so maybe that's really all we need right maybe we can finish this briefing short
+21:21
+and go outside a bit earlier so we need I know that to really think about it we need to ask ourselves
+21:26
+a few more questions about the building process so first of all is where do we build because the
+21:33
+all aim was to use the ergot machine much less and we still needed for the for building the image
+21:39
+for the builder service so do we really do a swap here so the answer is yes because now we need
+21:44
+the ergot machine only for changes in the builder image and that will be once in a blue moon of course
+21:51
+especially when you compare it to all of the other microservices in farblast combined which might
+21:56
+be multiple times a day so we really made an improvement there so that's good another question
+22:03
+we need to ask ourselves is with what secrets meaning what secrets do we need for the building process
+22:09
+and we saw that we need a secret private key in order to sign the image files and that's a very
+22:16
+important key because if an attacker can somehow get all of that key they can create their own
+22:21
+malicious images sign them as if they were official fire block images give them to our customers maybe
+22:27
+deploy them on our network and that's not good that's a real attack vector we really need to think
+22:33
+about it and we can't just put it inside the builder image because in the ergot machine we could
+22:39
+put the private key there because it's isolated but depending on the confidential computing technology
+22:43
+that you use the images for the enclaves aren't necessarily encrypted so we can just put secrets
+22:48
+there so we need to do something differently here and in order to do that solve this we need to
+22:54
+introduce another concept from confidential computing and that is long term model keys which is a
+23:01
+long term pun intended for an API provided by the confidential computing infrastructure that allows
+23:09
+the enclaves to generate a key that is both derived from the secrets that are in the CPU itself
+23:15
+and you will get the same key as long as it is signed by the same people so if you take the same
+23:22
+enclaves image and run it on a different CPU you will get a different key so for example if an
+23:26
+attacker takes your good image and runs it on their own computers they will get a different key
+23:32
+and if they try to run their own images on your own network on the same CPU they will still get
+23:37
+another encryption key because it is not signed by you so that's a very good primitive and you know
+23:47
+what maybe that's enough because we just said that we need a way to perform to get a secret key
+23:54
+inside the builder in cleave and there is just a way to do that right wrong unfortunately
+24:03
+the vendor gram of enclaves with long term model keys and enclaves that can be used as builders
+24:07
+looking like that and the reason is that we are really talking about the family of technologies and
+24:11
+some implementation like Intellectile GX do have long term model keys but there you are really
+24:18
+the enclaves is really running a single process you have to call it in C++ or REST and for us it was
+24:24
+impractical to be used as a builder because in a builder you need to have many different building
+24:28
+scripts you have many different ecosystems you need to support you need to put in git integration
+24:32
+all of those things are very hard to do in something like Intellectile GX so on the other end
+24:37
+you have other technologies like AMD SCV or NITER Secure In Claves which provide you with something
+24:42
+like a VM and there you can do a lot more stuff you can put many different processes there so it's
+24:47
+much more flexible fortunately they don't contain long term model keys at least in the way that we
+24:53
+have this prod so we need to do something again different and the solution to that is to build a
+25:01
+new service called the secret service and that's a paradigm often used in confidential computing
+25:06
+where we have where we create a new service here the secret service secrets in Claves and it will
+25:12
+be implemented using a technology that does support long term model keys or something like Intellectile GX
+25:17
+and there it will encrypt secrets using its algorithm key and maybe those secrets were generated
+25:22
+upon the first run of the enclave or maybe they were encrypt before and and then that enclave
+25:29
+when another enclave not necessarily implemented in the same confidential computing technology
+25:34
+when the other enclave needs its secrets it will send that a station report to the secrets in
+25:38
+Claves and that the station report contains a lot of those PCRs those are just cryptographic proofs
+25:44
+that the algorithm is running okay all of those isolation properties are kept it can prove that it
+25:50
+was signed by the key from the air-gift machine and the secrets in Claves can then verify that
+25:56
+at a station report and we trust its verification because again we trust the code execution of the
+26:01
+enclave and once it passes the attestation the secrets in Claves will decrypt the secrets using
+26:09
+its own algorithm key and return them to the other in Claves in our case the secret is the key
+26:15
+that is used to sign images so that's cool and if you really are keen to know how does a
+26:22
+station report really look like it's those big binary blobs which contain all of those cryptographic
+26:27
+proofs and materials so that's how they look like and it's good we need to use all of that
+26:33
+so to recap we needed a key to sign build images and now we will only get this key on successful
+26:41
+attestation so if an attacker builds their own building claves their own build their image and
+26:45
+we'll try to get that key it will fail attestation it will not be able to get the key it will not
+26:50
+pass go will not collect $200 so that's good we have actually solved this issue
+26:55
+now we need to ask ourselves another question what exactly do we build and it may sound
+27:01
+trivial but basically what we have shown until now is that we have a good way that once a good
+27:09
+way to start builds and to know that once we start the build the building process is doing exactly
+27:14
+what we think it is doing but we still need to get the code from somewhere and what happens if
+27:22
+your Git provider is compromised what happens if an attacker steals your developer credentials
+27:28
+and all of those attacks are really attacks that we have seen in the wild so we really wanted to
+27:33
+think about how to approach and solve this issue and to think about it let's talk a bit about
+27:40
+friction so we saw that there is a lot of friction in the air get machines and you know for all
+27:45
+of the reasons that we have talked about you've seen Michael and on the one and we jump here
+27:51
+from air get machines that have a lot of friction to something that is frictionless like a CI-CD
+27:56
+pipeline at the end of the day we want a job where you click and you can start the build jump
+28:01
+and zero friction sounds good but it comes with a lot of risks because if an attacker has a way
+28:08
+again because of compromised developer credentials or something like that where they can put malicious
+28:13
+commits or malicious code into a Git repository then they can immediately execute an attack
+28:18
+they can immediately push a commit start a build maybe even deploy so that's bad we want to
+28:24
+do things differently because they are got to machine with all of its friction it gives you
+28:29
+opportunity to remediate those kind of risks so we want to find some epimedium in between the two
+28:36
+another concept we need to think about is intent so what we do we mean by intent we want a way
+28:40
+to declare the intent of the changes that we want to build so for code it's easy we have commit
+28:47
+ashes so if someone pushes another more code into the repository or tries to build a different set
+28:55
+of changes then they will have another commit ash so that's good that's actually something we can
+29:00
+use so the main idea is to use this commit ashes declaration of intent and then sign it and
+29:08
+pass it along to the build job where we will verify it later and that's a bit different than
+29:15
+signed commit ashes in Git if you're familiar with that because we want to separate the roles of
+29:22
+a developer and of a verifier first of all because it's a good security principle separation of
+29:27
+privilege we want to ensure that if someone compromises one sort of privileges then they want to be
+29:33
+able to build and deploy and it's also very different events one pushes code and 10 the other
+29:40
+needs to audit it and maybe it's a team leader maybe it's a different role in the organization so we
+29:44
+want to have a new set of permissions for verifiers where they can verify the set of diffs and changes
+29:50
+and confirm that those changes are doing what they are intending to do what we are intending them to do
+29:57
+so we talked about how to give the verifiers an ability to sign those changes and they thought
+30:01
+about two things one is a ubiquit they could on their computer check out the Git repository check out
+30:09
+the code is doing what it's supposed to do take the commit ashes and sign it using ubiquit or we
+30:13
+talked about maybe doing a mobile application where they tend to approve the commit ash and it will
+30:19
+send back that signature and we actually want not a single verifier but we want multiple verifiers
+30:27
+because again when you have a single verifier you run the risk of a real attack where someone will
+30:33
+take hold of the verifiers machine right they will somehow compromise it and visually display them
+30:38
+some other commit ash to sign where they think they sign a commit ash from the organization but
+30:42
+actually it's a commit ash by a malicious actor so in order to reduce that risk we want to have
+30:49
+many different verifiers depending on the project we can have different number of verifiers
+30:53
+and we can do all that because the builder which will verify all of those signatures can do
+31:00
+as complex logic as we want because it's a trusted code we can do any intricating that we want to do
+31:06
+there so we can also check the dates if you try to build something from three months ago maybe it's
+31:11
+weird for production maybe we want to limit building only to specific branches so where we could
+31:17
+also enforce that and all of that will be enforced by a trusted code that runs inside a builder in
+31:22
+clay and for fablock specifically we chose ubiquitous because as someone on the internet said cryptography
+31:30
+reduces the security problem into a key management problem which is still an art problem so if you see
+31:36
+this on youtube please check out who first said it on the internet and put it in the comments
+31:42
+and for fablock specifically key management problem is solved by ubiquitous we have good
+31:46
+distribution of them inside the organization we have different ubiquitous based on roles for support
+31:50
+for team leaders for group leaders etc and we have centralized repository with certificates generated
+31:55
+by the ubiquitous so it's easy for us to verify that signatures are really made by specific ubiquitous
+32:01
+so for us it was a good choice all right so let's see now how we put it all together all of the
+32:07
+different things we've talked about but it's important to stress that it's not just theory we talked
+32:11
+here about many different terms from confidential computing many different ideas but it all works it's
+32:17
+this is really our running integration with gitlab if you see the log you can see that it starts
+32:23
+a new enclave upon a new build job and that's really the first step when we receive a new build
+32:28
+job we will start a new enclave that enclave in turn will receive all of the signed commit ashes
+32:34
+verify them verify the policy and if it passes then it will continue to build it will turn a test
+32:40
+to the secret service we saw earlier and get the secret signing key and assuming that passes
+32:46
+it will build the image and it will sign it and then we can publish the artifacts and push them
+32:51
+into something like an image repository or an image registry in the organization and last but not
+32:58
+least the enclave will tear down it will shut down which is similar to a VM shutdown so for
+33:03
+every new job we will get basically a new fresh VM which is also nice it has nice security properties
+33:09
+so you know it's a nice bonus and what all of that means to the organization and to the developers
+33:15
+so if we saw Michael earlier now he has all of the benefits of CI that we had in other realms of
+33:25
+computing in the last decade or more he can suddenly push rapid changes he can do many things
+33:33
+rapidly without needing an aggregate machine he stops being a bottleneck for the organization
+33:37
+and that makes him happy and that's happy and you know it improves his productivity improves
+33:43
+the velocity always good and reduces stress and that works that's a solution that we are really happy
+33:50
+with so that has been really the idea and its implementation so thank you hope you enjoyed it
+33:59
+and do you want to do a questions all right so I think we have time for questions so if anyone has
+34:07
+questions thank you thank you all right thanks to the great talk what are you using to create
+34:21
+the attestation report that's passed to the the sign of enclave and what is inside the attestation
+34:27
+report all right so first of all it depends on the confidential computing technology so we
+34:34
+intel sgx as their own SDK for that nitro securing cleaves of the run SDK and at the end of the day
+34:41
+it needs to somehow communicate with the CPU of the machine because they have sgx for example
+34:47
+have their own set of instructions of an instruction set in order to produce all of the material that
+34:53
+is needed for the attestation report in something like a nitro for amazon they have the NSM chip nitro
+35:00
+secure model it's a chip in their PCBs where you can communicate it using some Linux device so
+35:09
+it really is technology specific but you have different implementations of it online and you know
+35:17
+the providers also provide them of course do you want to add something no all right I suppose the
+35:24
+following is what's contained within that attestation report do you have things like you know a
+35:29
+kernel hash or running processes or anything like that or is that also specific to the technology
+35:36
+all right so of course there are nuances based on the technology but it contains ashes of all the
+35:42
+code that you put in it contains the you know the signature on that ash using the private key of
+35:56
+the signer and it also contains a signature of all of that of either intel or amazon depending on
+36:05
+the technology and you know there's also a big difference as here between technologies where
+36:11
+you really just put in one process that will start as an inflav like intel sgx or something like
+36:19
+amazon where you have a well vm basically so there you will also have maybe different
+36:26
+ashes of you know both just in it from a face and all of the image and all of the file system and
+36:32
+all of those kind of things and the other important things and it also can you hear me?
+36:38
+can you hear me talking okay I'll just talk loud so yeah it contains all of that like some
+36:44
+proofs about the workload you have loaded like the code or whoever signed it and also some usually
+36:50
+a hardware security guarantee so sometimes there's a microcode update for say intel processor so it
+36:57
+will tell you which microcode version or security version you own so you can say decline and all
+37:03
+the testation report that is running on an in vulnerable processor so some hardware guarantees and
+37:08
+also applicative guarantees of what code you are running inside the enclave thank you
+37:16
+and the nice thing about some I mean again it's a bit different with human different technologies
+37:20
+but you know it's something like intel sgx it's both those attestation reports are both signed by
+37:25
+some key of intel and also by your cloud provider so something like a sure so you have sort of
+37:31
+this double guarantee if you have more questions if someone we are also of course be here after
+37:40
+the talk so feel free to come and ask us anything you know we'll be happy to answer anything
+37:46
+okay thank you thank you very much

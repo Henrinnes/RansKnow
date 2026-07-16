@@ -1,1 +1,932 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Good afternoon.
+0:05
+Thank you for joining our talk.
+0:08
+In this session, we are going to share with you our latest results regarding a research
+0:12
+that we have done on the matter standard.
+0:15
+Now this is a privacy track and originally we didn't really intend to do a privacy-related
+0:21
+research.
+0:22
+We're doing whatever a researcher is doing anomaly detection nowadays.
+0:27
+And we started seeing some patterns in encrypted traffic and we said, okay, this is not right.
+0:34
+Basically we have a brand new standard with strong cryptographic protection that is built
+0:39
+in the device in the standard itself.
+0:43
+And also we have all this legislation in the EU that is supposed to protect our privacy.
+0:50
+And then we decided that this seems to be a very important topic.
+0:53
+We should focus on this direction and this is how it all got started.
+0:57
+My name is Yangabela.
+0:58
+I'm a senior security researcher at BDFender.
+1:01
+I work on IoT security and vulnerability research.
+1:04
+I've been doing this for more than 20 years.
+1:07
+Now this is a joint effort between the I don't know when University of Technology and BDFender.
+1:15
+About a year ago, Christopher contacted BDFender trying to find a research topic for his master
+1:21
+thesis.
+1:22
+We had this idea on doing some anomaly detection on matter traffic.
+1:27
+And this is how it all got started.
+1:29
+We also done the anomaly detection, but we progressed also towards this direction.
+1:35
+Hello everybody.
+1:36
+My name is Christopher Schlet and I'm a master student at the Eindhoven University of Technology.
+1:41
+And as Bela has mentioned, this was a joint effort between my university and BDFender.
+1:46
+And what all started out is a simple humble project on anomaly detection quickly, diverged
+1:51
+and expanded as we realized that we could infer a lot from the information leakage as part
+1:57
+of encrypted matter communications.
+1:59
+The result of this research is then today's briefing.
+2:04
+So we'll kick things off in introduction and motivation on the topic.
+2:08
+We have a few fundamental concepts that we need to clarify just to make sure that we are
+2:13
+talking the same language.
+2:15
+And then we'll see what kind of devices we analyzed, what patterns we have found, and
+2:20
+how we can use these patterns in order to expose the semantics behind encryption.
+2:25
+We also have some ideas on possible fixes and research directions, especially interesting
+2:30
+for young researchers so stay tuned and we'll end with conclusions on key takeaways.
+2:36
+Now let's see how it all got started.
+2:38
+So if you are working in the field of IoT, surely you have heard of the matter standard.
+2:44
+This is a rising star of IoT technology.
+2:47
+From my point of view, it builds on two main pillars, interoperability and mandatory security.
+2:54
+Now interoperability means the ability to interconnect devices coming from different vendors.
+2:59
+So you no longer have to worry about making devices talk to each other out of the box.
+3:04
+You should be able to interconnect devices.
+3:07
+Now mandatory security is very important for IoT.
+3:10
+You no longer have the option to have secure communication.
+3:14
+This is mandatory and you have very strong cryptographic protection for your infrastructure.
+3:20
+Now matter is a global collaboration of more than 600 companies.
+3:25
+It includes device certification programs that are also aligned with several legislative
+3:29
+directives.
+3:30
+And it's slowly becoming the single established standard for IoT.
+3:36
+Now it started in 2022 with support for a couple of humble devices, very simple devices,
+3:43
+such as contact sensors and smart plugs.
+3:46
+But nowadays matter is also being supported by very critical devices that you find in your
+3:52
+house, such as home routers, access point, inverters, cameras, and more and more and more.
+3:58
+So I think that in the very short term, we will see more and more devices supporting and
+4:05
+being powered by matter.
+4:08
+And from this perspective, also the security standpoint is changing in the early days
+4:13
+you had optional security.
+4:15
+I think that everybody thought of IoT as being very, very vulnerable.
+4:19
+And for instance having one network-wide symmetric key that everybody was the story of the
+4:24
+day.
+4:25
+But nowadays, with these new standards, we have mandatory security.
+4:29
+We have battery power devices that juggle with certificates, that juggle with asymmetric
+4:36
+keys, generating FMR or DPHY helmet keys.
+4:38
+So I think that we have a real game changer that is happening in the field of IoT.
+4:44
+And if you have heard this, one may say that finally we can rest assured our IoT infrastructure
+4:50
+is secure.
+4:52
+At least I think if you look at it, things look very nice, at least on paper.
+4:57
+Nevertheless, since we are having this stock, I think that there are still some issues that
+5:04
+needs to be solved.
+5:05
+So let's see how we got started.
+5:07
+So our job is mainly very simplistically put, look at traffic, identify patterns and
+5:12
+maybe use these patterns to build some products.
+5:16
+Now what we see in the slide on the right hand side is the matter traffic capture.
+5:21
+And we can see these numbers that represent packet sizes.
+5:25
+Now if we zoom into these numbers, we will see with the naked eye you don't need to use
+5:29
+any tools.
+5:30
+You will see these numbers repeating over and over again.
+5:33
+And if you interact with devices, you will also realize you are able to manually generate
+5:39
+the same numbers over and over again.
+5:42
+And if you think of it, okay, we have this brand new standard with very strong robust protection.
+5:48
+Maybe we shouldn't be seeing this happening, right?
+5:51
+At the same time when I tell this story to my colleague, they said, haven't seen before.
+5:57
+I mean, in the case of the smart meters, we have seen the same issue.
+6:03
+We will be able to infer energy consumption, being able to infer what type of devices were
+6:08
+being turned on and off just by looking at encrypted traffic.
+6:13
+So I think that this is a lot of similarity what we have seen in the past and what is happening
+6:18
+also nowadays.
+6:20
+Why is this happening?
+6:22
+Well, I think that we have become very good with using cryptography in order to protect
+6:27
+communications, to enforce security properties such as confidentiality, integrity or neticity.
+6:33
+As I mentioned, devices now juggle with a lot of cryptographic elements.
+6:38
+However, we still have a lot of way to go in order to protect privacy.
+6:45
+So we still need to work a lot on how we can enforce privacy in different settings.
+6:52
+Now considering that privacy is taken very seriously across Europe and we have seen these
+6:58
+patterns in encrypted matter traffic.
+7:01
+We thought, okay, are these patterns different for certain devices?
+7:06
+What if we have analyzed devices from different vendors or different matter controllers in terms
+7:13
+of privacy?
+7:14
+What can we infer?
+7:15
+Can we identify the device type?
+7:16
+Can we identify different users?
+7:19
+How many users are there?
+7:20
+Can we identify automations and so on and so forth?
+7:23
+So we had a lot of questions that we wanted to find an answer to.
+7:28
+Now let's look at some of the fundamental concepts in order to make sure that we're all speaking
+7:33
+the exact same page.
+7:35
+Well, okay, matter has been a subject of discussion at previous other briefings, especially one
+7:40
+taking place here last year at Black Hat Europe.
+7:43
+In summary, matter supports strong security by encrypting the communication between devices
+7:48
+that are part of a security enclave called a fabric.
+7:52
+A fabric essentially is just a set of devices that share a trusted route and devices inside
+7:57
+of a fabric establish session keys via asymmetric cryptography.
+8:02
+But what about privacy?
+8:04
+So matter supports the MDNSSD protocol which essentially allows four matter devices to
+8:10
+be discovered over the network.
+8:12
+And although some of the devices do publish useful information like vendors or models as
+8:17
+part of their TXT records, the majority of them do not.
+8:20
+So the burden of reliable identification is left up to these security researchers.
+8:26
+Then matter also uses the case protocol which unfortunately only received versioning past
+8:31
+versions of matter 1.3.
+8:34
+So that means that any previous versions did not have versioning of the case protocol,
+8:38
+matter itself is version.
+8:40
+We will show that this is quite problematic later on in the briefing.
+8:43
+Finally, as mentioned earlier, all traffic between devices that are part of a fabric is encrypted.
+8:49
+So therefore, any passive observer should not be able to infer or understand anything from
+8:54
+the user interactions.
+8:56
+But we're going to investigate is this really the case?
+8:59
+Speaking of encryption, let's take a look at how matter actually encrypts packets.
+9:04
+So matter, when two matter devices successfully establish a handshake and create the shared
+9:11
+symmetric key, matter then uses this key in combination with an AESC CM scheme as defined
+9:16
+in NIST 838C in order to encrypt the packets.
+9:20
+This symmetric cipher provides secrecy, authenticity and integrity, but unfortunately matter only
+9:26
+supports AES 128 bit.
+9:29
+This means that we have no cryptographic handshake.
+9:32
+And without any real protocol negotiation, we don't have any crypto agility at the moment.
+9:38
+And this raises a very interesting observation where if I perform a command today, an encrypt
+9:43
+that command, and then next week perform the exact same command and encrypt it, I will
+9:48
+receive the exact same packet size from both encryptions.
+9:51
+And we thought this was very interesting and provided a solid base for traffic analysis.
+9:57
+Finally, let us take a look at some of the foundational technologies that matter uses.
+10:02
+So Bluetooth is used by a majority of devices for the initial commissioning and afterwards
+10:08
+matter communicates over two mediums, Wi-Fi which I'm sure that you already know and thread.
+10:15
+Thread is an IPv6 based protocol for low power mesh networks and in order to communicate
+10:20
+over thread, you need a special device called a border router.
+10:24
+Thankfully, however, the majority of any multimedia devices that you can purchase, so your smart
+10:28
+TVs, your media hubs, your IoT hubs, will also act as a border router.
+10:35
+In addition, we are seeing that a lot of IoT devices that are being developed are being
+10:39
+created with Wi-Fi support in mind.
+10:42
+So it's great to see that the ecosystem is evolving in this direction.
+10:49
+So we have seen a couple of background concepts.
+10:53
+Let's see what kind of devices we have analyzed in our technical context.
+10:58
+We try to analyze a large diversity of devices starting from very simple devices such as door
+11:04
+windows, sensors, smart logs, that much.
+11:07
+But we also manage to analyze more complex devices such as door locks that you would normally
+11:12
+mount on your door.
+11:13
+We also analyze different traffic scenarios, generate five different border routers and
+11:19
+controllers.
+11:20
+Now, if you just buy, get devices and analyze them in an isolated scenario, you will not
+11:26
+be getting anything out in terms of privacy leakage.
+11:29
+What you need to do is to create a connected environment.
+11:32
+You need to install these devices and analyze them in the context of people in the context
+11:38
+where users normally interact with their environment.
+11:42
+And this is what we have done.
+11:43
+We have installed devices and automation in our office in Telugu, Romania.
+11:48
+We mounted devices all across our office on doors, windows, walls, pretty much everywhere.
+11:55
+And made sure that users were actually interacting with these devices.
+12:00
+For instance, when someone entered the front door, certain devices turned on or off.
+12:05
+So you had certain interaction between users and devices which could be then used in order
+12:12
+to infer certain aspects regarding privacy by just looking at encrypted traffic.
+12:18
+Now, this is just to show you our network setup.
+12:22
+We can see here that we analyze both threads and Wi-Fi based matter devices.
+12:27
+We created scenarios, including both an open and commercial matter controller and open
+12:33
+controller integrated into home assets.
+12:34
+And so I think that anyone can recreate this scenario and perform the same type of an
+12:40
+analysis and also a commercial controller created with Apple technologies.
+12:44
+And this is just a simple view from our home assistant interface showing the diversity
+12:50
+of devices and that we had a pretty nice and complex scenario.
+12:54
+Now that you've seen the context, let's take a look at the actual juice of today's presentation.
+13:00
+As mentioned in the beginning, this was a joint collaboration between the two institutions
+13:05
+in the scope of my master thesis.
+13:07
+And although I was very excited about embarking on this new journey, I soon ran into two great
+13:12
+obstacles.
+13:13
+Number one, I had no background in matter.
+13:15
+And number two, I had a great distance between me and the devices in Turgumuresh.
+13:21
+So I had to tackle the first obstacle and understand really how users and how devices
+13:25
+can interact with each other on a theoretical level.
+13:29
+After exploring what felt like endless amounts of matter documentation, I identified four
+13:34
+key transactions which really defined these communications.
+13:38
+Read, write, invoke, and report.
+13:41
+The report was more unique as it was an unsolicited update from the devices to the controller which
+13:46
+at times could also be empty.
+13:49
+What we then took was a series of baby steps which when added together really produced a
+13:53
+significant result.
+13:55
+We started from a small cute light bulb because it was just so fun to interact with.
+14:00
+So we will show that any device that actually supports matter is subject to the exact same
+14:05
+issues.
+14:06
+So if I can get it to work on this small and fun light bulb, then I can get it to work
+14:10
+in a big factory or in a hospital setting.
+14:14
+But before any of the results can't even come about, I still needed to tackle the second
+14:18
+issue.
+14:19
+Namely the great distance between me and the devices that I'm supposed to be interacting
+14:23
+with.
+14:24
+To get over this issue, I looked at flight tickets, I checked hotel bookings, and I realized
+14:29
+that the best decision is to just make my own environment on a much more student-friendly
+14:33
+budget.
+14:34
+After leveraging simulated and real devices, I had somewhat of a similar variety as bid
+14:39
+defender and whenever I would communicate with these devices, I saved the encrypted
+14:43
+traffic as well as having access to logs provided by the matter server running in my
+14:49
+home assistant controller, offering me a lower level view of what is happening.
+14:54
+Having these views, I quickly understood that in some cases like end and SRA 2 packets,
+15:00
+their structure was so simplistic that it always created a uniform and consistent packet
+15:05
+length across the different interactions for all of the devices.
+15:09
+And in some other cases, it was slightly more complex.
+15:12
+So for a read transaction, for example, I had to investigate the length of the request
+15:19
+packet of the response packet and investigate if the ratio is greater than a certain threshold.
+15:25
+If this is the case, then I can establish okay, a read transaction has occurred and identify
+15:29
+the two constituent packets.
+15:32
+Overall, we found patterns for each of the four transaction types as well as their constituent
+15:37
+packets and from there develop a powerful labeling mechanism which essentially converted
+15:42
+a string of random numbers into something that a human can understand, creating a timeline
+15:47
+of events from which you can pinpoint specific interactions of interest.
+15:52
+And it gets worse.
+15:54
+So what we noticed when interacting with these devices was that similar device types exhibited
+16:00
+similar command length behavior.
+16:02
+And what you may ask yourself, well, why is this happening?
+16:06
+Well, because matter is focused on interoperability, that means that if two manufacturers want to
+16:11
+create the exact same device type, so let's say a light bulb, they will need to use the same
+16:16
+matter clusters to provide the same functionalities, thus the same commands are used.
+16:21
+And as we know from the encryption earlier, the same commands will result in the same
+16:25
+packet length and therefore we can establish fingerprints for the device types.
+16:31
+Let's take a look at a smart bulb, for example, and see how we developed a fingerprint.
+16:35
+So what we did was we sent each of the commands available in Home Assistant and investigated
+16:40
+the length of the command packet appearing in the encrypted traffic.
+16:44
+What we noticed was that a command length also had a unique command name associated, allowing
+16:51
+us to make a simple mapping between the two.
+16:54
+We also noticed that we could identify the manufacturer even of the controller that sent
+16:58
+the command to the device in certain cases, which we thought was very, very interesting.
+17:04
+Overall we managed to get a fingerprint for each of the device types that we had in our
+17:09
+system and we noted that there was a small overlap between smart bulbs and smart plugs.
+17:15
+The reason for this was the fact that they shared the same on-off cluster providing functionality
+17:19
+to the devices.
+17:21
+Moreover we noticed that when users would perform certain interaction that the controller
+17:26
+would automatically also send invoke requests or even additional packets and these patterns
+17:31
+are noted in the right hand side of the column.
+17:34
+Okay, we can identify packets, we can label devices and find those as well.
+17:40
+So overall from just looking at the inferred information, looking at the encrypted traffic,
+17:44
+we can infer a lot of information, device types, command names, and even the controller type,
+17:50
+which we thought was just amazing.
+17:52
+Overall these results were also consistent across multiple data sends from both my environment
+17:57
+and the environment at Bitdefender.
+18:00
+We saw consistently high accuracy results when labeling the packets and when identifying
+18:05
+devices.
+18:06
+We noted that additionally if a user has more diverse interactions and exposes more features
+18:12
+of the device, then it also has a higher chance of being classified more accurately.
+18:19
+So even though as mentioned by Christopher, we had this distance, I really enjoyed working
+18:25
+with him and seeing these results made us think, okay, can we somehow automatize this
+18:32
+procedure by using some machine learning?
+18:36
+And because we are working on privacy, the main purpose of our machine learning approach
+18:40
+was to precisely identify what type of devices are in the network by looking only at encrypted
+18:48
+matter traffic.
+18:50
+If you are able to do this, then you can also infer what the user is doing, the behavior,
+18:55
+and a lot of privacy issues can then be revealed.
+18:59
+For these purposes we have taken a very simple approach, random for us, but I think that there
+19:05
+are many other algorithms out there, so one may achieve a far better result than we have
+19:11
+with other techniques.
+19:13
+Now when we first started to just apply machine learning, we started to see a lot of misconfigurations
+19:20
+in our results.
+19:22
+And when we looked closer to the problem, we have seen that 90% of the traffic, more than
+19:27
+90% of the traffic was represented by report sequences, that are sent by devices to controllers
+19:36
+and these reports are the same for all devices.
+19:38
+So we basically had a very unbalanced data set.
+19:42
+So what we had to do is to drop all these 90% and focus on the 10% that exposed the actual
+19:49
+features of devices and that we could use to create a very, very feasible solution.
+19:56
+And this is what we have done.
+19:58
+And as we can see in this table and in the next one, we had achieved a very high level
+20:03
+of accuracy for identifying devices.
+20:07
+And depending on the data set that is on the time window that we have observed the user
+20:11
+behavior, you would get a higher or lower level of accuracy.
+20:16
+And I think that the key takeaway here is that in order to identify and to have some privacy
+20:22
+leakage from the traffic, users need to interact with devices.
+20:27
+This is a mandatory aspect.
+20:31
+But okay, we can identify the devices.
+20:33
+We're great at labeling what about the actual privacy implications for a user.
+20:38
+Well, if we know that the traffic is originating from a contact sensor, for example, then we
+20:43
+can look at the different days and count the number of times that a report event indicating
+20:48
+a door or window has opened occurs.
+20:51
+This means that essentially we can count the number of people that came into the office,
+20:56
+make an inference about the magnitude of traffic that is happening around there and even to
+21:00
+an extent estimate the amount of homework on a particular day.
+21:05
+We also looked at this traffic from a different angle.
+21:08
+So we saw that in a particular week we had a lower volume of traffic and we wondered,
+21:13
+well, why is this happening?
+21:15
+By investigating Bitdefender's public participation in organizations such as the Purple Foundation,
+21:21
+we identified that during that particular week, there was actually a summit in France
+21:26
+or ago, many people from Turgu Morech went to France to attend the summit.
+21:30
+And now we're trying to think, can we make a similar prediction for the future?
+21:36
+We also noticed that similar devices would produce different amounts of traffic and this
+21:41
+was observable just from the encrypted traffic.
+21:44
+For example, we had two motion sensors in different regions of the office and when we saw
+21:48
+as a disproportionate amount of activity, thus an attacker with regions of the office
+21:56
+or visited more often and this information can be highly valuable for them.
+22:01
+What is also important and a feature of automatized systems is the presence of correlations.
+22:08
+Essentially, what we saw was that multiple devices would perform similar behaviors close
+22:14
+to each other in time.
+22:15
+So for example, if a contact sensor with fire off an event, then a motion sensor was also
+22:21
+seen to fire off a report event in a close period of time.
+22:26
+So what this means is that an attacker has the ability to reconstruct entire automation
+22:31
+chains by looking at the device traffic and this is very powerful as it allows them to
+22:36
+identify targetable or weaker devices and essentially disable an entire chain just
+22:42
+from targeting these few devices.
+22:45
+We will end this segment off by looking and taking a trip down memory lane saying that
+22:50
+we have seen these exact same patterns before in the case of smart meters.
+22:55
+And it really feels like we're just repeating history over and over again.
+23:01
+So we have seen all these privacy issues.
+23:04
+Now let's see if we can do something about fixing this.
+23:08
+As we mentioned, the standard mentioned only one cryptographic scheme for creating secure
+23:13
+communication.
+23:14
+There is no crypto negotiation, no crypto agility, so you don't really have the option of
+23:19
+changing the cryptographic algorithm and parameters.
+23:23
+Nevertheless, we started to think about what we could do in order to address this issue.
+23:28
+In terms of privacy and in privacy research, you would normally add for instance some randomness,
+23:33
+add random padding, maybe use a uniform packet size, but you could also adopt solutions that
+23:39
+have been published in other fields such as previous blackhead venues.
+23:43
+Now, but the less you could apply these solutions, if and only if your devices would support
+23:48
+these type of changes.
+23:51
+So we try to analyze and simulate what would happen if we were to apply render perturbation
+23:57
+on packet sizes.
+23:59
+That is what would be the impact on the accuracy of our machine learning algorithm if we're
+24:04
+to randomly change the size of packets.
+24:07
+And as we can see in this figure, for many of the device size we had, a drop in accuracy
+24:14
+to almost 0%.
+24:16
+And however, there are still some devices that expose the high level of classification
+24:21
+accuracy.
+24:22
+And this is because these devices have so many features that rely on so many different
+24:25
+types of packets that even so you can accurately classify them.
+24:29
+Therefore, another solution that we have tested is to leverage uniform packet sizes that
+24:35
+is to round up all the packets to their nearest multiple of 100 bytes, for instance.
+24:41
+Now as we have seen this could work and it would have a dramatic impact on the accuracy
+24:47
+of our machine learning solution, namely the accuracy would drop to less than 40%.
+24:52
+However, if you think about it in practice, this would bring a huge overhead on communication,
+24:58
+especially on battery power devices, especially on thread-bade communication.
+25:02
+This would have a dramatic impact.
+25:04
+What is the impact?
+25:05
+I don't know.
+25:06
+This is a resource question that needs to be investigated.
+25:10
+So let's see what we have learned and some actionable items.
+25:15
+Now our lessons learned need to be interpreted in the context of EU legislation such as
+25:19
+CRA and GDPR, especially CRA mentioned that digital elements need to enhance the privacy
+25:25
+of individuals.
+25:27
+And as we have seen in our investigation, unfortunately the interaction between users and devices
+25:32
+can pose significant risk to user behavior profiling.
+25:37
+Therefore indirectly user identification.
+25:41
+Now in this context, I think that the protocol maybe also the standard might be in trouble.
+25:47
+We did not intend to analyze and we did not analyze the ability to identify persons via
+25:54
+matter traffic analysis.
+25:55
+However, this could also be a very relevant research question to pursue.
+26:01
+Also as we have seen random padding and also using uniform packets as it could be a solution
+26:07
+nevertheless, this would have a dramatic impact on communication.
+26:12
+So we still have a problem that is looking for a solution.
+26:16
+And yet again, another research direction to explore.
+26:19
+Unfortunately this issue as we have seen is standard specific so it affects all matter
+26:24
+devices of all versions from all vendors.
+26:27
+Nevertheless, I think that the standard and its protocols are young and there is still
+26:32
+time to change and to protect privacy.
+26:36
+A couple of actionable items for device owners as with any software.
+26:41
+If there is an update that solved this issue, you can go ahead and update the software running
+26:46
+on devices and have a way about fixing this.
+26:50
+For academia in industry, I think that we need to continue to analyze standards protocols,
+26:55
+keep reporting issues.
+26:57
+This is a very good job that will place, hopefully, sufficient pressure on standard developers
+27:03
+so that our privacy is also protected.
+27:06
+And lastly, I think as standard creators, with these new standards are doing a very good
+27:10
+job at protecting security, but nowadays we also value our privacy.
+27:17
+So privacy maybe should also be placed into context and have as a requirement when designing
+27:24
+new protocols and standards.
+27:27
+Thank you.
+27:28
+Any other questions?
+27:36
+Does it work?
+27:42
+Thank you very much for the talk.
+27:44
+Very interesting.
+27:45
+I might have missed something, but you said at the beginning that the easy vises we're using
+27:50
+multicast DNS service discovery.
+27:55
+And your threat assumption is that you can see the traffic in order to see the packets.
+28:01
+So you will see also the multicast DNS announces.
+28:06
+So you know already what these devices are.
+28:09
+You can already assign an IP, correlate IPs with the type of device, the version, the brand,
+28:17
+everything.
+28:18
+So what does that bring?
+28:23
+Great question.
+28:24
+That was a very nice example for MDNS response.
+28:31
+However, devices, as we have seen especially, threat-based devices, do not really publish
+28:36
+their vendor product.
+28:38
+Identity, you don't really know what type of devices you have in your house.
+28:43
+That was an example from a couple of devices that do that.
+28:47
+But most of the devices that you will buy do not publish that.
+28:51
+So even if they are your devices, by using MDNS, discover you are not able to detect,
+28:59
+to identify what devices you have.
+29:01
+You need to be in the matter fabric, to be part of a fabric and controller to interrogate
+29:08
+devices, and then you will be able to find out what you have in your house.
+29:11
+But that was just an example for certain devices.
+29:14
+On the Wi-Fi, we have seen on Wi-Fi many devices or certain devices publish this information,
+29:20
+but on thread, at least, we have not seen this to be published.
+29:23
+So there is no way to know what you have there.
+29:26
+You don't even have MAC addresses because they are behind them, the border router, and so
+29:30
+on and so forth.
+29:31
+OK, so the reliance Euro-Configuration Protocol, and they use MDNS, but with their announces,
+29:37
+they do not announce enough information for you to figure out what they are, which is
+29:45
+contraintuitive because MDNS SD is to discover the services, right?
+29:51
+It is used to discover the IP addresses as mentioned.
+29:53
+Also controllers use MDNS SD, but they send out the fabric identifier, the node operational
+29:59
+identifier, and based on the identifier, they get the IP addresses and they connect to
+30:04
+the nodes to get more information.
+30:06
+So controllers also leverage MDNS SD to discover the IP addresses of devices, but they don't
+30:12
+actually need the vendor product ID.
+30:16
+Devices publish vendor product ID, usually when commissioned at early stages, but then
+30:22
+this, or this information is hidden.
+30:24
+It's not made public.
+30:26
+Thank you.
+30:27
+Yeah?
+30:37
+I wanted to ask, like, you don't need access at all to the virus LAN to read the package
+30:47
+sizes, so it's completely independent.
+30:51
+OK.
+30:52
+Very good question.
+30:53
+Yeah.
+30:54
+This is, you know, an assumption, I think that we have not mentioned explicitly.
+31:00
+We analyze the matter protocol.
+31:04
+Wherever it is running.
+31:06
+It is an application layer protocol.
+31:08
+It can run on Bluetooth.
+31:09
+It can run on thread on Wi-Fi.
+31:11
+So we focused on the application layer.
+31:14
+We didn't focus, you know, breaking thread or breaking Wi-Fi to learn what is behind Wi-Fi
+31:22
+or thread-based protection.
+31:24
+We focused on the application layer because matter can run on any type of network protocol.
+31:31
+OK.
+31:32
+So you just need access to the layer that is actually used.
+31:37
+Yeah.
+31:38
+And then the follow-up question.
+31:40
+We follow-up answer.
+31:42
+We didn't really analyze for, because thread has a very simple encryption.
+31:48
+This is also a research direction that one could pursue.
+31:51
+If you could infer what we have inferred by just looking at thread-based communications,
+31:56
+right?
+31:57
+And then you could have access to the actual thread network.
+32:01
+This is a very good research question that we didn't really pursue yet.
+32:04
+Yeah.
+32:05
+I have a very concrete question.
+32:08
+So I just checked Google Home came, our matter enabled.
+32:14
+They can speak to protocol.
+32:17
+And if I have like Mac filtering in my viral Islam, would that help?
+32:23
+Yes or no?
+32:25
+Can you...
+32:26
+So, imagine the scenario I'm having Google Home cameras in a device restricted viral Islam.
+32:40
+So does an attacker need access to that viral Islam?
+32:44
+Yes or no?
+32:45
+That was my question.
+32:47
+So what we have done, as I mentioned, is to analyze encrypted matter traffic within a certain
+32:57
+wireless environment.
+32:58
+Yeah.
+32:59
+So if we are talking about accessing camera related traffic, you need access to Wi-Fi.
+33:06
+Good.
+33:07
+That's what I wanted to know.
+33:08
+Thank you very much.
+33:11
+Thank you.

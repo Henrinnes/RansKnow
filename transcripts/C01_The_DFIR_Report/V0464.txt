@@ -1,1 +1,162 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Welcome to the audio version of our newest report. We hope you enjoy it.
+0:04
+Iced ID brings screen connect and C-sharp streamer to Alph V. ransomware deployment.
+0:08
+Key takeaways. In October 2023, we observed an intrusion that began with a spam campaign,
+0:14
+distributing a forked Iced ID loader. The threat actor used in packets WMI exec and RDP to
+0:20
+install screen connect on multiple systems, enabling them to execute various commands and deploy
+0:25
+cobalt strike beacons. Their toolkit also included C-sharp streamer, a rat written in C-sharp with
+0:31
+numerous functionalities as documented here. The attacker used a custom tool to stage and exfiltrate
+0:37
+data using R-clone. Eight days after initial access, Alph V. ransomware was deployed across all
+0:42
+domain joined window systems. The DFR report services. New DFR labs case out today based on
+0:49
+this case. Five new Sigma rules were created from this report and added to our private Sigma rules.
+0:54
+Private Threat Briefs. Over 25 private reports annually, such as this one but more concise and
+1:00
+quickly published post intrusion. Threat feed focuses on tracking command and control frameworks
+1:05
+like cobalt strike, meta-sploit, sliver, etc. All Intel includes everything from private
+1:11
+threat briefs and threat feed plus private events, long-term tracking, data clustering,
+1:15
+and other curated Intel. Private Sigma rules set features 100 plus. Sigma rules derived from 40 plus
+1:22
+cases mapped to attack with test examples. DFR labs offers cloud-based hands-on learning experiences
+1:30
+using real data from real intrusions. Interactive labs are available with different difficulty levels
+1:35
+and can be accessed on demand, accommodating various learning speeds. Contact us today for a demo.
+1:41
+Case Summary. This intrusion began in October 2023 with a malicious email that enticed the
+1:47
+recipient to download a zip archive containing a visual-based script, VBS, and a benign readme file.
+1:53
+We assessed with high confidence that this email was part of a spam campaign delivering a
+1:58
+forked variant of ISTID. First reported by Proofpoint in February 2023, this forked ISTID variant
+2:05
+lacks banking functionality and prioritizes payload delivery. Upon user interaction with the
+2:10
+archive's contents, the VBS file was executed, initiating the embedded forked ISTID loader.
+2:16
+This was followed by the creation of a scheduled task to maintain persistence on the beachhead.
+2:21
+The forked ISTID loader then communicated with a command and control server,
+2:25
+leading to the dropping and execution of another ISTID DLL. Approximately two minutes after execution,
+2:32
+the first round of discovery was observed using Windows native binaries,
+2:36
+mirroring the activity seen in previously reported ISTID cases. Around two hours into the intrusion,
+2:41
+the threat actor installed screen connect on the beachhead, using a renamed installer binary,
+2:47
+2v.xz. They executed multiple commands on the host via screen connect. These commands included
+2:54
+Windows utilities such as NL test and net for reconnaissance. They also used PowerShell cradles,
+3:00
+Bits admin, and cert util to attempt retrieval of cobalt strike payloads on the beachhead.
+3:04
+They had a few stumbles while trying to download the cobalt strike payloads using temp.sh,
+3:09
+resulting in downloading the HTML of the website rather than their intended payload file.
+3:14
+Once the cobalt strike beacons were executed, they established communication with the cobalt strike
+3:19
+command and control server. Within 20 minutes of this activity, a new payload, cslight.xz,
+3:25
+C-sharp streamer C2, was dropped on the beachhead. C-sharp streamer is a multi-function remote
+3:30
+access trojan that was first reported in 2021. During this intrusion, it was first used to
+3:36
+access the LSASS process on the beachhead for credential access. And around 40 minutes after that,
+3:41
+the threat actor performed a DC sync operation from the beachhead host to one of the domain controllers.
+3:47
+The threat actor then copied a renamed screen connect installer from the beachhead to a domain
+3:51
+controller over SMB. The installation was completed using impacts WMI exec script to remotely run
+3:58
+the screen connect installer. After installing screen connect, we observed a log into the domain
+4:03
+controller using screen connect to access the host. During this session, the threat actor dropped
+4:09
+several C-sharp streamer payloads. Although they executed the files, we did not observe any network
+4:15
+traffic to a command and control server at that time. Activity then ceased for approximately 8 hours.
+4:21
+On the second day, the threat actor returned and performed a network discovery on the domain controller
+4:26
+using soft perfects network scanner. They then initiated an RDP connection from the domain
+4:31
+controller to a backup server. The threat actor reviewed backups and running processes before
+4:36
+dropping both a C-sharp streamer binary and a previously used screen connect installer.
+4:41
+These were then executed over the RDP session. Next, a cobalt strike beacon was run and LSASS was
+4:47
+accessed on the host. Around 11 hours later, the threat actor dropped several cobalt strike
+4:52
+beacons and attempted to execute them. However, no new command and control traffic was observed.
+4:58
+The threat actor quickly removed the files. Four hours later, another screen connect installer was
+5:03
+dropped on the backup server and executed using WMI exec. A new RDP connection was then
+5:08
+initiated to a second domain controller and NetScan was run again. Following this,
+5:13
+screen connect was installed on the second domain controller and an RDP session was started
+5:18
+from this domain controller to a file server. On the file server, both a cobalt strike beacon and
+5:24
+the screen connect installer were dropped and executed via the RDP session. After three days of
+5:29
+no significant activity, the threat actor returned. They dropped and executed a new screen connect
+5:35
+installer on the backup server via WMI exec and ran NetScan again. Using RDP, they connected to
+5:42
+the file server and used Mozilla Firefox to preview a few financial documents before running NetScan
+5:47
+there as well. The following day, a custom tool named Confucius CPP was dropped on the file server.
+5:53
+Its functionalities included aggregation, staging and compression of sensitive files.
+5:58
+We observed the threat actor performing Google searches for the keyword RClone and subsequently
+6:03
+downloading the RClone application on the file server. Instead of direct execution, the RClone
+6:09
+binary was started using a VBS script. Upon execution of this script, the previously staged data was
+6:15
+successfully exfiltrated using RClone to a remote server. On day 7 of the intrusion, a RDP
+6:21
+connection was initiated from the beachhead to the backup and the file server using C sharp
+6:25
+streamer. New screen connect installers appear yet again and followed the same WMI execution pattern
+6:31
+as before. On the final day of the intrusion, the threat actor proceeded to push toward their final
+6:36
+objectives. From the backup server, they ran a fresh NetScan sweep and began staging both a
+6:41
+screen connect installer and an Alph V ransomware binary. First, they used Xcopy to stage the
+6:48
+screen connect installer across all windows hosts in the domain and then executed it using a WMI
+6:53
+command. This was then repeated for the Alph V ransomware payload. During the execution,
+6:58
+we observed the threat actor deleting all the backups interactively. Upon completion of the
+7:03
+ransomware execution, a ransom note was left behind on the hosts. The time to ransomware TTR was
+7:09
+around 180 hours over 8 days. The next section of the report is not attainable in an audio format.
+7:16
+Therefore, we recommend visiting the site on a computer when you have time. A link to the full
+7:21
+report is in the description. Thank you for listening.

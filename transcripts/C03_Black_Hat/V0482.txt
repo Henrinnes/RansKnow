@@ -1,1 +1,828 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hello, everyone.
+0:04
+Good morning.
+0:06
+So we're here to talk about line break today.
+0:09
+Line break is our security analysis in partial reverse
+0:12
+Engineering of letter ceiling.
+0:14
+Letter ceiling is the end to end encrypted messaging layer in
+0:17
+The line app.
+0:19
+My name is Diego.
+0:20
+I'm associate professor at Os University.
+0:22
+This is Thomas.
+0:23
+He recently finished his master's studies during this project.
+0:27
+He's also joined work with Adam Hansen, who is a PhD student.
+0:30
+We are from the crypto group at Os University in Denmark.
+0:33
+So back in the day, if you wanted to send a message, what you do is
+0:42
+You write a letter, you put this letter inside an envelope,
+0:46
+You close the envelope, you authenticate this envelope with a signature
+0:49
+Maybe a seal, and you go to the postal service and leave it there.
+0:53
+And then you trust on the postal service to deliver that letter without
+0:56
+It being tempered with or the contents being compromised in any form.
+1:01
+Of course, if we move to the digital world, people would still send
+1:05
+Messages, but then you do things differently.
+1:07
+Then you can achieve some of the same guarantees by encrypting the
+1:11
+Contents using a digital signature for authentication.
+1:14
+And then you send this message to a server for a messaging service that
+1:18
+Will deliver the letter.
+1:20
+What is good here is that we can actually design and deploy
+1:23
+Protocols, the production protocols doing this today that can give extra
+1:28
+Guarantees in the sense that the sender and recipient can get stronger
+1:33
+Assurances that the contents of the message were not compromised in any
+1:36
+Form without having to trust the server, which is very different from the
+1:41
+Postal service in the old days.
+1:48
+So, I don't know if you have heard of line.
+1:56
+Line is a super app.
+1:58
+If you're not familiar with the concept, maybe you have heard of
+2:02
+WeChat in China or maybe you have heard of Elon Musk's plans for
+2:06
+X, formerly known as Twitter.
+2:08
+It's an app you do everything with.
+2:11
+You're supposed to do a maybe shopping, maybe you fewer taxes,
+2:15
+You send messages to other users as well.
+2:18
+You interact with the government.
+2:20
+It's a big part of your life.
+2:22
+It's produced by a company called LY Corp.
+2:25
+It's a merger of the former line cooperation with Yahoo Japan.
+2:29
+It has millions of users who are especially active in these four
+2:33
+Countries.
+2:34
+Japan, Thailand, Taiwan and Indonesia.
+2:38
+With nearly 1 billion users interacting with the service.
+2:42
+If you look from a geopolitical perspective, one of these
+2:45
+Countries is different from the others.
+2:47
+The threat model for these users is not exactly the same.
+2:50
+It has a very high penetration in the internet markets, especially
+2:54
+In Japan and Taiwan.
+2:55
+We're over around 89 to 90% of the population using the app.
+3:00
+It's a very much part of their daily lives, especially the young
+3:04
+Parts of the population.
+3:05
+This is not the first security analysis of letter ceiling.
+3:09
+There was an earlier version of the protocol called V1,
+3:12
+which is called V1 here, which researchers have taken a look at
+3:16
+And disclose some vulnerabilities about message integrity.
+3:20
+As a response to that, LY has upgraded the protocol to
+3:24
+Version 2, in which they claim all these issues are resolved.
+3:27
+Of course, if this was the case, we wouldn't be here.
+3:30
+That's what our talk is about.
+3:33
+If you look at these two protocols, you recognize some good
+3:37
+Cryptographic algorithms.
+3:39
+We have DPHY-HELM-4K exchange in both of them.
+3:42
+Version 1 has ASCCBC mode with some custom Mac for integrity
+3:47
+And authentication of messages on top.
+3:50
+That was actually the source of the previous concerns that
+3:53
+This combination was not exactly ideal and method data was not
+3:56
+Protected.
+3:57
+Version 2 of the protocol moves correctly.
+4:00
+This is a good practice to authenticate the encryption as per the
+4:03
+GCN mode.
+4:04
+It has a more principled combination of protocols.
+4:07
+But as we will see, just selecting the cryptographic primitives
+4:10
+Is just the first part of the job.
+4:12
+It's designing a protocol that involves combining them in
+4:14
+Secure ways as well.
+4:16
+So, letter ceiling doesn't cover all the traffic that's
+4:20
+Exchanged through line.
+4:22
+One thing that's interesting here is that this protocol was
+4:25
+Deployed progressively, covering different types of contents
+4:28
+As the time passes by.
+4:30
+And to this date, there's two parts of communication contents
+4:33
+That are not end to end protected.
+4:35
+These are stickers and message reactions.
+4:38
+This is legal emojis you can send as messages.
+4:41
+Also, it's important to note that letter ceiling doesn't cover
+4:44
+Communication with official business accounts or in large groups.
+4:48
+If you have 50 more than 50 users in a group letter ceiling is not
+4:51
+Applicable.
+4:53
+So, and the rest of the talk will basically give you
+4:57
+Another review of what end to encryption means.
+5:00
+So, the protocol is designed and implemented.
+5:02
+Or at least parts of it that we are interested with.
+5:05
+And go with attacks and video demos.
+5:15
+So, there is no consensus definition of what end to end
+5:19
+Encryption means.
+5:21
+But if you survey the literature and read papers, you
+5:24
+Actually get these four different security properties.
+5:27
+And the non-autorize user should not be able to read messages
+5:31
+Exchange by this user is using an end to end encryption protocol.
+5:35
+There should be guarantees that these messages are not
+5:38
+Changed in transit.
+5:39
+And they should be authenticated as well.
+5:41
+Such that two parties can verify that the message is coming
+5:44
+From the party that claims to be communicating with them.
+5:47
+A more advanced notion is what we call forward secrecy.
+5:50
+Which basically means that if there is a compromise of key
+5:53
+Compromise should not allow an adversary to decrypt past messages.
+5:57
+So, this establishes the impact is just in the future.
+6:01
+So, that is what the forward in the name comes from.
+6:05
+In the case of line, we have two layers of encryption.
+6:09
+Alice and Bob have a connection with the server that is protected
+6:12
+By TLS.
+6:13
+That is the client to serve a part of the communication.
+6:16
+And then they use these communication, these individual
+6:19
+TLS connections to relay the end to end encrypted messages that are
+6:23
+Showed in a picture as each we e, which they are being routed and
+6:27
+Related by the server.
+6:29
+And ideally they shouldn't have to trust on the server to
+6:32
+Actually obtain those security properties we saw in the previous slide.
+6:37
+So, we look during this analysis in different ways.
+6:42
+The first one is what we call the end to end adversary.
+6:46
+Where you assume that the server might be compromised.
+6:50
+So, the server might misbehave and not follow the protocol for so
+6:54
+Advantage.
+6:55
+This captures the malicious insider in the company.
+6:58
+Or maybe the servers have been compromised by an external
+7:01
+National state attacker.
+7:02
+But this one the server doesn't follow the protocol and behave.
+7:06
+And then the server is not able to follow the protocol.
+7:09
+And the next one is, let's do some delay.
+7:15
+Yes, we might also have a malicious user that's colliding with the
+7:21
+Server.
+7:22
+In this case it doesn't have to be user-person.
+7:25
+I could also be the server simulating a user for some advantage.
+7:30
+But the user L is here is malicious is also interacting with
+7:33
+Bob.
+7:34
+And the final one is when we have a man in the middle attacker.
+7:40
+I don't know if this will help.
+7:43
+Oh yeah, this helped.
+7:44
+So, now there is an attacker compromising the TLS layer between
+7:48
+Alice and Bob.
+7:49
+Right?
+7:50
+So, this attacker is useful for because they have access to the
+7:53
+Client to server communication between Alice and the server.
+7:57
+And also, this is useful from a security perspective to sort of mimic
+8:01
+what the malicious server can do without having control over the
+8:05
+Service.
+8:06
+So, we use that in our analysis.
+8:08
+Now, Thomas will continue with the protocol details.
+8:11
+So, we need to understand what line does to be able to break it.
+8:15
+So, first off, to be able to send messages between two parties,
+8:18
+we need some key material.
+8:19
+This is what cryptography does.
+8:21
+So, first off, Alice and Bob, when they open their app for the
+8:24
+first time, they generate a key pair.
+8:26
+They have a secret key that is stored on their phone.
+8:29
+And then they send a public key to the server that is stored on the
+8:32
+server.
+8:33
+Now, the clever thing here is that Alice can fetch that purple,
+8:37
+purple, that yellow key of Bob's, the public key, and then combine it
+8:40
+with her secret key in what's called ECDH or elliptic curve
+8:44
+Diffie-Hellman to create this green key that's a shared secret.
+8:48
+So, Bob can do the same with his secret key and Alice's public key
+8:51
+and get the same shared secret.
+8:53
+Now, when they have the shared secret, they can do the encryption
+8:56
+step, which is symmetric encryption using the AS that Diego mentioned
+9:00
+before.
+9:01
+So, when Alice wants to send a message, she'll combine saying the
+9:05
+message is hello, it's from Alice to Bob, and then she'll sample salt and
+9:10
+use a counter, which is this is message number one from Alice to Bob.
+9:14
+And then she will use that green key for encryption, and she will denote
+9:19
+this message as I have used the public key, the yellow one, for Bob,
+9:22
+so that Bob knows he's able to decrypt.
+9:26
+Now, one-to-one communication is one thing, but group communication is a different
+9:31
+thing.
+9:33
+And group chats are set up slightly differently, but they rely on the one-to-one
+9:36
+connections.
+9:38
+So, Alice has a pre-established green key, as we just saw, with Bob,
+9:42
+but Alice also has a pre-established purple key with Charlie.
+9:46
+And what Alice does to gather this group of people to be able to communicate
+9:50
+is that she now makes a new group key.
+9:53
+This is what's the orange key.
+9:55
+And Alice then encrypts this group key for Bob specifically with the green key,
+10:01
+puts that on the server, and takes, once again, the group key and encrypts it for
+10:05
+Charlie specifically, puts that on the server.
+10:07
+Now, Bob and Charlie are able to fetch the correct one and decrypt to get the
+10:12
+common group key.
+10:13
+So, when Alice finally wants to send a message, she does pretty much the same thing.
+10:18
+She says, Mesotholo from Alice to the group now.
+10:22
+And once again, samples a salt, and gets the counter, this is Alice's first
+10:26
+message to the group.
+10:28
+And then she denotes it, not by the recipients, public key, but by her own public
+10:32
+key.
+10:33
+This will be interesting later.
+10:35
+And using, once again, this common secret to encrypt.
+10:40
+Now, for the cryptographers out there, this slide might be the more interesting one,
+10:43
+which are the full technical details.
+10:45
+So, the secret in a one-to-one connection is ECDH on your own secret key and the
+10:50
+other parties public key and vice versa.
+10:52
+Then you sample 16 random bytes for a salt.
+10:55
+And then you combine those with a hash function to get the proper shared secret,
+10:59
+or sorry, proper key.
+11:01
+Then you have a nonce, which is partly a counter.
+11:04
+So, as I mentioned, this is the first or second or third message you're sending.
+11:07
+That's the counter.
+11:08
+And then you add for random bytes at the end, because it needs to be 12 bytes,
+11:12
+to be a proper nonce for AES.
+11:15
+There's a technical details.
+11:17
+Then AAD stands for authenticated additional data.
+11:20
+This is who is the sender, who's the recipient, which are the identifiers of the public keys
+11:25
+we're using, just to make sure things are in order.
+11:28
+Then we do AES encryption.
+11:30
+This is the encryption step.
+11:32
+And finally, we put all things together, and this is the final message object that is sent to the server.
+11:38
+The group chat is only slightly different.
+11:41
+ECDH in the first step is done based on the group key that everybody has,
+11:46
+and the public key of the sender, which everybody also has.
+11:49
+This will be interesting later.
+11:51
+And then the AAD object is once again just the group identifier, not the recipient.
+11:56
+It's not one to one. It's a group chat.
+11:58
+So group ID and group key ID.
+12:00
+Now notice that in the one to one chat, I mentioned that the first time they open their phone,
+12:05
+or open their app, they make this secret key and public key.
+12:09
+That's never redone unless you delete the app.
+12:12
+Now in a group setting, if somebody joins a chat or leaves a chat,
+12:16
+somebody has to remake the group key.
+12:18
+And that is in the description of the app, the first person wanting to send a message in the new group constellation.
+12:26
+So given this analysis of what the cryptography looks like, we found the following attacks.
+12:33
+In all chat constellations, both one to one and group chat,
+12:36
+the server or malicious in the middle can replay messages endlessly,
+12:41
+at least in the same group constellation or forever in one to one.
+12:45
+Reorder messages, block messages so they never arrive.
+12:48
+Also, if Alice is evil working with the server, they are able to impersonate other people,
+12:55
+then the app leaks through stickers in URLs.
+12:59
+Once again, this requires the server to be evil because it's the server it is leaked to.
+13:04
+Let's go into the details of how this replay is done.
+13:07
+So the experimental setup is this specifically.
+13:10
+We have an honest iOS device.
+13:12
+This is because it's easier to set up men in the middle connections on iOS for some reason.
+13:16
+Then we have the men in the middle machine, which is using a third party library to understand how the server works.
+13:22
+And then the men in the middle machine issues a certificate that's installed,
+13:26
+that's a rogue certificate, an evil certificate that is installed on the iOS.
+13:31
+Now, let's get into the fun.
+13:34
+So a replay attack, I mentioned the counter a few times.
+13:38
+This is the first message, the second message, third message sent.
+13:41
+Now this counter should be the state of the protocol, which is,
+13:45
+Bob should be able to tell, okay, this is the ordering of messages.
+13:49
+Oh, there was a message missing.
+13:51
+But the thing is, when the message arrives at the server,
+13:54
+you have to write to that counter and just set it to zero, because why not?
+13:57
+So when it arrives at Bob, there is no way to check, really, or partly.
+14:02
+So the server is just able to, when it's evil, just replay old messages a week from now, a year from now, whatever.
+14:09
+The full technical details are a little bit more detailed.
+14:16
+So Alice makes this message object, and she end to end encrypts that.
+14:22
+The server cannot see what's inside and cannot mess with it, because that's authenticated encryption.
+14:28
+But the metadata also holds the counter, and that's the counter that the server is changing.
+14:33
+Okay, but all of this with the metadata is thrifting coded.
+14:37
+And this will be interesting because we don't have an evil server.
+14:40
+We're not working with a line for this analysis.
+14:42
+So we have to get around the server mitigations.
+14:44
+And the server doesn't want you to be messing around with things.
+14:48
+So we had to dive into thrifting coding, because we weren't just able to do things the regular way.
+14:55
+So what we had to do was change a single byte to the value 255 to make the server replay an old message.
+15:03
+Now why is that? That comes down to how thrift works.
+15:08
+So a value that is encoded and thrift is zigzag encoded.
+15:12
+So the value 0 becomes 0. Positive values become even numbers.
+15:17
+Negative numbers become odd numbers.
+15:19
+That's the zigzag nature of encoding.
+15:22
+So the server expects you to be encoding a counter.
+15:26
+That's a positive value becomes even.
+15:28
+So if we flip that single byte, it's little Indian, so we flip the first byte.
+15:34
+If we flip that to an encoding of a negative value, the server is not happy.
+15:38
+So it just replays an old message over and over and over.
+15:41
+And this is seen in our small little video here.
+15:44
+So we have a main in the middle on the left and then two phones, Alice and Bob.
+15:48
+Alice sends a message that's captured by the MIT, I'm adversary.
+15:52
+And then I click R because not to replay.
+15:55
+It overrides a single byte to the value 255.
+15:58
+And that is replayed over and over and over and over.
+16:02
+And Alice sees nothing.
+16:04
+But Bob sees the message multiple times.
+16:09
+Now since there is no state to really check how things work or the ordering of things,
+16:14
+well, messages can be reordered as you'll see first, second, third message sends in that order with specific timestamps.
+16:20
+They can arrive in different orders, some are blocked, timestamps are different because it's all controlled by the server.
+16:27
+Now that counter inside the end to end encrypted layer could have been used, but it's not.
+16:33
+But we don't know why it's there.
+16:37
+Now an even bigger threat is impersonation attacks.
+16:42
+It works for the one to one setting as well, but it's more intuitive to explain in the group setting.
+16:46
+So let's do that.
+16:48
+Now Alice is evil working with an evil server.
+16:52
+Alice sends a message and says this message is not from me, it's from Bob.
+16:57
+And the way she does it is by using his public key and saying, okay, it's from Bob.
+17:02
+The server then says, let's just not deliver this to Bob.
+17:06
+But let's deliver it to the rest of the group.
+17:09
+And in fact, it looks perfectly legitimate to be from Bob and Alice chose the contents.
+17:15
+The full technical details, well, in the end to end encrypted layer, Alice puts Bob's public key and says the message is from Bob.
+17:23
+Then she end to end encrypted using the ECTH on his public key and the common group key.
+17:28
+And then the metadata, she also just says it's from Bob with Bob's public key.
+17:33
+Now this works if the server is evil, but we didn't have an evil server, so we had to get around it somehow.
+17:38
+We just said the message is from Alice with her public key because the server can't look inside the end to end encrypted layer.
+17:44
+So it's an evil message inside, but the packaging looks good.
+17:49
+On the other side of the server, we have to intercept that message.
+17:52
+And then once again, just put in Bob's public key and say that it's from Bob, and it looks perfectly legitimate.
+17:59
+We don't have a video of this, but we've proven that it works, but we don't have a very clear video of it against the authentic server because intercepting the message, sorry, I'll go back,
+18:11
+intercepting the message from the server towards a user was not very easy to do technically.
+18:18
+Now, the result can be anything because you can forge the message, you can choose the contents based on what you want,
+18:25
+so it could just be, I want that race, we'll just fire someone else.
+18:29
+You can imagine this could be all sorts of issues for in combination.
+18:33
+Now, those are the cryptographic issues that's based off protocol design.
+18:38
+These other issues are based off not using end to end encryption or just simple design or simple implementation issues.
+18:47
+So first off, you have these cute stickers, and stickers are a main selling point of the application, so line really wants you to be using stickers.
+18:55
+They're very cute, right? And they're not sensitive. Or are they?
+19:00
+So guess which word I typed to get these stickers recommended.
+19:03
+You might be thinking money, and you would be right.
+19:07
+So every time you type a letter in your app, your app checks a local dictionary, is there a sticker that corresponds to the current wording?
+19:16
+If you don't have that on your phone, you want to get it, right?
+19:20
+So it downloads it from the server saying, can I please have these?
+19:24
+Now, they're cashed on the phone, but you just leaked what your word typing.
+19:28
+You haven't sent anything yet.
+19:31
+Then when you want to preview the cute animation of that bear throwing the money, once again you click that bear in the left image under the typing,
+19:38
+and it becomes a preview, that's an animation, that's downloaded once again, and the one to the left and right adjacent previews are also downloaded.
+19:46
+And when you finally sent it, well, they're not into any crypt at all. When you send it, it says, please server, will you send this sticker with the ID of this to that person for me?
+19:58
+Just all in plain.
+20:01
+They say that it's an anonymous feature, that it's anonymous lookups, but it leaks the full user agent, which for some is ringing alarm bells, and it should.
+20:10
+But also, this introduces, at least we believe, it introduces the issue of spyware, because if there's a political campaign that introduces interesting stickers, the server is just able to see who sends them, but also who just types words that match those stickers.
+20:27
+Now that's not all, you'll see the video here.
+20:32
+So, I've got airplane mode on, just to show you that those stickers are not present on my phone, take off airplane mode, type love, and they're all downloaded, one request for each.
+20:46
+And I click one of them in the animations are downloaded, and I finally sent it.
+20:52
+And the full message leaks the user agent and says, send that message to this user with this ID, send that sticker with that ID.
+21:03
+But that's not all URLs leak as well. And they do mention it in their privacy note, that to make a preview for you, so you can see on the right, that's a Facebook.com preview.
+21:15
+To get that little box of the Facebook logo for you, which is, I guess, is a major feature. To get that, they need to send Facebook.com to the server.
+21:24
+So whenever you send a URL, that is sent to the server. But it's not just the base URL, it's in full.
+21:31
+So you'll see example.com slash private slash secret, and with token. So it's private file sharing links, it's tokens, it's whatever is in that URL is sent in full to the server.
+21:42
+And this also means that they are able to, at least if they can match your user agent, they can stop messages from you based on URLs you're trying to send.
+21:56
+So we started out by mentioning there were four key properties to end to end encryption. Confidentiality hiding the contents.
+22:05
+If you're leaking it, you're not hiding it. So that's partly broken at least. Integrity, preserving the contents, are you sure that it's the correct contents arriving?
+22:15
+Well, if I can choose the contents for you, I guess not. And if Alice and the server are working together, and Alice provides the group key material to the server, then the server is able to dynamically change the contents of group messages from other people to whatever contents of the server is choosing.
+22:34
+So no, integrity is not upheld. Authentication, do you know where messages come from? I guess not. And the last one, forward secrecy.
+22:46
+Since there is no key rotation continuously, as I said in the one to one setting, your app makes them once.
+22:55
+And in the group setting, it's only whenever somebody joins or leaves the group that it's remade. Since there is no continuous key updates, then there can be no forward secrecy by design.
+23:07
+It's an advanced feature and it needs continuous key rotation to be alive. So none of the four key properties are really achieved, one partially, potentially confidentiality.
+23:18
+So the real world impact of the attacks that we've found is that the server can manipulate the conversation, although blindly, it cannot tell the contents of a conversation if it's not working with one of the people in the chat.
+23:31
+But it can blindly manipulate block messages from arriving, and you'll never see that they're not arriving because you don't have a way to check that they should have been there.
+23:39
+Then for impersonation, it can fully forge a conversation. But that also gives deniability. If you're in court and people have a transcript of your line chats, you can say, I just didn't make that. Somebody in the chat is evil and the server is hacked.
+23:52
+So it gives plausible deniability to using line. But the leakage allows for spyware, censorship of URLs, and definite surveillance.
+24:04
+Now I want to mention a few other attacks that we found to be possible, but they require a malicious server. So we haven't been able to test them in full.
+24:13
+The first is illegitimate key rotation. This is for groups only and illegitimate group membership. Now they fully depend, the attacks fully depend on server and app mitigations. They're not protected in any way by cryptography.
+24:29
+So what do I mean when I say illegitimate key rotation? I mean that Alice is outside the group, but Alice is evil and working with an evil server. And as I said, when somebody joins or leaves a group, the shared group key is changed.
+24:45
+Now this can be done also if the group hasn't changed. So Alice is simply able to make a group key for a group she's not part of and send that to the server encrypted for the people in that group.
+24:58
+And then the server just says, hey, there's a new group key everybody. And they're able to fetch and decrypt and use that group key. There is nothing cryptographically protecting the protocol from this.
+25:09
+That would mean that Alice and the server are able to listen in on the conversations. But in fact, there's an even worse thing. That's illegitimate group membership.
+25:18
+There is no cryptographic binding of how groups are handled. So a group is updated based on the server saying Alice joined.
+25:29
+The server just tells you Alice just joined the group and you just have to accept that as a matter of fact. So Charlie and Bob are in a group with potentially other people and the server just says Alice joined.
+25:40
+Then Alice joined and is able to impersonate and fake conversations or whatever she wants to.
+25:49
+Right.
+25:54
+We disclosed these findings to a line back in June. They provided this statement addressing the claims and this is available in our website.
+26:04
+If you go there, you get the PDF info. So we called some of the passages here because I think it's interesting to know what they think about our attacks. Right.
+26:12
+So first of all, they recognize that what we call the replay block and reorder attacks. They actually apply and they are inherently herring design limitation of the protocol, which is stateless.
+26:22
+So they were aware of it, but they were still happy that we took an independent look and provide evidence of how it would work. They also
+26:32
+provide this are also caused by their reliance on server side timestamps. So the ordering, as Thomas has said, of messages is done by the server as they receive and pick timestamps to to take the messages.
+26:45
+So they do this to prioritize user experience, maybe because they have widely different networking connections.
+26:53
+So they are not only the cryptographic protocol issues, ideally this should be cryptographically bound as well. Right. We will see later on how the signal protocols actually achieves much stronger guarantees in terms of just message ordering.
+27:07
+In terms of metadata, they claim that this historically has not been considered to be sensitive, which is somewhat accurate, but they are updating their threat model and encryption report to reflect these concerns.
+27:21
+So in regards to the impersonation attacks, they claim to have server side checks to prevent impersonation of messages in groups, or at least for this message is to be delivered through their infrastructure.
+27:33
+But they understand this is not sufficient to satisfy the end to end adversary we talked about. Of course, server side countermeasures would not work against the malicious server. That's a contradiction. And they also are very hard to analyze for security researchers.
+27:47
+So this is not good to a good practice, right. Ideally, you actually put this on the protocol and cryptographically bind it in some way.
+27:55
+With respect to the plain text leakage, they said that this is a result of their attempt to balance privacy with usability. They have looked into private lookups.
+28:04
+They are cryptographic protocols called private information retrieval, where you can download something from a database without the server actually learning what was downloaded.
+28:12
+They can work efficiently at their scale because they have too many stickers. But they say that URL and sticker previews are opt out features, so users who want additional privacy can actually disable these features and still communicate.
+28:26
+Finally, they end by saying that they committed to improving the security, looking up into updating the cryptographic protocol, and then we will consider how we address these updates based on what we reported and details of how these attacks actually work.
+28:45
+Now I think it's interesting to look at the state of the art protocol for end-to-end encrypted messaging that signals that actually shows how some of design features can actually prevent these attacks from applying.
+28:57
+And to be honest, this also gave me a very interesting insight into how signal was designed. When you see the text, you kind of understand some of the design features really well.
+29:08
+So the analogy here is this ratchet, right? So you have a gear that's moving forward, and there is a mechanism that prevents the gear from moving back. So it's constantly moving to a new state.
+29:18
+Of course, the analogy is not perfect because this gear doesn't have as many states, but now imagine a gear with 2 to the 1.28 different, you know, dense, and that would be a cryptographic ratchet.
+29:30
+In signal, this manifests in two different ways. We have on the left hand side with the green boxes, these are difficult helmet key exchanges that constantly are executed as two users communicate to inject new randomness or key material into the communication.
+29:47
+And this key material is then used for the symmetric ratchet, the one in the right, with the key derivation functions deriving the keys that actually are used to encrypt the messages.
+29:57
+So take a bit of a deeper look in each of this.
+30:03
+So this is the symmetric ratchet. We start with like some where some shared state ready there, there will be a diffie helmet protocol executing on the left, and this introduces a key into the key derivation function that will mix this two together and produce a chain key.
+30:19
+Chain key is the key material that Alice uses to send keys, for example, to Bob as a sequence. And for every message that Alice sends to Bob in this sequence, in this burst, this messages will be encrypted with different keys.
+30:33
+So every message gets a new key derivation function execution that produces a new key, and that encrypts that particular message. A new message will also get a new fresh key.
+30:43
+And the idea, of course, here is that if one of those keys leak, you cannot decrypt previous messages, even in the same burst, because the keys are constantly evolving in one direction through a one wave function. This functions are designed to be hard to invert.
+30:58
+The diffie helmet ratchet is what introduces new key material in this conversation. So again, we assume Alice and Bob are talking. Alice has her public key pair and secret key pair ready in blue.
+31:10
+Alice needs Bob's public key to do the key exchange. So Alice will get the public key from Bob directly through the signal server, and then run diffie helmet to derive the sending chain key.
+31:23
+So this will be the key that will be used to encrypt messages from Alice to Bob. Because Bob has, of course, the matching private key, Bob can use Alice's public key to derive the same diffie helmet secret, and then be able to decrypt the messages that Alice sent.
+31:39
+If Bob wants to reply, now Bob will generate a fresh new key pair. That's what we call in the SK and PK prime here. And then the diffie helmet will be executed between the fresh new private key and Alice's public key to derive a new sending key for the other way around.
+31:54
+Bob will encrypt those messages in the same burst as a reply. And when Alice receives those, she can use, of course, her previous private key with Bob's updated public key to decrypt those messages.
+32:06
+So this ping ponging happens every time there is a round of communication in signal or any other messenger protocol that implements signal as this standard.
+32:16
+So this is the one-to-one chat protocol with group chats is a bit more complicated, of course, because now we have multiple groups. But one thing that I can say is that there is shared group key material, but there are, there are percent or keys as well that would prevent impersonation attacks that we discussed before.
+32:34
+These are the messages that implement the signal protocol with varying degrees of security properties because some of them also do stronger cryptographic management of groups.
+32:44
+If you want to read more about how this works, we have a list of resources here that maybe you can take a look at later when these lights are become available. They do both security analysis of messages and also they show how the signal protocol is designed.
+33:00
+So as some takeaways, if you're a line user, you're basically implicitly trusting the server for many things. For example, to deliver all the messages in order, line doesn't have a way because the protocol is stateless to communicate the users that a message might be missing, which the signal protocol gives the tools for.
+33:19
+You also trust in the server to not snoop into what you might be typing in terms of stickers and URLs being sent through the service and to not collude with other users in the same group to mountain impersonation attacks.
+33:33
+Obviously, this is not how end-to-end encrypted messaging is supposed to work. We designed protocols such that these are cryptographic properties of the protocol and not something you trust the server to not do. This is important to observe.
+33:48
+In general, I think the takeaway also here is do not deploy your own cryptography. We have well-designed, well-established protocols that achieve these security properties, already available in open source implementations.
+34:01
+So the idea of the best practices is actually to deploy those instead of designing your own. And of course, don't deploy something without careful, extensive independent peer review, because then you might just find out that you actually made the same design flaws that were made in the past.
+34:16
+So we just repeat in the same mistakes in the past. So thank you very much for your questions. Thank you to Stefano who helped us prepare the talk. Thank you.
+34:24
+So if anybody has a question, you can go down to the microphone. Yes.
+34:36
+Great talk. Great research. Thank you very much. If you're assuming an interested server in the middle, couldn't the server impersonate Bob towards Alice and Alice towards Bob, like Jeanette key pairs, and then break confidentiality this way?
+35:02
+So when Alice requests Bob's public key, the server just sends their own public key and so on? Yes, very good question. So the question is about many minor attacks for public key distribution.
+35:14
+So we still rely on the server to store the most recent public key of a certain user, and the server could actually replace that key with some other key knows the private key for, and then impersonate the other user successfully.
+35:26
+So this is a risk for all N2N encrypted messaging apps. What they provide you as a user is a feature in which you can get an off-band communication channel with different Alice and Bob, and they actually check if they see the same public keys.
+35:40
+So this is called in the different names, security codes, or you get a QR code to scan. So there is a usability security feature where you actually do this in person. Of course, it's a problem that how do you do this securely if you need an N2N encrypted messenger to talk to Bob, and actually how can you do this in practice is a different concern, but there is a way to actually disambiguate this.
+36:05
+So, and detect the server misbehaving. Thank you. Thank you.
+36:12
+Thank you for your presentation. I'm not sure I got the right point, but if the sticker-related packets are sent in plain text format, is it possible to forge a packet with the sticker that I did not buy yet? Or is it prohibited from the server level and denying?
+36:34
+They, in fact, say that they don't end to an encrypted stickers to be able to do access control. So the server will check if you have access to the sticker you want to send, because it's the server sending it for you.
+36:48
+So there is, in my opinion, no way for you as a user to ask the server to send something you don't own unless the server is malicious.
+36:58
+Otherwise, you have to interrupt or get in between the TLS connection between the server and the recipient in order to be able to send that message.
+37:08
+Thank you.
+37:16
+Any other questions? We still have like two minutes to go a little more.
+37:20
+If not, feel free to talk to us. We'll be, of course, enjoying the conference today. See you around. Thank you.

@@ -306,14 +306,17 @@ def _fetch_via_whisper(video_id: str, model_name: str = "base") -> Optional[str]
 
     with tempfile.TemporaryDirectory() as tmp:
         audio_path = Path(tmp) / "audio.m4a"
-        r = subprocess.run([
-            YTDLP, "-x",
-            "--audio-format", "m4a",
-            "--audio-quality", "5",   # ~128 kbps — sufficient for speech
-            "--quiet",
-            "-o", str(audio_path),
-            f"https://www.youtube.com/watch?v={video_id}",
-        ], capture_output=True, timeout=300)
+        try:
+            r = subprocess.run([
+                YTDLP, "-x",
+                "--audio-format", "m4a",
+                "--audio-quality", "5",   # ~128 kbps — sufficient for speech
+                "--quiet",
+                "-o", str(audio_path),
+                f"https://www.youtube.com/watch?v={video_id}",
+            ], capture_output=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            return None
 
         if r.returncode != 0 or not audio_path.exists():
             return None
@@ -364,7 +367,7 @@ def retry_missing(whisper_model: str = "base"):
         txt_path = meta_file.with_name(meta_file.name.replace(".meta.json", ".txt"))
         if not txt_path.exists():
             continue
-        if txt_path.read_text(encoding="utf-8").strip() != "[NO TRANSCRIPT AVAILABLE]":
+        if not txt_path.read_text(encoding="utf-8").strip().startswith("[NO TRANSCRIPT AVAILABLE]"):
             continue
         try:
             meta = json.loads(meta_file.read_text())

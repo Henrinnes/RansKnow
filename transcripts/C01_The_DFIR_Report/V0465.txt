@@ -1,1 +1,948 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Welcome to another episode of the DFIR Report Podcast. I'm your host, Postas, and today
+0:13
+we're looking into our latest report from Einstein ID to Daughern locker, Runsumer, in
+0:20
+29 days. We have with us the two of the analysts behind this report, along with our special
+0:27
+guest, Antwerdov Mayn, a detection engineer guru, Nas. The two analysts that I have with
+0:34
+me today are Renzan and Angela. How are you doing, guys? Can we maybe go around, introduce
+0:42
+yourselves, tell us a little bit about yourself, and thank you very much for being here with us.
+0:47
+Hey, guys. It's really cool to be here. I'm Angela Veletti. I work in Switzerland in a
+0:58
+beauty company that offers cybersecurity services. My daily work is in-centre response and digital
+1:05
+forensics. I've been working in cybersecurity for years.
+1:12
+Thank you, Antwerdov. I'm Renzan. Hello, everyone. I'm D.C. is my second podcast, so I'm
+1:19
+very much happy to be back here. Again, my name is Renzan Cruz. I work for a security company
+1:26
+as a technical director for Intidate Response. I've been with the DFIR report since last year,
+1:33
+a year and a half now. Thanks again, Postas. Thank you, Antwerdov. And Nas.
+1:40
+Yeah. Yeah, well, my name is Nas. I'm a security researcher detection engineer at a security
+1:47
+company called Nextron. I maintain the Sigma project as long with other colleagues and other
+1:54
+projects. I'm happy to be here finally. It was longer waited. So yeah, thanks for having me.
+2:01
+Yes. We were trying to get you on the podcast since day one. But everybody has to be
+2:11
+busy schedules nowadays. But thank you very much for making it. Thank you, everyone.
+2:18
+And yeah, I just thought maybe we can start looking into this report and maybe start from the initial
+2:28
+axis. Let's maybe look into the campaign that was used for this initial axis. I believe you
+2:39
+mentioned the Prometheus campaign. Is there anybody here that we can help us explain
+2:46
+about this campaign and some of its characteristics and how did the initial axis happen?
+2:53
+Yeah, maybe I can start with that. So this is this is this is campaign where we've been seeing
+3:01
+this from the community side since 2020. There's a lot of like an Intel reports from different
+3:07
+security companies that provides this this kind of Intel where they basically observe a new
+3:13
+underground service while new during that time, every year 2020. This is being called as
+3:19
+Prometheus TDS. TDS means the traffic direction systems. So this is an underground service that
+3:26
+distributes malicious files and it also redirects visitors to efficient or to malicious sites
+3:33
+wherein the panel or the admin strip the panel has been controlled by by these threat after
+3:42
+on which they can it's kind of like a flexible where they can configure it based on their needs
+3:46
+whether they wanted to download the malicious files they wanted to configure the restrictions
+3:51
+of the users or the geolocation and maybe they want to get some some information like the browser
+3:59
+version and operating system. So it's considered as a malware as a service or mass maes and since 2020
+4:08
+I'm not sure up until now but during that time it was considered as one of the services available
+4:14
+for the underground and they asked for a subscription based service as much as 250 per month for
+4:23
+for the people on the underground. So this is how this particular phishing started and navigates
+4:29
+through the phishing email which we're going to talk about in a bit. Let's take a quick break and
+4:34
+listen to the services that the DFI report has to offer to help businesses and individuals in the
+4:41
+field. The DFI report provides a range of services including private threat briefs which include
+4:48
+50 plus private reports annually. Another service we provide is our threat feed which specializes
+4:55
+in tracking command and control frameworks such as Cobalt strike, Metasploit, Sliver and more.
+5:03
+We also offer a private rule set that consists of exclusively curated rules using insights derived
+5:10
+from private threat briefs and other internal cases. Want to take the role of the investigator?
+5:16
+We now offer the data we use to analyze the intrusions you read on our public and private reports
+5:21
+through our new training platform. Dive into the real intrusions logs and certify your skills
+5:27
+with our DFI R labs. Check out our website for more details.
+5:32
+We invite you to reach out for a personalized demo of our services via our contact us page.
+5:40
+Yeah that's very interesting. We discussed on the previous episode how the criminal market works
+5:45
+a little bit. Very interesting to see how everything comes together and up to the final
+5:51
+phasing email that people are receiving. On that phasing campaign what was the aim for initial
+5:59
+access? What was the execution patterns we observed on the BITS head host? Angelo would you like
+6:07
+to go over this for a bit? Yeah sure. So initially with JavaScript file called Jocuments Can
+6:16
+that basically after it was executed by the victim, it connected to the first command and control
+6:22
+server, then created a schedule that does to gain the initial persistence to have a nice idea
+6:31
+persistent execution and as always with iCED we see a DLL file dropping the APE data directory
+6:42
+and then a little bit later so just one minute after we saw a lot of the classic iCED discovery
+6:52
+commands. Indeed I will say that we can already see here a detection opportunity for example
+7:01
+because we have got JavaScript file that creates a subsequent schedule that does but especially
+7:08
+the RANDYLL process that then launches a lot of discovery commands for example the net process.
+7:17
+Then subsequently after an hour of the enumeration commands we saw also the usage of DNC that is
+7:25
+basically a module embedding into iCED idea. And those JavaScript files to my knowledge they
+7:35
+are quite obvuscated and they are very difficult to decode as well. In a way they are able to
+7:43
+bypass detections and any preventions that people may have via an AV or an ADR sensor on their host
+7:55
+maybe NASCAR speak a little bit more on that I know his detection engineer expert
+8:03
+in here and I'd love to hear his opinion because to my experience JavaScript files I just had
+8:13
+a very difficult time detecting or looking into those files from an analysis point of view.
+8:21
+Yeah definitely yeah yeah JavaScript has always been like a the bad apple in the detection space like
+8:30
+a very obvuscated file can make your life very difficult. And usually like my approach and I believe
+8:37
+that the better approach usually is to not analyze the file but look at it dynamically except if
+8:43
+you have to. The best approach to find what a JavaScript is to execute it somehow via node or via
+8:49
+your browser or in a safe environment and then try to determine what is doing first to determine
+8:54
+its maliciousness and perhaps that's enough for you like depending on your level of skills or your
+9:00
+level of analysis or depending on the level of threat that's your analyzing that's usually is
+9:05
+enough because like the amount of efforts required to the obvuscate sometimes they actually put a
+9:12
+lot of effort into making it very hard but at the same time like if you're using like methods of
+9:18
+detections like specifically Yara to detect the content of the file one one one technique that we
+9:24
+can use against the threat factors themselves is that the fact that they obvuscate the file too much
+9:31
+like a typical obvuscation would be to include a lot of comments for example you could create these
+9:36
+like hunting rules in general that detects for example multiple concatenation that that could be
+9:42
+suspicious in combination with like different comments and and the line is split into different
+9:48
+like strings like when we see in this in this report like there is this comment every every second
+9:56
+string like there is a string and then some comments and and you might be surprised if you look
+10:01
+from a hunting perspective of these kind of things yes they are used digitally but if you're
+10:07
+looking for something malicious you can then start to determine that this is indeed very suspicious
+10:13
+or highly suspicious and then you can start to look into it a bit more but unfortunately I don't know
+10:21
+of any good way to the obvuscate them like easily or rapidly yes thank you very much Nass
+10:29
+there are some tools for certain malware like good load that researchers have
+10:37
+helped us with developing a tool to quickly the obvuscate and provide you with the IOCs
+10:45
+really fast and that's so useful that speeds up the analysis because you're just getting the C2
+10:53
+domains or IPs related to that malware so you can look into your environment for any hits on those
+11:02
+but if there is something that you know if there is a malware that doesn't have such tool that you
+11:10
+have to look into it yourself and yeah using a dynamic analysis would probably work best
+11:18
+does anybody have anything to add on that topic yeah I think from the last report that
+11:25
+that we have published related to the good loader we actually use a script that was
+11:30
+open and free to everybody it was actually created by mandyand so it's really an easy task of
+11:35
+just writing or not not writing but just executing that python script and that extracts the whole
+11:40
+thing it extracts the whole IOCs that you need to know it also creates a specific or separate file
+11:48
+that that that dissect some of important information from that good loader js on this stage of
+11:55
+this i-side js trapper we also use an emulation tool we call it like backstash js it's a built
+12:03
+it's a pre-built into when you install remnux VM that that that contains all these
+12:09
+smaller analysis tools and then after you run the backstash js essentially it just emulates the
+12:14
+javascript on its own and also it extracts that this whole IOCs that you need to know into another
+12:20
+file and then it produces another sort of second stage of javascript that you can easily just
+12:26
+beautify and then that beautification of javascript is also available from the crabmax so the js-beautify
+12:33
+is also what we use on this javascript for us to sort and parse things out without writing a
+12:40
+parser manually or from scratch and it gives us the the whole c2 and the whole command line parameter
+12:47
+once you run those two tools that are available on remnux VM that's great I haven't heard of that
+12:54
+tool that you mentioned that's box box dash js and then the second thing to beautify the javascript
+13:01
+there's actually a lot of online tools for you to beautify the javascript but there's a built
+13:06
+into the js that should beautify those are all available on remnux VM I think these tools can can
+13:13
+be can be asked as a quick quiz for you to save more time but essentially when you have to do
+13:19
+some sort of manual approach like I think cyberchefist is the king just to decode and decrypt all
+13:25
+these of uscations and encoded commands I'm not sure if some some other folks here are using
+13:31
+other tools but I think cyberchef is something that I normally use if ever there's a second third
+13:38
+for a base of obfuscation especially for the javascript which is kind of like insane sometimes
+13:43
+it just takes you a lot of hours for you to just decode this single c2 which is kind of annoying
+13:51
+yeah I've been using cyberchef for many years now and I don't know any better tool than that
+13:57
+maybe we can we can move a little bit to the next phases here and after the malware was executed
+14:07
+I think we saw the kobelstrike becun being dropped and being loaded in memory by the adversaries but
+14:16
+what are some of the interesting factors of the post exploitation activities you observed?
+14:21
+angelo is there anything in specific that you found interesting after the initial execution on the
+14:30
+bithead host based on your analysis? well for sure we so the usual abuse of kobelstrike nowadays
+14:42
+like cancer where attacks are mostly performed through kobelstrike so nothing new on the site
+14:49
+so for sure it was interesting that the protector in order to download the kobelstrike beacon instead of
+14:59
+for example using ice daddy directly since that connection to the command and control
+15:08
+it is called that IO as a cloud storage you actually download the kobelstrike beacon and then
+15:18
+executed it to randial l then if we always talk about kobelstrike obviously we
+15:27
+so the usage of the power shell functionality to obviously move literally and a lot of other stages
+15:36
+so basically this power shell script is directly executed and is usually encrypted through
+15:44
+aksor now in this case the protector didn't even modify the classic aksor
+15:53
+the that is used in the kobelstrike beacon because it's 35 by default and therefore we actually
+16:01
+were able to do pretty easily and then we analyzed this power shell code basically uses a lot of
+16:11
+a manage code to use windows APIs and then directly load the shell code in memory and as we were
+16:21
+able to see actually those shell codes were not modified to the malleable profile because they
+16:30
+included also the classic kobelstrike initial lines basically and the ar uh that are usually used
+16:41
+in jaroals to actually take kobelstrike gigant in memory but then also like a very interesting
+16:49
+thing about the post exploitation was a massive usage of scheduler task because the
+16:57
+the protector didn't just abuse the i's the id perstistant perstistance to continuously access the
+17:07
+perstructure but instead created multiple tasks in different servers by multiple i'm talking about
+17:15
+more than five scheduler tasks and also deployed a gpo to actually distribute the kobelstrike
+17:23
+in a different attempt probably did you feel was the most interesting thing i think and in terms of
+17:32
+timeline so listeners can get their head around here we are on day two of the intrusion and
+17:41
+protectors are already looking into moving laterally to the network using kobelstrike the way
+17:50
+they achieved that was by copying the kobelstrike dll to remove posts that they wanted to access
+18:00
+and then executed wm my commands if i'm not mistaken to to execute the kobelstrike
+18:09
+pickens that's that's very interesting because there there are so many ways of and they define
+18:16
+this activity but nas what do you think about this timeline of events we are on day two they are
+18:23
+already going for the kill looking into executing kobelstrike on all the servers or and all the work
+18:31
+stations that they could get access to on the domain and trying to find identify any open
+18:39
+servers and trying to find interesting files that they can move out meaning excel trade how often do
+18:48
+we see that right yeah it's it's very common but before before that i just want to want to
+18:54
+mention something regarding the download of the kobelstrike we can via the power shop using the
+19:00
+file.io because i think that's that's something interesting using like the file sharing websites
+19:07
+we see that very often but it's but it's such an easy way to sometimes track because most of the time
+19:15
+even if you use these file sharing you don't use all of them you're using like a couple of them
+19:19
+and we we've seen many times like people using pastebin using mega-nz using ddns using anon5
+19:27
+and those are all like very interesting file sharing stuff that like from a detection perspective
+19:33
+what you can do is you can you can build a list around this and at least exclude what you're
+19:39
+usually using your environment and it would be very like easy to spot the anomalies and even even
+19:47
+like if you go to prevention sometimes these these like these whole file hosting websites needs to
+19:51
+be blocked and can be blocked so it's best to block them and like if if you see that like the usual
+19:58
+stuff and an iposume that they're being so fast sometimes is because these things are
+20:05
+easily detectable and easily sigable as we say they are easily you can write a signature for them
+20:11
+very easily and and like this this goes to the the old adage is that yes sometimes it's good to be
+20:20
+sophisticated but as as Angela mentioned is they're using almost everything to the default
+20:26
+and they're like acting very quickly and the reason behind that is that yes there are defaults
+20:31
+yes but if you don't have the necessary like mechanisms in your environment you're already like
+20:37
+doomed because it's it's very quick like they they're doing this and they're doing that the
+20:41
+schedule task is here the GPU is there and the moment you realize what's going on it's already too late
+20:46
+but but like you can you can extrapolate from this idea like they're using power shell download
+20:51
+like the usual CM let's from power shell to download these things they're using the cobalt strike
+20:57
+default header that you can use like like classic yar are used to detect and I feel like it's
+21:04
+it's understated and at the same time boring but it's very common for these kind of threat
+21:11
+actors to act like yes they're using legitimate services online service to host their files
+21:20
+one thing to be aware is that you have to have situation on awareness of the environment that you're
+21:27
+trying to protect and make sure that you are you know what type of services your users are using
+21:36
+if you are a very big organization I'm sure you will have users going into file.io and mega.
+21:43
+uh uh whatever that website is you know on the mega cloud hosting provider and uh there will be
+21:52
+downloading and uploading files over there so make sure you baseline the activity before you put
+21:59
+any detection or prevention in place I mean it wouldn't hard to put a detection in place for it
+22:06
+if you have the capability but preventing such activities is when it becomes very difficult
+22:14
+but yeah I agree it's some of those basic uh things who would just trigger alerts and uh
+22:22
+would have an analyst look into the activity a lot sooner now we have an intracional
+22:28
+classic 29 days we are on day two imaginive uh we had a detection where it was triggered on file.io
+22:38
+access and we were already looking at this activity it would have been a lot better to
+22:46
+attend to this uh intracional on day two rather than in the mid of the intracional where
+22:54
+possibly many of the objectives have already been established by the throttaccia. Yeah thank you very
+23:00
+much Nas it's nice that uh you have this mindset of bridging things back to the basics uh I love that
+23:08
+because detection does not have to be complicated and uh that's why I value your opinion a lot and uh
+23:17
+I listened to what you have to say for a long time now detection has to be straightforward and can be easy
+23:25
+looking into the uh discovery as well when I mentioned about they are looking into shares as well
+23:35
+um we saw that on day two and I believe we saw some data exultation as well uh using arc loan on day two
+23:43
+so they went straight for establishing their objectives uh and clearly one of those objectives were
+23:51
+to steal data. Did you guys uh the two analysts uh that we have with us? Did you uh look into
+23:59
+what type of files the tried to exfiltrate and from where and what were they interested on?
+24:05
+Yeah I think I can answer that so when we talk about the uh uh the exultation there's like two parts
+24:12
+here so they use arc loan uh when they when they tried to use arc loan which which gives us a
+24:18
+lot of artifacts from the host when you try to execute it um including the arc loan that confide
+24:23
+or the configuration file of arc loan so when we look into it we saw that they're using port 666
+24:30
+and then they're using the pcloud service um to exfiltrate the data uh but upon looking into
+24:37
+the network connectivity and network traffic uh based on that timeline of of of interest we didn't see
+24:43
+like a successful uh exfiltration um so we also noticed uh that they've leveraged the AWS
+24:51
+L.I. V2 here um so that is uh actually a legitimate um binary that that's commonly used for for AWS
+25:00
+uh uh kind of uh activities and then behavior and then they've used that uh binary to
+25:07
+to exfiltrate uh the files that they that they're interested with so when you go to the report you
+25:14
+can see on the AWS uh CLI uh command line parameter as a whole what are the different file extensions
+25:21
+files that has a specific file extensions that they're interested with uh such as jpeg file or um
+25:28
+you know uh I think there's like a db down here as well for for database or cab jar so these are the
+25:34
+things that they're interested with so again our clone which is commonly used by these
+25:40
+threat actors ransomware gangs but one of the most interesting part on this report which we can
+25:46
+talk about the different features of the this the power shield script that they've used as well
+25:50
+but the binary uh the the AWS L.I. V2 uh was was mainly the the tool that they've used uh to
+25:58
+to successfully exfiltrate uh these files naturally Angela maybe you want to add something into that
+26:06
+um yeah for sure um so basically um related to the AWS CLI basically uh they uh use uh custom
+26:15
+power shield script called AWS collector uh that uh basically all the features to perform uh the
+26:22
+attack on the entire chain I will say because we have got tools to perform the discovery and
+26:29
+the enumeration of the active directory and the infrastructure for example you have to a sharp
+26:34
+pound uh then you have got tools to actually uh bypass security defenses uh and also obviously
+26:42
+either the malicious activities that were performed and this was specifically the deletion of
+26:48
+windows security events you can also bypass AV or EDRs now uh honestly I don't know how much
+26:55
+those techniques are actually uh working right now but uh still then also like functionalities
+27:03
+to connect to uh telegram uh other offensive tools probably coming from the uh power
+27:10
+exploit uh package so for example WMI etc until you come up to the uh actually deploy of the
+27:19
+run where so it was uh fully featured uh power shield script it's a 14k lights of codes by the way
+27:28
+so it took us a really couple of weeks to and we were actually arguing uh when we when we are building
+27:34
+this report we're like should we put a separate report for this for us that they
+27:39
+seg more on these 14k lights of power shield scripts but uh we decided to just put like an infographics
+27:46
+and then like they sec the most important points of this script and uh if they go if the
+27:51
+people go to the report you can actually see the the comments uh um and also the the the different
+27:58
+versions of this script like the mint how the the thread after maintains this script there's also a
+28:05
+timestamp over there and it's really an amazing script to be honest and it's it's fun too today
+28:12
+sectors i remember when we first came across this uh script i think we put uh twitter uh post out
+28:21
+uh and uh we did a little bit of uh not a very detailed level of uh analysis but uh we just
+28:30
+posted about a couple of its features and uh we found the comments hilarious yeah but to this day
+28:38
+i don't know why they chose to comment on the script and keep a track of all the comments uh based
+28:47
+on uh different versions but also if you see at the top if i remember correctly anyway i haven't
+28:53
+looked at this script for a while if you see at the top they had uh a tough type of like they had a
+29:01
+conversation i'm sure it was more than one person or it was one person talking to himself or
+29:07
+to herself and uh just mentioning why things don't work and uh the frustration
+29:16
+when i saw that you know when i saw that i i like to imagine them like having like an
+29:22
+halisa a task and somebody was his task was committing and his boss said what did you do today i
+29:28
+committed to this script i added functionality yeah it's like and then it's an everything yeah it
+29:35
+dreads something like that and it was it was so funny to see you know the language that they were
+29:40
+using and uh why would anybody you know why would anybody comment on the script and have a
+29:49
+conversation on the script in that way to this day i don't know um why that that was the case did they
+29:59
+keep tracking of everything on that script using comments because that script as ranzan mentioned
+30:07
+it was huge it was just so funny to see but uh on a more serious note i think it was a script that was
+30:15
+used for uh as a everything in one solution and was served with multiple groups or you know it was
+30:27
+used in uh final state or in every stage of the intrusion i guess and you can see at the end stages
+30:37
+where we could see the different ransomware that they were mentioning on the script with
+30:44
+our variations of those we also saw different tools being used and mentions to tools that we didn't
+30:52
+see in this report so i would have to say if i would have to guess they would take this tool
+31:01
+uncommon what they want what features they want they told to have change a couple of things around
+31:07
+move a couple of parameters here and there and just make it for their purpose for that specific
+31:15
+intrusion or objectives that they had for that intrusion and then they would revert back to
+31:22
+other features for different type of cases it had everything from hilarious comments to different
+31:29
+tools and execution of those tools for different face of the intrusion it was a very nice find
+31:36
+and great analysis on the on the script guys yes thank you very much and zelo for bringing it up
+31:43
+because i forgot about it and it was i really want to to mention it did we see that script being run
+31:50
+straight away or was it just a wsl i tool that we saw along with arc loan
+31:59
+we saw we saw it on the second day so basically um the initial faces of the tag if especially if we
+32:07
+consider that um this case last uh for uh 29 days so i would say that they chewed in the
+32:15
+earless faces um but then we saw a lot of um keyboard activities especially through uh
+32:25
+cobalt strike and then in the end they used the AWS collector to actually deploy tag hold off
+32:31
+around so it was um mainly used for the um main activities so basically expel trition and all
+32:39
+doing fine thank you and zelo and regarding the AWS CLI yeah sorry uh no
+32:47
+if i may if i may just want to wanted to comment because i believe angel i wanted to make that joke
+32:53
+about by passing e dr's but yeah he made it indirectly but if what i wanted to mention is in this
+33:00
+section where they disable the e dr is they use the functionalities of the processes themselves
+33:06
+like every e dr or antivirus has their own like admin utility or whatever where you can stop the
+33:13
+service and if anti-tamp rank is not enabled the service is stopped immediately and this is very
+33:21
+like this is very interesting why because many people think when they when they hear like
+33:25
+disabling a v or whatever they think that it's very complicated but if you if you just made a simple
+33:31
+mistake of not enabling like anti-tamp rank or enabling a password for your antivirus like it's
+33:37
+only a command away like stopping the service is very easy and killing the process is very easy
+33:42
+and that is considered like uh bypass quote and quote you're actually killing the service but like in
+33:48
+the in the normal sense it's actually bypassed and many people do not monitor those things so that
+33:55
+i i highly suggest like one thing you should do is you should look at your admin utility for
+33:59
+your antivirus like sometimes it's not documented or it's hidden in the documentation you should
+34:04
+look into your in like installation folder of the antivirus look up those binaries and try to figure
+34:11
+out some command line flags that can be abused like that is very very like an easy way but it's a very
+34:18
+effective way because at the end of the day if i want to stop your antivirus uh and i know your
+34:24
+admin like do that regularly sometimes i just use that i will not use some sophisticated i don't
+34:31
+know process injection whatever to achieve that so that's something to keep in mind outside
+34:38
+yeah even if right now a lot of edr products have basically the tokens or passwords
+34:46
+enabled by defaults and those strings can only be taken from the management console us so
+34:53
+um in those cases actually uh you need to have management console access to actually be able to
+35:00
+use sub-de uh process however um also we we should also consider that basically describe the
+35:08
+based on the comments obviously uh it was developed since the 2020 so obviously it will have also
+35:15
+a lot of features that are not uh useful anymore yes and to the point that uh nas is making here as well
+35:27
+we should consider that many environments would not have their right configuration on the edr's so
+35:36
+they might not have tampering enabled and it's going to be just as simple as maybe end
+35:45
+a process or stop a service or something like this although i have seen edr's that uh even with
+35:52
+tampering protection tampering protection and in quote enabled uh you could just stop the service
+36:00
+if you have system rights and that's very easy to get there's so many methods considering how
+36:08
+uh you know our own configuration and make sure that uh all hosts that we have in the aron them
+36:17
+are correctly configured under the right policy and are in detect or prevent mode or whatever
+36:26
+are policies i think that's very important make sure that if a host diverts from that
+36:33
+configuration that we have said we get notified most of the intrusions i see is because
+36:42
+teams are misconfiguring in the arts and we have a point of entry in the in the organization where
+36:49
+we didn't know about and we do not collect the telemetry for whatever reason and the edr sensor
+36:58
+is not configured according to our policy so we have an in his way in for threat actors to begin their
+37:05
+their intrusion from there bring all their tools into that host and nothing will be detected
+37:10
+yeah thank you very much for this everyone let's go towards the the end of this intrusion
+37:18
+unless someone wants to highlight something from mid mid intrusion i guess from days 4 to 13
+37:27
+yeah i think there's an important part of the report which basically the threat actors use a
+37:33
+lot of discovery tools so aside from like low beams which can easily be detected like you know
+37:39
+the ibeconfig netview nlts whatever they've also deployed a sharefinder which we had like a
+37:46
+separate report for that uh few years ago they've also deployed a zip belt which is like an
+37:53
+open source tool that to to perform host survey for for those kind of safety checks um we've also
+37:59
+seen that this threat actor use uh okla like the the the speed test um binary uh just to do their
+38:07
+mean the the the speed of of how how speed or how fast they can upload or download um the file is
+38:15
+that they're planning to do there's also bloodhound um that was uh that was observed on on the
+38:21
+the main controller on the third and fifth day uh then there's uh the the net scan was also used
+38:27
+which is also one of the favorite tool kits by by these ransomware gangs and then in the e-crimes or
+38:34
+whatever you call it and um there's also a define so almost all most of the ransomware reports
+38:41
+that you have there's always a defined whether it's the executable version or the batch uh
+38:45
+much file version uh there's there's always something like like that and the nbd scan so
+38:51
+those are the combinations of multiple tooltool kits that was used during the discovery uh
+38:56
+the face of this attack thank you ransom and all these tools they just brought into the
+39:06
+environment uh as binaries yes um there there was uh um i think there was uh we've seen some logs
+39:16
+where the the bloodhound itself was was there um the binary of the the okla uh was still noted as well
+39:24
+i think there was some uh injected module within cobalt strike and then from cobalt strike they run
+39:29
+this specific tool um through memories scan that i think angel angel maybe correct me if i run that
+39:37
+no no no that's correct basically also uh the executables were dropped through the AWS
+39:43
+collector file very interesting they brought everything in and uh if you just had a navy installed
+39:51
+it would probably have caught half of them this is how easy it could be uh to prevent something but
+40:00
+as we discussed misconfigurations happened and we have to have a different security control in
+40:06
+place to detect it in later stages of the intuition and also uh i just i just i just want i just want
+40:13
+to add which something interesting i've noticed it's it's not very common but i noticed and i
+40:18
+believe threat actors like i don't have proof so don't quote me on that but i believe
+40:23
+on threat actors like yeah some threat actors actually uses these tools uh with the knowledge that
+40:30
+the anti-virus exists just because some of these tools actually are crossing the lines between the
+40:35
+admin side and the malicious side and by having that i i've sampled onto environments where
+40:42
+like bloodhound was added as an exclusion to one hope randomly because somebody decided and he
+40:49
+got approval for it and he used it to actually scan it in defensive mode to determine stuff and
+40:56
+and our clone and all of these things like sometimes they they trigger the anti-virus but they are
+41:04
+allowed or they are ignored because they trigger the anti-virus more often and the threat actors
+41:09
+also play on this code meaning that they think that uh mixing those alerts into normal alerts because
+41:17
+if everything is medium or to end quote we're using global bin if everything is medium the analyst
+41:23
+might like doesn't necessarily have a good framework sometimes to uh evaluate all the alerts if
+41:30
+they are all medium like depending on what you use you're probably looking at the alerts from top
+41:35
+to bottom and with the correct uh like uh timing you're actually in the middle of 17 alerts so you're
+41:43
+already like uh ahead of uh of the analyst and that's something like i believe threat actors at
+41:49
+least try to to use or they they they notice that more often i believe many of us have been in that
+41:58
+place where we have uh detection on alert fatigue by uh being an analyst and having to deal with
+42:05
+all these false positives that you see sometimes you're late on your shift and you just
+42:12
+very tired and you're just missing things you know um i know how this could feel so
+42:20
+yeah absolutely i agree with nasi and uh another thing is yeah there have been cases where
+42:27
+these tools have been used just as a testing method to test the protection so collect some
+42:34
+information from users and uh you could be considered benign by by some people so that brings
+42:43
+into the topic of like how how good the policy was when you're allowing a certain tools like
+42:49
+let's say okay you're gonna use that tool for specific timeframes so when that approval or
+42:55
+widely seen gonna expire because at the end of the day sometimes they you just tend to forget that
+42:59
+and then when the threat after kicks in then oh the bloodhound was allowed all right let me
+43:04
+leverage that because no one will detect me no everyone knows that it was allowed at some point
+43:10
+and they're still there so i think i've seen that on my very recent case where um it's it's it's
+43:17
+completely not part of this uh this this case but there was an atera involved like on one of the
+43:22
+R&M tools that we've know of a terror was involved and then suddenly the threat after initial access
+43:27
+vector was to to buy an atera login and when when we tried to look into the policy of that of the
+43:34
+client we saw that it was allowed by default and they just whitestit so there's really no alerts
+43:40
+coming in but if you look into the the R&M uh mechanics of that like if you get if you get
+43:46
+enough to the console you can just literally do whatever you want because you can launch a power
+43:51
+shell you can launch a command line so it's like a legitimate back door within your enterprise
+43:57
+so i think just the policy thing on okay you need an access to that okay so super sort of
+44:02
+approvals and uh the time frame where it needs to expire is also very important yeah and here we
+44:09
+are talking about binary malicious binaries and open source tools where protocols are using to get
+44:16
+access or do collect information from hosts and things like that and uh we are not even considering
+44:25
+at least for this report the use of R&M tools imagine if organizations are not able to defend
+44:32
+themselves against malicious binaries in that way that are brought to the environment and execute
+44:40
+it manually by the threat actors imagine how difficulty will be for an organization to
+44:46
+defend against an R&M tool um especially if you don't have certain policies within your
+44:54
+environment and you're allowing your users to use whatever R&M solution they want to access
+45:00
+their host um the workstation that becomes very very difficult and this is this is why threat actors
+45:10
+still are successful at you know infiltrating in organizations even with uh a more robust security
+45:18
+solutions everything starts with the baseline and makes sure the policies that you have are
+45:24
+enforced otherwise it will just be very difficult to defend against low level threat actors like
+45:30
+these ones that just want to deploy ransomware and uh still information from your organizations
+45:36
+because they can just use an R&M tool and that would be even 10 times more difficult to detect
+45:43
+than what we see in this case thank you very much R&M and uh lastly maybe maybe we can talk a
+45:50
+little bit about the ransomware now that we are in this topic and close up after that because uh
+45:58
+we have already talked too much and we can stay and talk about those things forever but i'm just
+46:03
+thinking about the listeners i don't know who is still with us in this but uh i don't really
+46:09
+mind because i just want to talk with you guys uh talk about those topics they are very interesting
+46:16
+and just have it start and if uh we can do a trick we can say right now if you're listening right
+46:24
+now to this minute we toss at the different one and we'll see how it usually gets the classic
+46:29
+phrase where we're around like 40 50's minute um so if you're still listening just say
+46:38
+hey i listened to that time hopefully you won't be the only one but regardless this these
+46:44
+these stocks are very interesting and i'm just allowed to have you have them with you guys
+46:49
+and maybe we can go into the ransomware execution how did that happen was it uh i believe uh
+46:56
+Angela said using the AWS collector script but was that deployed on every single workstation
+47:03
+and run by the threat actor by different mean or um how did that uh how did their ransomware uh
+47:11
+deploy uh so basically after the threat actor again access to uh domain have been uh user
+47:18
+uh on the last day um of the intrusion uh they accessed uh domain controller uh when
+47:25
+they loaded uh in memory the AWS collector file and then they imported one of the multiple functions
+47:32
+that were available specifically the locker one um so basically in uh this function you can specify
+47:40
+multiple uh attributes uh specifically uh you can specify the name of the DLL that obviously
+47:48
+or because the ransomware is executable where you will like to put the executable um and also
+47:56
+the name of a SIM defile that is basically used to stop the different services that are running
+48:03
+on the target system uh because obviously um you have also to uh delete the shadow copies and also
+48:10
+for example stop backup services uh before starting encryption um so basically they deployed through
+48:18
+if i remember correctly uh publisher remoting uh this um this cmd file that was uh executed before
+48:27
+the actual ransomware and then the uh DLL of the locker was deployed into all the uh system
+48:35
+infrastructure so basically every screen started from a domain controller
+48:41
+okay so they deployed on the domain controller and uh what uh what did you say at the end what was
+48:49
+uh transferred to the host yeah yeah exactly so basically they specified that they wanted to place
+48:57
+the um toggle locker DLL file under the program data Microsoft folder uh and basically they created
+49:05
+this DLL under um it's folder um obviously they abused the uh c dollar uh shared folder to
+49:15
+create this file into multiple systems and then uh they executed the DLL
+49:21
+that makes sense uh now do you have anything to add regarding this technique or anything interesting
+49:30
+you see uh related to the execution of the ransomware texture or anything related to that uh i
+49:37
+would like to add like something generic uh as long generic ideas yeah i would not speak
+49:43
+specifically on this but what i would what i would like like uh as usually like extract on these
+49:49
+different reports there are very very awesome in the sense that they provide a a look into how the
+49:56
+front actors operate and if you're a detection engineer well one of the best thing you can do when
+50:03
+looking at this report is instead of like looking specifically is looking at the methodology like
+50:09
+instead of them using arc loan what is arc loan or like them using file.io oh it's a file sharing
+50:15
+they using power shell so it's a scripting engine and it's it's a built in scripting engine why
+50:21
+did they like could they use w script well yeah and uh could they use like cmd but that's another
+50:27
+option and what like one of the one of the things taken to consideration is that you should
+50:34
+evaluate your uh risk appetite and of course your time and build on pawn those ideas like
+50:41
+today we saw arc loan and pw s c li next week or next month we might see a different thing
+50:49
+so when when you're detecting at a two level it becomes really a coverage game instead of a uh
+50:56
+at least an idea game the more you have coverage for these tools even though yes you could use an
+51:02
+API to query the recipe you can use this or for that but sometimes the level of telemetry will
+51:08
+depend on the on the host and yeah you could have the latest edr on 17 hosts but you could have like
+51:15
+only this security lock enabled with process creation on on the affected host and having this level
+51:21
+of coverage and uh like predicting the future if if we can say that is like we we spoke about rmms
+51:30
+determine what rm you use or what you can allow and look at other rmms and try to block them
+51:36
+look at what they like if you have the time yeah it's it's very tedious task but go beyond the
+51:42
+the report itself and uh in fact like analyze what the threat actor is actually trying to do like
+51:49
+in the exfiltration yet now we're going into the route of might are attacked through like
+51:55
+attack the versus the technique but it is actually very important especially if you do like a
+52:01
+detection at this level and i believe most people if you don't have time to spend on reverse
+52:06
+engineering things and you're not like a dedicated analyst and you're only looking at
+52:11
+like the maximum amount of time of looking at something is maybe one hour two hours
+52:17
+you need to extrapolate on that and try to expand your horizons i would say yeah that's
+52:24
+that's very true and i'm with you where you have to look into the tactic uh and the technique
+52:31
+that the attackers are using because if you just focus on the tool you're just uh chasing your
+52:38
+tail we will keep playing this cut in mouse game and it will never end but maybe looking to the
+52:45
+number of fights that have been uh uploaded to a certain destination uh related to one of those
+52:53
+services like file or or mega for example and see if you can have this type of telemetry and if
+53:01
+you do maybe you want to detect any connection that is lasting more than 30 minutes let's say for
+53:10
+large files i don't know i'm just i'm just guessing here i don't know uh what didn't
+53:16
+connections your organization's using but uh or maybe you can look into the the amount of data
+53:24
+that are uh being uploaded to that service maybe you want to detect something over 50 megabyte
+53:31
+one one one hundred megabytes uh even even if you have it in your policy that they shouldn't be
+53:37
+using users shouldn't be using this type of online services to upload data uh but they do anyway
+53:45
+maybe this is a good way of uh compromise to detect it please the species behavior um and that's
+53:52
+not to say that you won't miss things but we all have to start from somewhere and try to baseline
+53:59
+some of the basics that we see from threat actors here and maybe we can do better next day but uh
+54:06
+everything starts from somewhere and uh those are just some detection ideas that people can
+54:12
+incorporate you can't just you know uh plug and play what i'm just uh trying to describe here but
+54:20
+at least you can get some ideas on how to approach this uh thank you very much nas yes that's very
+54:26
+very good point and ransom any final thoughts before we close
+54:31
+well last issue that i wanted to add uh before we close this um podcast is the is the people who
+54:38
+still keeps on saving uh clear text credentials into a text file or into sv file uh we've seen
+54:44
+that here where the threat after tries to look into those passwords via a notepad and then just
+54:50
+leverage it so you'll be surprised how many organizations large small organizations and their network
+54:57
+engineers their systems addings and even sometimes security professionals and even developers are keep
+55:03
+always keep in saving those passwords credentials or tokens into a notepad so that's the one thing
+55:10
+that i'd like to just highlight right now before we close this because it's uh it's you know it's
+55:17
+it's been a while since since we tackled this and but up until now we still keep on um saying this
+55:22
+because it's just a matter of one liner power show script that attacker needs to do to the right
+55:29
+or just to run uh for them to just collect all of this and then um zip it into a file and then
+55:35
+just use it as an unofficial reference so just take note of for the public there
+55:41
+yes stop using password.dxt and saving it to download sort of desktop that's not a good way to do
+55:49
+things use password monitors um but yeah thank you very much friends and uh i think it's time
+55:57
+here to to close this podcast thank you very much everyone for being here uh the two analysts for
+56:05
+the amazing report and the instance that you provided through the report thank you very much
+56:10
+and uh nas thank you very much for being here with us uh we have we have we have you again in the
+56:17
+future uh and we'll be hopefully i will be i will i will be available i will make myself available
+56:25
+i love this kind of discussion so thank you very much nas and thank you everyone for listening
+56:31
+and uh we hope to see you again on the next one thanks guys thank you guys

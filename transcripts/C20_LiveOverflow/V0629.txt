@@ -1,1 +1,368 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+In the previous video, I showcased a proof of concept route exploit against Serenity OS,
+0:05
+a bit of an obscure operating system. But at the end of that video, I shared a few thoughts
+0:11
+why I think looking into Serenity OS and this particular exploit is not a waste of your time,
+0:17
+and I want to expand on this with this video.
+0:21
+To prove a point, I want to give you an example of how the Serenity OS kernel and the Linux kernel
+0:33
+relate to each other. And we do that by looking at P-trace. P-trace is a syscall that basically
+0:39
+implements the features for debugging another process. GDB that new debugger obviously uses P-trace
+0:46
+so you can interact with another process. Specifically, you can call P-trace P-tatt to attach a
+0:52
+debugger or tracer to a process. With PTP, you can read memory from a target process. With PTP
+0:59
+Pogue, you can write memory. And with P-trace single step, you can single step in a process.
+1:05
+As I mentioned, it's the syscall to implement typical debug features like in GDB.
+1:10
+Now that you know what P-trace does, let's compare the P-trace syscall source code
+1:15
+of Linux and Serenity. In the excellent Linux source code code browser,
+1:19
+Alex here, we can search for P-trace and then look out for a file that looks promising.
+1:25
+You could click through some of the other files, but this one looks most likely.
+1:29
+A kernel P-trace.c file. Alright, now let's go find the P-trace implementation in Serenity OS.
+1:35
+Just FYI, I'm here on the commit where the vulnerability was still present,
+1:40
+so code might have changed in the latest version. Here we simply search for P-trace,
+1:45
+and it turns out in the folder kernel, there is a P-trace.cpp file, but there's also a kernel
+1:51
+syscall P-trace.cpp file. So let's look at the letter first. And here we can find a very short
+1:57
+function, sysP-trace, which very quickly calls P-trace handle syscall. When we now check out the
+2:03
+other P-trace.cpp file, we can actually find that handle function. So here seems to be the
+2:09
+actual implementation of P-trace. Now let's compare Linux and Serenity OS.
+2:14
+Linux's implementation starts by checking if the request parameter is P-trace traceme,
+2:21
+and Serenity also has a check of P-traceme. But OMG, why the Hector Serenity OS have another
+2:30
+underscore here? I think I changed my mind about Serenity. It's literally unusable. Serenity's
+2:38
+garbage. Just kidding, but you can see the code is similar, but different. On Linux, in this case,
+2:44
+it calls P-trace trace, and if that doesn't return successfully, it will call Arge P-trace
+2:51
+attach instead. Otherwise, it will return via this go tool. And this function P-trace traceme
+2:57
+has a check if we are currently being traced. And Serenity has that check too. If the current
+3:04
+process has a trace saw already attached, we return E-bizzy. Though it looks like Linux returns E-perm,
+3:11
+so a permission error. And the Linux man page also says that E-perm might be returned if the
+3:16
+process is already being traced. So you can see slightly different implementation of the
+3:22
+basically same thing. Now, if we look further in the code, we see that in Serenity OS, we start to
+3:28
+have various checks. For example, it ensures that the requested P-trace process ID is not the idea
+3:34
+of the currently calling process. Or it also has the set UID check to prevent you from tracing a
+3:39
+root program. And here it ensures that the requested process is already traced and traced by our
+3:45
+calling process, meaning that our calling process called PT attached before. And here's the
+3:50
+Linux equivalent. Linux calls this function P-trace check attach, where checks if the requested
+3:56
+child to attach to is already being traced. And if our current process is the parent of the
+4:01
+Tracy, totally similar. But let's go on with the Linux code of the P-trace call, because we
+4:07
+eventually call an architecture specific P-trace implementation. When we click on it and look for
+4:13
+references, we see that there is an x86, so introversion, there's an ARM version, and tons of other
+4:20
+processor architectures. That's the mess you have to deal with Linux. Linux supports so many
+4:26
+different architectures, and the lower level you get, the more architecture specific code you need
+4:31
+to implement. Serenity does not support different architectures, but that also makes it so much
+4:38
+easier to read for educational purposes. Now let's look into the Linux x86 version. Here can see
+4:45
+a big switch case statement that checks which P-trace functionality you want. Pretty much the same
+4:51
+way how Serenity has here a switch case statement. I mean, I think I showed enough. We could go on
+4:58
+and on comparing their code. As you can see, the code looks different. The way stuff is implemented
+5:04
+is different, but it's essentially the same functionality. So I believe if you understand Serenity
+5:12
+operating system internals, you will also understand Linux internals, or at least will understand
+5:19
+much quicker, because you already can imagine how something could be implemented. And knowing
+5:25
+how something could be implemented is an extremely powerful skill when doing hacking or research.
+5:32
+That's why I always recommend learning to program or reading code, so Serenity OS is not a wasted
+5:38
+time. Serenity OS is an amazing learning resource and you can have so much fun playing and poking
+5:45
+around the kernel sources. And please, never think that that toy project is a waste of time. You can
+5:51
+grow your skills massively, being involved in something like this. And so what do we do now?
+5:57
+We look into the Serenity OS kernel source code to understand better the exploit we looked at
+6:02
+in the previous video. So this HXP wisdom to exploit from the original challenge author abused a
+6:09
+race condition where an unprivileged process could actually modify the code of a set UID binary
+6:15
+in memory. But it's a race condition, so to have a successful exploit, this was only possible
+6:21
+within a small window of time, just when the new process was loaded. To understand the root cause
+6:27
+of the vulnerability, we have to look into the kernel code of the P-trace and execveesyscall.
+6:33
+P-trace was used to write into the other processes memory, and execvee was used to load the victim
+6:39
+set UID binary. Okay, so you already saw a bit of the P-trace code before, but let's look at it
+6:45
+again because last time the purpose was just to compare it to Linux. Now we read the code with
+6:51
+the purpose to understand the vulnerability. So when you read code, you might want to read it
+6:57
+differently depending on your goal. Sometimes you can ignore parts if they are irrelevant to your
+7:02
+goal. Anyway, when you start reading here, you might find something very important near the start
+7:06
+of this function. It checks if the target process is a set UID process. And if that's the case,
+7:12
+this is called returns within access error. This is interesting because this looks safe. This looks
+7:19
+like it should prevent anybody from using P-trace to change the memory of a set UID binary.
+7:25
+So I guess we should check the second part. How does execvee execute a set UID program?
+7:31
+Because P-trace had its own file, maybe execvee has two, so we can use GitHub's go-to file feature
+7:36
+to search for execvee and we can find the execvee.cpp file in kernel syscalls. Cool.
+7:43
+In there, we can find a function that has a similar pattern like the P-trace syscalls function.
+7:47
+Here's a sys$execvee function. As I mentioned, I'm reading this code with the purpose of
+7:53
+understanding the vulnerability. So right now, I'm just skimming over the code looking for any
+7:58
+serious important function call related to this. We seem to copy around a lot of the parameters used
+8:04
+for execvee but nothing more. And at the end, we see a call to the function exec. Let's follow that.
+8:09
+Here it is. First, we seem to open the program we try to execute and then we check if we try to
+8:14
+execute a shell script with a shebang at the start or if we have an actual elf binary.
+8:18
+In the case of our exploit where we executed the set UID binary past WD, we should be in here.
+8:25
+And this seems to eventually call do exec. Follow that as well. I'm still just skimming the code
+8:32
+here. Not really reading it. I'm kind of just looking out for a function call that could be
+8:36
+important or related to the vulnerability. And all of that sounds uninteresting. Like, we don't
+8:41
+really care about the absolute path of the binary or the stack size or if profiling was enabled.
+8:47
+But eventually, we can find here a function load. With this related error message, do exec
+8:52
+fail to load main program or interpreter. So this seems to load the binary to execute. And that
+8:59
+sounds like one of the important functions we do care about. Hmm. Keep that load function in mind.
+9:05
+If we skim more of the code, we see here that the effective UID and effective group ID is modified.
+9:12
+Those variables are prefixed with M to indicate they are member variables of the current process
+9:18
+object. So the currently running process that called exec.be. And now here we check if the new
+9:23
+program is a set UID program and then we change the effective UID accordingly. Setting it to root,
+9:29
+and that's it. Do you notice the vulnerability here? If not, pause the video and think about this
+9:35
+code for a moment. Three, two, one. Okay. We loaded the new program into memory. And then afterwards,
+9:43
+we changed the effective UID of the process. Remember how Ptrace checks if you are allowed to
+9:49
+modify the memory of a process. It checks the effective UID to prevent tracing of set UID
+9:55
+but the new program was already loaded before the effective UID was updated. So here is the
+10:02
+race condition. If we can Ptrace and modify the memory, write malicious shell code into it,
+10:08
+right after the set UID binary is loaded, but before we update the EUID, then it would work.
+10:15
+Now that we identified the potential vulnerability, we can think about a strategy to exploit it.
+10:20
+And because it looks like a race condition, which means it might be unreliable as it has to happen
+10:26
+in a small window, we could try to find a way to increase the time window. So let's go hunting.
+10:32
+Basically now you want to actually look at every single code line and function that is executed
+10:38
+in this window. And think about ways to make that code run slower. Typical strategies are,
+10:44
+of course, things such as loops. If you can make a loop have more iterations, you will have a
+10:50
+longer time window and look at this line here. Unveiled paths dot clear. Unveiled paths is also a
+10:57
+member variable so we can check the process.h header file to figure out the type and it is a vector
+11:03
+of unveiled path objects. And vector is a standard C++ class and so we can look up some information
+11:09
+about the clear method. And according to the C++ reference, the complexity is linear to the size.
+11:16
+So the amount of elements in that vector list. Complexity refers to the time complexity.
+11:22
+So the clear function runs longer. The more elements are in the list, which means we might have
+11:28
+found a great candidate to slow down the race condition window. And do you remember the cliff hanger
+11:34
+from last video? Remember the tens of thousands of paths that were unveiled by the exploit code?
+11:39
+Now you know why we wanted to make the size of this vector super large so that the code runs
+11:46
+longer. Cool. Now we understood the vulnerability. What could we do next? Should we try to find a
+11:54
+similar vulnerability? Maybe there's another race condition. And actually when I read over this code,
+11:59
+I noticed this year. Kill threads except self. As you know, when we call executee to execute the
+12:06
+set UID binary, our process is of course running. So our threads are still running. And I thought,
+12:12
+hold on a minute. Kill threads except self. If we kill all threads after we loaded the binary,
+12:19
+could we create a similar exploit? Instead of using Ptrace to override the newly loaded code,
+12:25
+we just write the memory from another thread running in parallel. I got super excited. I thought,
+12:30
+now I'm also a cool hacker who can find a kernel exploit. But my joy was short. I eventually saw
+12:37
+the code right before the load where it says, mark this thread as the current thread that does exit.
+12:43
+Crap. But on the other hand, I wasn't sure why this would prevent other threads from running.
+12:48
+I haven't looked into the scheduler code of serenity as so I don't know why this should prevent it.
+12:54
+So we have a choice now how to deal with this uncertainty. First, we can just believe this comment
+13:00
+or two, we can try to read the scheduler code or three, we could do a small experiment.
+13:08
+Because I'm not super good in reading and understanding low level code like the scheduler,
+13:12
+and I wanted to believe I could find the vulnerability, I decided to do an experiment.
+13:17
+That's greater hacks.cpp program for that, which I placed into the user land folder. Here's
+13:22
+a minimal main method, simply printing a string. By the way, I have set up serenity or as development
+13:27
+environment in a Ubuntu VM to start serenity and then run my program. I simply call the ninja or
+13:33
+make commands to build serenity. And just a moment later, a chemo window will open, booting serenity
+13:39
+and give us a shell. And now we can execute hacks. Cool. So I want to figure out if a thread can still
+13:47
+be scheduled after the load of the new binary. And we can detect that kind of the same way how
+13:52
+they exploited it. By simply writing a Sentinel value to the entry point and then keep checking
+13:58
+that value. So how do we create the thread? I don't remember. So I Google see create thread.
+14:04
+I found a website which said the function is pthreadcreate, which I hope serenity also has.
+14:11
+Because I like copying pasting code, I simply search for the serenity sources of other user land
+14:16
+programs using it. And with that code inspiration, I wrote my own test. Here it is. And please excuse
+14:22
+my agreed code. First, I fork into a child and parent. The child gets the process idea of the
+14:28
+parent attaches to the parent, changes the entry address to a Sentinel value and then detaches again.
+14:34
+It's just there to modify the entry point. The reason why I have to use pthreads to change that
+14:39
+memory instead of just writing it directly is that the entry point is mapped, read and execute only.
+14:46
+Not writable. And I can't call mprotect on this memory area to change the permission and make
+14:51
+it writable because the mprotects call only works on memory ranges that were previously
+14:56
+M-MET and not just loaded through the alpha loader. At least that's how I understood the code.
+15:02
+Figuring this out was frustrating and took me hours reading more kernel code.
+15:08
+Kids, read more kernel code. It's fun. Anyway, the parent then creates a thread and simply reads
+15:14
+the value of the entry point in a loop, while the main thread of the parent simply execs VE's
+15:19
+is set UID binary. Here is how it looks like when executing. This is the original value at the
+15:24
+entry point, then we pthreads from the child and change it to 4141 for one, and then we have the
+15:30
+thread just reading that value all the time and we exec in parallel. If my idea for an attack would
+15:36
+work and the scheduler would still schedule this thread, then we might read the new loaded entry point
+15:44
+again. And to artificially help my experiment, I added a few user loops right into the kernel
+15:49
+code where I expected the race condition. Of course, on a real target kernel, this wouldn't be
+15:55
+the case, but just to confirm that this race condition could work, we can do that. But no matter
+16:01
+how often I execute this test, even with an extreme slowdown from my modified kernel, it never works.
+16:08
+I did run into several pagefold errors, which I can't explain, but the experiment failed.
+16:14
+Though I would still like to understand why this one line works, why does this block threads from
+16:20
+executing? And so I use a secret option for the cheat code, asking Andreas Kling the developer
+16:29
+directly. Why does this scheduler not execute this thread anymore? So the exact date is the
+16:37
+thread ID of a thread in the current process that is attempting to perform an exec. And we use that
+16:45
+to prevent any other threads from the same process from getting scheduled by the kernel while an
+16:51
+exec is in progress. Because if we were to schedule any other thread in this process, after we have
+16:58
+started messing with the memory layout of this process, then that other thread was going to get
+17:03
+very, very confused when its code is not where it's supposed to be. So the mechanism is very simple.
+17:10
+When we enter into exec here, we simply assign the current thread ID to mexected. And then the
+17:18
+scheduler, whenever it's picking which thread to schedule next, if the process of the candidate thread
+17:26
+has an exacted set, then we will not schedule any other thread in that process except the
+17:34
+exacted thread. We look through the list of threads that are candidates for execution. And we skip
+17:43
+over any threads that are not the exacted thread in a process that has an exacted. I hope that
+17:52
+makes sense. Oh, okay, this was pretty easy. To be honest, I was kind of scared of reading the
+17:57
+scheduler code myself that sounded super complex to me, but I think Andreas just showed again how
+18:03
+readable serenity OS kernel code is. I'm a huge fan of reading source code to understand systems
+18:08
+better, but the Linux kernel code can be very complicated, especially when you have never done
+18:14
+it before. This C++ code and low-level CPU stuff is not easy for beginners either, but
+18:20
+easier than Linux. And learning and reading code is always a very slow progression,
+18:25
+so don't be scared to read code and don't worry if you don't understand it. You can always come
+18:31
+back to it in a few months and maybe you learned enough to give it another go. Nobody's learning
+18:36
+this stuff over a weekend. Anyway, I thought that this was interesting and I hope you do too.

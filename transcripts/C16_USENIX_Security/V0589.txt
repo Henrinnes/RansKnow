@@ -1,1 +1,230 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hello everyone, my name is Hyping and I perform the Buddha and by dance.
+0:25
+This is the original authors, they cannot attend in person due to the visa and illness,
+0:31
+so I will give the talk on their behalf.
+0:34
+It's my great pleasure to present today.
+0:37
+The title of our work is Skyjuling, a way of buffer management,
+0:43
+Skaengma designed for the HBM based hybrid package buffer in modern high-speed router.
+0:52
+Let me start with a brief background on the HBM.
+0:56
+The HBM is a 3D stack DRAM architecture that delivers the massive bandwidth with low power and compact form factor.
+1:08
+At 400 GPS and beyond, S-RAM along is not enough for the modern routers,
+1:16
+with S-RAM with HBM, which is a first on-chaped storage plus a large off-trip capacity.
+1:24
+This is now the dominant trend in the industry.
+1:28
+However, the HBM doesn't deliver the pink bandwidth automatically.
+1:35
+It is highly sensitive to the access pattern.
+1:38
+On a Samsung HBM 2E chip, we have tests that reading one megabets can vary by 583 times between the best and worst patterns.
+1:51
+Even with the relic's capacity access, we can't get only about one nice of the pink bandwidth.
+1:59
+We have summarized that two simple routes to fully employ the HBM bandwidth.
+2:05
+First, especially, that's a set should be targeted to continuous address and distributed across the Psyco channels and byte groups to optimize the activation and project overhead.
+2:22
+Second is the temporary. The same type operations should be performed continuously that's patching the read and writes together to minimize the buzz to around panit.
+2:36
+Now, how is the HBM used inside the router today?
+2:41
+In the commercial designs, the buffer measurements will place each package either on-chap or off-chaped.
+2:49
+The default spillover only hybrid Bm will keep the package on shape whenever possible and split to the HBM only under the congestion happened.
+3:01
+But does this satisfy the spatial and temporal continuity on HBM?
+3:08
+As we will see in the next answer is no.
+3:12
+Let's work through a very concrete example. Consider a single output port with three flows, the blue, yellow and green.
+3:23
+The scheduler policy is the blue has the streak priority over the yellow and green. Yellow and green will equally share the remaining bandwidth.
+3:33
+So, we start with an empty buffer and the package will begin to arrive.
+3:38
+As the traffic buildup, once a field screens exact the threshold and its substring package will deliver it to the off-chaped HBM.
+3:50
+And more packets will keep arriving and HBM will keep absorbing the overflow.
+3:57
+To sustain the high right spend wise, the packets are written to the consistent adjust in the river order and we can instead group them by green.
+4:09
+But that will work on the spatial continuity on the right side.
+4:15
+And now we move to the scheduling phase where the packets will begin to depart.
+4:20
+And since the blue has the streak priority, so the scheduling will dry all blue packets first.
+4:28
+After the on-chaped blue packets are gone and the scheduler will still need to fetch the later blue packets, that is the packet 7, 8, 9 and then they will still sitting in the HBM.
+4:42
+From the HBM-exex backtiff, the first read will go to the address 0 and to fetch a blue packets.
+4:51
+But the next packets to depart is as the address of 5, not adjust to the 0.
+4:57
+Just to read in and the spatial continuity is already broken.
+5:02
+Meanwhile, the router never stopped receiving the packets and a new packet arrives because its queen is already above the 0.
+5:11
+It must be written to the HBM.
+5:15
+So in our example, this turns to a right and adjust 0.
+5:20
+And here we got a right sandwich between the two reads.
+5:25
+So now the temporal continuity is already broken.
+5:29
+And stepping back, why does this happen?
+5:33
+Because the two fundamental reasons here, first the arrival order doesn't equal to the departure order.
+5:41
+Optimizing the layout for the continuous rights will make the read scattered.
+5:46
+And also the second read and rights interleaving is unavoidable.
+5:53
+A router will always receive and transmits at the same time.
+5:57
+So the HBM bus will continuously switch direction and pay the penalties.
+6:03
+As a result, the HBM bandwidth in a real router will fall far below the spec sheet.
+6:10
+And this brings us to the core idea of the work.
+6:15
+Our key insight is the buffer management should fetch the packets with similar scheduling priority.
+6:23
+That is to say, the packets that will depart closely together in time and ensure they can read and write together.
+6:33
+But to make scheduling a well decision, the buffer manager first needs a unified way to express the scheduling priority.
+6:42
+For that, we use a P4 model for which we come from the CCOM 2016.
+6:49
+In P4, every packet is a number of rank.
+6:53
+And the packets will always depart in the order of increasing rank.
+6:58
+By changing the rank competition function, the P4 can express many policy.
+7:05
+So as we know, the rank is a single and generally purpose value, which captures when a packet will depart.
+7:14
+And we will use it as the bridge between the schedule and the buffer management.
+7:20
+We name the word as, that means, that means, maintain a single global record, the smallest rank concurrently in the HBM.
+7:31
+So now, when a new packet will compare the rank against this record, a smaller one will go to the S1 and the larger one will go to the HBM.
+7:42
+And all HBM access happen in batch, which can communicate it in a very small batch size buffer.
+7:51
+Batch size is the smallest amount of continuous data that need to fully utilize the HPM bandwidth.
+7:59
+And for Samsung, HBM2E, this will give a batch size of around 16 K bytes.
+8:07
+Let's work through the admission.
+8:11
+Now, the minimal HBM rank, our record is supposed to 71, a new packet arrived with rank 6.
+8:20
+Since the 6 is less than the record 71, and this packet is admitted on shape into S1.
+8:28
+Now, another packet arrives, and this time with rank 101, 100, a one is greater than the 71.
+8:37
+So this packet is designated to the HBM.
+8:41
+But we do not write it immediately.
+8:45
+We will put it in the small batch size buffer, which can see as a cache.
+8:52
+More packets in the same rank arrive, 102 and 103, and we will communicate it in the batch size buffer.
+9:01
+And whilst the batch is full, we will write all of these packets to the HBM in a single batch and continues right.
+9:09
+So admission is rank-based, small rank will go in own shape, and larger ranks will communicate and go off-chaped in batch.
+9:19
+That means we will also introduce a new primitive swap-outs.
+9:25
+As more packets are admitted to S1, the equipment grows to keep the room for future hyper-arty arrivals,
+9:33
+we define a swap-out word mark on S1.
+9:37
+Once the accuracy calls this word mark, and we will try and go a swap-out.
+9:43
+We pick up a batch size number of packets with the largest ranks counted in the S1.
+9:50
+That is the least urgent one, and batch writes them to the HBM.
+9:56
+And that means also introduce another primitive, the swap-in during the conjunction drawing, as one will gradually be being empty,
+10:05
+and to provide the scheduler from storing on HBM later, we will define a swap-in word mark.
+10:12
+Once the S1 is full, we will proactively bring the packets back from the HBM.
+10:20
+And we pick the HBM batch with the smallest repetitive rank, the most urgent batch, and write it back to the S1 as a single continuous batch rate.
+10:32
+Together, admission swap-outs, swap-in will continuously reshape the layouts so that the most urgent packets will sit on shape, and the HBM will always accept in clean and tenuous batch.
+10:46
+Now let's revisit the three-float scenario from the motivation.
+10:51
+But this time on the STEMEs, notice that the numbers on the packets are now the ranks and not the rival orders, and the blue, the hyper-arty flow will get the small ranks yellow and green will get the larger interlived ranks.
+11:09
+And a new packets with ranks is arrived, the HBM will still empty so that the record is infinity, and the packets is admitted to S1.
+11:20
+Then more packets will keep arriving with various ranks, as the S1 fills up and across the swap-outs with the mark, we will try anger the swap-out.
+11:31
+STEMEs identifies the packets with the largest ranks currently in S1, and we write them out as a single continuous HBM batch.
+11:42
+Now a new packet with rank 100 and 10 arrives, since the 100 and 10 is greater than the record 109, this packet is correctly directed to the HBM.
+11:55
+And another low priority packets, which is the 113, arrives, same decision, run 115, also the same decision.
+12:07
+And the batch size buffer fills up and is flushed to the HBM as a batch, and the low rank packets is admitted directly to the S1.
+12:17
+As you can see, rank 8 will land directly in the S1.
+12:22
+Now the departure begins, the scheduler will join packets from S1 in the rank order, and because all the small rank packets are in the S1, every decrease happened as the S1 speed.
+12:36
+As S1 joins, the occupier will forth below the swap-in-what mark, and STEMEs will try a swap-in, we identify the batch in the HBM with the smallest representative rank, and bring it back continuously.
+12:55
+And the end result, throughout the entire run, all the HBM access at batch continues in address, and grouped by the operation tab, perfect spatial and temporal continuity.
+13:09
+And to summarize, STEMEs use the rank-based admission to ensure that each packet goes into the right place, the high priority on chip and low priority off-chip.
+13:22
+Dynamic swapping and swipe-out that's preserved the property as the buffer states inverse.
+13:29
+At the same time, this buffer management pattern will naturally consolidate the HBM access into batch, and unlocking the HBM's full performance.
+13:40
+And STEMEs is not just a paper design, we also build a full hardware implementation.
+13:47
+We perform the simulation, use the OS3 and run the prototype test in the FPGA and ASIC.
+13:56
+The simulation was set up to evaluate the packet's loss on chip-de-creen history, link utilization, and HBM throughput at the single-point level, as well as the flow competition temp and the large-scale level.
+14:11
+Meanwhile, the port app test also done to verify the timing and measure the result conception on FPGA and ASIC.
+14:21
+And the left figure shows HBM's throughput, STEMEs reach up to the 790 GPS, while the baseline stays around 650, thanks to the batched continuous access of STEMEs.
+14:37
+And this translates directly into the link utilization. As shown in on the right, the STEMEs will stay near 100%, while the baseline will drop to the 50% to 70% at high load.
+14:52
+And two more single-point metric, the left figure shows the packet loss rate, STEMEs reduce the job by 18 to 90% compared with the strongest baseline, with the gap widening at high load.
+15:06
+And the right figures show on chip-de-creen history, STEMEs achieve up to around two times to the history of the baseline, because it admits and is wiping based on the rank.
+15:21
+Now the micro-view, the left figure shows around FCT, STEMEs is the lowest, of course, the full load range.
+15:30
+The right figure shows the 99% FCT for the smallest flows, and baseline is the tail inflation under the high load, while STEMEs still nearly flayed, reducing the 99% FCT by up to around two times compared with the strongest base.
+15:50
+And finally, about the hardware cost, compared with a baseline that used a BBQ scheduler plus the ready hybrid buffer management, STEMEs have only 134 LUTs and 88 flip flops on the FPGA.
+16:12
+And on the SXI, the additional area is around 0.2 mm, thanks to the BMSCH unified model, which gets all the benefits of scheduling a well buffer management.
+16:29
+In conclusion, STEMEs is a hybrid buffer management schema that's employed at HBM access pattern for scheduling a well-developed package buffering, which can improve the own chip-de-creen history, link utilization and flow competition time.
+16:49
+Since I just present the paper for the authors, so if you have further questions, I think maybe you can reach out to the original authors for the discussion, or I can forward your questions to them.
+17:08
+Thank you.
+17:19
+You

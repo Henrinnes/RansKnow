@@ -1,1 +1,1084 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+OK, so hello, everyone.
+0:01
+Thank you for joining us today.
+0:02
+Welcome to our talk, Beat Locker,
+0:04
+leveraging Windows Recovery to extract Beat Locker secrets.
+0:14
+Can you hear me?
+0:15
+Let's go.
+0:17
+Today we'll take you inside our journey
+0:18
+of attacking and securing Beat Locker.
+0:20
+We show you how we found and exploited
+0:22
+and fixed new vulnerabilities in the Windows Recovery
+0:25
+environment that allowed extracting
+0:27
+all the Beat Locker protected secrets.
+0:29
+But just before we dive in, a quick introduction.
+0:33
+So my name is Alon and here are me and Stages at the NL.
+0:36
+We're both security researchers working
+0:37
+with a security testing and offensive research team
+0:39
+at Microsoft, also known as Storm.
+0:42
+Our expertise is in vulnerability research
+0:44
+focused on everything that happens before the operating
+0:46
+system fully loads, covering the various boot stages,
+0:49
+and its security features, so a secure boot,
+0:51
+Beat Locker, and others.
+0:53
+But enough about us, and let's dive into our agenda.
+0:57
+So we'll start with a research background
+0:59
+and give an overview of Beat Locker and Winery.
+1:01
+Then we'll dive into the vulnerabilities
+1:03
+that we discovered, how we exploited them,
+1:05
+and finally we'll wrap up with the research results,
+1:08
+the fixes, and actual Beat Locker countermeasures,
+1:10
+then we can apply today.
+1:13
+So starting with a research background,
+1:16
+today we'll explore security feature
+1:18
+that is designed to protect your sensitive data at rest.
+1:21
+It aims to defend against steps and areas
+1:23
+where an attacker steals your laptop,
+1:25
+aiming to extract your sensitive information,
+1:27
+compromise your machine, and even backdoor it.
+1:30
+You're here at Defcon, surrounded by some of the brightest
+1:33
+minds in cybersecurity, and let's be honest,
+1:35
+some of the juiciest targets for hackers.
+1:39
+Now, picture this.
+1:40
+You step away for a quick coffee break,
+1:41
+and when you come back, your laptop is gone,
+1:44
+stolen by a thief that is after your research,
+1:46
+internal tools, credentials, and personal data.
+1:50
+Without data at rest protection,
+1:52
+the thief can directly access the contents of the hard disk,
+1:54
+extract sensitive data, and even modify system files
+1:57
+to install a backdoor, then even return the computer
+2:00
+without detection.
+2:02
+Data at rest protection ensures that even if your laptop
+2:04
+is stolen, your data remains encrypted and inaccessible,
+2:07
+and your system remains untempered.
+2:12
+Now, I know what you're thinking.
+2:13
+The odds of your device getting stolen or stolen,
+2:15
+that you're probably wondering if you should even bother
+2:17
+worrying.
+2:19
+So consider this.
+2:20
+Studies show that the laptop is stolen every 53 seconds.
+2:24
+The odds of the laptop being stolen are 1 in 10,
+2:26
+and the average cost of a stolen laptop, around $49,000.
+2:31
+This figure reflects replacement costs, productivity loss,
+2:34
+legal expenses, but most importantly,
+2:37
+the loss of sensitive data and intellectual property.
+2:40
+These numbers emphasize the criticality of data at
+2:42
+rest protection features, and with that,
+2:44
+let's dive into our junior attacking and securing
+2:46
+beat locker, which is Windows's data at rest protection
+2:49
+feature.
+2:51
+So beat locker is a full volumic encryption
+2:53
+technology that is designed to protect individual disk
+2:56
+volumes.
+2:57
+Once enabled, it encrypts the target disk volume,
+2:59
+protecting all data stored in it.
+3:01
+Users have the flexibility to choose which volumes to encrypt
+3:05
+based on their specific needs.
+3:06
+And by default, beat locker targets the OS volume,
+3:09
+ensuring that all data stored within the OS environment
+3:11
+is protected and encrypted.
+3:13
+So with beat locker encryption in place,
+3:15
+even if your laptop is stolen, the protected data
+3:18
+remains unreadable because it's encrypted.
+3:21
+Now, the beat locker web model assumes an attacker
+3:23
+similar to a common thief, which means someone with full
+3:25
+physical access to the device, but without advanced credentials,
+3:28
+such as usernames or passwords.
+3:32
+Not only the beat locker attack surfaces are shaped by the
+3:35
+interface is accessible to an attacker feeding within
+3:38
+this red model.
+3:39
+And as we examined the different attack surfaces in the
+3:42
+interfaces, a surface, one surface stood out.
+3:45
+A surface with significant vulnerability potential,
+3:47
+that surprisingly, has received very little attention
+3:50
+in barrier research.
+3:52
+This surface is the Windows recovery environment,
+3:54
+also known as Winery.
+3:56
+Any beat locker attacker can directly boot into Winery
+3:59
+by holding the shift key while selecting restart from
+4:01
+log on UI, rendering it a potential candidate for deeper
+4:04
+inspection.
+4:07
+Given Winery's feet within the beat locker web model,
+4:09
+the lack of barrier research and its high vulnerability
+4:12
+potential, we decided to conduct a security review
+4:15
+that is dedicated towards finding novel vulnerabilities,
+4:18
+exploiting them, fixing them, and then hardening Winery,
+4:21
+while reducing its exposed attack surfaces.
+4:24
+The end goal of our view was to make both Winery and beat locker
+4:28
+more secure and resilient.
+4:31
+So let's take a closer look at Winery, what it is,
+4:35
+how it functions, in which areas present the most promising
+4:38
+opportunities for vulnerability research.
+4:41
+So Winery is Windows's recovery platform,
+4:46
+and it's designed to address critical system issues,
+4:49
+such as south of failures, persistent crashes,
+4:51
+beat locker errors, and more.
+4:53
+For instance, if you're machine crashes,
+4:56
+Winery is the component responsible for analyzing the crash,
+4:59
+identifying corruptions, and resolving it by using its recovery tools.
+5:02
+Now, if you use Windows, the chances are that you've encountered
+5:05
+Winery at least a few times in your lifetime.
+5:09
+Architecturally, Winery operates with its own standalone
+5:12
+operating system known as the Recovery OS.
+5:15
+This Recovery OS is a lean version of Windows
+5:18
+with recovery specific estimations.
+5:22
+These estimations include a unique set of recovery tools
+5:25
+that are all integrated to the known Bluest Grin Recovery UI,
+5:28
+among the exposed tools or familiar options such as south of repair,
+5:32
+system reset, system restore, and others.
+5:37
+For storage, this entire Recovery OS, including all of the DLS,
+5:41
+executables, drivers, they're all compressed into a single
+5:44
+Winfile named Winery.Wim, and this Winfile is then stored on disk.
+5:50
+Then, when Winery boots up, the entire Wim is decompressed
+5:54
+from disk into RAM, creating a temporary RAM disk that hosts
+5:58
+the entire Recovery OS runtime.
+6:01
+Any changes made within this environment within the RAM disk
+6:05
+are not saved back to the original Winery Wim file,
+6:08
+making the Recovery OS inherently volatile.
+6:11
+So modifications to the RAM disk are discarded upon reboot.
+6:16
+Now, when Bitlucker was first introduced, Winery had to evolve
+6:20
+to support recovery from Bitlucker-related failures,
+6:23
+and this led to several architectural and design level changes
+6:26
+to enable that recovery functionality.
+6:28
+We wondered what impact these changes had,
+6:30
+so let's take a closer look at them.
+6:33
+The first design change focused on the location of Winery Wim.
+6:36
+It was moved from residing in the OS volume,
+6:39
+which is now encrypted by Bitlucker, to a dedicated recovery volume,
+6:42
+which is not encrypted.
+6:44
+This change was necessary because Winery must be able to recover
+6:48
+from Bitlucker-related failures, and if the OS volume is encrypted
+6:51
+by Bitlucker and becomes inaccessible, for example,
+6:53
+because of a decryption failure, storing Winery in that location
+6:57
+would prevent future recovery.
+7:01
+Since Winery is a critical component that must always be available,
+7:04
+it was moved to a separate recovery volume,
+7:06
+and this ensures that it can function even if the OS volume is not accessible.
+7:11
+The second design change focused on the integrity of the Winery Wim file itself.
+7:16
+So to support integrity validation of Winery,
+7:18
+a feature called Trusted Wim Boot was introduced.
+7:21
+It verifies the integrity of Winery Wim by comparing its hash
+7:26
+to a known trusted hash.
+7:28
+So, we will have a little hash comparison here.
+7:30
+If the hash is matched, the OS volume is automatically unlocked,
+7:33
+and if the hash is not matched, the OS remains locked.
+7:38
+Now, these two states, Auton Locked and Locked,
+7:41
+define the level of access that Winery has to the main OS.
+7:44
+So, in the Auton Locked state, Winery has full access to the OS.
+7:47
+It can perform recovery operations without any user intervention.
+7:50
+While in the Locked state, Winery has no access at all to the encrypted OS volume.
+7:55
+Now, this change was necessary because Winery now resides on an unprotected recovery volume,
+7:59
+and it can no longer be blindly trusted, right?
+8:02
+Because physical users can mount this recovery volume, change Winery Wim and Boot,
+8:06
+and we want to prevent it, of course.
+8:08
+So, with trusted Wim Boot, any unauthorized modification to the Winfile
+8:11
+breaks its trust effectively blocking any tempering.
+8:16
+The third design change and the last one focused on limiting recovery tools
+8:20
+that are inherently risky to beat Locker.
+8:22
+So, for example, among the exposed recovery tools is the command prompt.
+8:26
+To prevent a scenario where an attacker abuses the command prompt to access the
+8:30
+Bitlocker protected data, a volume Reloq functionality was added into Winery.
+8:34
+This functionality is triggered every time that a risky recovery tool is selected,
+8:38
+and it basically relocks the OS volume.
+8:41
+Then, to regain access to the OS, the user must manually insert the Bitlocker recovery key,
+8:46
+otherwise, all contents remain completely inaccessible.
+8:50
+So, this is how it looks like in practice.
+8:52
+If an attacker launches the command prompt, Winery Wim is trusted, auto-unlock occurred,
+8:56
+but if it launches the command prompt without inserting the recovery key,
+9:00
+access to the Bitlocker encrypted volume will be denied, resulting in the following lock error.
+9:07
+So, to summarize the impact of the design changes, as long as Winery Wim is trusted
+9:11
+and no risky recovery tool is triggered, the OS volume is unlocked,
+9:16
+allowing Winery to recover it automatically without user intervention.
+9:20
+In contrast, if Winery Wim is modified without authorization by a physical attacker,
+9:25
+where if a risky recovery tool is triggered, the OS volume is relocked,
+9:29
+preventing Winery from accessing it.
+9:32
+So, now, the critical question arises.
+9:35
+Any attacks or if it's exposed because of these design adjustments?
+9:39
+So, as it turned out, the auto-unlock state, in the auto-during the auto-unlock state,
+9:43
+Winery parses files from unprotected volumes, specifically the EFI volume
+9:48
+and the recovery volume.
+9:50
+This parsing presents a very interesting attack surface, which wasn't valuable to explore
+9:54
+before Bitlocker's introduction.
+9:57
+Because before Bitlocker, there was no security boundary here.
+10:00
+So, even with full code execution within Winery,
+10:03
+and a physical attacker didn't grant any new capabilities,
+10:06
+but this is no longer the case.
+10:08
+With Bitlocker, any code execution within Winery in the auto-unlock state can be utilized
+10:12
+to bypass Bitlocker and extract all the protected secrets.
+10:16
+So, we decided to take a look at this parsing of Winery during auto-unlock
+10:19
+and to see if we can attack the parsers, maybe find memory corruption or logical vulnerabilities
+10:23
+and potentially bypass Bitlocker.
+10:27
+So, we decided to dig deeper into this files and they're parsing,
+10:30
+and specifically, the files that we will be focusing on today
+10:33
+are the R-A-Agent XML and boot SDI files,
+10:36
+residing in the recovery volume and the boot configuration data store,
+10:40
+the BCD store, residing in the EFI volume.
+10:44
+So, without further ado, I'm going to pass it on to Netanel
+10:46
+who will walk us through the research process of the parsed external files.
+10:56
+Thank you.
+10:59
+So, let's begin with the boot SDI file.
+11:02
+The SDI stands for System Deployment Image Format,
+11:05
+and it is optionally used for booting from virtual disk into RAM disk.
+11:10
+This format consists of multiple binary blobs,
+11:13
+with certain blobs being essential for the RAM disk boot process.
+11:18
+Below, you can see the layout of RAM disk in memory,
+11:20
+which contains the OS disk image and more.
+11:25
+When an SDI file is specified, it gets propended to the virtual disk
+11:28
+within the allocated RAM disk memory region.
+11:33
+In our scenario, we are trying to boot Windows Recovery from a Winfile.
+11:36
+The boot SDI will contain a Winblog,
+11:38
+which contains an offset to the appended trusted Winery Win.
+11:42
+Additionally, the boot SDI must contain an empty anti-file volume.
+11:48
+This empty volume enables the in-memory Win to be presented as anti-file volume,
+11:53
+ensuring compatibility with other Windows components.
+11:57
+Now, let's briefly examine a pseudocode that demonstrates this process.
+12:01
+The code retrieves the sizes of both the SDI and the Winfiles,
+12:04
+then allocates buffer large enough above.
+12:08
+Next, the SDI data is copied to the beginning of the RAM disk image buffer.
+12:13
+Then the Win data is loaded and positioned immediately after the SDI data.
+12:18
+During this process, the loading API computes the Win hash for validation.
+12:22
+If the hash validation fails, the main noise volume gets re-locked.
+12:28
+Finally, the Win address is determined by adding the Win offset stored in the SDI
+12:33
+to the RAM disk buffer address.
+12:36
+Notably, there is no verification linking between the Win being used to the one that was harshed earlier,
+12:42
+allowing the offset to be set arbitrarily.
+12:45
+With that in mind, let's dive into our first vulnerability.
+12:49
+We know that Winery Win must pass hash validation,
+12:52
+and loaded immediately after the SDI.
+12:55
+However, the boot SDI itself undergoes no validation whatsoever,
+12:58
+and since we can manipulate the Win offset to point to an arbitrary location,
+13:02
+we could append an untrusted Win to the SDI and adjust the offset to point to it.
+13:08
+The hash validation for the trusted Win will succeed,
+13:11
+but the untrusted Win will be executed in its place.
+13:14
+This allows us to load and execute any Win we choose while keeping the main noise volume still unlocked.
+13:19
+Now, let's see a demo for the first vulnerability.
+13:23
+Here's the locked machine, which we don't have the password for it.
+13:27
+We press on Shift Restart to reboot into Winery.
+13:30
+Once we are in Winery, we will execute the exploit we prepared beforehand.
+13:35
+Now, during boot, the main noise volume gets automatically unlocked by BitLogger.
+13:41
+We reach Winery UI actions, we select troubleshoot, then we select advanced options.
+13:46
+Then we select command prompt, now the main noise volume got to re-locked.
+13:51
+We don't have the key, so we skip this drive.
+13:54
+Now, if we try to access it, we can't access it.
+13:56
+It's locked by BitLogger.
+13:59
+If we check the BitLogger status, you can see it's locked.
+14:04
+So we change path to the D drive, which is the unrecovered volume, the unprotected volume.
+14:09
+We execute the exploit, we prepared beforehand.
+14:13
+It adds the custom weam to the boot SDI and then adjust the offset to it.
+14:19
+Once the exploit completed, we reboot the machine back to Winery.
+14:27
+Now, instead of the Winery UI actions you've seen before, we expect our custom weam to be loaded and we set it to launch CMD.
+14:34
+So here's the CMD, we can change path to the C drive.
+14:38
+If we check now the BitLogger status, you can see it's unlocked.
+14:43
+And if we list all the files under the C drive, here are the secrets.
+14:56
+After we completed our review for the boot SDI, we shifted our attention to the R&A.
+15:04
+The R&A.
+15:06
+The R&A.
+15:11
+The R&A.
+15:13
+The current recovery state and other configuration settings for Winery.
+15:17
+Upon Winery startup, it will mainly consume and process this XML file.
+15:21
+When Winery state is configured to execute a scheduled operation, it will run the designated recovery operation, such as startup repair or other tasks.
+15:31
+All of these occurs prior to reaching the UI actions you've seen before.
+15:35
+Today, we will talk about two scheduled recovery operations that can get arbitrary executed by modifying the state in our reagent XML, first offline scanning and then winery applications.
+15:46
+Starting with offline scanning operation.
+15:49
+These operations allow AV running AV scan from within Winery against the main OS.
+15:56
+It is mainly used again malware that does not run inside Winery.
+16:02
+We found we can control which app performs the scanning, though there are couple limitations.
+16:08
+First, the offline scanning is performed only by executing applications from within the main OS volume.
+16:14
+Second, this application must be digitally signed by Microsoft or WHQL.
+16:19
+Third, the signatures must be embedded within the binary itself.
+16:25
+We searched for all the different applications that satisfy these requirements and we discover approximately 30.
+16:31
+No CMD is not among them.
+16:34
+And we could not execute all the applications on that list mainly due to compatibility reasons.
+16:43
+We are doing one by one until we got to application and MTT tracer.
+16:48
+This application is a time-travel debugger utility that allows tracing and arbitrary executable.
+16:55
+Okay, so if we can trace any binary we want, let's trace CMD, then, right?
+17:03
+Now, let's go over the complete flow.
+17:06
+Before starting the machine, we set the recovery state in our reagent XML to schedule offline scanning operation.
+17:13
+It is then parsed by Winery.
+17:19
+Then according to the state we just set, Winery performs the scheduled operation which is offline scanning.
+17:25
+It will execute TTT tracer which will trace any binary set.
+17:29
+We specified CMD so in our case it will launch and trace CMD.
+17:34
+And at this point, while still in auto unlock state, we have a full shell access with the main OS volume unencrypted.
+17:40
+Now, let's see a demo for the second vulnerability.
+17:44
+Again, here's a locked machine which we don't have the password.
+17:48
+We shift to start again to reboot Winery.
+17:51
+We will execute an exploit we prepared beforehand.
+17:59
+Once we reach Winery, we select troubleshoot, then advanced options.
+18:04
+Then command prompt.
+18:05
+It will be the first.
+18:08
+It will ask for the bitlocker key.
+18:11
+We don't have it, so we skip this drive.
+18:16
+Again, if we check the, if we try to access the drive, you can see it says locked by bitlocker.
+18:23
+If we check the bitlocker status again, it will says locked.
+18:29
+Now, we change path to the D drive which is the recovery volume that I'm protected volume.
+18:33
+We execute the exploit we prepared beforehand.
+18:38
+And once the exploit completed, we just reboot the machine back to Winery.
+18:45
+Remember, this is the recovery volume and protected volume.
+18:48
+We can do anything we want in it.
+18:50
+Now, instead of the reactions, we expect an application to spawn.
+18:55
+So here's TTT tracer.
+18:58
+And it asks us to accept the ULA.
+19:00
+And we can change path to C drive.
+19:05
+And if we check the bitlocker status, you can see it says protection on and unlocked.
+19:12
+If we release the files under the C drive, we can see again the secrets.
+19:18
+There are.
+19:20
+So, we can see the data.
+19:25
+Okay, so we completed going over the offline scanning.
+19:28
+Let's proceed with Winery applications.
+19:33
+Another scheduled operation we can configure is Winery apps which allows us to run application within Winery.
+19:39
+If this application are trusted, they get executed while the system remains in auto unlock state.
+19:44
+Otherwise, the run after the main OS volume has been re-locked.
+19:49
+We went looking for the hash validation process and we found that trusted applications are registered within the Winery registry using their executable name and the file hash.
+20:01
+The registry resides within the Win file and a physical attacker cannot modify it.
+20:06
+Any alterations to the Win would cause the change it has, causing the main OS volume to be re-locked.
+20:07
+During the boot hash validation.
+20:13
+When Winery scheduled to run trusted application, it first calculate the hash of the target application then search for a match in the registry.
+20:24
+If a match is found, the application is marked trusted.
+20:27
+If no match exists, the application is marked as untrusted.
+20:30
+The main OS volume gets re-locked and then later the application gets executed.
+20:35
+But with the main OS locked.
+20:40
+So overall, that sound as Winery trusted apps validation is solid and works properly right?
+20:46
+Well, we wondered if an already registered application can expose an attack surface.
+20:51
+So we went hunting for registered applications.
+20:56
+We found the legitimate usage of this feature by a program named SetupLafoam.
+21:00
+This application is registered as trusted app and used during Windows upgrade.
+21:08
+Only once the upgrade completes, the trusted app entry remains in the registry and it is not removed.
+21:15
+So we can execute SetupLafoam, but what else can we do with it?
+21:21
+We found out the register shift plus F10 hotkey to launch CMD.
+21:25
+Convenient, right?
+21:27
+Well, we tried that, but it felt to execute.
+21:31
+Due to missing configuration file on the main OS volume.
+21:34
+Since this configuration file resides on the bit locker protected main OS volume, it cannot be created already.
+21:42
+This configuration requirement calls SetupLafoam to terminate early due to this file being absent.
+21:50
+Now, the time window between the hotkey registration and the process exit is very short.
+21:55
+It's quite impossible to trigger this hotkey manually.
+21:59
+So we wanted to find another way to trigger CMD.
+22:03
+We went back to analyze SetupLafoam.
+22:07
+That is when we discovered something really interesting.
+22:10
+Immediately after registering the CMD hotkey, the application set shows for a file named SetupLafoam.mionile on the recovery volume, which is the unprotected volume.
+22:21
+And we can fully control it.
+22:24
+Now, by configuring this file properly, SetupLafoam will trigger a message box, which prevents applications from continuing the execution.
+22:33
+Essentially, locking the application from early termination.
+22:37
+That will open an infinite time window to sponsor CMD and type anything we want in it.
+22:46
+Now, let's move to, let's see the complete flow.
+22:49
+We modify our rigid XML and set the state for schedule adjusted up.
+22:53
+More specifically, we set SetupLafoam to get executed.
+22:57
+We know even validates this up can be trusted.
+23:00
+The validations succeed and the menu is volume remains unlocked.
+23:05
+Next SetupLafoam gets executed.
+23:08
+It registers the hotkey for CMD, which is a shift plus of 10.
+23:13
+It then looks for SetupLafoam and IFA and loads it.
+23:16
+Which will trigger a message box.
+23:19
+This way, the process got blocked and one continued until we press OK.
+23:24
+Now, we can simply press on shift plus F10 to trigger the CMD.
+23:35
+And we got a shell up and running while the menu is volume still unlocked.
+23:39
+Now, let's see a demo for the third vulnerability.
+23:42
+So, again, here's a lock machine which you don't have the password.
+23:46
+We shift restart to reboot into Winery.
+23:55
+In the UX and select troubleshoot, advanced options, command prompt.
+23:59
+We don't have the key, so we skip this drive.
+24:04
+Now, we will try to access again the C drive.
+24:07
+You can see it's unlocked.
+24:09
+We'll check beatlooker status again.
+24:11
+Says lock, protection is on.
+24:16
+Now, we change path to the D drive.
+24:18
+We have recovery volume, unprotected volume.
+24:20
+We execute the exploit.
+24:22
+We set a platform to get executed.
+24:24
+We write down the setup platform by an IFA and next we reboot the machine.
+24:28
+Now, instead of Dio actions this time, we expect our setup platform to get executed.
+24:33
+And we set a platform by an I.
+24:35
+So, we expect a message box.
+24:39
+And here is the message box.
+24:41
+Now, we can simply press on shift f10, we spawn the CMD.
+24:44
+If we change path to C, we can change it.
+24:48
+If we check the beatlooker status, it says protection on.
+24:52
+And the beatlooker status is still unlocked.
+24:57
+Now, we can just list the files under the D drive, get the secret.
+25:01
+Here it is.
+25:09
+Now, we'll continue to talk about the BCD parsing and tax efforts.
+25:16
+We have one more demo, guys, so stay tuned.
+25:20
+So, let's move on to attacking the BCD parsing.
+25:24
+So, first things first, for those of you who are unfamiliar with BCD and what it stands for,
+25:28
+BCD stands for boot configuration data.
+25:31
+And it's basically the file that defines how Windows boots.
+25:34
+It stores the boot entries, controls the boot parameters, recovery settings, and many more boot code.
+25:38
+So, we have two boot related configurations.
+25:42
+Now, in the context of Winery, the usage of BCD is considerably minimal.
+25:46
+Winery uses the BCD mainly to determine the location of the target OS volume on the disk,
+25:51
+so that Winery knows which volume to enter recover operations to, right?
+25:55
+Because we have multiple volumes on the disk, Winery must know which volume is the OS volume to recover.
+26:00
+So, when Winery starts, it reads the BCD store,
+26:03
+queries the target OS volume location from that store, and then aims to recover operations to this volume.
+26:10
+So, the first question that came into our minds when we investigated Winery BCD usage is what can we potentially gain from targeting it?
+26:18
+As it turned out, Winery places full trust in the target OS, assuming it's out of attacker's switch.
+26:25
+Now, generally speaking, this assumption is solid from a design perspective,
+26:28
+because with Bitlucker enabled, the target OS is encrypted, and the attacker has no access whatsoever.
+26:33
+So, it's safe to store the configurations, query these configurations, and not further validate them,
+26:38
+because again, a physical attacker can't change anything in the main OS, it's encrypted.
+26:43
+Having said that, since the target OS location is defined in the BCD, which we could modify,
+26:49
+we began the question distrust assumption.
+26:52
+Could BCD manipulations allow us to undermine it?
+26:56
+So, what if we could trick Winery into thinking that an attacker control volume is actually the trusted Bitlucker encrypted one?
+27:05
+Our focus is shifted towards identifying a primitive that allows impersonating the target OS location.
+27:11
+The goal is to manipulate the target OS volume to point to an attacker volume, such as the recovery volume,
+27:17
+instead of pointing to the trusted Bitlucker encrypted one.
+27:20
+So, any time that Winery then, if we gain this primitive, if Winery requires configuration assuming it's out of attacker's switch,
+27:25
+the attacker can modify it, because it will be in the recovery volume and not in the encryption volume.
+27:30
+So, this primitive if gained would break the trust assumption.
+27:35
+So, we already know that the target OS location is controlled in the BCD, as we just mentioned,
+27:40
+which we can directly modify.
+27:42
+So, what happens if we change the location directly in the BCD?
+27:46
+Well, theoretically it's possible, but it isn't valuable.
+27:50
+Let me explain.
+27:52
+The target OS location isn't used only by Winery, but also by the boot manager, which uses it to know which volume it should auto unlock for Winery,
+27:59
+so that Winery is able to access the OS.
+28:01
+So, any change to the BCD store would affect both the boot phase and the OS phase.
+28:06
+In this specific scenario, if we modify the target OS to point to the recovery volume,
+28:10
+it would prevent the boot manager from auto unlocking the bit locker encrypted OS volume.
+28:15
+And this encrypted volume contains the secrets that we are after.
+28:19
+So, in this state, even it breaks this trust assumption, but even with full code execution within Winery,
+28:24
+we're not able to access the secrets, and that's why it's not valuable.
+28:27
+Our primitive must not interfere with the boot procedure and the auto unlock functionality.
+28:31
+We must go deeper.
+28:34
+So, we decided to dig deeper into the way that Winery searches for the BCD store.
+28:37
+Any potential flaws at this stage would not interfere with the auto unlock functionality because it executes afterwards.
+28:44
+So, to locate the BCD store, Winery iterates over disk volumes and searches each one for the store.
+28:50
+The first store that is found is the one used to further calculate the target OS location.
+28:54
+So, a simple volume iteration logic.
+28:57
+Now, this iteration logic is actually an interesting point to further inspect, because if you think about it, only the E5 volume contains the BCD store.
+29:04
+So, any attempt to locate the store on other volumes, especially if they are not protected, could potentially be abused.
+29:13
+Internally, the functions that are used to iterate over the volumes are find first volume and find next volume.
+29:19
+These are two standard Windows APIs, and notably, the remark section highlights a very interesting point.
+29:25
+It says that once you not assume any correlation between the order of the volumes that are returned by these functions and the order of the volumes that are on the computer.
+29:33
+So, under the hood, these two functions perform further filtering and sorting, which causes an inconsistency in the returned volume order.
+29:40
+So, for example, on the monitor, you can see the typical volume order returned by the disk part list vol command.
+29:47
+The order is first the OS, then the E5, and only then the recovery volume.
+29:52
+However, the volume iteration functions would return a different order.
+29:57
+It would return first the OS volume, then the recovery, and only then the E5 volume.
+30:01
+Can you spot the inconsistency?
+30:04
+With this iteration logic, the recovery volume is iterated over and checked for a BCD store before the E5 volume.
+30:12
+By placing a custom attacker-controlled store in the recovery volume, we can trick winery into using it instead of using the E5 BCD store.
+30:20
+So, with this setup, winery doesn't ever reach the point of querying the E5 volume, which contains the real store that used to boot the machine.
+30:26
+So, any modification or corruption we make to that custom store will only impact winery and will not disrupt the boot procedure at all.
+30:34
+This flow allows us to achieve the desired primitive.
+30:37
+During the boot phase, the boot manager locates and uses the legitimate store from the E5 volume to unlock the encrypted OS.
+30:44
+And this OS contains the secrets. So, during the boot, it's unlocked.
+30:47
+However, during the OS phase, winery instead locates and uses the attacker-controlled BCD store due to the iteration logic that we just explored.
+30:55
+And it uses this attacker-store, letting it to consider an attacker volume as the bitlocker-encrypted one.
+31:02
+Right, because once we control the store, instead of pointing the volume location to the main OS volume, the encrypted one, we just point it to a different volume that we control.
+31:12
+So, with this primitive, any configuration that winery retrieves from the target OS, previously assumed to be beyond an attacker's reach is now entirely under the attacker's control.
+31:21
+So, any sensitive configuration it queries, which we weren't able to modify, now we're able to modify.
+31:28
+To further exploit this powerful primitive for bypassing bitlocker, we need to find a winery flow with trigger characteristics.
+31:35
+First, a flow that can be triggered either from the winery UI or from our reagent exoskegial operations, so that we're able to trigger this flow freely.
+31:43
+Second, a flow that doesn't trigger the will of functionality so that we won't lose access to the secrets, because we don't want a flow that when we trigger it,
+31:51
+we'll lock the volumes and we'll lose access to the secrets.
+31:55
+Third, characteristic is a flow that queries configuration from the target OS to perform sensitive operations, and this is actually the interesting part here.
+32:03
+The idea is to chain this flow with the gained impersonation primitive to trigger sensitive operations in the auton-lock state, such as operations that we wouldn't be able to trigger beforehand.
+32:13
+So, after exploring different winery behaviors, we found a potential candidate.
+32:17
+This is the push button reset feature, also known as PBR.
+32:21
+PBR is Windows Assistant Reset tool and it provides various recent functionalities.
+32:27
+It supports multiple trigger modes, with one of its known modes known as ONLY PBR, meeting the characteristics that we defined for the exploit.
+32:35
+So, first, ONLY PBR can be triggered freely as a scheduled operation in our reagent exoskegial.
+32:41
+Second, this flow doesn't trigger the will of functionality, thereby benefiting auto-unlock, we won't lose access to the secrets,
+32:47
+but in addition, the current configuration from the target OS will perform sensitive operations, thereby can be controlled with the impersonation primitive.
+32:56
+Specifically, the sensitive configuration that we identified was an XML file named recent session.xml, which defines all the operations executed by PBR.
+33:05
+Notably, it included the decrypt volume directive, which instructs PBR to decrypt any arbitrary beatlocker encrypted volume.
+33:13
+So, we now have all the pieces that required for the food beatlocker bypass exploit chain.
+33:21
+The exploit required modifying few files on the recovery volume.
+33:24
+So, first, the XML file with ONLY PBR schedule operation, second, the BCD store, with the OS device element pointing to the recovery volume instead of the encrypted OS.
+33:33
+And third, the PBR configuration with the decrypt volume directive specifying the target OS volume to decrypt as the OS volume, the encrypted one.
+33:41
+With this setup, what will happen is that in the next winery boot, winery will go through the ONLY PBR flow during the BCD store lookup.
+33:50
+PBR locates the attacker BCD store and mistakenly identifies the target volume as the recovery volume.
+33:56
+Then, PBR loads its configuration from that recovery volume, which instructs it to decrypt the beatlocker encrypted OS volume.
+34:03
+Once this entire process completes, beatlocker secrets become really accessible as beatlocker was essentially disabled by PBR.
+34:11
+So, we went from a considerably scoped OS impersonation primitive to an arbitrary beatlocker decryption primitive.
+34:20
+With that, let's see the demo, the last demo of the day, of the full exploitation chain.
+34:27
+So, we have here a locked machine, which we don't have the password to this machine.
+34:31
+So, we select shift and restart into winery in order to execute the exploit.
+34:36
+Inside winery, we select troubleshoot, advance options, and then command prompt.
+34:44
+Here the recovery key is requested, we don't have this key, we skip this drive, now you will see that we don't have access to the C drive that contains all the beatlocker secrets.
+34:54
+So, now what we need to do is to change drive to the D drive, that's the mounted recovery volume which we control, we placed our exploit in that volume.
+35:03
+So, we now execute this exploit.
+35:07
+And once the exploit finishes, we'll reboot into winery.
+35:11
+Now, you will see during the reboot that PBR gets executed, this process takes a few minutes.
+35:18
+This is what you'll see now on the screen, so we fast forward a bit.
+35:21
+In the meantime, let me tell you what the exploit did.
+35:23
+So, it placed this XML file with online PBR on the recovery volume.
+35:28
+It then created the BCD store on that recovery volume as well, so that the iteration logic considered this store.
+35:34
+And the volume, the target volume on that BCD store pointed to the recovery volume instead of the encrypted volume.
+35:39
+So, now when PBR looks for its configuration, it queries it from the recovery volume instead of from the encrypted volume.
+35:45
+This configuration tells BBR to decrypt the OS volume that we are after its secrets.
+35:50
+So, what happens now under the hood, what you see on the screen is actually PBR decrypting the OS volume.
+35:56
+Essentially, decabling beat locker on that volume.
+35:59
+So, once PBR completes, we'll go back into the main OS.
+36:07
+You see now the logon screen.
+36:12
+And of course, we still don't have the password, right?
+36:14
+So, we'll restart into winery.
+36:17
+And once we're in winery, we'll check what is the corn status of BBR of beat locker.
+36:23
+So, select troubleshoot, advanced options, command prompt.
+36:26
+At this point, you will see that the recovery key is not requested.
+36:29
+We change drive to the C drive.
+36:31
+At least the files, and you can see that we have full access to the C drive that contains all of the secrets.
+36:37
+Now, if you wonder why this is possible, if we check the status of beat locker, you will see that the protection is off and the drive is fully decrypted.
+36:45
+So, we bypass beat locker by disabling it, able to extract all of the secrets.
+36:53
+Thank you.
+36:57
+So, closing remarks.
+36:59
+Starting with the vulnerability fixes.
+37:01
+So, all the discovered vulnerabilities and exploitation techniques were fixed in July's patch Tuesday.
+37:06
+The CVs for the vulnerabilities that we presented today are displayed on the screen.
+37:12
+To further enhance the security of beat locker, we recommend enabling TPM plus spin for pre-birth authentication.
+37:18
+This significantly reduces the attack surfaces and limiting the surfaces only to the TPM.
+37:23
+So, if TPM plus spin is already enabled in your machine, you are protected from beat locker bypasses that originate from winery, the boot components, log on screen and adder attack surfaces.
+37:32
+Because to get the beat locker key, you have to insert a pin.
+37:35
+So, to mitigate beat locker downgrade attacks, we advise enabling the revised mitigation.
+37:41
+This mechanism enforces secure versioning across critical boot components, preventing downgrades that could reintroduce known vulnerabilities in beat locker and secure boot.
+37:49
+For the full article on beat locker countermeasures, please scan the QR code on the screen.
+37:55
+Lastly, we want to emphasize that our junior never ends.
+37:58
+We continue to proactively research beat locker winery and the related components with a never ending goal of increasing their security and resiliency.
+38:06
+It was a pleasure for us to show we do our research project and the security word that we do on winery and beat locker.
+38:12
+If you have any questions, please catch us in the hallway and also feel free to reach out on social media.
+38:17
+And with that, we would like to thank you all for joining us today and we wish you a great rest of your day.
+38:22
+Thank you.

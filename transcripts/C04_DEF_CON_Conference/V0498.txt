@@ -1,1 +1,2130 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+We have no time to waste and a lot of ground to cover.
+0:02
+This is Journey of the Center of the PSDN.
+0:04
+I am Enzo D'Amato and first a little bit about me.
+0:08
+So I got into computing when I was very young,
+0:10
+got a bunch of servers, turned them into this,
+0:13
+then got one of these, one of these,
+0:16
+and put my servers in a professional data center.
+0:19
+After doing that, I started looking for the next big challenge.
+0:22
+I mean, after getting an ASN, you've got to find something new to do.
+0:25
+And for me, the answer was telephones.
+0:28
+I wanted to figure out how the phone network worked,
+0:30
+how I could become a part of it, and some interesting and unique exploits
+0:34
+that you could do from the inside of the phone network.
+0:36
+And this talk will take you through all of that.
+0:38
+How you can become your own mobile.
+0:41
+This talk, however, is not legal advice.
+0:43
+It is not a comprehensive course on voice network design.
+0:46
+It is not a guide to the regulations in your state.
+0:49
+We're going to be covering licensing later on.
+0:51
+And just remember to always check everything
+0:53
+with what the actual Rousal are for your state,
+0:56
+not just the generic nation-wide rules.
+0:59
+This is also not going to be PBX hacking.
+1:01
+A lot of people have done that, and that's sort of overplayed.
+1:03
+We're going to be doing everything from the carrier side.
+1:06
+So with that in mind, what is the publicly switched telephone network?
+1:10
+The PSTN is essentially any phone that allows you to call another phone
+1:14
+using a standard US phone number.
+1:16
+Some people define the PSTN as only phones
+1:20
+that are connected over the traditional TDM network
+1:24
+rather than phones that are connected over VoIP.
+1:27
+However, in my opinion, there's no difference
+1:29
+as long as the number is accessible from a standard telephone.
+1:31
+So we're just going to say the PSTN is everything.
+1:34
+And with that in mind, what is a phone company?
+1:37
+In this case, a phone company, and what I say,
+1:39
+I started a phone company, and I run a phone company,
+1:41
+I mean a real phone company that owns its own numbering resources
+1:45
+in the same way, an ISP that has its own ASN,
+1:49
+owns its own IPv4 resources.
+1:51
+You're not just reselling, you're not just
+1:52
+buying from a generic sub-trunk provider
+1:54
+and slapping a PBX on top of it.
+1:56
+You're actually the carrier of record.
+1:58
+You're managing the routing for those entities.
+2:00
+A real phone company also files its own FCC 499,
+2:03
+so it files federal taxes for phone companies,
+2:06
+and it's interconnected with other carriers.
+2:08
+Again, manages its own routing.
+2:09
+It doesn't just send everything through whatever it's upstream is.
+2:13
+And why should you care about this?
+2:15
+Well, the answer is that we, in the hacker community,
+2:18
+used to love phones.
+2:20
+This was how the community started.
+2:22
+Defcon groups are still labeled by area code,
+2:24
+and freaking was everything.
+2:25
+But then everyone's lost interest,
+2:27
+right as the network started to get interesting.
+2:29
+Because in 1996, you, for the first time,
+2:32
+were allowed to become a competitor to Ma Bell
+2:34
+for local exchange service, which means you could become
+2:36
+a legit freak.
+2:38
+You didn't have to do it in secret anymore.
+2:41
+And with that, the amount of stuff on the network
+2:44
+and therefore the interesting bits of the network
+2:45
+got way larger and way more interesting.
+2:48
+So we're going to be looking at all of those new interesting
+2:53
+bits of the network.
+2:54
+Unfortunately, we do have to cover first a bit of history
+2:57
+and a bit of terminology for those who
+2:59
+are new to freaking and new to phones.
+3:01
+In the beginning, there was AT&T.
+3:03
+AT&T was an amalgam of one major long distance company
+3:07
+and then a local bell operating company in each region.
+3:10
+The long distance company did long distance,
+3:12
+and the local companies provided dial tone and local calls.
+3:16
+However, this would break apart in 1984,
+3:19
+which created nine separate robots, a regional bell operating
+3:22
+companies in each region of the United States.
+3:25
+And one IACC, or Inter Exchange Carrier,
+3:27
+that was the AT&T long distance entity,
+3:30
+that was subject to competition for the first time.
+3:33
+MCI sprinted the other long distance carriers.
+3:35
+So if you remember dial-around codes,
+3:38
+and this is sort of a graph of how things broke apart
+3:40
+and then merged back together.
+3:42
+As you can see, there are three major phone companies,
+3:45
+all of which own the wrong long distance branch,
+3:47
+and all of which also own a significant chunk
+3:51
+of the US geography for phones.
+3:53
+The only difference now is that Quest is now level three.
+3:56
+But these companies are the R-Box successors,
+3:58
+what happened after the R-Box got broken up.
+4:01
+And an interesting note here is looking
+4:04
+at what an actual local call is.
+4:06
+Because when we say we have local exchange carriers
+4:08
+and inter-exchange carriers, what is what?
+4:10
+And this up on the screen here is a map of all of the lattice
+4:14
+or local access and transport areas in the United States.
+4:17
+Each ladder is the specific territory of one of the R-Box,
+4:21
+and any calls within the ladder are handled by that R-Box.
+4:24
+Any calls external to the ladder are handled by an IXC.
+4:29
+And within a specific ladder,
+4:31
+we also have a number of numbering plan areas
+4:34
+or area codes and rate centers.
+4:36
+With calls within a rate center are always truly local.
+4:39
+So always truly local, meaning that they are not
+4:44
+built per minute, they're either built not at all or per call.
+4:47
+And usually there'll be an arbitrary boundary
+4:51
+between that rate center and a couple of the other
+4:53
+adjoining rate centers that will be included
+4:55
+in that local calling scope.
+4:57
+This is defined in the state tariff, the R-Box,
+4:59
+and it is highly arbitrary.
+5:01
+They're unlike the ladders, there's no federal standard
+5:04
+for how big a rate center is supposed to be,
+5:05
+what it includes, and sort of what the rules are for those.
+5:09
+So you're going to have to check for your specific rate center
+5:12
+to see what counts as local for it.
+5:14
+And therefore, we can sort of put together a taxonomy.
+5:18
+We've got local calls that are always handled
+5:21
+by the local exchange carrier,
+5:22
+and therefore governed by the State Public Utilities Commission
+5:25
+as a local utility.
+5:26
+And they're usually unbeatered.
+5:30
+And then we've got true long distance calls,
+5:32
+which are governed by the FCC under the Braille system
+5:35
+break up and handled by an IXC.
+5:37
+However, then you've got a bunch of weird niche categories.
+5:40
+So intralata and intrastate calls are what are known
+5:44
+as local long distance, or long distance calls
+5:46
+handled by the local exchange carrier, or the baby bell.
+5:49
+And then you also have intralata and intrastate calls,
+5:54
+which are counterintuitively more expensive
+5:57
+than interstate long distance calls,
+6:00
+because they're governed by the State Public Utilities
+6:02
+Commission.
+6:02
+And therefore, since the State Public Utilities Commission
+6:05
+is a less strong regulator, those calls are more expensive
+6:09
+because they can get away with charging more.
+6:11
+And finally, you have a very weird category that usually
+6:13
+only exists in the large flat plain states of interstate
+6:17
+intralata, interstate interlatta calls that
+6:21
+are governed by the FCC, I think, and handled
+6:24
+by the local exchange carrier.
+6:26
+These basically only exist on paper,
+6:27
+but this just goes to show you the weirdness
+6:30
+and the state of the number of exceptions and oddities
+6:34
+that exist in the phone network.
+6:36
+When you have a bunch of categories
+6:39
+that are created by successive regulations being layered
+6:41
+on top of each other, you get these sort of weird categories.
+6:45
+And this only is going to expand and create
+6:47
+a bunch of interesting opportunities for us later.
+6:49
+However, the real big change wouldn't come with the bell
+6:51
+break up, but rather with the telecom act of 1996.
+6:55
+This enabled competition for the local exchange carriers,
+6:58
+these new entities known as CLX, or any local exchange
+7:01
+carriers certified after 1996.
+7:03
+It normalized wireless regulation
+7:06
+and created the modern cell phone industry
+7:07
+by allowing cell carriers to be treated as co-equal carriers
+7:11
+to the Lex instead of just as basically almost as resellers
+7:15
+that subtended off of them.
+7:17
+And it also critically required the incumbent Lex,
+7:20
+meaning the R-Box, to interconnect their networks
+7:23
+at any technically feasible point,
+7:26
+offer services for resale, and to do all of this
+7:32
+on non-discriminatory terms expressed in a publicly filed
+7:36
+interconnection agreement.
+7:37
+These responsibilities are known as collectively
+7:40
+as 251-252 interconnection.
+7:42
+Together with the provision allowing for CLX,
+7:46
+that has been what has allowed the telephone network
+7:48
+to really transform itself over the past couple of years.
+7:51
+It's how we got VoIP, it's how we got new carriers,
+7:54
+and it's how I was able to become a phone company
+7:57
+at the age of 19.
+7:59
+Later on, we would see a new category of sort of a half-select
+8:03
+certification created for VoIP-only carriers.
+8:05
+This, known as an IPES, allowed those VoIP carriers
+8:09
+to get numbering resources issued directly to them,
+8:12
+but still required them to go through an IPES entity,
+8:16
+sorry, go through a CLX entity as their sort of parent company.
+8:20
+They, the I-Like entity would manage the routing
+8:24
+on their behalf.
+8:25
+So sort of a half-select that doesn't have interconnection.
+8:28
+So now let's get into how the PSTN actually works
+8:30
+and how those calls are going to flow through the network.
+8:33
+So here we can see an example of a modern Lata ecosystem
+8:37
+as it exists currently.
+8:38
+Each different company is represented
+8:40
+by a different colored box.
+8:41
+And as you can see, a call from an I-Like to a CLX
+8:46
+is going to go through obviously the I-Lex network,
+8:49
+but it's also going to go through a very special box
+8:51
+that exists in every Lata.
+8:53
+The I-Lex feature group D tandem.
+8:55
+The feature group D tandem acts almost like the default route
+8:58
+for everything within that Lata.
+8:59
+If two carriers don't have a connection to each other,
+9:02
+they're supposed to always have an interconnection
+9:05
+with that I-Lex feature group D tandem
+9:07
+as part of their interconnection agreement with that I-Lex,
+9:09
+which means that those calls can flow through that feature group
+9:12
+D tandem to sort of reach where they need to go.
+9:15
+Either on the I-Lex or on another carrier that
+9:18
+sub-tens that I-Lex, they can use that sort of as almost
+9:21
+like a tandem that they can both reach.
+9:24
+If a call is long distance, however,
+9:26
+it's going to get piped out over the long distance network
+9:30
+and then all the way back into the feature group D tandem
+9:32
+in the new Lata has an example,
+9:34
+this is an I-Lex to I-Lex call.
+9:36
+Critically, the I-Lex because of the regulations
+9:39
+are not allowed to carry their own long distance traffic
+9:41
+between Lata, so they have to send that traffic over an I-X-A.
+9:45
+However, CLX are not subject to the same restriction.
+9:49
+So in this example, two CLX in different Latas
+9:51
+are able to send traffic directly to each other.
+9:54
+In this case, over an IP trunk that they have.
+9:56
+So CLX can actually use IP trunks.
+9:59
+They can use, you know, VoIP to send calls between each other.
+10:02
+So the internal routing on CLX to CLX or CLX to mobile calls
+10:08
+can actually be IP in some cases.
+10:11
+Finally, you also have an example of a CLX
+10:14
+that connects directly to the inter exchange carrier,
+10:16
+so receiving calls from them directly
+10:18
+instead of sending them over the feature group D tandem.
+10:21
+In this case, the CLX basically acts as its own feature group
+10:24
+D or access tandem for the numbers that it has.
+10:27
+Hanging off of an I-X-C is one directly.
+10:31
+This allows us to put together some general rules for routing
+10:35
+with the caveat that voice routing is very ad hoc.
+10:39
+It's not particularly well-defined, like BGP routing
+10:43
+is where like a BGP router will always
+10:45
+be able to use BGP to pick the best route to a given point.
+10:48
+And I-Lec will not be able to do this,
+10:50
+because in I-Lec routing will not be
+10:54
+able to see the entire picture of the network at one time.
+10:56
+It won't be able to calculate a best path.
+10:58
+So it has to go through basically a series of rules
+11:01
+defined by the regulations and the information that it does have.
+11:04
+These rules generally are as follows.
+11:06
+If two carriers have a private IP interconnection
+11:08
+between each other, that will be used by default.
+11:11
+It's much cheaper, and everyone
+11:12
+prefers to keep things on IP as much as possible.
+11:15
+If the call is local, however, it will
+11:17
+be sent over the local interconnection.
+11:19
+Local calls have to go over the local interconnection
+11:23
+if you send them over long distance, they won't wrap properly.
+11:25
+However, if a call is introlata, it can either go over
+11:29
+the future group detandom for that ladder,
+11:31
+or it can go through an I-X-C, who they can then
+11:34
+be responsible for basically delivering it back
+11:36
+onto the future group detandom through their internal network.
+11:40
+However, if a call is introlata, it has to go over an I-X-C.
+11:43
+It can't get sent through the future group detandom,
+11:45
+unless that future group detandom is basically
+11:47
+being used just as a bridge to reach an I-X-C.
+11:50
+We can now look at phone numbers.
+11:52
+Everyone's familiar with the basic parts of a phone number,
+11:55
+but there's a bit more to it.
+11:56
+So obviously, in area code, one or multiple
+11:58
+will be assigned to a single number in plan area.
+12:01
+And when there are multiple assigns that's
+12:02
+called an overlay complex.
+12:03
+However, we also have the next three digits, the CO code,
+12:07
+are the most important for actually routing the call
+12:10
+within the number in plan area to the carrier
+12:12
+that it's going to.
+12:13
+So this was the original basic unit of phone number
+12:15
+routing from the original days of direct dialing.
+12:19
+And these were originally assigned to a single end
+12:22
+office, like a single building back when it was the bell system.
+12:25
+After the breakup, these started just being
+12:27
+assigned to a single entity.
+12:29
+So it's like a single license local exchange carrier.
+12:33
+However, this, even this, was too inefficient.
+12:36
+They were noticing that especially with the rise of smaller
+12:40
+sea legs, you'd have sea legs that were getting a CO code
+12:43
+in every rate center and only using about 1,000
+12:45
+of those numbers, meaning that all of those blocks, potentially
+12:48
+hundreds of thousands, if not millions of phone numbers,
+12:50
+would only be 10% utilized or less.
+12:53
+This was extremely inefficient.
+12:55
+And therefore, they created the number block pooling system.
+12:59
+Instead of assigning people CO codes directly,
+13:02
+instead, a CO code would be broken up
+13:04
+into its constituent thousands blocks.
+13:06
+And these would be assigned to carriers.
+13:07
+And we would route on these thousands blocks,
+13:10
+instead of routing on the full CO code.
+13:12
+This made it allowed us to make much more efficient uses
+13:15
+of our routing, but it wasn't adopted everywhere.
+13:18
+It was required in major urban and metropolitan areas
+13:21
+by the FCC.
+13:22
+However, in more rural areas, it's optional.
+13:24
+And again, you'll have to check with your State Public
+13:26
+Utilities Commission to see what rate centers in your area
+13:30
+are pooled.
+13:32
+Most of you will know that if you change carriers,
+13:35
+you'll be able to take your number with you.
+13:36
+However, you may not know how this is implemented.
+13:38
+The routing that I just displayed is fairly static.
+13:41
+It's based on block.
+13:42
+So if you move your number, how is that number
+13:44
+going to be able to move with you?
+13:45
+The answer to this is number portability or porting.
+13:49
+The porting allows you to take the number with you
+13:51
+by adding a routing overlay, a query layer,
+13:53
+on top of that existing base routing structure.
+13:57
+And the way this works is that each number gets an LRN
+14:00
+in addition to its normal appearance.
+14:03
+And when that number is called, we hit a database
+14:07
+for that outgoing call, and we get back the LRN.
+14:09
+We are guaranteed to know that the LRN will be a phone number,
+14:13
+will be a phone number in a CO code owned by the destination
+14:16
+carrier.
+14:17
+So the destination carrier CO code will point to that switch.
+14:21
+And then we can route to that CO code.
+14:23
+And we know that routing to the LRN CO code,
+14:26
+rather than the original dial number,
+14:28
+will get that call to the switch where it actually
+14:31
+lives rather than the one the carrier that initially owned
+14:34
+that number.
+14:35
+And then we can put all this together
+14:37
+and actually figure out how routes were built.
+14:39
+So an AOCN loads routes into birds,
+14:44
+then feeds a database called the LERG.
+14:46
+The LERG is a pile of CSV files,
+14:50
+like several gigabytes worth of CSV files.
+14:52
+And those CSV files form the routing information
+14:55
+for the entire network.
+14:57
+These CSV files are sent weekly to all of the carriers
+15:01
+that are subscribed to the LERG.
+15:02
+And then they use these CSV files
+15:04
+to manually build routing entries on their switches,
+15:06
+sometimes using scripts, especially if they're a larger carrier.
+15:10
+And within these, the LERG entries,
+15:12
+there will be a bunch of codes known as silly codes.
+15:15
+The silly codes identify each individual switch
+15:17
+or routing entity on the network.
+15:19
+And then these codes are then manually associated
+15:21
+to either SS7 point codes in the case of SS7 signaling,
+15:25
+which is the most common, especially for legacy networks,
+15:27
+or sometimes for VoIP signaling in the case
+15:30
+that the two carriers have implemented VoIP
+15:32
+between each other.
+15:34
+This is a very manual process, obviously.
+15:37
+And it takes, on average, 30 to 60 days for the network
+15:39
+to update with a new full CEO code.
+15:41
+And about 14 days for a new thousands block, it's slow,
+15:46
+very, very slow.
+15:47
+And there's the reason for this is because, again,
+15:50
+it's a very manual process.
+15:51
+Those switches do not have the capability
+15:53
+to communicate routing information to each other.
+15:55
+So we have to maintain the routing information centrally.
+15:59
+All of these different parts of the network
+16:01
+are governed by separate regulatory bodies
+16:03
+that you're going to have to interface with.
+16:05
+So phone numbers are governed by NANPA,
+16:07
+or the North American numbering plan authority.
+16:09
+Portability and number porting is governed by NPAC.
+16:13
+Operating company numbers, or OCNs, which identify
+16:15
+individual telcos, and individual telcos in a state
+16:19
+are governed by NECA, and then silly codes,
+16:22
+the SS7 point codes themselves, the LERG, and IAC codes,
+16:26
+and basically any other code that you'll need
+16:28
+is controlled by a company called IKIDECTIVE,
+16:30
+which is basically allowed by the FCC
+16:32
+to have a monopoly on routing information
+16:35
+for the entire network.
+16:37
+Billing is another interesting topic.
+16:41
+In almost all cases, the calling party pays.
+16:43
+It's not build 955, like internet traffic is.
+16:47
+It's strictly built per minute, based on the calling party
+16:50
+paying, with each call counting as an additional billing
+16:54
+counter.
+16:55
+The calling customer pays the calling
+16:57
+looked like exchange carrier, the calling
+16:59
+looked like exchange carrier pays the IACC
+17:01
+that they're using throughout that call.
+17:02
+The calling IACC pays the receiving IACC.
+17:06
+The money flows along the call path from entity to entity.
+17:09
+It's not end to end, it's hop by hop.
+17:11
+And there are also a few special cases.
+17:14
+The most prominent is 800 numbers where the money basically
+17:17
+flows in reverse.
+17:19
+There are entities known as REST orgs
+17:21
+or responsible organizations, which
+17:22
+handle the toll-free routing.
+17:24
+And they handle billing for that routing
+17:26
+and the billing passes from the called party back to the caller.
+17:30
+900 numbers and 500 numbers used to be special cases,
+17:34
+because they were premium numbers that had were upcharged.
+17:36
+However, these numbers don't exist anymore.
+17:40
+The software to build them no longer exist,
+17:42
+so they're not routable on the current phone network.
+17:44
+Local calls are almost always unmetered,
+17:49
+or if they are metered, they are pay per call, not pay per minute.
+17:55
+So now, with all of that information,
+17:58
+all of that details about the phone network,
+18:00
+let's actually get to doing something interesting and useful
+18:02
+with it.
+18:03
+We'll start with access stimulation.
+18:05
+So if you were listening during the segment
+18:08
+where I was talking about phone number billing,
+18:10
+you may have noticed that the calling party always pays.
+18:13
+And since most people nowadays have an unlimited minutes
+18:16
+plan on their phone, can you make money off of this?
+18:20
+Having people just call you and collecting the money.
+18:23
+And the answer is yes.
+18:25
+Access stimulation has been one of the longest running legalized
+18:29
+abuses of the process since the very early days
+18:32
+of competitive local exchange carriers.
+18:33
+And the process goes about like this.
+18:36
+We have, you know, so all we have to do in order
+18:46
+for this to work is to get people to call us.
+18:48
+It is that simple, because the money will always
+18:50
+flow along the calling path.
+18:51
+And our carrier will pay us.
+18:52
+So we just have to generate a volume of calls.
+18:55
+So imagine it's 1996, and you need people to call you
+18:58
+and sit on the line with you for a long period of time
+19:01
+so you can make money.
+19:02
+How are you going to do this?
+19:04
+And the answer is dial up.
+19:05
+Dial up in 1996 was the golden ticket for this.
+19:09
+There were many, many, many, many, many sea lex that
+19:12
+were created specifically for the purpose of either being
+19:15
+or serving dial up ISPs.
+19:17
+The dial up calls were 100% inbound,
+19:19
+and people sat on the line for hours.
+19:21
+So they could just rack up the billing.
+19:25
+They would sit on the line, and the dial up ISP
+19:28
+would become a sea lex.
+19:30
+Since they weren't serving real customers,
+19:31
+they didn't have to run lines.
+19:33
+They didn't have to get a fancy switch.
+19:35
+They had almost no costs.
+19:37
+They just had to connect.
+19:38
+There are dial up modems into the interconnection
+19:40
+trunk so that they were getting from the R-Box,
+19:42
+and they could collect those inbound minutes and profit off
+19:44
+of this.
+19:45
+However, the FCC would kill it in 2001
+19:48
+with the ISP remand order.
+19:50
+They would rule, and I still do not understand
+19:53
+where they got this from.
+19:54
+But they ruled that internet traffic
+19:56
+is considered interstate because it's
+19:58
+going to the internet rather than another person
+20:00
+at a fixed location.
+20:02
+I still don't know how the FCC came up with this rolling,
+20:04
+but they basically did it so that they could seize control
+20:07
+over the reciprocal compensation for those ISP calls, which
+20:11
+had previously been a state issue.
+20:13
+And then the FCC basically said, since this is interstate,
+20:16
+we can set the rates for it.
+20:17
+We say, you get nothing.
+20:19
+This doesn't count.
+20:20
+ISP calls don't count.
+20:21
+You can't get compensation for them later on,
+20:23
+much later on.
+20:24
+They would kill local compensation for local calls altogether.
+20:29
+However, there was still another plan.
+20:32
+All we have to do is get people to call us.
+20:33
+So if dial-up isn't working, what are we going to do now?
+20:36
+We're going to give people free stuff.
+20:38
+Freeconferencecall.com is one of the original people
+20:41
+who pioneered this space, but there were a lot more.
+20:44
+Basically, any music, chat line, conference site, anything
+20:49
+that people would call into and use for long periods of time.
+20:53
+And critically, during the period between 96
+20:55
+and when dial-up died, when the dial-up loophole died,
+20:58
+people got unlimited long distance packages,
+21:02
+where they could talk long distance for a long time
+21:05
+or almost unlimited amount of time.
+21:07
+We combine the free stuff with locating our numbers
+21:09
+in the middle of nowhere, so we can harvest higher
+21:12
+per minute rates from them.
+21:14
+We combine that with our unlimited plans,
+21:17
+and we get a pile of money.
+21:19
+We're talking millions upon millions of dollars back
+21:22
+when this was running out of Tadei.
+21:23
+And we make AT&T extremely mad.
+21:26
+This likely cost AT&T more in a month
+21:29
+than all of the freaks of the 60s and 70s did.
+21:32
+The entire time they were operating.
+21:34
+The scale of this was really astronomical.
+21:36
+And it hit its peak during COVID back
+21:39
+when everyone was calling into conference call sites.
+21:41
+However, this too would die.
+21:44
+With, in 2011, the FCC finally closed the loophole
+21:48
+and said that if you're doing a revenue share agreement
+21:51
+with the person who's driving your inbound traffic,
+21:53
+and you either have an over three to one in-out ratio,
+21:56
+or 100% year on your increase in inbound calls,
+21:59
+you don't get access revenue.
+22:01
+Unfortunately, there was still another loophole.
+22:04
+In certain rural areas, there were specialized collector
+22:08
+IXCs that basically pulled access to a bunch of rural co-ops
+22:13
+and collected that long distance traffic,
+22:14
+and they could build for that.
+22:15
+So we would put our access stimulation behind
+22:19
+the like 20 of these that still existed
+22:21
+and have them build it, because that was a loophole.
+22:24
+The FCC would close that loophole.
+22:26
+We would try again, and we would add an IPES company
+22:29
+between the lack and the high volume calling,
+22:32
+the high volume to endpoint, and now the lack
+22:34
+would build the access minutes.
+22:35
+And this was also a loophole.
+22:37
+They only closed this one last year.
+22:39
+And of course, people have moved on to something else.
+22:41
+This, like I said, it's the longest running, basically,
+22:45
+free-money glitch in the phone network.
+22:47
+People have been using this for years.
+22:48
+I'm sure people still continue to use it
+22:50
+until they get rid of permanent charging
+22:53
+for long distance calls.
+22:56
+And you may be wondering, why do you care about this?
+22:58
+And if you've looked at your PBX logs,
+23:00
+if you have SIP exposed, you may have noticed
+23:02
+that there are a lot of people attempting
+23:04
+the brute force your box.
+23:06
+Why?
+23:07
+Why are people trying to brute force PBXs on the internet?
+23:09
+How is that a profitable activity for them?
+23:11
+And the answer is that this same principle
+23:13
+that works for domestic calls also works for international calls,
+23:17
+where the rates aren't half a cent per minute.
+23:19
+They're 50 cents a minute.
+23:21
+And if someone is actually able to get near PBX
+23:24
+and you've got international dialing enabled
+23:26
+or hell, even if you've got domestic dialing enabled,
+23:28
+they will run up a tremendous bill on your PBX
+23:31
+until you figure out that you've been hacked
+23:32
+and you close the loophole.
+23:34
+It is a pretty big money attack.
+23:36
+And it's the reason why everyone is always trying
+23:38
+to brute force any of your SIP servers.
+23:42
+Now let's get on to another attack,
+23:44
+something more traditionally freaky.
+23:46
+Let's say we want to make robocalls,
+23:48
+and we don't want people to be able to identify
+23:50
+that we're making them.
+23:51
+In the FCC quite recently added a new SIP header
+23:59
+that mandated that all telecoms use it.
+24:02
+This SIP header was the Sturshake and Hatter.
+24:04
+The Sturshake and Hatter added a cryptographic signature
+24:06
+to every call that contains certain critical details
+24:09
+about the call and an attestation level.
+24:11
+A, for a fully verified caller ID,
+24:13
+where you assign the number to the user,
+24:15
+B, for a verified customer, where you knew the customer,
+24:18
+but you didn't know that the number they were using
+24:20
+was legit, and see if you were just a gateway passing
+24:22
+on a call to someone else.
+24:24
+Passing on a call you got from another carrier
+24:26
+onto someone else with no real information.
+24:29
+And, but you may have noticed that if you have a phone,
+24:32
+you've still been getting robocalls.
+24:35
+This hasn't fixed anything, and the robocalls you're getting
+24:38
+are still spoofed.
+24:39
+This is fixed nothing.
+24:40
+So how the robocall is getting away from this?
+24:43
+Because if you think about it, if you have a Sturshake
+24:45
+and certificate for them, the police
+24:46
+should just be able to roll up at a rescue,
+24:48
+but this hasn't worked.
+24:49
+And the answer to this is something
+24:51
+that I'm calling the TDM Shuffle.
+24:53
+In a normal telephone arrangement,
+24:56
+everyone will generally prefer IP trunks,
+24:59
+because they're faster, they're easier, they're cheaper.
+25:01
+And most major carriers, especially people doing real volume
+25:06
+and the major cell companies have IP trunks between each other,
+25:09
+because they want to take advantage of those discounts.
+25:12
+However, if we choose a provider that's, let's say,
+25:15
+spam or friendly, that provider can choose
+25:18
+where and how they're going to send out those calls.
+25:20
+So they can choose to force those calls
+25:23
+over the old school TDM network instead of the newer IP trunks.
+25:27
+This means that those calls will lose their Sturshake
+25:30
+and header once they go over TDM,
+25:32
+because TDM doesn't support Sturshake.
+25:34
+So that header gets stripped out.
+25:36
+And then eventually, once the call re-enters the IP network,
+25:39
+a gateway node is going to see that it doesn't have a signature
+25:41
+on it and is going to slap a C-A-Testation on it.
+25:44
+If you're really lucky, you'll hit a misconfigured PSTN gateway
+25:47
+that puts A-Testation on everything.
+25:49
+But either way, you've now gotten your spoofed caller ID
+25:53
+to have a legitimate Sturshake and certificate on it,
+25:56
+and the original destination of that call
+25:58
+has been completely muggled, and no one knows where it came from.
+26:03
+There are a bunch of approaches to this
+26:04
+in ways that this can happen.
+26:06
+The spammer can directly run TDM trunks into their boxes.
+26:10
+More likely, the spammer will use a carrier
+26:12
+that they know will support TDM.
+26:14
+But sometimes the spammer can try and force the routing
+26:17
+to force a call over a legacy pathway
+26:19
+by calling between two providers that they know don't have trunks,
+26:23
+that they know don't have IP trunks,
+26:24
+even if both of the providers are legitimate.
+26:27
+This can sometimes just be coincidental.
+26:29
+A lot of phone companies, especially in rural areas,
+26:32
+or just for whatever reason, are still TDM only.
+26:35
+A large part of the network, I'd say, about 40% of calls
+26:38
+that are still hitting TDM at some point in the call chain.
+26:40
+So a lot of times that this star-shaken header gets popped out.
+26:46
+And with the weird rowdings, this can be very hard to diagnose
+26:50
+and much harder to actually definitively prove to be malicious.
+26:55
+There is a standard for TDM shaken.
+26:57
+However, there is no date yet on a forced implementation.
+27:02
+There's no even agreement on how the implementation would work.
+27:05
+The FCC is working on it, but they're not done yet.
+27:07
+And I'm sure the fact that the robot call carriers
+27:09
+are harvesting millions of dollars in revenue
+27:12
+for carrying these robot calls has absolutely nothing to do
+27:14
+with the fact that we haven't gotten a fix for this yet.
+27:19
+Now, let's say we want to do something a bit less technical.
+27:22
+We're not a carrier.
+27:23
+We're just a jerk.
+27:24
+And we want to blast people with spam.
+27:28
+We can harvest a technique that will be familiar to anyone
+27:30
+from the old days of email spamming.
+27:32
+We call it Snow Shoe.
+27:34
+But essentially, what we do is we get 20 shell companies
+27:38
+and each shell company signs up with 20 mom and pop
+27:41
+or super tiny void providers that aren't doing good KYC,
+27:46
+that aren't doing proper at the station.
+27:48
+They're not doing caller ID filtering on their app
+27:50
+down calls.
+27:51
+And all of these companies are going to get 5%
+27:55
+of the overall spam volume.
+27:57
+So the spammer might be having a tremendous spam pipe, cranking out
+28:01
+tens of thousands of calls a day.
+28:03
+Remember, the car warranty robot call thing was one guy
+28:07
+that was one spam operation.
+28:10
+That was one guy.
+28:11
+And he had all of these accounts with a bunch of other people.
+28:14
+And he was blasting these calls out and basically spreading them
+28:17
+out.
+28:18
+So even if any one of these entities would get zapped
+28:21
+by the government, there would be no way
+28:24
+to really get the root guy because it was all shell companies.
+28:28
+This was combined with the fact that a lot of these small carriers
+28:31
+aren't doing KYC properly.
+28:32
+They don't know who their end customer is.
+28:34
+They're not stopping that customer from sending out
+28:36
+stupid amounts of traffic for their profile size.
+28:39
+They'd let a residential customer have 100,000 lines
+28:42
+active.
+28:43
+And that can become a real powerful attack vector.
+28:46
+This is made even better by the fact that numbers
+28:49
+are so cheap now.
+28:50
+If numbers are 1 cent each, we're
+28:52
+going to buy one per day per company and just switch them out.
+28:55
+And major, like the state attorney general,
+28:58
+Rubble call report, has noted that this
+29:00
+is one of the big issues they're seeing that caller ID filtering
+29:03
+has become almost useless because spammers will never
+29:05
+use the same caller ID for more than a couple of calls.
+29:09
+And we can, of course, mix and match both of these techniques
+29:13
+from maximum damage, spreading calls across piles of tiny
+29:17
+middle of nowhere in the country, TDM carriers, all of which
+29:21
+aren't doing KYC, all of which are muddling the call flow,
+29:25
+and all of which can never be tracked back to us,
+29:27
+especially when you consider that a lot of these carriers
+29:29
+have three or more resellers and other entities in the chain
+29:32
+between customer and the actual entity
+29:35
+in the lab responsible for routing.
+29:37
+And since only inbound carriers require licenses,
+29:41
+none of these high volume VoIP carriers are regulated,
+29:44
+so you can't take away their license,
+29:45
+you can't kick them off the network,
+29:47
+you've got a recipe for infinite rubble calls
+29:49
+with almost no mitigation.
+29:51
+And this is just scratching the surface of carrier side VoIP
+29:54
+abuse.
+29:55
+Again, once you get your certification,
+29:57
+the doors are open to you, you can do everything
+29:59
+that you want pretty much legally.
+30:01
+You've got local number portability abuse.
+30:03
+You don't need a pin for wireline ports.
+30:05
+You can just make a fake LWA and steal someone's number.
+30:08
+SS7 devices haven't been pen tested, and I think ever.
+30:11
+And that's not even considering just plain freaking,
+30:14
+sending out calls with no A&I, sending out calls
+30:17
+with a charge number set to someone you don't like,
+30:19
+because they get built for it.
+30:21
+Sending out, using your access as an AOCN
+30:24
+to hijack number bots and numbering resources,
+30:28
+vulnerabilities on 20 plus year old hardware,
+30:30
+like 5E's and DMS 100's, that, again,
+30:33
+have never been pen tested, but have a bunch of interfaces
+30:36
+that may not be accessible to the public,
+30:37
+but are certainly accessible to other telcos.
+30:39
+You're basically only limited by your time
+30:41
+and the imagination you're willing to put into this.
+30:43
+It's like a new internet to play with.
+30:44
+It's wonderful.
+30:46
+Now, finally, hopefully, you're all interested enough
+30:49
+that we can discuss SEALEC formation, the actual process
+30:52
+to become a phone company.
+30:54
+So let's do this.
+30:55
+And let's do this quickly.
+30:56
+So first thing you're going to do
+30:59
+is you're going to need to get certification.
+31:01
+So then establish interconnection
+31:02
+with another phone company.
+31:03
+So your calls will route, set up a switch, get your numbers,
+31:06
+and then handle taxes.
+31:08
+So there were a bunch of different types of certification.
+31:10
+I'll let you read this slide later.
+31:12
+It's on the server.
+31:12
+But the key ones you need to understand,
+31:14
+the ILEX are existing phone companies.
+31:16
+Before 96, there are no new ones.
+31:18
+You either have to buy one or merge into it.
+31:20
+SEALECs are new wireline companies,
+31:22
+and cell companies are wireless companies.
+31:24
+And IPES are IP only.
+31:27
+In terms of picking which one you want to get,
+31:29
+if you can afford it, and you don't plan to be doing wholesale
+31:31
+minutes because wireless carriers have to sell wireless,
+31:34
+wireless is by far the easiest type.
+31:36
+It's included with your wireless certification.
+31:38
+So if you can track down any common carrier wireless
+31:40
+certification, you're basically good to go.
+31:42
+If you don't need interconnection agreements,
+31:45
+you can get an IPES.
+31:46
+However, it's nationwide.
+31:47
+It has minimal ongoing paperwork.
+31:49
+However, the FCC is slow and expensive to deal with.
+31:51
+And again, you don't get to do interconnection agreements.
+31:54
+So you're basically completely shut out of TDM.
+31:56
+If you want maximum power, like you
+31:58
+want the full set of certifications, you want to be as
+32:01
+mobbell as you can be, you want to get a SEALEC certification.
+32:04
+However, the downside is that these are a lot of paperwork.
+32:07
+You have to get one for each state you want to operate in.
+32:10
+So you have to file paperwork in each state,
+32:12
+and you need to file ongoing reports in each state.
+32:15
+It's also a tax headache, because again,
+32:16
+you have to pay taxes in each state.
+32:18
+However, the application process for all of these, again,
+32:21
+except mobile is fairly simple.
+32:23
+You file with the State Public Utilities Commission.
+32:27
+General, some financial information, balance sheets
+32:30
+and income statements, resume for your key executives
+32:33
+and key personnel, descriptions of the service area
+32:37
+that you want to serve and the services to be offered.
+32:39
+This can be the whole state and everything.
+32:41
+Just write something that sounds good for those categories.
+32:45
+And a brief description of what equipment you want to put together.
+32:48
+Again, the people at the Poc aren't really tech experts.
+32:51
+They just want to have some idea of what you're going to be setting up.
+32:54
+Then be prepared to wait about $30,90 days.
+32:57
+In terms of getting approved, the best advice I can give you
+33:00
+is to read the Public Utilities Commission docket.
+33:03
+Every application that has ever been filed is public,
+33:05
+and it's in there.
+33:06
+You can read the applications that got approved.
+33:09
+And more importantly, you can read the ones that didn't.
+33:11
+You do what's in the good ones.
+33:12
+You don't do what's in the not good ones.
+33:14
+Download one that got approved quickly by a major carrier
+33:16
+and just modify it to suit your needs.
+33:19
+Generally, however, having a team is better.
+33:20
+Hackings are social activity, especially phone hacking.
+33:24
+The more people you have on it, the more years of experience
+33:26
+are able to show the better.
+33:28
+This goes doubly well if you have actual telecom experience.
+33:31
+But this isn't a necessity.
+33:32
+Just have some idea of what you're doing.
+33:35
+The biggest and most important thing
+33:36
+is you can't have a criminal record or judgments,
+33:38
+especially for fraud or consumer abuses.
+33:42
+I don't know about other stuff, but I know that basically,
+33:44
+if you got convicted for defrauding people,
+33:46
+they're never going to give you a license for obvious reasons.
+33:49
+You also need some amount of money.
+33:51
+The actual amount varies from zero in liberal states,
+33:54
+or not liberal as in politically liberal,
+33:56
+liberal as in liberal and giving out licenses
+33:58
+to a fairly decent chunk in other states
+34:03
+that require you to have a specific amount of equity
+34:05
+or a specific balance.
+34:07
+Again, check your state's website and read your state's laws.
+34:11
+Read the laws.
+34:12
+It will tell you what needs to be in the application
+34:14
+and make sure you put that stuff in there.
+34:15
+And don't be afraid to call.
+34:17
+Generally, the public utilities commissions
+34:18
+are more friendly than you might think.
+34:21
+You'll have to shop around a bit to get to the right person.
+34:24
+But generally, once you get to the right guy,
+34:25
+they'll be able to help.
+34:26
+It's not as hard as it used to be.
+34:28
+In the 90s, it was very difficult to get approved.
+34:30
+Now, it's almost deregulated.
+34:32
+So you just have to do a box checking exercise almost.
+34:35
+Once you've got your certification,
+34:37
+you need to get interconnection.
+34:38
+There are two kinds.
+34:39
+Local for where your numbers live,
+34:40
+and long distance or feature group D for everything else.
+34:42
+Inbound calls are hard.
+34:44
+Outbound calls are fairly easy, because for outbound,
+34:46
+you just use a normal set trunk for everything that's not local.
+34:49
+The first step is to pick Alata and a rate center
+34:52
+that you're going to be getting numbering resources in.
+34:54
+You have to pick the geographic location in the rate center
+34:56
+in order to figure out what kind of interconnection
+34:58
+you need and where you're going to grab it from.
+34:59
+Local interconnection is the harder of the two.
+35:03
+You need to find that you are going to need to get an ICA
+35:05
+in the area where you want to get numbers.
+35:07
+And the rate center where your numbers are going to live.
+35:10
+For our box, this process is fairly standardized.
+35:12
+If inflexible, you're going to send them an email.
+35:15
+They're going to send you an information request
+35:16
+from an embedded application, and then a draft interconnection
+35:19
+agreement that's part of their standardized template.
+35:21
+You're going to fill out the draft ICA and send it back
+35:23
+to them, and you're done in about a month.
+35:26
+For a smaller I-LEC, the process is a lot more variable,
+35:29
+because they almost certainly won't know you were talking about.
+35:31
+You're going to have to go through multiple rounds of people
+35:33
+until you either get their regulatory guy
+35:35
+or whoever's responsible for that at their company.
+35:39
+And you might have to send them a draft ICA,
+35:42
+because they might not have one on file.
+35:44
+But the upshot to this is that even though it's
+35:46
+hard to deal with them, they are more willing
+35:48
+to negotiate, more flexible.
+35:50
+So if you need something that the R-Box doesn't want
+35:52
+to give you, they will be more helpful.
+35:54
+If you want to deal with TDM, you've got a few difficulties.
+35:59
+So firstly, the actual media part of TDM is pretty easy.
+36:02
+Cheap T1, media gateways are everywhere.
+36:04
+However, SS7 is a real killer.
+36:06
+If you have to deal with it, you're basically
+36:07
+going to have to develop a custom platform,
+36:09
+because it's not supported on anything.
+36:13
+However, you can order MF trunk still in a lot of parts
+36:15
+of the country, so you can use MF to avoid this.
+36:19
+There are also interconnect companies
+36:21
+that make the process easier, peerless,
+36:22
+and telequent wide voice to the big three.
+36:24
+However, there are a lot more.
+36:25
+These companies basically provide you
+36:27
+a TDM IP translation service.
+36:30
+However, this, however convenient this may be,
+36:32
+it also is an added cost per minute,
+36:35
+and sometimes per number, check with whatever provider
+36:37
+you're going to deal with.
+36:38
+But this avoids having to pay with either pay
+36:42
+for either a fiber midpoint slot splice
+36:45
+or least facilities from the ILEC.
+36:48
+This isn't that bad in terms of actually ordering real TDM
+36:50
+from the ILEC.
+36:51
+If you're close to them, if you're in the same lot,
+36:53
+if you're in their service territory.
+36:54
+However, if you're outside of their service territory,
+36:57
+those rates are no longer regulated,
+36:58
+and therefore are obscenely expensive.
+37:00
+We're talking tens of thousands of dollars for single T1,
+37:03
+if you need to run it like between states or something.
+37:06
+So again, your mileage may vary.
+37:07
+If you're staying local, you might be able to just deal
+37:09
+with the R-box directly.
+37:10
+If you're not, you might have to do something different.
+37:13
+One distance interconnection, thankfully,
+37:15
+is a hell of a lot easier.
+37:17
+You can just get an ICA with your R-box.
+37:20
+If you have an ICA with your R-box and you're doing TDM,
+37:23
+you can just do one distance through them.
+37:24
+Otherwise, you're going to want to look
+37:26
+for an access homeing tandem service.
+37:28
+This is either cheap or very or free.
+37:30
+Again, depending on who you deal with.
+37:32
+If you're doing decent volume, you
+37:34
+can even get some of that access revenue
+37:35
+that we were talking about before.
+37:38
+In either way, this is easier to get
+37:40
+because there's no incentive for long distance companies
+37:44
+to protect their brand or their territory.
+37:46
+It's a profit center for them to be selling interconnection
+37:49
+because they're getting a fraction of that permanent revenue.
+37:52
+Switch building is where you really get
+37:53
+to exercise your creativity.
+37:55
+A couple of the major SIP platforms,
+37:56
+I have their logos up, but you're
+37:58
+going to pick water multiple of these
+38:00
+and put something together.
+38:01
+Generally, you're going to need a session board
+38:03
+of controller or a gateway signaling element
+38:06
+and deal with SIP and load balancing.
+38:07
+That's sort of thing.
+38:08
+Then some media element to do codec translation,
+38:11
+to do natural versatile.
+38:12
+That sort of thing.
+38:14
+This is where you can really show your creativity
+38:16
+and make your voice service unique.
+38:17
+There's a ton of flexibility you can show here.
+38:20
+But it is a bit of a larger project
+38:21
+because you're going to have to develop something.
+38:23
+Again, this is also what you want to do.
+38:25
+You can get away with a single-ashrist box
+38:27
+if you just want to be tiny and serve yourself.
+38:28
+But if you want something production ready,
+38:30
+you're going to need to do more.
+38:31
+A couple key notes here.
+38:32
+IMS is the standard for LTE.
+38:34
+It's confusing, difficult, and generally
+38:36
+nightmare to work with.
+38:37
+But you do need it if you want to deal with phones.
+38:40
+Or if you want to follow the technical standard
+38:42
+for residential voice services.
+38:43
+But no one really uses it if they don't have to.
+38:46
+And finally, commercial switches, your old stuff,
+38:48
+your five-E's, your DMS 100s, or your meta switches
+38:51
+and ribbons, if you want to buy modern stuff,
+38:52
+are very expensive and less customizable.
+38:55
+But rock solid reliability.
+38:57
+We're talking five-nines for a single box
+38:59
+and have everything you're going to need out of the box.
+39:00
+So if you're willing to pay out of pocket for them,
+39:04
+there might be worth it.
+39:06
+There are a couple pitfalls with switches.
+39:08
+Biggest one is leg style routing.
+39:10
+So local and interlatic calls, you're
+39:11
+going to have to pick those out, make sure they go over
+39:13
+the correct trunks.
+39:15
+You may have to support equal access,
+39:17
+depending on whether someone asks you to,
+39:18
+and the regulations in your state, again, check your local laws.
+39:21
+And you may have to deal with TDM and SS7,
+39:23
+as we were talking about before.
+39:25
+So you may need media gateways.
+39:26
+You may need other gateway type elements.
+39:29
+You may need an SS7 signaling gateway.
+39:31
+Billing can be a real nightmare.
+39:32
+If you want to do proper teleco style billing,
+39:35
+or you're billing local calls separately,
+39:36
+you're billing per minute, you're
+39:37
+billing cabs or access revenue for inbound,
+39:41
+you're also going to have to deal with high availability
+39:43
+and failover if you want to meet certain state standards
+39:47
+for uptime.
+39:50
+A lot of states have a standard of four
+39:51
+nines of uptime for your switches.
+39:53
+So you may have to make sure you're
+39:55
+suitable for reliable and not just running on one box.
+39:58
+You may also want to go multi-site,
+39:59
+especially if you're going to be pumping a lot of traffic
+40:01
+through one central instance.
+40:03
+There are issues for how to do this clustering and that sort of thing.
+40:06
+For it is not particularly easy to cluster like websites.
+40:11
+Once you've got your switch set up, you're on the home stretch.
+40:14
+Now all you need to do is follow for your numbering resources.
+40:16
+You're going to go to NAMPO, the North America
+40:18
+and numbering plan authority.
+40:19
+You're going to send them your OCN.
+40:21
+You're going to send them your long distance interconnection details.
+40:23
+And you're going to send them your silly code for your switch.
+40:25
+Then you're going to wait 45 to 90 days
+40:27
+to get your central office code, or a bit less
+40:29
+if you're just getting 1000s block.
+40:32
+Once you're approved by NAMPO, you're
+40:33
+going to get an AOCN to put the numbers into birds and set up the routing records.
+40:37
+You're going to talk to them about how you want to get your routing set up.
+40:40
+And then you're going to input your numbers in the end pack so people can port them.
+40:43
+After you're all set up and all fully online,
+40:45
+you're going to submit part four with NAMPO.
+40:48
+And if your numbers are pooled, you'll also
+40:50
+have to send in a PACN confirmation to say, basically, a test that you've fully built out the block.
+40:55
+And then you're done.
+40:56
+You are now an official phone company with your own numbering resources built out.
+41:00
+And with your own interconnections set up and routed.
+41:03
+We're going to finally have a few concluding notes and hopefully get that done before we run out of time.
+41:07
+So firstly, if you're a phone company or hell, even if you have an internet connected PBX,
+41:11
+monitor your call and zip logs, set alerts for unexpected usage,
+41:15
+especially for weird international destinations.
+41:17
+Lock down those weird international destinations.
+41:19
+If you're a normal company, why are your employees calling Uganda?
+41:22
+They probably shun it.
+41:23
+Nothing wrong with Uganda, they charge like 50 cents a minute for a call.
+41:27
+So you want to make sure that's not happening.
+41:29
+If it doesn't have to be, did rotation or people swapping out phone numbers,
+41:33
+if your carrier is not normal and is almost a certain sign that that person is using your service to send spam calls,
+41:39
+you're going to want to monitor your customers, too.
+41:42
+Know the real person behind every company.
+41:43
+Know who's making your calls, know who you're dealing with,
+41:45
+and set limits on your switches to match that.
+41:47
+If a customer says they're home, they don't need to be making 40 calls at the same time.
+41:52
+If a customer says they're a large business, you know, you should expect them to have,
+41:56
+you know, not be switching out their numbers every two days,
+41:58
+because that's not normal for anyone.
+41:59
+And never give out people the ability to swap out their caller ID
+42:02
+and basically supply what the caller ID is going to be,
+42:05
+unless you absolutely have to.
+42:06
+You know, it's the number one way that spammers were able to abuse phone services.
+42:10
+In terms of public policy, if we have any feds in the room,
+42:12
+require Ilex to support IP interconnection.
+42:15
+This would solve a huge chunk of our issues for, you know,
+42:18
+the TDM shuffle, the evasion of Starshaken.
+42:21
+And it would also, at the very least, you know,
+42:24
+get the FCC moving on mandating out of ban Starshaken support.
+42:27
+This would be a big thing for fixing a lot of our, you know, a lot of those problems.
+42:31
+And user shaken might also be a good idea.
+42:34
+If you force the end user PBX to sign the call,
+42:36
+rather than the, you know, the calling carrier,
+42:39
+this would allow us to set up proper, you know, black hole lists for PBX
+42:42
+for people who, you know, calls are frequently associated with spam.
+42:46
+And it would allow us to track the call directly back to the originator
+42:48
+rather than their carrier.
+42:50
+And we also need better enforcement against criminal telecos.
+42:52
+I have no proof of this, but I would estimate that 50 plus percent of all
+42:55
+of our global calls right now come from less than 10 carriers
+42:58
+who make this a market for them.
+43:00
+These guys need to be kicked off the network
+43:01
+because they're the source of all the spam, basically.
+43:04
+Finally, I will ask you nicely,
+43:07
+if any of you have equipment that you don't need, please,
+43:11
+like if you have five ease, if you have old step-by-step stuff,
+43:14
+you know, even if you have like mainframe gear,
+43:16
+I've also got, you know, the Z114.
+43:18
+If you have anything, or if you just are an ISP,
+43:21
+an IXC, a black, an ASN, you want to appear with me,
+43:24
+I'll connect with anyone, and I will give any unloved equipment a new home.
+43:28
+Finally, I'd like to give a thanks first to DefCon
+43:31
+for inviting me here to speak.
+43:33
+Second to LiveWire Telecom and my friend Dylan Cruz,
+43:36
+who knows far more about TDM and the old phone network than I ever will,
+43:39
+and has been a tremendous help in this.
+43:41
+Wide voice, who is my future group D carrier,
+43:44
+and I have nothing but good things to say about their service.
+43:46
+And finally, YKC communications in Ganato, Texas,
+43:49
+who did not have a choice when I sent them an interconnection request,
+43:53
+but was still a good sport about cooperating.
+43:55
+So thanks for following the law and being a good sport, I guess.
+43:58
+And finally, call me.
+44:00
+This is my information.
+44:02
+I love talking about phone stuff with people,
+44:04
+and I have no one to talk about it with.
+44:06
+Please reach out.
+44:07
+I will talk your ear off about any of this stuff.
+44:09
+I love to talk to you, love to talk about phones.
+44:11
+And I think we're done with one minute to spare.
+44:14
+Woo!
+44:15
+Woo!
+44:16
+Woo!
+44:17
+Woo!
+44:18
+Woo!
+44:19
+Woo!
+44:20
+Woo!

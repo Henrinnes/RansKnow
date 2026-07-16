@@ -1,1 +1,222 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+It's time. In this video, we will discuss possible exploit strategies for Sudo.
+0:06
+In the past eight episodes, we have used Fuzzing to rediscover the crash in Sudo edit.
+0:11
+We have analyzed the crash with Adresanetizer and found the loop that causes a memory corruption.
+0:16
+And then we looked at the root cause in detail.
+0:19
+And now it's time to make a plan for exploitation.
+0:22
+How can we turn this memory corruption in Sudo into an actual privileged escalation exploit?
+0:27
+Let's head in.
+0:30
+For heap exploitation, there are basically two strategies.
+0:38
+First, you can exploit the heap implementation itself, so attacking the heap metadata,
+0:44
+or you can attack the data stored in the heap.
+0:48
+Let's think about exploiting the heap metadata first.
+0:51
+If you have watched my Exploite Education playlist, then you might remember the videos about heap exploitation.
+0:56
+The heap is basically a data structure with metadata.
+1:00
+You can imagine it as a linked list.
+1:02
+And this metadata, for example, contains the size of the junk and some flags, like if the previous junk is in use or not.
+1:09
+Blah blah, details are important right now.
+1:11
+In those old videos, we exploited a very old allocation algorithm called DLMALOG.
+1:18
+Not gonna lie that heap exploitation of DLMALOG was mind bending and it is complex.
+1:23
+But it also didn't have any mitigations, thus it was relatively simple.
+1:28
+Nowadays, the default MALOG algorithm is a bit more advanced.
+1:33
+We have for example fast pins, which are different data structure additionally to the regular heap that you might know.
+1:39
+And the MALOG algorithms also have gotten a bit more hardened.
+1:43
+But only in some ways, for example, some techniques with fast pins are actually a lot simpler.
+1:49
+But generally, in order to exploit the heap implementation directly, you need a specific order of memory allocations and free operations.
+1:58
+So in CTF challenges, you often have some kind of menu where you can create or delete stuff.
+2:03
+And then you can perform the exact order of MALOG and freeze you need.
+2:08
+But in our pseudo vulnerability, we have a single short overflow on the heap.
+2:13
+We don't have any interaction with the program.
+2:16
+And on top of that, we have to deal with ASLR.
+2:19
+And the typical way of dealing with ASLR is to only deal with relative offsets or first have a bug to leak addresses, thus defeat ASLR, and then you can go further.
+2:30
+But again, we don't have any interaction with pseudo.
+2:33
+We can't perform multiple overflows.
+2:35
+We can't really decide how we want to allocate or free chunks.
+2:39
+With our one overflow, we need to win.
+2:43
+That's why I believe attacking the heap directly, the heap algorithm, the heap metadata is unrealistic.
+2:49
+I don't want to say it's impossible.
+2:51
+People always find crazy creative ways, but I don't know any reasonable technique that we could try.
+2:57
+So that's why I want to go for the second strategy, attacking data on the heap.
+3:02
+We have a heap overflow and we can override arbitrary data in other chunks.
+3:07
+We don't immediately crash when we override this data.
+3:10
+We crash because of the side effects after we overrode other data.
+3:14
+We call this corrupting memory.
+3:16
+So maybe there are some very interesting and useful data stored after our buffer that we can override.
+3:22
+As an example, if we find a function pointer on the heap after our chunk and is then used afterwards, we could override it.
+3:30
+And when the function pointer is then used, at least we would have control over the instruction pointer.
+3:35
+It's allowed would still be an issue, but we could maybe do a partial override, whatever future problems, something like that would get us a huge step forward.
+3:44
+But how can we find something like that? What do we need to make this work?
+3:48
+Let's look at the heap again with heap chunks and GDP.
+3:51
+Here's our buffer. Now how could we know what is stored after it?
+3:55
+What is the meaning of this data? How could we know if there is a function pointer?
+4:00
+That's not easy.
+4:02
+And maybe there is no function pointer here at all.
+4:06
+But that's not the only question we should investigate.
+4:09
+Check out this. The allocation of our buffer happened right before we caused the overflow.
+4:14
+So it's the last chunk that was allocated.
+4:17
+But our buffer is not at the end of the heap.
+4:20
+This means that during the execution of this program, memory was allocated and freed many times.
+4:26
+And there was a hole in the middle where our new buffer could fit in.
+4:31
+This means, depending on the size of our buffer, we could end up in different places.
+4:37
+To replace this, depending on the length of the arguments, so the size we allocate,
+4:42
+we might have a different heap chunk after the buffer we can overflow.
+4:47
+But that's not all we have to research. We have no clue what influences the sizes of other heap chunks.
+4:54
+If you casually scroll through the allocated chunks,
+4:57
+here's a chunk with the folder path and here's what looks like environment variables.
+5:01
+Which means if you have a different set of environment variables,
+5:05
+and probably many other things that influence what sizes of chunks are allocated on the heap,
+5:10
+the hole where our buffer will be allocated might be in completely different places.
+5:15
+The whole heap could be arranged very differently if you control this other data.
+5:20
+What does this mean? Does this make it easier or harder?
+5:24
+On one hand, this means we might be able to carefully control where we want to place our buffer
+5:29
+and overwrite the right thing. On the other hand, it might not work on other systems.
+5:34
+Either way, we got to try. And by the way, this careful planning and arrangement of heap chunks is called heap feng shua.
+5:42
+Feng shua is a pseudoscience where you use the energy forces to harmonize individuals
+5:48
+with their surrounding environment or in other words, the pretty arrangements of objects in a room.
+5:54
+And I think there is no better word that could describe this for heap exploitation,
+5:58
+harmonize the heap chunks perfectly so that our exploit can work. It's kind of magical.
+6:04
+Anyway, I'm not a point expert. To be honest, I rarely solve pointable CTF challenges.
+6:09
+I know many won't believe me because I made the binary exploitation series.
+6:13
+I must be an expert and do that all the time, but that's not true.
+6:18
+This pseudo exploit feels a bit out of my league. I think I have the skills to attempt it.
+6:23
+I have some ideas I want to try, but maybe I will fail.
+6:27
+And that's totally fine for me because I know by trying this I will learn a lot.
+6:32
+Actually, I have already learned so many new things working through this project.
+6:37
+And it is already a success for me.
+6:40
+Remember, other people have done the research and there are many good exploits already.
+6:45
+But that's not the point we use the pseudo vulnerability to learn.
+6:49
+And it's cool that others have written exploits already because if we get stuck or if I get stuck,
+6:54
+I can always look at the other exploits for inspiration.
+6:58
+So either way, huge success for me.
+7:01
+That being said, what should be our next steps?
+7:04
+I have two ideas I want to combine.
+7:07
+The first idea is to write a tool that helps us enumerate or fast different heap configurations
+7:13
+by controlling buffer sizes.
+7:15
+But to be honest, this idea is not actually from me.
+7:18
+When pseudo edit was released, I obviously read over the advisory and I remember them saying this.
+7:23
+To implement this initial technique, we wrote a rudimentary brute-forcer that execute pseudo inside of GDB
+7:29
+overflows the user arcs buffer and randomly selects the following parameters.
+7:34
+So this is an example of where I read about an idea.
+7:38
+It seemed obvious and I saved it in my head and facing this exploitation challenge, I recalled it.
+7:43
+I could try to brute-force different parameters.
+7:46
+Now, the advisory specifically talks about which parameters they fast because they have an actual exploit technique they are going for.
+7:53
+But for my learning attempt, I don't want to do that.
+7:56
+I don't know this technique, so I want to see if I can figure something out myself.
+8:01
+But still using the technique of brute-forcing heap layouts.
+8:04
+That was the first idea.
+8:06
+But I have a second idea.
+8:08
+I thought I could specifically search through the heap for function pointers.
+8:12
+How would I do that?
+8:14
+I'm sorry, not telling you just now, but I would love to hear your ideas in the comments below.
+8:19
+Next video, I show you how I have done it.
+8:31
+Thanks for watching.

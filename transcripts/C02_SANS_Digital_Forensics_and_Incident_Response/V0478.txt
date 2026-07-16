@@ -1,1 +1,480 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Yeah, let's get started. Thank you for having me. I'm really excited to be here. It seems
+0:06
+like also in the morning there was a number of folks that have graduated from SANS classes
+0:10
+in the past and like many of the other speakers and maybe not known very broadly, but actually
+0:16
+I was part of a SANS program back in my last year of college called US Cyber Challenge.
+0:20
+I did a competition for a couple days and then over the summer got to go for a week
+0:24
+into a SANS training and I think there's few things in my early part of my education
+0:30
+experience that quite set me up in the way that SANS did in terms of, you know, for success.
+0:36
+So thank you for having me. Thank you SANS. Let's get started.
+0:40
+You're a drink too. Right. I'm Silas. I'm a Principal Security Researcher at Census.
+0:50
+I hope this has been for several years on broad scanning the internet. So you may know
+0:54
+me also if you read your patchy logs. Do a lot of scanning also in the name OnlySans.
+1:00
+I also run a malware repository of malchare. We've been around for about 10 years.
+1:04
+And I've worked at a variety of cyber threat intelligence companies for a while. The activity
+1:10
+discussed in this presentation does not involve any of my employers. However, a lot of the things
+1:16
+sort of went into the trade craft of this are things we've looked at and are using as part of what we do at Census
+1:23
+to do is about hunting these days now. So today we're going to focus on cyber operations.
+1:29
+I cast a fairly wide net when I'm talking about cyber operations. What I'm talking about is essentially
+1:35
+any time that multiple people are working together to achieve some type of outcome in cyber.
+1:41
+Typically across organizations and for some type of broader purpose. What I don't mean is hackback.
+1:52
+I actually really dislike the term hackback because I feel like it's a kitchen sink or like a kitchen grain
+1:57
+term. There's things that we see people do that are like really formal well done operations,
+2:04
+like the operations from several years ago from HISAC, Microsoft and Portra where they went
+2:09
+after pirate cobalt strike servers. That was an incredible good example of a formal operation with a
+2:15
+really good intended purpose that actually had an effect, something that's usually reserved mainly for
+2:21
+governments. But as time's gone on, we found ways to be able to work together in new and creative ways.
+2:30
+I also really don't like hackback because the inherently at its core, it's a very reactionary thing.
+2:35
+Somebody punches you, knocks out of your network, going after and getting revenge is not going
+2:40
+out and solve anything. When things are planned and people have an idea or an opportunity for
+2:45
+something where it's hey, there's an opportunity to see something more about this threat actor that
+2:50
+we didn't know before. Those are times when really really good cyber operations come together.
+2:56
+So, one kind of last point. Most of the things that I've done in terms of cyber operations
+3:03
+typically are either for collection where I think one of the earliest operations that I was
+3:09
+ever part of was back with APT1. I wasn't working in Mandiant. I think it was at secure works time.
+3:15
+But we were just scraping the C2 pages, pulling down the C2 commands, storing those in a database
+3:20
+and sharing the amongst amount of small with a small research community. Some really small things
+3:25
+like that make a huge difference. And I generally do like cyber operations are something that should
+3:31
+be accessible to everyone. But we all play a role in helping make things happen. So, with that,
+3:38
+we're going to talk about a piece of malware that I grew very fond of a couple of years ago called
+3:42
+Rotomontus. So, those of you who are unfamiliar with Rotomontus, and I apologize also to the artists,
+3:48
+this is not going to be an easy malware to spell. Numerous spelling errors for myself. So,
+3:56
+so Rotomontus is an info-stealer similar to things like RedBine. What it does is it's designed to
+4:02
+be deployed on a target system and then it pulls things like browser passwords, crypto wallets,
+4:08
+there's some like some file grabbing capabilities. You can say pullbackall.dex.ex files.
+4:14
+And now we'll do that. So, when an attacker is using this, they work out of a web-based panel.
+4:20
+So, it's a web app that they log into. They're able to see all the infected systems that they have
+4:26
+that they've hit. And, and kind of pullback the data as well. But that's sort of that like middle point
+4:35
+where infected systems send their data, attackers able to pull it down and then sell it or do what
+4:39
+else they want to do. It's not terribly expensive in the scheme of offensive tools. Typically it's about
+4:47
+$200 for a month or about $500. During the early days, they also offered like a lifetime sale for
+4:53
+about a thousand I think. But I don't know if anybody took them up on that. So, by the way,
+5:00
+real big shout out earlier to Sierra and Dave for their talk on putting together good visual aids
+5:06
+for presentations and when conveying for intelligence information. It would have been great to see
+5:12
+before I started making slides because I am not a great slide mayor. So be aware these slides are
+5:17
+going to be fairly flexible. So, starting to kind of view like early days,
+5:23
+part of the month is first came out of the scene in like September 2022. Fast forwarding to the next
+5:28
+big part of broad amounts of history happened over the past couple months where as part of Operation
+5:34
+Endgame, Europe, along with several other partners, went from help assist broad
+5:40
+months from going from a successful criminal enterprise to this in which they publicly shut down
+5:48
+a couple thousand servers of the operators. They publicly released that the person who developed
+5:54
+the malware was actually stealing from their customers and stealing their crypto wallets,
+5:58
+which led to them getting banned across most of the forums. And one of the forums also got shut
+6:02
+down in between these two dates. So, quick note. So, I've been doing like threat intelligence in
+6:08
+malware, reversing for a few over a decade. But it took actually a year off a couple years ago
+6:15
+in order to do kind of an odd, a positive study. I spent a year studying public-private operations.
+6:22
+What does it look like when government and industry work together in order to in order to have an
+6:28
+effect or to take out a piece of malware to disrupt things? And in the case of something like
+6:34
+Operation Endgame, which I was not part of, it all kind of boils down as I've seen down to three
+6:39
+kind of core things. And there are likely other better academics college who have come up with
+6:44
+a better set of three, but these are the three that I kind of think of a lot about.
+6:47
+So, the first is really good operations are coordinated. There are no surprises. Everyone who's
+6:53
+involved knows what's going on. They're aware of it and there's a community open lines of
+6:58
+communication between folks or necessary lines. Then there's some type of intention. There's
+7:04
+something that they want to do collectively together that people couldn't do individually. I mentioned
+7:09
+earlier the Microsoft HISAC 4-TRA and likely many others I'm forgetting offhand. That was
+7:16
+incredibly good operation as well because they had a clear focus. They were going to shut down
+7:21
+pirated copies of Kobold's right. They were the means to find them. They had collaboration with
+7:26
+the necessary parties and they executed it outstandingly. And then last is there have to be balanced
+7:32
+incentives. A whole lot of the conversations I had during the time where I was researching this very
+7:38
+closely was we'd love to work with private or government folks to see. We'd love to work in private
+7:44
+sector. It would just be easy. They just gave us all the reports about it. The thing is though,
+7:50
+it's an incentive scheme. You could, but those reports take hours and days and months
+7:56
+to put together like blood, sweat and tears of researchers like handing it over doesn't accomplish
+8:01
+anything. You miss out on all the intangible things and the insight that these researchers have
+8:06
+built up over time. But also their time isn't just readily available. You need to work with their
+8:12
+companies to be able to say, hey, I need this researcher for three months because we're going to do
+8:16
+something incredible. These are the incentives that need to be balanced. Oh, I'm doing well on time.
+8:23
+Sweet. All right. So let's go back to the beginning of Brottomont this accessory.
+8:28
+So Brottomont this is that engine first came out of the scene back in like September 2022.
+8:34
+And if you look closely like the screenshots of like the panels and their demo stuff,
+8:37
+like it was clear that it had been active for maybe like a month before that as well.
+8:42
+Even though it was like point version 0.3 when it was released.
+8:47
+So when it came out basic Windows 4, put forward to hijacking as well. I had some other basic features.
+8:57
+But it was fairly well received on forums and yeah, virtually they didn't open like a demo instance.
+9:05
+But it was all right. So I started looking at Brottomont this personally on November 2nd 2022.
+9:11
+I know because that was the day of my case notes. I've kept most of that fairly tight since then.
+9:18
+Well, I wish I had a really good story about how I got interested in Brottomont this.
+9:24
+The truth was that the time I was doing a bit of scanning and building out some malware identification techniques using scanning.
+9:31
+And I also needed an example for an upcoming talk. So I started going through some forum posts looking for new malware.
+9:38
+Brottomont this did provide public documentation and I highlighted in red what actually really sold me on this malware.
+9:44
+So when you set up your own Brottomont this instance you log into the web control panel.
+9:50
+That that general path.
+9:53
+Which I really liked because when you get something like a fixed URL path for like a control server.
+9:57
+That makes it really easy to scan the internet poor.
+10:00
+And essentially it comes back within HTTP 200.
+10:03
+That's a good first step that this might be a panel.
+10:06
+Also, weirdly, there's only a poor 443 without SSL.
+10:10
+Which was really nice as all.
+10:12
+So because at the SSL details, that is huge volume to the scan data.
+10:16
+So.
+10:18
+And that's what the panel looks like on the left side.
+10:21
+Gipsy high level of like system information, how many credentials were captured and things like that.
+10:26
+So, um,
+10:28
+certainly now it was probably about like 11 30 12 o'clock in the day when
+10:33
+when I finally sort of settled on like, okay, Brottomont this seems like a cool thing to grab first.
+10:36
+So I started to scan and then went back kind of digging into the malware and searching virus total looking for anything that was out there.
+10:44
+And at this time, there wasn't any public reporting on Brottomont this.
+10:46
+It's very new.
+10:47
+It was something that, you know, likely maybe a couple customers had picked up.
+10:51
+But it wasn't really reaching like Brott adoption.
+10:53
+Definitely hadn't been seen in any sort of like,
+10:56
+broad type of path.
+11:00
+This is also what the panel looks like.
+11:01
+This is not my panel.
+11:03
+But I think by about 12 30 in the day,
+11:07
+the copy of the malware panel itself fell off the back of the truck.
+11:13
+So, uh, so I had a working panel was able to sort of testing and sort of get to understand the malware a little closer.
+11:18
+As like a malware analyst, I really like to look and understand how malware communities like,
+11:23
+what does the protocol look like when it's sending data.
+11:26
+What are those requests look like?
+11:28
+So as I continued to dig into it,
+11:30
+I like to do the same also when looking at something like a web panel.
+11:33
+And
+11:35
+I've come from developer tools open, which is kind of watching the requests that I noticed something odd.
+11:42
+Whenever I click like the logs, so we can see what, you know, see if I DM was checking in.
+11:48
+Every page leaves eloted.
+11:49
+So, web page would open.
+11:51
+But then it would take a second or two for a web request call the API to get all the infected system details.
+11:58
+And I noticed that that request didn't have any authentication at all.
+12:03
+Maybe it was cookies though, but so I definitely didn't need like normal, like,
+12:07
+no, normal isn't good word here.
+12:11
+What I thought would be a good test case or rewrote the requested curl.
+12:15
+And it works successfully.
+12:17
+So in this version of bottom up this, you could theoretically just call all the API and points directly
+12:24
+without having to authenticate, which puts this into kind of an unusual area.
+12:28
+Because similar to something like an open web directory,
+12:30
+if you can call something directly, you're not bypassing authentication,
+12:35
+you're not hijacking something, you're not doing anything that would typically be a,
+12:38
+you know, be here for an abuse act violation.
+12:44
+So we can be at the art of the possible order.
+12:47
+So what this allowed us essentially would be for us to be able to request everything
+12:53
+that an attacker could do in the portal without having to log in.
+12:57
+So we can list all the infected victims, we can get the settings,
+13:00
+we can also get the license information because when you buy a copy of our bottom up this,
+13:04
+you get a license based on how long you paid for it.
+13:07
+So if somebody has like an unlimited license, that's a pretty interesting sign also and gives us
+13:12
+who that server operator is. But we couldn't do things like
+13:19
+drop a web show or get system access on the remote servers, which trivially is not of the goal in
+13:25
+this case. The goal in this is collective. We want to learn more. This is a new malware.
+13:29
+Now this is likely far beyond the time and long enforcement is actually even sort of looking at it
+13:34
+or come up on the radar or if anyone. So
+13:36
+it's an interesting ground to be able to sort of like begin to dive in.
+13:43
+So
+13:46
+this is why like four or five o'clock in the afternoon at this point when the scan finished
+13:48
+that I kicked off at the very beginning. And at that time there were 19 control servers that
+13:53
+I was able to see. Most of these were hosted in like Europe, I think along pretty heavily on like
+13:57
+OVH, maybe some in Hetzner as well. So when I write a scanner, I like to make sure that the scanner
+14:06
+runs on a regular basis. But this was 2022. And things like like census was out there, but I was
+14:13
+not at census at census at the time. So my scanning pace was a little bit lower. But what was
+14:19
+really exciting is watching, watching slowly, then on the 17th of November, that number of control
+14:28
+servers rise up to 29. There have been a jump about 19 new or 10 new control servers in a few days.
+14:35
+When we get to early December, that number goes up to 61. And so there's a slow rate of the
+14:39
+malware growing, new people adopting it, picking it up and adding into their campaigns. December 25th,
+14:45
+we hit 97. So it started to grow at about 30 control servers every few weeks now.
+14:51
+January with 118. But then like January 10th, we jump up to 300 servers. So this started to reach a
+15:00
+pretty sizeable adoption. It was becoming popular with actors. So right around this time,
+15:07
+something else falls up the back of the truck. And this comes from the developer of the malware saying,
+15:12
+hey, people are scanning for this malware. Like make sure you change the web path. We added a new
+15:18
+block list to stop these scanners. And I like, this was a, this is my nightmare scenario.
+15:25
+Every day I worry about things like this, because what I was horribly terrified what about was
+15:31
+was causing a change in this ecosystem. My goal is always not to change anything in the criminal
+15:37
+on the board. I don't want to have any impact. I don't want to help folks be better. I just want to
+15:42
+observe and understand the ecosystem. So I took a look at the new copy of the malware. I wasn't in
+15:49
+any of the block lists. And I am to this day furious that none of my infrastructure was flagged.
+15:56
+But it taught me something really, really important. It's I was likely not the only one that found
+16:01
+this vulnerability. And there were other actors that found the vulnerability and also conducting their
+16:07
+own operations against Romantic. There's red on red, maybe other defenders as well, also pursuing
+16:14
+collection activities against it. Sorry, I'm also a very fast talker. So
+16:25
+so this is also the configuration panel and servers look like. And like most malware they could
+16:31
+solve on sketchy forums, you have to have your traditional CIS protection. So rather
+16:37
+than this, we're not run in Russia in Ukraine. Keep that in mind. So as I was doing the scanning
+16:46
+through November, December and January, we also ran the scans in parallel with
+16:53
+does the server exist? If it exists, pull back all of the data possible.
+16:59
+So when we map this out, ooh, let's just ignore that one blip and mask out. That shouldn't be there.
+17:05
+But it was definitely there. So eight November already had about four to five thousand
+17:13
+infections across the planet. And this is based on pulling each server for all of the victim
+17:18
+information, settings of the control servers and things like that. Interestingly, December 13th was
+17:25
+when there was a significant spike that 4,000 kind of started growing at about a couple thousand
+17:30
+every other day. Early December, I think the numbers were around nine to 10,000 at this time.
+17:39
+But in December 13th, the amount of infected systems dramatically rose to that 67,000. And this
+17:46
+was comprised of two to three control servers that each were housing, tens of thousands of
+17:52
+infections each. Lightly, some larger botnet had deployed Rotomontis as a secondary payload in order
+17:59
+to capture credentials and pull those back as well. For some of you like smaller commodity botnets
+18:06
+or more general botnets, things like Cuba, pushing down a payload like Rotomontis is a way that
+18:11
+attackers can sort of further monetize the infrom like the systems that they already have access to.
+18:17
+Sorry, the reverb there. So right around this time as well, in January when the developer
+18:26
+reached out to the back of the truck, they also released version 0.4. This, unfortunately,
+18:33
+had corrected that authentication bypass and closed down the ability to see more into the malware.
+18:40
+Interestingly though, the sort of core way that the communications between infected systems and
+18:46
+control servers were structured wouldn't end up being changed until later on that year in November.
+18:51
+At that point, the actor put in a bit more sophisticated protections to prevent
+18:55
+into trying throw scanning, a print scanning from picking up a malware as part of these scans.
+19:05
+So this is the last slide I have and the key things that I wanted to say here, and I actually
+19:11
+intuitively this slide kind of intentionally blanked because I want to talk about a couple pieces of
+19:15
+this. The number one thing that I've kind of consistently come back to when it comes to cyber
+19:22
+operations is that they can't be done alone. It's tempting for researchers who find an opportunity
+19:27
+and identify something unique on the internet to say like, I'm going to go and start collecting
+19:30
+on this by myself. But in the previous two talks, they talk about things like cyber forecasting
+19:36
+and bringing in additional insights. That is the most important thing that you can do if you find
+19:41
+yourself in one of these opportunities. Reach out to friends you have. There are people in this
+19:45
+room that I reach out to on a regular basis asking for questions like, hey, can you take a look at
+19:49
+this? That comes with a cool. So when we found this vulnerability, I immediately reached out to
+19:55
+a friend of mine and said, hey, like, I need your legal advice on this because I'm not a lawyer.
+20:02
+I can't even pretend to be a lawyer on TV. And mind you, I was in textbooks when I was a kid
+20:08
+because my friend's mom worked at Silverberg that and he used neighborhood kids as models.
+20:12
+So I can at least pretend to be a school bully after this was what I was in that presentation,
+20:19
+which clearly does not match. But I am not a lawyer. So as part of this, we worked with a couple of
+20:27
+different lawyers and different government agencies first just to make sure that this wouldn't be
+20:31
+illegal. Touching actor and structure tends to be one of those issues that gets people into a very
+20:38
+like sometimes it makes them uncomfortable. But in some cases, it can be done responsibly and
+20:44
+carefully. And in the case of when we started collecting this data, I could come back to,
+20:50
+can't do it alone. So I had the ability to pull this data. But one of the things that
+20:56
+is important as well is in these opportunities to make the absolute most of them. And collecting for
+21:04
+Intel say is important. But the key piece that also enabled this operation to be successful
+21:09
+was that we partnered with two other organizations whose sole business was around collecting
+21:16
+collecting credentials and then notifying companies and providing some of that credential security
+21:21
+stuff. Unfortunately, I can't name who they are. But the key bit was that we in order to be
+21:31
+responsible stewards of this data, victim notification was a key component of making sure that
+21:37
+we were sort of fulfilling our social contract as researchers to the world and trying to ensure
+21:42
+that we protect them forward. With that, I'll say thank you and I'm opening up because I suspect
+21:49
+there will be quite a few questions.

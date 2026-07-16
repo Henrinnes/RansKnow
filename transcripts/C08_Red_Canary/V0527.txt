@@ -1,1 +1,628 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Obviously, what we thought we would get with AI is, I'm sorry, Dave, I can't do that.
+0:04
+Arguably, that might even be better for us from a security standpoint.
+0:07
+But instead, we got, that's an excellent idea, Dave.
+0:09
+I'll go ahead and give you everything you need, which is the unfortunate reality that we are in.
+0:15
+In the context of 2001, Space Aus, I think if I were in the circumstances, I would have rather
+0:21
+have done what I had been asked to do.
+0:24
+Yeah, exactly. Great, but not great for us.
+0:26
+So let's go ahead and get into some of the logs, which is going to be the scary part of today.
+0:38
+Welcome to the Halloween Week version of Red Canary Office Hours.
+0:43
+Thank you all for making time to join us. We appreciate you being here.
+0:47
+Joining me today are Brian Donahue of many of you probably know if you've been here before
+0:52
+in our Principal Security Researcher and Jesse Grig.
+0:54
+They're senior threat researcher that's going to be here to talk about supply chain sadness.
+1:02
+We have a lot to cover today. Let's hop in with the top of the news here.
+1:07
+Brian, who's leading this?
+1:09
+All right, well, so we're going to talk about a few things. As you said, we're going to talk about
+1:13
+some supply chain stuff since there's been a lot of it in the news. But first, we're going to start with
+1:18
+this Windows, this WSUS for real. I can never remember what that stands for.
+1:23
+Is it Windows, Server, Updates, or?
+1:25
+Updates, Services.
+1:26
+Updates, Server, Updates, Services.
+1:28
+Yeah, I think so.
+1:29
+And then we'll close out. We'll wrap up the end here with some interesting research that Jesse actually did
+1:34
+on bad guys harnessing artificial intelligence command line tools.
+1:38
+So let's talk about the CDE that CESA just added to their known exploitive
+1:47
+vulnerabilities list.
+1:50
+Let's do it.
+1:51
+So effectively, like the Windows Server Update system had an RCE or a bug in it that could be
+1:58
+exploited. Now it's important, though, because like, and it is being exploited. But the really key
+2:03
+point here is that it is, it only affects WSUS endpoints that have the server role enabled on
+2:13
+specific ports. So like, I've never done Windows administration if one of these two of you wants
+2:19
+to kind of explain like the circumstances in which that might be the case. I think that would be
+2:23
+helpful.
+2:24
+Yes, I'm going to raise a question here. I can't think of a way that the bug would only happen
+2:31
+on default ports. Like so it's a deserialization bug and I have feelings about the whole deserialization
+2:40
+over the wire from untrusted sources. And if we get a chance, I'm going to, I'm going to have
+2:46
+some spicy thoughts about the a different bit of research called pole growth. But like, I would
+2:53
+be surprised if it was really dependent on the port that just happens probably to be the port
+2:57
+where it's exposed to the internet. But because of the deserialization bug, I would expect that an
+3:02
+RCE from deserialization will happen on any port that it was regional on.
+3:07
+My sense is that the more important component of this is that server role, right? So there's like,
+3:12
+no, no, it's in that service today. If the service role isn't enabled, it's not going to happen.
+3:18
+Which I was listening to shout out to the risky biz podcast, I think like last week when this
+3:24
+news broke and they said like, they ran a scan to see how many instances of this were actually
+3:29
+accessible on the internet. And I expected it to be like hundreds of thousands or maybe millions,
+3:36
+but it was not. It was like, I think thousands or tens of thousands. So the scope of this,
+3:41
+I think the severity is high, but I think that overall scope of it is somewhat limited. And
+3:46
+importantly, for our part, and we just, we just, I think we probably recently are very soon
+3:52
+going to put out some social posts on this. Not only is the scope of it somewhat limited,
+3:58
+but there are detection optics that will work to catch it, right? So there is some command shell,
+4:05
+trade craft that we've detected using it. And also the use of like encoded power shell commands,
+4:11
+the coded power, power shell command and flag. So like dash e dash e and dash e and c,
+4:17
+which is actually one of our like most, I've probably said this before on half-sarrows,
+4:21
+but it's like one of our most prevalent detectors every single year. So there's good, good stuff
+4:29
+to detect this. Check out our Twitter, Rekhaery's Twitter or LinkedIn. And we have more detailed
+4:36
+information about those detection opportunities that are useful for catching this activity.
+4:47
+Do you want to, yeah, before we're talking about that, I'm going to take a brief side quest
+4:51
+into tolbooth because this is funny. I told our production crew that we weren't going to talk
+4:56
+about this. So I apologize to you guys because I got up early to talk with a dear friend in
+5:02
+Australia who confirmed my suspicion around this. So I could have baked that pay off.
+5:08
+So deserialization is always a scary deal, right? Especially if it's binary deserialization,
+5:15
+we've seen all kinds of those issues leading to our CEs in the deserialization process.
+5:23
+If you if you followed the the tolbooth research from elastic search labs,
+5:28
+they're talking about a threat actor that's deploying ransomware onto IIS servers.
+5:34
+And the initial access vector is it sounds it sounds scary, but it's a it's just a run of the
+5:42
+mill configuration error, right? So IIS supports this thing called view state.
+5:51
+I can't tell you exactly why they chose this pattern, but it's it's the way that IIS uses
+5:57
+for for maintenance, client state. And it's this object, the binary object, to get serialized into
+6:04
+cookie and then deserialize when it comes back. And it's signed or encrypted, I'm sure, which with
+6:10
+a particular key. And so in this particular case, the victims are folks that used a well-known
+6:16
+machine key. They configured their IIS servers with a well-known key in some documentation,
+6:22
+as I said, here's how you configure it. So this is your annual reminder, not to use publicly
+6:28
+published key or key material for securing your systems. But the bigger thing that that caught
+6:35
+me as I was reading this was, hold on a second, they seem to be implying that anyone who has the
+6:42
+ability to hand an IIS server a view state object has all the primitives necessary for arbitrary
+6:50
+command execution on the server. And that as I understand it is by design and that just feels like
+6:59
+a terrible design. And so I'm curious if anyone out there is using IIS, if they're heavily leveraging
+7:08
+that that view state service or not, or if you're aware that that view state provides an RCE
+7:14
+primitive as part of IIS. And this has been known for a long time. Every time I make a blanket statement
+7:21
+about something like that, like X is silly and shouldn't exist. I get like five former
+7:27
+cis admins that are telling me a dozen reasons why the functionality needs to exist and the
+7:31
+dozen programs that use it legitimately. There is absolutely no doubt in my mind that that's true.
+7:36
+And that's why we can't have nice things. All right, let's talk about our first bit of
+7:44
+red canary specific stuff here. So our another threat researcher here at Red Carry Mac Graver published
+7:52
+a fantastic blog on evidently on October 27th that is about how we go about
+8:02
+assessing like the ability of different log sources to tell a story that is sufficient to
+8:10
+create like a minimal minimum viable sort of story about the stuff that you're seeing.
+8:16
+I don't know if you were prepared to speak about this Jesse, but you did foolishly tell us
+8:21
+a few minutes ago that you guys have been like actively kind of using this framework.
+8:26
+So can you tell us a little bit more about it? Yeah, so I think it's generally how a lot of us in
+8:33
+detection engineering and research already talk about things. It's just that has been really
+8:37
+codifying that into like a guide for explaining how we talk about data quality and how we can turn
+8:45
+that into a detection. Because if you write a detection, it's only good in so far as that it tells
+8:51
+the analyst what's happening and then what to do about it. And so basically what we try and do
+8:56
+is for any given detection or any given log source, it's kind of can it tell us, you know, who did it,
+9:03
+what they did, where they did it, when they did it, and whence they did it from, which is always
+9:09
+the best part about that. Whence was one of the W's, I had a good laugh to myself.
+9:15
+Yeah, yeah. And then the how is the one age? You notice that we don't have a why in there because
+9:21
+we can't always give that arbitration for any given event. But basically if you run through that list,
+9:26
+it's kind of just understanding the data source and saying, yeah, okay, this identity did this thing
+9:32
+in this tenant by leveraging this API call and they did it from this IP source, this geolocation.
+9:41
+And so given a lot of that, it's like, does this log source give me all of that information
+9:46
+for this detection? And if it doesn't, then do I have to correlate it with other logs? So that
+9:52
+way, those two things together, these different log sources together give me that story. So kind of
+9:57
+just making sure that you have enough of what you need to actually like give this actual story to
+10:03
+the analyst so that it's something useful. Yeah, it's a super interesting blog. It's really
+10:07
+narrowly focused on I think like one particular log source in this case, but obviously like can be
+10:12
+applied out to a bunch of different things. Yeah, and I think we might be giving more and more of
+10:18
+those examples as we move forward. So keep an eye out for that as well. Fantastic. All right, let's
+10:24
+talk about supply chain problems. They've been numerous. Do you want to run us through these here
+10:32
+Dave? Do you want me to up to you? Go ahead. All right. So like broad strokes here, right? Like we've
+10:43
+got this problem of invisibility, right? Where we've got things that are maybe upstream or downstream
+10:49
+from an organization that relates to their vendors that they may or may not know about, right? And it's
+10:54
+not just third party vendors. It can be fourth party vendors as well, right? So potential problems
+11:01
+and software you buy and then even dependencies upon that software, which would be I think your
+11:06
+fourth party is here. And there's also just the difficulty in in seeing the implications of all
+11:14
+of the open source you've pulled in. I mean, yeah, like, open question, how many people are able to do
+11:19
+like full source code reviews of the software that they purchase, right? Like the answer is,
+11:24
+if you raise your hand, we know that you're playing fast and loose with the tricks.
+11:31
+And like, there's a lot of like ways this can manifest, right? Whether it's related to like failure
+11:37
+on the regulatory or compliance side or security problems that lead to kind of integrity problems
+11:44
+down the line, leave you exposed to like a lot of operational risk and legal risk as well.
+11:48
+And then also like legacy systems is a huge problem. Like we're literally just talking about
+11:55
+this a couple of weeks ago on 60 minutes related to salt typhoon and people that are targeting
+12:00
+that are running like, you know, plants in this country where they might have systems that are
+12:04
+no longer updatable. And then like, all of these problems just keep keep keep coming up, right? So
+12:13
+like we were all here for solar winds, right? When that Orion system got got compromised and was
+12:21
+then abused to deliver deliver payloads across a wide variety of organizations,
+12:27
+affected a lot of government organizations. More recently, a lot of the sales lots drift stuff.
+12:34
+Have we talked about the sales left drift stuff on here, Dave?
+12:37
+No, no, we haven't. Yeah, I finished your thought. I have one observation about this line that I think
+12:46
+is helpful for framing your thinking about your splatching. Yeah. And then obviously we have talked a lot
+12:52
+about MPM, right? Like, is MPM packages getting poisoned is is in prevalent for years? We may be
+13:00
+getting to the point where we can start to say decades about that, although I'm not entirely sure
+13:05
+about like when MPM started being a prevalent thing that people were using. And then we don't even
+13:09
+bring it up here because we talked about it last week, but like the F5 stuff that dropped a couple
+13:14
+weeks ago is another really, really good example of this. And like this just seems to be kind of a
+13:20
+forever problem. What was the point you were going to bring up to? So I like this is a helpful slide
+13:25
+for me and that it really calls out a specific example of kind of the three domains that you need to
+13:30
+be thinking about for supply chain. All right, for those of us that are heavy and abseq, the MPM
+13:36
+pillar is a reminder about the threat that is posed to us from the things that we build our products
+13:43
+with. SolarWinds is a case study of the software that we run in our environment that we may operate
+13:52
+firsthand that may be installed on site. It may be installed in our public files, but it's got
+13:57
+deep operational connections into our environments. And that one we're like, yeah, I mean,
+14:02
+they're a firsthand vendor. We need to be aware of how they are mentioned is pretty popular.
+14:09
+But sales law drift is kind of the next level of hotness, which is people get ransacked via
+14:20
+something that was connected to something else that they don't run. Right? So there's just a
+14:26
+another layer of distance between the attacker and the victim. And it's still every bit as
+14:34
+impactful as either an MPM or a SolarWinds impact. So before we move on to Jesse, just this just
+14:41
+popping to my head because I read about it recently, but there was also a VS code extension that got
+14:47
+compromised and like was being used by a bunch of people and people compromised it and we're
+14:53
+using it to do like in the service of cryptocurrency mining, but like those things auto update and VS code.
+14:59
+So like if you're using it, it just auto updates and you don't even know. And like VS code seems like
+15:04
+a really clever place to do this sort of thing because it's like kind of directly ties into a
+15:10
+supply chain potentially as you're like, building all your code there. So if you want to, if you want
+15:15
+to get to the interest to that rabbit hole, go back through and look at our previous episode where
+15:21
+Justin Steven, the previously mentioned Australian guy that I talked to this morning.
+15:26
+When he was on the show, he's done a ton of research around hacking developers through things like
+15:32
+the VS code. And it's a real threat. So these supply chain threats are absolutely everywhere. And
+15:42
+it needs to be front and center of how we're thinking about our threat moment.
+15:45
+In my simple brain, if you want to be a good bad guy, go after the places where the code gets
+15:50
+written. Seems like a pretty good strategy. All right. Let's let's move on. We've taken up
+15:56
+too much time and we're not giving Jesse Griggs. Oh no, we've got more from the supply chain. So
+16:02
+like a bunch of guidance here. I'm going to burn through this, you know, pretty quickly.
+16:09
+Like in order to sort of defend against this stuff, you've got to really understand like
+16:15
+the architecture of your supply chain in a sense, you have to be like continuously
+16:19
+assessing it. And then, you know, obviously, the problem of legacy systems is a big one.
+16:26
+And particularly in places where you don't have the budget to go and buy all new equipment when
+16:31
+it runs out of when it becomes out of when it becomes a legacy piece of equipment. And also like
+16:37
+food for thought, maybe controversial take, like sometimes you're buying new systems that end up
+16:43
+being just as vulnerable or end up having these kind of freak show bugs in them as well. So
+16:49
+really, really tough problem. But you know, testing, doing table stops, being ready to implement
+16:54
+your supply chain when you really need to super, super important. All right, Jesse.
+17:00
+I would say this is not a pitch for Z-Skiller, but these skills are absolutely on the right track
+17:06
+here, especially for systems that you can't pass because they're legacy segmentation, segmentation,
+17:11
+segmentation. Will them at your blast radius? Yeah, great, great point. All right, Jesse, I'm
+17:16
+going to hand it off to you. Let's talk about how attackers are doing bad stuff with AI
+17:23
+command tools. Yeah, so. So, oh yeah, shopping. Why would we do that?
+17:30
+Why would that happen? So, this is zooming into one of the NPM compromises the singularity one
+17:36
+specifically. I saw that it was basically mentioning that adversaries were leveraging AI CLI
+17:43
+tools to do credential harvesting. So, I was like, that's interesting. What does that look like
+17:47
+from a telemetry standpoint? So, as a site game as well in these next few slides, you can go ahead and
+17:53
+play along at home and tell me what movies the different robots are from because I haven't spread
+17:57
+all around here. So, for those of you that aren't as familiar with what happened, I'll quickly go
+18:02
+over that. So, NX build compromised that then executed this telemetry.js, which within that tried
+18:09
+to leverage AI CLI tools if they were present on the system by saying, hey, go look for any
+18:16
+credentials in the .8 of us directory.ssh, bash RC for environment variables crypto. Just go
+18:23
+search all of these things, put it into an xville intent directory and then I'll go ahead and download
+18:28
+that and do it with yolo mode enabled. So, that way I don't have to prompt you to say yes, do
+18:34
+this. You have full control of the system. Just go do it and then give me the results.
+18:40
+What is NX build? I'm late to this party. I'm not asking you with it because I was focused on the
+18:45
+AI CLI tools, but it's just another supply chain compromise. Is it just some service that was
+18:50
+that was against? Okay. Yeah. And you can go to the next slide. So, a lot of these tools themselves
+18:55
+are node applications, which is why I think it was kind of wrapped up in this, along with the fact
+19:00
+that adversaries are always going to try and leverage the brand new shiny thing the same way that we
+19:05
+are. So, the three main ones, it also is an open AI one as well and more being added every
+19:11
+every day. It's like since I started this research, took me a couple weeks, like even in that time,
+19:15
+we had a new CloudSonic model released, more AI CLI tools released. It's hard to keep up.
+19:21
+But Cloud Code, Gemini CLI and Warp are kind of the main ones. So, I leveraged Cloud Code for
+19:27
+this testing, but it is proprietary. Gemini CLI is open source so you can kind of go read
+19:33
+how they structured it on GitHub, which I recommend kind of gave me a good understanding of like
+19:37
+how all these things are put together. But yeah, these tools basically allow you to run
+19:43
+LLMs in the terminal. It gives read access, write access to all of your code or projects that you
+19:49
+give it access to. And then of course, you can add extra functionality with MCP so that you can kind
+19:55
+of add whatever you would like on top of it. So, next slide, please.
+19:59
+So, what did I do testing methodology wise? I wanted to test three different scenarios. So,
+20:06
+I leveraged built-in tools. So, I basically said, hey, Cloud Code, you know,
+20:10
+Sonic, go ahead and write a file to my home directory, leveraging your built-in tools. I'm not
+20:17
+giving you access to any MCP servers with anything else. Just go ahead and do it for me.
+20:21
+Then I did a local MCP server. So, this was basically just Python running locally in my Dev
+20:28
+environment. And I said, okay, given this MCP server with this tool that just writes a file,
+20:33
+go ahead and leverage that and write me a file into the home directory. And then the last one was
+20:39
+remote. So, I had two EC2 instances, one with Cloud Code, one with the MCP server. And I said,
+20:46
+given this remote MCP server, go ahead and write me a file in the home directory. So, it was the same
+20:51
+test across three different different scenarios to try and see what the telemetry looks like.
+20:57
+What are the things that we can look for in terms of detection?
+21:00
+So, you were setting up a representative AI processing environment so that you could observe
+21:08
+what telemetry is generated and do some reason about what might be useful for detecting
+21:12
+bad behavior in the Python? Yeah, exactly. So, I just wanted to give like what are the different
+21:18
+Dev environments that you might see? And another reason I wanted to do this is with the non-deterministic
+21:25
+nature of LLMs, we don't actually know which one it might run. If you have these enabled,
+21:30
+it can just decide to use a built-in tool or it could decide to use an MCP server. So, that's kind
+21:36
+of one of the challenges when it comes to detection, which I'll talk about later is we don't exactly
+21:39
+know what it's going to do. So, we have to make sure that we're even better about covering our
+21:44
+bases when we're talking about covering techniques with the LLMs, they can use all sorts of
+21:50
+different procedures to get something done. So, something to keep in mind for defenders as we move
+21:54
+forward. So, obviously what we thought we would get with AI is, I'm sorry Dave, I can't do that.
+22:02
+Arguably, that might even be better for us from a security standpoint. But instead, we got,
+22:06
+that's an excellent idea, Dave. I'll go ahead and give you everything you need, which is the unfortunate
+22:11
+reality that we are in. In the context of 2001, SpaceAsc, I think if I were in the circumstances,
+22:17
+I would have rather held done what I had been asking him to do. Yeah, exactly. Great, but not great
+22:23
+for us. So, let's go ahead and get into some of the logs, which is going to be the scary part of
+22:29
+today. So, the first one built-in tools, we have basically called Cloud Code executes a file rate.
+22:38
+Really nothing special about this. If you can go to the next slide, please.
+22:42
+So, the logs themselves, we see simply a file creation event with the parent process command line
+22:49
+and the process command line matching the same thing of just me running Cloud Code. And you can see
+22:54
+that I actually had to pin the Cloud model because while I was doing the testing, they released a
+22:58
+new one and it changed the updates. So, absolutely nothing special. Pretty easy for detection.
+23:04
+Just make sure you're managing your command lines to understand that Cloud is running. You will
+23:10
+also see the flags from Yolo mode. You'll see just a tag-y or whatever else in these command lines as
+23:17
+well. So, that's another good place for... Wait, is it actually called Yolo mode? Yes, it is actually
+23:24
+I think in Cloud Code, it's Yolo mode and Gemini has dangerously skipped permissions or it might
+23:30
+be reversed. I can't exactly remember which one, but yes, it is just Yolo mode. So, next slide.
+23:37
+So, the standard in and out, MCP transport, it's what we would expect basically,
+23:45
+Cloud executes and then we see it trying to run Python with the UV, you know, packet manager
+23:53
+in a virtual environment. So, basically saying, hey, Python run this with a fast MCP and then that
+24:00
+file or, you know, that process executes the actual file, right? So, nothing really special about
+24:06
+this one either. You can go to the next slide. We'll look at the logs and also, I know I'm going
+24:10
+fast through this, but we can... You can go ahead and read all this on the blog as well. I have all
+24:15
+the same logs. It's all there. So, this is just another place to see it. So, we see the process
+24:21
+start here from Cloud. It executes the server.py, which is the tool that I wrote with UV on fast MCP
+24:29
+and then if you go to the next slide, we'll see that the server.py go ahead and does the file
+24:35
+creation in the home directory for that demo file. So, make sure you track those process,
+24:40
+command, parent, trial relationships, Cloud executes MCP and then at MCP, go ahead and runs the
+24:48
+actual file creation event. So, nothing special here as well. Okay, so maybe you're going to get
+24:54
+into this, but is it enough to just track the file or the file creation and the process starts
+25:01
+to stops? To detect that behavior, do you actually need to see into the columns, like what's being
+25:07
+asked for? So, you won't really see what is actually being asked for. You know, this was being run
+25:13
+with our Linux ER tool in a AWS environment EC2. This is all I saw. There really wasn't much more.
+25:22
+I will say though that each, if you do want to look at prompts, what you can do is the Gemini CLI
+25:30
+and Cloud both create a .gemini or .Cloud directory in the home user wherever you've installed the
+25:36
+tool and in there, there's actually logs. So, that's in the blog as well and I give some examples of
+25:43
+what they store. It's mainly prompts. So, what you can combine this with is basically what did the
+25:49
+user ask for. Other than that, you don't really get a whole lot of telemetry. Another quick plug for
+25:56
+a Z-scaler is there actually is some tooling within Z-scaler for you to basically investigate
+26:04
+some of this stuff and you can actually deny. Say, I do not want Cloud code running in any of my
+26:11
+environments and from a network level, you can try and deny some of these things. So, that's how I would
+26:16
+try and investigate more is maybe on the network. So, I'm sure that at some point, we're going to
+26:21
+start looking at AI as a detection domain. Do you know if we've done any experimentation into
+26:27
+looking at those prompt logs? We've got any research that's underway at this point?
+26:33
+Yes. So, Matt has an excellent blog post about logging open AI in Azure using proxies. So, if you put
+26:44
+in a proxy in front of it, you can actually capture a lot of the information from the prompts.
+26:49
+So, we have been looking at what's the best way to kind of go about securing this new domain.
+26:55
+My standpoint on viewing a lot of it after investigating MCP and some of the tooling and
+27:00
+agentic stuff, it's all the same. Like, there's nothing special about this. In so far as we need to
+27:07
+create new processes to understand this, it's the same security principles apply to this. The main
+27:14
+difference is these are non-deterministic and it can move quickly since it's code. You know,
+27:20
+it's just going to keep running through things. So, last one, MCP over HTTP. What we expect is
+27:28
+cloud executes doesn't outbound network connection to the MCP server. The MCP server then receives
+27:34
+that and then writes the file. Good job, Chappy. Is the robot in this one? Not the name of the movie,
+27:41
+though. The name of the movie is different than Chappy. So, let's go to the logs,
+27:46
+I'll quickly run through these. There's nothing that's necessarily special about it. So,
+27:50
+we see the outbound connection and then the next one will be the inbound. And then finally,
+27:55
+after that, we get the file. So, you can go through the next two slides inbound and then the last one
+28:02
+one more is the file. What I will say, District 9, good job. What I will say is that if you run MCP
+28:09
+servers that you do not own, you would not get these last couple. You would only see the outbound
+28:15
+network connection. You would not see the inbound and then subsequent file creation event. So,
+28:20
+if you can go to the one more slide, kind of to wrap up, basically monitor for things like YOLO
+28:27
+mode or skint dangerous skipper missions. Obviously monitor for credential access in your sensitive
+28:33
+files, your .aws directories, your crypto, all those sorts of things. And then for securing the AI
+28:39
+standpoint, centralize it, make sure you can route everything through a proxy because then what
+28:45
+you can do is actually compare props. If you're worried about prompt injection from an agent accessing
+28:50
+something online, you can actually look at the prompt on the endpoint for what the user gave.
+28:55
+And then if you have a proxy, you can look at the prompt for what the model received. And if there's
+29:00
+a discrepancy between those two things, then you can be fairly sure that there was some sort of
+29:04
+injection at that standpoint to actually compromise your LLM. So, yeah, interesting stuff, but
+29:13
+don't be scared of these things. It's the same standard security practices, a defense and depth
+29:18
+least privileged, a continuous monitoring and response. Just trust in the process and just
+29:23
+understand your environment and you'll be totally fine with these things. Yeah, that's honestly the
+29:28
+more I work with you all on sort of the AI stuff that we've been working on from a defensive
+29:32
+perspective. The more I realize, these really are just more cloud resources that kind of
+29:39
+from a log perspective behave similarly to the things that we already have a good deal of
+29:43
+experience with. So it's like a keep common carry on situation. It is. And I always like to think of
+29:49
+it as a lot of the agentic stuff is you can think of it as securing a user, but the difference is
+29:55
+is that user can then operate at the speed of code. So that's the risk is that it can move quickly.
+30:01
+If it gets out of hand, it can do a lot of damage very fast. Do we have another slide? We do.
+30:07
+All right. Well, oh man, we nailed it. We're right at time. Maybe a few seconds over, but nevertheless,
+30:13
+that was super interesting, Jesse. Thanks so much. Check out our blog. This will get posted on YouTube.
+30:19
+If you want, definitely check out Jesse's blog. Also check out that security operations trends report.
+30:24
+We showcased at the beginning, Dave. As always, thanks so much.
+30:31
+You and Jesse, thanks for joining me here, guys. Dave and thanks for having me on, Dave.
+30:36
+Yeah, super, super interesting. Looking forward to seeing the progress you guys make in identifying
+30:44
+what bad looks like in this environment. Yeah, yeah, that's fun stuff.
+30:48
+All right. See you later, everybody. Thanks. Bye.

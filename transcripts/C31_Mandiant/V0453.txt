@@ -1,1 +1,1122 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+This is the place where it unlocked the rest of our investigation.
+0:04
+So we did find this Git string in one of the modules that we could tie back to the botnet
+0:09
+and we knew it was coming from there.
+0:10
+Everyone does mistakes with one slip that happened once,
+0:13
+but the fact that these binaries were then available for analysis retroactively,
+0:18
+then we were able to tie this back and then we started digging.
+0:21
+What is this organization?
+0:25
+That one rookie mistake became the thread that unraveled one of the largest botnets of its time
+0:29
+and took the battle to court.
+0:31
+Joining me today to walk us through this incredible pivot from reverse engineering to legal warfare
+0:36
+is Pierre Marc Barot.
+0:37
+Pierre Marc works at Google's Thread Analysis Group, also known as TIG,
+0:41
+where he specializes on identifying, tracking, and countering cyber threats
+0:45
+focused on Google its users and the broader internet.
+0:48
+And now my conversation with Pierre Marc.
+0:51
+Welcome to the podcast, Pierre Marc.
+0:53
+Can you just start giving us a little bit of background on GloupTibet when did it come
+0:58
+onto your radar or the radar of TIG?
+1:00
+And what's this go from there?
+1:03
+Yes, sounds good.
+1:05
+So GloupTibet has been around since 2011,
+1:09
+so it's been around for a really long time.
+1:11
+I cannot tell exactly when we first started talking about this,
+1:16
+but I would say that this is almost at the same time as our team started spending more time
+1:22
+around botnets trying to understand
+1:25
+how we can better protect users from them, both from their infection,
+1:31
+but then even thinking about how botnets operators are monetizing,
+1:37
+is there anything we can do there to reduce the income,
+1:40
+and reduce the incentives running big botnets.
+1:43
+And as you said, GloupTibet has had very high numbers of infected devices for a long time,
+1:50
+so that's definitely something that put it up there in our list of priorities.
+1:54
+And then one thing that I also increased the priority was the fact that it has so many
+1:59
+different modules and ways of monetizing, it kind of touches a bit of everything,
+2:04
+so I kind of made it really interesting and something where we felt like there was enough
+2:10
+complexity there that there might be things that we can do about this, or at least trying to
+2:14
+better understand what was going on to see if there was something to be done.
+2:18
+Because the malware itself building a botnet, so they had to have some form of distribution
+2:25
+network, was that how were they doing that?
+2:29
+Was that touch any Google infrastructure ad networks,
+2:33
+or were they leveraging other paper install type providers?
+2:38
+Yeah, so the actor developing and operating the GloupTibet botnet were outsourcing the distribution.
+2:44
+I think there might have been doing some of it themselves as well.
+2:48
+So they were definitely using paper services from paper install networks to distribute their
+2:53
+malware, so that's definitely something that we've seen in the past. As far as distributing through
+2:59
+ads, I don't think this was ever witnessed. It doesn't mean that it didn't happen, but I'm not
+3:04
+aware of any distribution that way. But your typical scenarios of
+3:11
+cracked software and websites that you're using cracks and that kind of stuff was super
+3:16
+popular to distribute paper install network, binaries that would then load GloupTibet and all kinds
+3:21
+of other stuff on there.
+3:24
+And so going back to 2011, I mean, they're entering the kind of the prime of the exploit kit.
+3:31
+I would imagine those were also likely a big part. And probably where I came across the malware,
+3:36
+just anecdotally, I looked at a lot of exploit kit incidents in that mid-2000 teens period,
+3:42
+so that would make sense. I think those were really, really effective. I went hunting for,
+3:48
+before I was with anybody, just on my own, hunting for exploit kits. And I would find just my own
+3:53
+way of scraping websites, find them all over the place. So I bet that helped tremendously.
+3:59
+Yeah, absolutely. This distribution was outsourced, so I do remember that there were some
+4:05
+exploit kits being used to distribute this. And then you were asking about what was RVSBT,
+4:10
+then of course some SEO was happening, driving traffic from traffic distribution systems,
+4:16
+landing on some of these exploit kits, so that was definitely part of the trend.
+4:19
+Okay, so then the malware itself, I mean, that seems to be a trend with a lot of malware.
+4:26
+It's social commodity stuff. It's multi-tiered. It has maybe some major objectives,
+4:30
+but data exfiltration, just resilient command and control, all seems to be pretty standard capabilities.
+4:37
+Anything else that stood out about what these authors were developing, how they were delivering it,
+4:43
+any unique languages they were using, or evasion, anti-analysis sort of tactics that made them stand
+4:50
+up, or were they just really relying on the sheer volume. And that seems to be a trade off that I've
+4:56
+observed over the years. If they're more prolific in volume, they can care a little less about
+5:01
+how stealthy they really are. Yeah, we're about persistence on the system. If they just have this
+5:05
+pipeline of new infections, they care maybe less about staying on infected devices.
+5:11
+To me, there were lots of interesting things. One that I think we can come back to later was
+5:16
+they were also shipping a crypto miner, and that did help our investigation figuring out
+5:22
+the scale of the infection, but also the kind of revenue that might have been driven to the operators.
+5:28
+They were dropping a proxy network, but they were also maintaining their own infrastructure,
+5:33
+not only stealing credentials from infected devices, but also by installing a proxy. They could
+5:39
+almost rent the access from an infected device through the stolen and compromised credentials,
+5:48
+and then the attacker could come back to the infrastructure they were targeting, let's say,
+5:53
+financial institution or Google or Facebook, from the IP of the victim as well. So that's another
+6:00
+service that they were selling, which was putting everything into end. You steal the credentials,
+6:04
+but you also maintain persistence traffic network through the infected device.
+6:10
+So there were lots of things that ended up being complimentary. But in terms of persistence and
+6:16
+anti-analysis, I would say that these were average. They had a couple of tricks to make sure they
+6:22
+were not running into sandboxes, but it was nothing super groundbreaking. You asked about
+6:29
+programming languages and evolution. Jumping ahead, there are still variants of
+6:35
+blook-deba being released right now. Even their infrastructure was taken down. Or at least right now,
+6:42
+in the last couple months. And part of their code has now been rewritten to go. But in the past,
+6:48
+most of the modules were plain C. And once again, you could change one module while not changing
+6:54
+the whole thing so it was evolving over time, probably through developers as well.
+6:58
+So it's a very modular C. It says a pretty common language. And in the last few years,
+7:04
+seeing that evolution to go and russet, I noticed in some of the reporting. So if anybody's
+7:10
+interested as we're digging into this more and more, Google blogged about some of the activity,
+7:16
+some of the initial analysis and findings and saw make sure to add those blogs to the show notes
+7:21
+here for the podcast for everyone. Anyone wants to follow along. There's also some, we'll get to
+7:25
+this in a little bit, but there's also some legal filings, which really added a very interesting
+7:29
+element to this and all those are all publicly available. So in terms of, I'll interrupt you here
+7:33
+for a second. Yeah. I want to point out that a lot of these analysis was performed by Lutsa Nagi.
+7:40
+And she presented on the topic, AdVaris Bolton in 2022. So I highly recommend everyone looking
+7:47
+for technical details to look at the virus Bolton proceedings. There is an article there.
+7:52
+And she is, she did excellent work on analyzing the binaries and tracking them over time.
+7:58
+I've been lucky enough to be involved in investigation, kind of coordinating different things around
+8:02
+it, but Lutsa really has a lot of contributions in terms of the analysis. And I highly recommend
+8:08
+looking at all her material. What else did this threat actor have? It seems like they, they have a,
+8:14
+kind of an interesting number of fronts, some corporate corporations and their footprint was,
+8:22
+I think, a little bit, to me a little bit surprising when I first read, you know, how some of their
+8:26
+legal trouble really unfolded. It seems like they had don't.farm, which is where they were selling
+8:32
+stolen data, particularly Google and Facebook accounts, likely that they were, I'm obviously
+8:36
+stealing. They had the AWM proxy and extra card, not looks like where they were selling the proxies
+8:42
+and fraudulent credit cards. So this group, if they started in 2011 and it wasn't really until
+8:48
+2020 that they came on, you know, major radars, I mean, they were probably quite confident
+8:56
+in what they were, how they were operating and likely making a lot of money. And any,
+9:03
+any additional insight into their activities or uniqueness to how they were approaching evolution
+9:09
+in the code, I mean, did they get more sophisticated? It sounds like their major evolution was just
+9:13
+going to go. Yeah, so that's part of it. Maybe what makes them noteworthy in that area is their
+9:22
+their commercial sense of having all these front end that were like on the open web, anybody can
+9:28
+go there and then they were openly sell access to proxy networks or to compromise devices and
+9:35
+credentials. So to me, there are not that many actors that are doing that. It's not obvious when
+9:40
+you look at AWM proxy that they're linked to look the bar, but when you start looking at the
+9:45
+how things are working, then it becomes pretty obvious. So I think that's one of the things that
+9:50
+really makes them noteworthy is their openness of just like all these services. How can I monetize
+9:56
+an infected device or some compromised credentials and then they pretty much had it all.
+10:01
+Down that farm was really big and I haven't seen that that often that a
+10:08
+someone would sell access to compromised credentials, spin up a VM, give you the availability to
+10:15
+exit the traffic through the infected devices IP because it also runs a proxy. Like that's an end-to-end
+10:20
+service that pretty much anybody can then use without any technical background or expertise. So
+10:27
+that is something that makes them noteworthy. I just always assume that a lot of this activity has
+10:31
+to happen in what a lot of people just call the dark web, the criminal forums, and you kind of have
+10:36
+to go searching and looking or maybe even be closed access sort of an invite. And so yeah, that is
+10:42
+pretty brazen to just be out there. I imagine most of that was hosted then on... I mean, it was bullet
+10:49
+proof hosting the right term in places where they're pretty much guaranteed to have the
+10:56
+the autonomy and the protection from any sort of international law enforcement to take down
+11:00
+their activity. And if they're that blazing and brating about what they're doing.
+11:05
+That's a good question. I did not see a lot of use of bullet proof hosting. It was mostly just
+11:11
+VPS in different countries, different places and maybe some that were less responsive to abuse
+11:20
+but I think they were maybe for some terms of services they were operating in this gray area
+11:26
+that they're not necessarily... It's not always clear. It's like an access and aged account on
+11:31
+X service. Like is it really a compromised account or not people don't necessarily know the same
+11:35
+for a proxy exit node. In some cases it might be legit. So I think they were more operating in this
+11:42
+gray area that until you connect the dot that this is just monetizing compromise devices,
+11:48
+there might be a way to explain that. So that's I think how they were avoiding being taken down that
+11:53
+much. So I guess they've been operating for many years. It looks like some of the reporting at the time
+12:00
+that Google decided to really take action while public actually go action in millions of devices.
+12:08
+Did you have any sense of how the peak of this botnet, how large it actually was?
+12:14
+So the best of our knowledge, the biggest number or the biggest size of the botnet was when
+12:20
+reached around one million infected devices. It did fluctuate a lot over time and after
+12:29
+there were legal actions that that number decreased for sure. But as far as I can tell I don't think
+12:36
+it went a lot more than one million devices. And composition was that typically windows inside
+12:43
+somebody's house or a corporation or was it did they go IOT and Linux based infrastructure?
+12:50
+That's a good question because at one point we did identify an Android malware that seemed to be
+12:57
+related to the same organization. But to the best of our knowledge there was not a lot of
+13:04
+distribution and not many compromise devices through that. A vast majority of the compromises
+13:10
+of the compromised devices were windows and user devices probably and users at home and then
+13:16
+the certain corporations. But as you know things are now a bit murky people are using their corporate
+13:23
+devices for things at home. And so it's I'm confident that there were devices that were corporate
+13:29
+devices that were compromised as well. In looking at the reporting there was a specific string
+13:35
+that seems like it cracked the case. Get.voltronwork.com. Interestingly enough,
+13:40
+fulltronwork.com is for sale on domain. It's available. I guess we'll get into it a little bit
+13:48
+more here in detail but it's not that wasn't my understanding is that was a part of the front.
+13:52
+So talking about those fronts that was the company, the entity that they were operating under
+13:57
+to give them some sort of pseudo credibility. But so this URL shows up in a binary. Can you?
+14:04
+I mean, this seems like a rookie mistake. Somebody was operating a botnet of this scale
+14:11
+to leave the string unprotected or even in there at all. Can you give us a little bit of insight
+14:17
+as to what is the string? I think it looks like it was related to maybe a go package.
+14:26
+So to me this is the part that I find the most fascinating when doing reverse engineering in general.
+14:33
+When you start figuring out the humans behind the binaries or like who is writing this?
+14:38
+How are they behaving? This finding is once again from my colleague, not directly from me, but I
+14:43
+was around with this happened. And this is the place where it unlocked the rest of our investigation.
+14:51
+So we did find this get string in one of the module, one of the binaries that we could tie back
+14:57
+to the botnet and we knew it was coming from there. So it's definitely one mistake. Everyone
+15:01
+does mistakes. It's one slip that happened once. But the fact that these binaries were then
+15:06
+available for analysis retroactively, then we were able to tie this back. And then we started
+15:11
+digging. So what's this thing? This what is this organization? And then we started finding more
+15:17
+and more evidence that were coherent like it kind of made sense. Okay, so this seems to be a
+15:22
+development shop. They're busy in Russia. They have open job boasting. So they're hiring folks.
+15:28
+And then you start looking at the name, the addresses, and then you find other organizations.
+15:32
+One of them was in the US and Delaware. It might be that they're trying to have some part of their
+15:39
+business that is on the legitimate side where it's easier to get some income. And then you say,
+15:45
+yeah, I'm hiring developers and you're going to be writing a proxy module. And you don't necessarily
+15:49
+have the context as to how this proxy is going to be used. So I do wonder if some of the developers
+15:54
+in there actually really knew what their code was going to be used for. But yeah, coming back to
+16:02
+that discovery is where we're like, okay, we really think we have something here. We knew that
+16:06
+this button was interesting for everything we've discussed so far. But now we're able to make a
+16:11
+connection to some legal organizations, some individuals. And that kind of changed some of the
+16:17
+dimensions of our analysis and our investigation. And it led to a bunch of interesting things.
+16:23
+Footprint in Russia, where they're looks like they're primarily operating out of
+16:28
+Footprint in Delaware, since Delaware is known for, I believe,
+16:31
+strict privacy laws around corporations. And it sounds like they likely did that to gain access
+16:37
+to financial capabilities markets and probably funnel money around. But then that also,
+16:45
+that Footprint in the US was another slip perhaps. It is it opened the door for
+16:51
+the, you know, the eventual lawsuit to have like a footing and for the US to be able to go after them.
+16:59
+Before we get to that, how did this, so up until this point, like we're kind of building up to this
+17:07
+the legal action that I think ultimately had the biggest impact, what was being done? So like,
+17:11
+how did their C2 typically work? I know they had resilience in the blockchain, but that sounds
+17:17
+like that was a backup. So what was their, what was their normal pattern for this malware for
+17:22
+checking into the botnet and, and then being a part of the botnet in terms of this network footprint?
+17:28
+Yep. That's definitely one of the interesting characteristics of Loupteba. Their normal command
+17:35
+control protocol was using HTTPS, something that is very common for malware these days. And the
+17:42
+command control, the address of the command control server was hard coded in the binaries.
+17:46
+Typically a binary would ship with a handful of URLs that they would try and contact to receive
+17:53
+commands and then provide feedback on how these commands were executed or what was happening with
+17:57
+the infected house. But the operators and the developers added a fallback that is poking at the
+18:07
+Bitcoin blockchain, looking for the address of a specific wallet and find the latest transaction
+18:16
+on that wallet. And from that latest written section, they can receive a blob that is in the
+18:21
+up return of that transaction, decrypted through a yes and then find another domain. So that's a
+18:29
+fallback. If all the domains, the other URLs that are already hard coded in the binary are not
+18:35
+responding or they might be responding but not providing any useful commands, then the fallback
+18:41
+would happen. The infected device will reach one of the front-hand for the blockchain and then
+18:46
+receive this information so that didn't make the button that more reliable. Which leads me to wonder
+18:53
+maybe there were cases in the past where all their C2s were down at the same time. I'm not exactly
+18:59
+sure why they wanted to do that but that approach was pretty novel and definitely noteworthy.
+19:07
+It made it hard for us when we were thinking about like can we do something against this
+19:11
+malware? Can we take it down? Then you have to think about that fallback mechanism which makes it
+19:16
+a lot harder than just seizing a bunch of domains and then everything goes dark.
+19:19
+Their hard coded domains, those compromised devices, I mean, were they relying on their own
+19:26
+their own botnet then to connect back in? Were they using other compromised websites or like
+19:33
+did they have dedicated systems that they were spinning up to handle those initial connections?
+19:39
+They were dedicated systems just being used for hand control. As far as I can tell,
+19:44
+I didn't see any compromised infrastructure in there. It was compromised devices with a bunch
+19:49
+of hard-coded C2 URL reaching out to a server that was under control of the operators.
+19:56
+The blockchain is resilience because if it now a hard-coded wallet address,
+20:02
+but if they all they have to do is post-the-duetransaction with a new encrypted blob and tell you
+20:08
+associate that wallet with bad activity, you don't really know what it is. Maybe the way that
+20:13
+they're interacting with the blockchain stands out is a little odd, easy to then be resilient.
+20:18
+You figure out what the C2 with the backup C2 is and then you try to take that down and then a new one
+20:23
+just pops up. Were the keys then? Yes, were the keys also unique or did they have a way to make it so
+20:31
+that it was harder to... I guess if they're using one monolithic transaction on one wall at a time,
+20:37
+they have to have the same key in order to take it down. Unless you have the sample of the key,
+20:44
+it's just a blob of nonsense. Which it was, it was a blend of nonsense. You have to have a
+20:52
+pre-shared secret and there was an AES key that was hard-coded in the binaries. We actually ended
+21:00
+up publishing. You can find that online now. We have a smart small snippet of Python code that can
+21:06
+help anyone decrypt these transactions to figure out what is the domain name that is encoded in them
+21:12
+and in the blog post there's also I think three or four wallet addresses that you can find.
+21:19
+Which was one of our approaches. We can't necessarily control, we can not control that wallet.
+21:24
+But if we tell the world where it is and how to decrypt the next command and control server,
+21:30
+our hope was that more researchers would be paying attention and potentially taking action
+21:35
+really quickly, both either by taking down the domain name or the underlying servers that it
+21:40
+points to the IPs that it points to. I guess you've come to the realization and this seems to be the
+21:47
+the back and forth that I have observed since I started doing cybersecurity, cybersecurity myself,
+21:52
+is that the adversaries can just stay one step ahead unless you can take a more aggressive approach
+21:59
+to go to the source and disrupt. Maybe there's a further spot up the chain. There's the distribution
+22:07
+model. There's the people themselves that are behind it. So there's a lot of different opportunities.
+22:13
+All of them are going to come with their challenges and especially when you're dealing with international
+22:19
+law enforcement, people located in different countries, infrastructure all over the world. I mean,
+22:23
+compromise infrastructure. In this case, it sounds like dedicated. What was the, so you've got the
+22:29
+string, you've got these corporate entities, you've got this massive spike in volume, their botnet
+22:34
+is growing, it's affecting Google customers as well as a lot of other, you know, another corporations.
+22:40
+When's the pivot point? What time, at what point, you know, does the team say we could take action,
+22:46
+further action and actually do more to disrupt this? I think this is really interesting because
+22:50
+it seems like most of us and most corporations are just settled into a very defensive nature. I mean,
+22:56
+this feels a little bit of offensive, you know, you're not hacking back, but you're using the courts
+23:01
+to be able to help. And this was also a first of its kind, wasn't it? The lawsuit that eventually
+23:06
+came out of this? So the affirmative litigation and taking this to the civil court, I'm not a legal
+23:14
+expert, so I'm not sure if it's 100% new. I think we all remember that Microsoft has done a lot
+23:20
+of lawsuits in the past. So there has been legal action against buttoned operators and that kind
+23:25
+of stuff. It was the first time on our side. And I feel very lucky and grateful that we had such
+23:33
+good teams that were super responsive and interested in helping, especially on the legal side of
+23:39
+things where typically security people don't always like to interact with their legal teams,
+23:45
+but in our case, like they were really awesome and like really, really good doing really good works.
+23:50
+It was good to engage with them and then they were like, yeah, we can help you with that. We have
+23:53
+ideas. They went out and reached out to some external partners, both to validate all of our results
+24:02
+in the legal case, but then also to help with the legal case itself. So to come back to answer
+24:11
+your question more clearly, we were like, okay, we have an interesting case. From a technical point
+24:16
+of view, there's a bunch of things we can do from an attribution and understanding the legal
+24:22
+organizations and even individuals behind them. We do have an interesting case. So we took that to
+24:26
+our legal team and they were like, yeah, we can help you. We have ideas and then they really got
+24:32
+the ball rolling. I think the interest was really, can we help users, can we protect users through
+24:41
+different actions combining legal and technical actions and can we also tell the world about it?
+24:48
+Because sometimes there are these legal actions that are happening and there is not that much
+24:53
+visibility happening or you can just reach out to an ISP and tell them like these things are bad
+24:59
+please think it down and then you move on. This time there was interest and kind of really
+25:04
+coordinating all of that in one operation, which was a bit different and not necessarily
+25:10
+arm-making. It was more of like being at the right place at the right moment. We have all these
+25:14
+interesting things and then our legal team was also like, yeah, sure, let's do this.
+25:18
+You hear, I mean, when I first got you started in the field, it was kind of like a mixed signal
+25:24
+attribution. You don't worry about attribution. As a day in, day out, reverse engineer, I don't
+25:30
+oftentimes worry that much about attribution. It's more about capabilities and getting past
+25:35
+obfuscations. This was obviously very different and it just seems like that one simple string
+25:41
+was what allowed this. I mean, there are definitely teams, there are intel teams that attribution is
+25:46
+all they do and it's important to understand that but maybe for the average security team out there
+25:52
+it's just it's such a, there's a lot to go into doing that and then even if you get the attribution,
+25:57
+what does that ultimately give you in your day-to-day defenses, unless you're able to do something like
+26:03
+what Google was able to do? Yeah, you're right. There's probably a matter of y'all to speak for hours
+26:10
+and hours around that condition. I think especially around cybercrime, I will care mostly about
+26:16
+the TTPs. Are there things that I can put in place to find new activity? Can I, what I like to learn
+26:22
+about how an operator does his thing because it does help you be ahead of the curve. You can understand
+26:29
+things and you can react more quickly but when it comes to putting a name or an address or that
+26:35
+can't stuff, I also typically stay really aware of that. I don't, I don't necessarily care
+26:41
+who's writing the malware directly but understanding their decisions, their trade-offs,
+26:46
+that I think is super interesting. But of course, there are some cases where in this case,
+26:52
+we had help from different parts of the company that helped with the investigation and then it
+26:57
+kind of helped having a attribution to a company that we could then do more about. So in,
+27:03
+I would say this might be an exception to the rule where it's like in some cases it does help.
+27:07
+Okay, so we're talking about Guptiba and this massive botnet that built up 2011 into the early
+27:14
+2020-ish Google filed a complaint secretly on December 2nd, 2021 that's now a public and you
+27:22
+can go look at the filing. So there, we've talked a lot about the underview, what was the bot?
+27:28
+What was the capability? What was sort of the purpose, the corporate structure or the business
+27:35
+structure, the fronts that they were using? Maybe we could now turn to the actual, like the court case
+27:41
+in and why, what was the ultimate objective with filing? Was there any strategy? It looks like it
+27:47
+was filed in the Southern District of New York. Was there any, that you can speak to, I know I'm not a
+27:51
+lawyer either, but I have access to AI. So it's kind of like I slept in a holiday in last night while
+27:57
+I have Gemini at my side. You know, was there any specific strategy to that or I mean, it looks like
+28:03
+ultimately the goal was to go after the C2 servers because what could you do to the blockchain?
+28:08
+So is this really still like the same effort of Wacomol but just applied in the legal sense or so
+28:18
+yeah, can you walk us through? What was going on here? What was the thoughts with moving into the legal
+28:22
+sphere here? I like the way you put it of like is this continuing the Wacomol but with lawyers now?
+28:28
+So the strategy was first to expose this operation and bring attention to it which
+28:36
+like the legal filing is 40 plus pages and it's full of details. It's super interesting and I
+28:43
+I had never seen such a thing before and the idea was to bring that in front of a judge and then
+28:50
+have the judge say yes, this is bad. This is bad against Google and bad against Google users
+28:56
+and ask for the domains to be taken down. Domains and infrastructure and then with that ruling,
+29:05
+we were able to go to ISPs and providers globally in France and Germany amongst others and tell them
+29:14
+look this is this has gone in front of a judge in New York. Please help us by taking all of this
+29:20
+infrastructure down at the same time. So the strategy was first to expose and then to be able to
+29:27
+take down the infrastructure all at once and then lastly by going public with the whole thing
+29:33
+as I mentioned before the things that could not be easily taken down like the Bitcoin wallets
+29:39
+at least put them, illuminate them, point everyone at them like anyone who cares maybe that's not
+29:45
+that many people out there but you know at least saying like these are the things you can look at
+29:50
+they're the ones that are encoded in the binaries. Here's how you can decrypt the content and find
+29:55
+any new domain as they are released and the final objective was really to make the whole thing stop.
+30:04
+Reduce the number of compromised users, compromise the accounts, compromise devices being used
+30:09
+as proxy endpoints or to mine crypto for someone else. And this was a civil suit. So you were
+30:15
+it was not meant to ultimately go after the arrest of these individuals but just to bring light
+30:21
+as you just discuss. So civil suit, pay for the damages and then surface this whole operation
+30:28
+coordinated law enforcement. So sounds like there was a lot of coordination then with international
+30:32
+law enforcement and then all these. So this must have been a massive undertaking to get everybody
+30:37
+quietly on the same page to guessing you picked a day or maybe a period of time that you would all
+30:46
+hit that kill switch and take the infrastructure down and kill the domains.
+30:50
+Yeah. For the infrastructure, take down this was actually also mostly civil and there were not
+30:57
+that the other organizations, law enforcement organizations globally being involved.
+31:02
+We picked the date in sync or to synchronize with our legal teams that were doing the court
+31:09
+filings and that part was the one that we that we depended on. So when we had confidence that this
+31:17
+was going to be to become public, then we had everything lined up and to make a small parenthesis
+31:25
+getting all of that material lined up, I had to ask many of my colleagues like please review
+31:30
+all my notes. I have this 40-page long document that's going to be signed by a director that's
+31:36
+going to be put in front of a judge. If there's a mistake in there, the consequences can be very serious
+31:42
+and it's been a very stressful time for all the team because you're going through all of this
+31:48
+and you're like okay this is not just me writing a small report for for my colleagues. This is
+31:53
+something that's going to get scrutiny, legal scrutiny as well and the consequences of having
+31:58
+something, having a mistake in the data and the attribution and everything is very significant.
+32:03
+Yeah, I type vultronwork.net instead of .com and now we're after the wrong
+32:09
+right. From the Google report, the public reporting is 78% reduction in botnetic infections.
+32:17
+Is that sound about accurate? Yes, yeah, it does sound accurate. Of course it always fluctuates and
+32:23
+we did discuss previously that there are still new variants being rolled out so of course,
+32:29
+ideally I would like the threat to be completely gone and then we can move to something else
+32:35
+but there is still some activity and there are still some devices that are impacted but the volume
+32:40
+is as gone down significantly. I wonder how just these organizations being named and then the fact
+32:49
+that people in the sub-acrime ecosystem know that this group is receiving scrutiny,
+32:57
+maybe it makes them a bit less attractive to work with, maybe they lost some partners and
+33:01
+it's not necessarily just the number of infected devices that matters but also are they still able
+33:06
+to monetize to the same extent? Are they as seen as reliable anymore? Yeah, because there's been
+33:12
+some interesting cases over the years of internal criminal group chat logs being dropped and
+33:21
+all the kind of the backstabbing and stuff that they do is certainly they're their own unique
+33:27
+ecosystem but a lot of just what we deal with on a regular basis reputation and has its risks and
+33:34
+I don't know what this impact has had on seeing later where we saw more arresting of people,
+33:41
+the coordination of IMATET seemed to be one that stands out in my mind more recently,
+33:45
+some of the ransomware gangs that I can't think of the names now but we saw there seemed to be this
+33:52
+period where they just they ran with impunity, you would try to take that at an infrastructure and
+33:57
+disrupt and you know maybe block at the end point but there was never any legal action and now we're
+34:02
+in this area where there seems to be legal action which doesn't always seem to end the threat though,
+34:08
+they seem to eventually find their way in some cases back to operations.
+34:12
+Like most things sorry for interrupting, like most things insecurity I think we're really looking at
+34:18
+raising the bar or either making it less profitable to do bad things or making it harder to do bad
+34:24
+things, it's very rare that you have like a complete result or like this went from 100% to zero
+34:32
+and let's move on. Yeah well they're just it's fascinating if you set aside the intent
+34:39
+of some of these groups what they do, I mean I've worked for companies where it's hard enough to
+34:45
+develop and really software doing it all legitimately, they're out there operating in the dark
+34:51
+edges of the internet and so I guess sometimes just right there in front of our faces that still it's
+34:57
+it's just very interesting that they're able to and it just shows how complex the system really is
+35:04
+and how difficult the these challenges are to understand, I mean like what network admin,
+35:10
+what security person can say with confidence at the end of any day that they know 100% what's
+35:15
+going on in their networks and on their systems, it's just you know you can't, I say that as a
+35:20
+reverse and you know how many times do I look at a binary that I can tell you with 100% confidence,
+35:25
+I know everything that it's doing, I very rarely can because it's just there's too typically too much
+35:29
+there to uncover an unravel and that's just one you know one program. Okay so the legal stuff is
+35:35
+where I was, yeah just an interesting side of this whole story, the blockchain then so the basically
+35:41
+the blockchain is what left them with the resilience they needed to stay up and running so that's
+35:45
+probably what what saved them ultimately and allowed them to continue and it sounds I was surprised
+35:51
+to hear that that they're still operating today. Correct I don't think that they are using the
+35:57
+blockchain anymore but yes and as we said this is being distributed through different means so I'm
+36:05
+not sure if it is 20% of the million infected devices that remain the same rather than they kept
+36:11
+doing things and then they paid more people to get more installs through paper install networks
+36:17
+but yeah there has been cases where they were able they tried to push and you domain through the
+36:21
+blockchain and then some hosts probably managed to get updated with new C2 URL and new infrastructure
+36:29
+that was not part of the initial litigation and investigation. So back to the legal stuff the
+36:34
+initial suit was filed in 2021 it looks like they clerk entered a default because the defendants didn't
+36:42
+show up that's probably not a surprise at this point. Yeah but what was a surprise is that they
+36:49
+actually hired a lawyer in New York and a lawyer came to the court and to represent them and they
+36:57
+were like yeah we're going to be taking part in this trial and then the judge said well can you please
+37:05
+come to the United States so that you can come in front of the judge and they were like oh we don't
+37:12
+really have a passport and then there were all these back and forth which was surreal to me I thought
+37:17
+that we would never hear about these people that were being named and that would be the end of it.
+37:22
+Two individuals so you likely came to them through that string that allowed you to start to
+37:26
+connect corporations and all of that it looks like in March of 22 they hired their lawyer they filed
+37:32
+a motion to to to vacate so they're now they're actually engaging in the legal process April of
+37:38
+that same year judge-code grants their motion so that allows the case to proceed this is another I
+37:45
+think really really interesting twist of this whole thing so now they've shown up they say they've
+37:49
+hired an attorney they want to they want to fight this out in the courts with Google of all places
+37:55
+what happens next? I don't have all the details some of them are private but what happened in the
+38:03
+end is that the the judge completely dismissed the case and they even blamed the defendant for trying
+38:13
+to extort the the other party the other lawyers and they asked the lawyer that they took to refund
+38:23
+some of the legal fees up to $250,000 and this is once again this is public and so some of
+38:31
+the discussions were found by the judge to be either I want to say unethical or not honest and then
+38:43
+in the end the judge was like okay that's enough or at least that's my understanding of this there
+38:48
+are probably some nicer legal terms to it but like okay this is that's enough you're not being honest
+38:52
+in front of the judge you're making everybody waste time you try to extort the the other party
+38:59
+heirs the conclusion of it you need to pay $250,000 back in legal fees so that was unexpected and
+39:07
+very interesting to see happen once again I invite you to to look at the different proceedings
+39:14
+that are public and it's super interesting it's these these two people that were named I'm not
+39:18
+even going to try to pronounce their names they decide to pursue Google asked for laptops they say
+39:25
+we don't have them and that they were fired from this company that they worked for and it was the
+39:30
+CEO that probably is made up at this point so they don't have any they tried to negotiate then
+39:38
+and basically extort saying that we will give you the the private keys I'm assuming for the the
+39:44
+C2s that they've been dropping into the binaries and into the blockchain but you have to pay Google
+39:50
+has to pay us a million dollars each defendant and then our attorney it's like a hundred thousand
+39:54
+dollars I think the idea behind that was they wanted to further the discovery process to try to
+40:00
+gain more insight into how Google was operating and detecting so it's almost like they showed up
+40:06
+just to troll Google into this this could be this court battle is this did I interpret all that
+40:14
+correctly I yes I think so I I don't see many other conclusions that we can reach
+40:22
+maybe they were trying to gain time or just make things last longer so that people would get tired
+40:28
+of this or I'm not sure exactly what else they would have been wanting to do in this context but
+40:33
+yeah super surprising very surprising Google projects their offer and I think then that went down
+40:39
+the path that you were talking about and that the judge said this is extortion and you're not
+40:44
+you know you're not here in good faith and not only I don't remember what the judgment was
+40:49
+because there is also the judgments now of course in the public court records it looks like fine
+40:55
+maybe find the defendants and also find the attorney which is I think what you mentioned just a
+40:59
+few moments ago so really ending conclusion to the legal saga of this whole the the glue cheba
+41:07
+take down yeah and this whole thing went on for a year like this was this was happening over a long
+41:13
+period of time but yes the the defending lawyer had to pay because I guess if you send the bill
+41:20
+to the folks in Russia they probably don't really have to pay it back so yeah I I was curious about
+41:25
+that I just assumed that the ruling basically the the attorney that was US based probably had some
+41:32
+money to to cough up but I would imagine the defendants are you know in areas where they're just
+41:38
+there's just no way to enforce that I again in a way a happy ending in a way was we talked about maybe
+41:43
+not as satisfying because you can just never get to 100 percent what else did you learn about
+41:50
+tracking adversaries about trying to be more effective at takedowns and dealing with this
+41:57
+resilience is this I mean is this still a common pattern that we see with with how malware is
+42:03
+distributed some of the I mean there doesn't seem to be a a family name or a group that has
+42:09
+dominated in recent times at least not that I'm aware of like the ima tets and maybe the glue
+42:14
+chebos is that a result of some of these you know these combined actions is it something else going
+42:20
+on are they just stealthier and we're just not aware or we're not tracking them as effectively or
+42:25
+do you have any thoughts on how this all kind of ties together and leads us to our current state
+42:30
+yeah that's a good question um I share the same observation that there are fewer big players that
+42:38
+are really out there visible and known to everyone so I think it does show that some of the
+42:44
+especially law enforcement operations against the big brands of malware operators did work and
+42:50
+and it's probably harder or riskier for malware operators to reach this level of being known
+42:58
+uh worldwide um for me and the team this was the first time we did an affirmatively
+43:06
+litigation but then Google has continued to do affirmatively tigations afterwards there was
+43:11
+an affirmatively tigation against a traffic distribution system that was a subitin trip bot
+43:18
+and there has been more recent one again phishing infrastructure so I think some of the legal
+43:24
+civil lawsuits is something that continues um I think it has some value in the sense that
+43:33
+as we discussed before it will expose some of these players probably make their jobs a bit harder
+43:39
+while at the same time making it easier to take down some of the infrastructure so that's one
+43:44
+thing that uh I think will continue it's always each case is a bit different but it is still relevant
+43:52
+another thing that I learned through this whole thing is having a good network of contact
+44:00
+really helps building your network of who do you know in in ISPs that other service pro at other
+44:06
+software providers and other places you never know when you it might make things a much easier to
+44:12
+cause someone that you know when you need help rather than trying to find them at the last minute
+44:18
+um so when we think about taking down infrastructure that's definitely one other thing that uh that
+44:24
+does help you didn't just go to to social media and say hey could anyone from ISPX reach out to me
+44:30
+I need some help coordinating some takedowns yeah exactly and then very often their abuse at email
+44:36
+addresses are a bit um swamped with requests so they don't necessarily get to yours really quickies
+44:44
+yeah I would echo that I would I would say I've never been involved in something like what you've
+44:48
+been involved with here but uh that network of people to reach out to and having places to go to
+44:56
+even to ask and like the you know some of the trust groups that I've been able to be to participate in
+45:01
+and see this this value uh yeah I don't know how often folks out there get to to experience that
+45:07
+or are a part of that I mean they're close groups for a reason a lot of reasons and but they can
+45:12
+be incredibly powerful not just for career growth and and finding jobs but for what we're talking
+45:17
+about here I what what happens when you need to reach out to you know 17 ISPs I don't know how many
+45:23
+numbers were involved but across the globe um that requires a pretty massive rolodex or network
+45:29
+contact book I don't know for rolodex it's a pretty dated term you know I grew up with
+45:34
+dial phones too I mean it's probably on the end of that uh that era but uh so yeah so I mean
+45:39
+erupted you you had you were had something else to finish there um no I no no I think this is all good
+45:47
+yeah we're talking about the having a good network of people to work with and then yeah even
+45:52
+internally like the different teams that we were working with that that also really really helped
+45:57
+combining the legal knowledge and I can't see it enough working with all our lawyers was really
+46:04
+awesome just the questions that we get asked and then working together to like how would I formulate
+46:09
+this knowledge about the command and control protocol and a c2 server and then phrasing that in a
+46:15
+way that makes it's way to court is a different set of knowledge than reverse engineering the protocol
+46:20
+but then like combining all of this together and then using that to go and reach out to other
+46:24
+organizations for a take down I think was super fascinating and um that's one of the things that
+46:29
+I learned just just putting all these kind of skills together and expertise together really really
+46:35
+can yield some interesting things yeah yeah the communication uh communicate what you find uh
+46:41
+you're translating some very technical things I mean maybe a string like get that vultron work.com
+46:46
+it's a little more self explanatory but I suppose to someone who you sometimes when you you take a
+46:52
+step back and and you say well it's just a string and they what's a string uh go well where how do I
+46:57
+even start that's such a simple thing that I've taken for granted now for so long how do I stop and
+47:01
+really explain what that represents to somebody who doesn't understand well it's a sequence of bite
+47:06
+so what's a bite well it's why does it matter well they need to use it to connect to an ip address what's
+47:11
+an ip you know it just it opens up this whole rabbit hole of of translation that someone has to be
+47:17
+able to grasp and you know attorneys tend to be smart people uh but it's it's not always a
+47:23
+you know it's very obvious yeah and another organization we collaborated with was a cryptocurrency
+47:30
+investigation firm and that also opened a whole area that I was not very familiar with and then
+47:36
+talking with them and they were actually able to replicate some of our findings and confirm some
+47:40
+of the things that we had but the way they were explaining it and their reasoning and I was like wow
+47:45
+this is something that is I'm not familiar with this I'm really out of my comfort zone um so
+47:52
+it still comes from a binary you still find this wide address in the binary but then it goes into
+47:57
+really weird areas uh yeah yeah I'm curious a little bit um up um a lot but actually about the
+48:04
+composition of their their their quote unquote company um I mean there there seems to be two names
+48:09
+that were named on the lot whether does it seem to be there were two names in the lawsuit
+48:13
+it seems like then these are the two people that were really in charge of this whole
+48:17
+operation and they were just bringing in more or less contractors to help write some of the code
+48:23
+I guess that also is not an uncommon model even to this day uh to to farm to to farm that out I
+48:30
+suppose AI is gonna take over a little bit of that work and I would imagine we're gonna get a lot
+48:34
+of really bad malware for a period of time but uh I don't know if that's anything really all
+48:40
+that interesting about that that part of the of the bot that operations so I think when we think
+48:47
+about this now it's not that surprising to see this kind of structure of an organization because
+48:53
+we've seen some ransomware groups that were operating also with very structured organizations with
+48:58
+sub teams focusing on different parts of their mission um but five years ago when we released this
+49:05
+investigation this was a bit newer and this was something that was less common um so the legal team
+49:12
+did put a bit more emphasis on that organization the fact that they were really operating as a
+49:18
+company with different titles and recruitment and that kind of stuff but that was probably one of
+49:23
+the well the first well-documented cases that then ended up being seen again in other groups that
+49:29
+were doing other types of cyber crime um but yeah I think to yeah I think that some of the developers
+49:37
+that were in there probably didn't know exactly how their software was being used but some of the
+49:42
+leaders definitely were putting everything together and and they knew exactly what they were doing
+49:47
+I could see that then being super you know surprising you get this it's hard to get a peek into how
+49:52
+a lot of these groups are are you know are operating and then you finally do get a peek and you
+49:58
+my assumption would have been more loose knit you know folks operating just out of their houses or
+50:07
+locations whatever um not even if it was somewhat fake but not a real organized structure and I
+50:15
+think that was also and that continued to surprise me being just a sort of tertiary involved
+50:20
+involved with with peeing behind again as an RE I don't I don't tend to get into the attribution I
+50:26
+don't tend to have to go tracking and understand the operators all that much and how they're operating
+50:32
+and what are their TTPs and so it's always a little surprising to me when you see these these robust
+50:37
+corporate structures and recruitments they're placing ads legitimate ads they're they're trying to
+50:43
+draw a certain legitimacy to what they're doing for the development work and um so yeah I could see
+50:49
+that was probably pretty surprising did it change the way that I mean other than the legal battle that
+50:54
+it really changed the way that you approached analyzing them did they obviously were successful
+50:59
+in building a large botnod but you know I would I would imagine like inconsistencies in their
+51:03
+code base and if they if they have people coming and going the core capability might be there but
+51:08
+stylistic changes that might you know that you might have relied upon for for you know sample
+51:13
+attribution or in similarity might have been harder to track yeah 100% when you start seeing these
+51:19
+malware families that have half a dozen different modules and then you realize oh yeah they're
+51:25
+probably like they're all used for the same thing but they're probably not written by the same people
+51:29
+and you can you can get a feeling of that based on the algorithms that they use or the coding style
+51:34
+that they use the mistakes that they do um so yeah I would say that this probably opened the door
+51:41
+to that thinking when I'm analyzing a new threat then it's like definitely a possibility that
+51:47
+this was not done by one person and probably not operated by the same person and I do realize that
+51:54
+more and more I use the term ecosystems rather than one malware author because I do see that
+52:02
+the delivery of the malware is probably done by one part of the ecosystem and then the persistence
+52:08
+or the monetization will be different modules are probably done by different different things
+52:15
+you probably see the same as I do that we often see malware now that has no persistence it just cannot
+52:20
+survive a reboot and you're like what's happening why aren't you persisting is it just to evade
+52:25
+detection or is it because there's another dropper up there that that is responsible for that part
+52:31
+that's probably written and operated by someone else but can still do it so yeah I'm thinking more and
+52:36
+more about malware as modular things for different missions um rather than the old maybe older
+52:46
+malware families that would do everything that would that would be clearly coded by the same person
+52:51
+yeah I definitely see in the same trends and I was recently putting together some basic malware
+52:57
+analysis content and I had the slide from years ago and I think it's covered in the the
+53:02
+practical malware analysis book too you know you've got your your root kits and you get your
+53:06
+Trojans and you've got your and all the basic terms of viruses and all these basic terms that we've
+53:10
+got it we've wrote you know grown up with I guess and they get used to the media and they just felt
+53:15
+so meaningless I mean everything so modular and and you kind of have to treat now I mean yes it might
+53:22
+hey you've ran somewhere might just only ransom but then it also does data x-fill that doesn't
+53:28
+maybe persist but it could persist and everything just seems to have sort of all of the capabilities
+53:33
+um until you go in and confirm that it doesn't so thank you pure mark for taking the time to join
+53:38
+the podcast today and for talking about this really really interesting and you know congratulations
+53:43
+on seeing a successful end to this whole chain I would imagine that the years of work and effort
+53:50
+felt like it really paid off so thanks again and I'll give you many last thoughts or comments
+53:55
+no thank you for inviting me I'm glad to be here I just want to reiterate once more that this
+54:00
+is really a team effort so I'm glad to be able to talk about this and shed light on what was done
+54:04
+but I have a very small portion of a contribution there lutsa did great work and lots of other
+54:09
+contributors did so shout out to them okay excellent well thank you very much and that's all for
+54:17
+this episode of behind the binary thanks so much for tuning in if you enjoyed the show please
+54:21
+consider subscribing and leaving a review it really helps us to reach new listeners until then
+54:26
+stay curious and keep exploring

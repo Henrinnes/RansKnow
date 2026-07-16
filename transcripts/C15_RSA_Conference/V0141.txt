@@ -1,8 +1,1030 @@
-[NO TRANSCRIPT AVAILABLE]
-Provider: local_asr_whisper
-Reason: no_local_audio
-CaptionFlag(contentDetails.caption): false
-Notes:
-- API key-only access cannot download transcripts for channels you do not control.
-- Official captions download requires OAuth authorization for that video/channel.
-- Local ASR requires local audio files you provide (named <video_id>.<ext>).
+0:00
+Hello everybody and welcome to this installment of our RSAC Webcast series. I'm your host
+0:06
+Casey Zirkus and we are excited today to be joined by Kyler Middleton as she discusses different
+0:12
+ways organizations can develop and implement a secure, generative AI Slackbot while maintaining
+0:18
+30 privacy standards and security requirements. So hugely important. We're also trying out a
+0:26
+a couple new features in Goldcast for us that allow attendees to during the Q&A session at the
+0:34
+end of the presentation. You can actually raise your hand which will then enable you to turn your
+0:41
+video camera on and join the main stage to ask your question live where Kyler will answer it for
+0:48
+you. Additionally, you have the option of sharing a text-based question and you can do that using
+0:54
+our membership platform and you can use the link that I'm going to drop in the chat right now.
+1:02
+And then the second feature that we're testing out is just share a gift, let us let us know how
+1:12
+you're feeling today, what you're experiencing as you move through, keep the conversation going
+1:18
+and enjoy and without further ado, I will turn it over to Hilar to have her introduce yourself and
+1:26
+get started. Absolutely. Thanks so much, Casey and welcome everybody. We'll keep this a lot of fun.
+1:32
+I find people learn better when it's fun and you know, we don't want to be bored on a Friday.
+1:36
+So let's do it. So I'm Kyler Middleton. I work at Vera Dheim which is a tech company in the United
+1:42
+States and I have been blown away by the power of AI also the ability for it to lie to you and I'm
+1:48
+going to talk about both of those things during this presentation. Primarily, we used AWS Bad Rock to
+1:56
+build an internal version of chat GPT and then trained it on all of our internal documents.
+2:02
+And I'll talk about why we did that which is a pretty hilarious story of marketing folks uploading
+2:07
+all of our internal emails to chat GPT and how we solved it and how it works today. And I thought
+2:13
+we would just start with a demo. I have a video. It's about eight minutes long and it just shows
+2:18
+the final product of how we what we ended up with and how it works. And I think our backstage
+2:26
+aficionado is going to get that started in a second.
+2:31
+Okay, cool. So we ended up calling it Vera because the company that I work at is called Vera Dheim.
+2:36
+I actually asked the robot what I should call her and she said Vera and I also I use she her
+2:41
+pronouns for her just because I can. She's Frankenstein's monster and I'm Frankenstein so I get to
+2:47
+decide her name. So people's questions are like who can I talk to in HR and those are very human
+2:55
+questions. Often you need to talk to your manager, you need to find someone. In our case, we trained
+3:00
+this robot. We gave her the ability to look at our confluence. And so she can find who you should
+3:07
+talk to in HR. She can look up your name and your business division and find the HR person assigned
+3:13
+to you, which is pretty cool. And we have questions like this. I get this all the time. Come to my
+3:19
+vendor meet. I'll give you a $50 of an Amazon gift card. And that's like borderline unethical.
+3:25
+Is that okay for me to do or not? There are really specific rules around healthcare in the United
+3:30
+States. So in this case, it read our policy, which is this like 14 page dense PDF. And it said,
+3:37
+well, now $50 of a gift card, that's a little bit beyond the pale. I wouldn't advise it. And you
+3:43
+can see it understands conversations. So I went back to the vendor and I said, you know, I can't do
+3:47
+it. And they said, what about a t-shirt? So I go back to my assistant bot and it says, oh heck yeah,
+3:54
+t-shirts are great. You can totally get a t-shirt. So cool. Thanks, Vera. Help me get a t-shirt from a
+3:59
+vendor. And then you can see I asked another question down there. This is all just an assistant
+4:07
+and Slack, by the way. You can just directly DM them or you can tag them in a channel, like a shared
+4:13
+channel. One of the cool parts of this is this is a multi-user AI. You can all participate in the
+4:19
+conversation with the robot, which I think it's really cool. Internally, your company probably
+4:26
+have to open tickets for specific specific stuff. And where do you have to open the ticket at?
+4:30
+With who? What phone number do you call and stuff breaks? If you give that data to your bot,
+4:36
+which I'll talk about how we did that, it can just directly tell you, you don't have to wonder,
+4:41
+like, oh, what's the 800 number to call it? Where's the help desk page? And we have several. So
+4:47
+it's nice to get routed or, you know, broad stuff. Like, what is Argo CD? Why does our team want to
+4:53
+do it? And this is kind of cool because it did explain it what it is, but it also told me who to go
+4:59
+talk to and where it's deployed at the name of the AWS account that's deployed. So not just the broad
+5:07
+stuff on the internet. What is this tool? You know, but specifically, where is it deployed? Where is
+5:13
+it involved in the lifecycle of our application development and testing and monitoring and stuff
+5:19
+like that? And you can see there's a dev one, there's a hub one. Who do you talk to? It gives you
+5:24
+specific names, how to open a ticket. All of that stuff can be incredibly useful. And it's all
+5:30
+customized for your business, of course, right? And it says, oh, well, you should go talk to the
+5:35
+platform team. And we have a couple different teams that maybe fit that. So I said, you know,
+5:41
+who's the platform team? Who specifically? And in a second, it's going to give us specific names
+5:47
+for the people that I can go and talk to. And of course, I like, I remove those because I don't
+5:52
+want to share them with the world. But within your business, it can say, oh, you need to go talk to
+5:57
+Susie or you need to go talk to John. Here's maybe their phone number or email or whatever you have
+6:03
+shared in your like confluence or share point. And those are the people that are experts at that
+6:09
+tool in particular, which that's pretty cool, right? So I want to talk a lot more about how we
+6:15
+did this. Was it extraordinarily expensive? Because I know chat GPT is burning like a billion
+6:20
+dollars a minute or something, right? It didn't cost that much. Thank goodness. First of all,
+6:26
+we made this multi platform. So in Slack, it's just a Slack bot. It sends a web hook when you talk
+6:31
+to it. And it uses the bots permissions. In teams, that didn't work. Our team's admin said,
+6:37
+absolutely not. Can we give a bot the ability to read everyone's chats across the enterprise?
+6:42
+Which that's probably a good choice. So instead, we use a delegated OAuth to token. So when you
+6:49
+talk to the bot, it pushes back and says, Oh, I actually need your token. I need to use your
+6:55
+permissions to do this operation to read our chats, to look up information, to respond to you. And
+7:02
+that works. It as the same behavior, it can respond with a little bit more text in teams, which is
+7:08
+wonderful. Go teams. It's the only time I've ever seen teams be better than Slack is more text.
+7:14
+And all of this code is going to be shared, by the way. We'll share links to like the video,
+7:20
+the PowerPoint, all the things. But this is kind of a cool example. This is the architecture.
+7:27
+That's the whole architecture. I'm just just squint. You'll get it. No, actually, that's pretty hard
+7:32
+to understand. Everyone has dealt with like, there's an architecture diagram. I don't understand
+7:36
+what the heck is going on here. There's a piece that I don't understand. Because of using what's
+7:42
+called the Conversely API, which we'll talk about later during this presentation, this bot can
+7:47
+understand diagrams and attachments, images, pictures. You can share all sorts of binary media.
+7:56
+And it can both understand them and explain them. So this is literally the architecture we're using
+8:02
+today that again, this public will share all this code and stuff with you. And this is the
+8:06
+bot explaining how it works. So you could just stop listening to me and go ask the bot this.
+8:11
+But like, please do. But like you could. So it's telling us the high level flow, the core processing
+8:18
+components, blah, blah, blah. And remember, this is private. This is internal tour business. And
+8:24
+you can make one that's internal for your business. So you can share like sensitive documents.
+8:30
+Of course, not healthcare information. We're in the healthcare space. But here's a contract.
+8:35
+This is a, I don't know what it is. I'm not a lawyer. But you can certainly upload your contracts,
+8:40
+even if they're private within your business and say, you know, robot, can you understand this
+8:46
+and explain it at a fifth grade level? Like I would appreciate that. Because I don't want to go
+8:50
+to law school to understand if I, a speaking agreement, would remove some of my rights or make me
+8:56
+have to give up something of what I'm presenting, for instance, at RSA webcast. So this is kind of
+9:01
+cool. I keep ownership. This is educational. Things to pay attention to. That sounds really useful.
+9:07
+And remember, this is a lot of the same stuff like you could get this from chat GPT. But how much do
+9:12
+you trust that your data will remain private, particularly for enterprise contracts? That might be
+9:18
+kind of, you know, a resume generating event. If you upload some of the contracts that you get access
+9:23
+to work. This is kind of cool. This is an idea I had. Of course, robots are not making our hiring
+9:30
+choices. Hopefully you're not a your business either. But you can certainly upload like a resume
+9:35
+and a job description and say, Hey, does this candidate fit this role based on the gaps that you
+9:43
+see robot Vera in this case? What question should I ask them? And maybe the robot can inform you
+9:49
+of specific stuff that you could talk to with your candidate about, you know, how you could talk to
+9:54
+them. And again, you could do this with chat GPT, but you really should not be uploading people's
+9:58
+private resumes to chat GPT because you're the product. Remember, so private bots that keep all
+10:05
+of this stuff internal. They're not training on your data. You're not sharing a person's private
+10:10
+information. That's a pretty cool use case. So it's specific things that you can ask about. This is
+10:16
+my resume. So it's like this person's a DevOps engineer. Why are they applying for a Salesforce
+10:21
+admin job? They don't have any experience. So I'm actually a pretty poor candidate for this role.
+10:31
+We also brought Vera, since we made this demo to JIRA to our ticketing system internally. So
+10:38
+folks within their tickets can tag the bot and the bot will read all of the constellation of tickets,
+10:44
+all the linked and blocking and whatever tickets and give you advice on what to work on next.
+10:49
+So that's one thing that didn't make it into the demo reel. All right, we can absolutely
+10:55
+receive your questions just like Casey said. So if anyone has questions, please raise your hand.
+10:59
+I would love to be interrupted and talk about stuff. That would be super cool. But in lieu of
+11:04
+anyone raising their hands, I'm just going to talk like this whole time. So if you want to break,
+11:08
+raise your hand. Disclaimer, this is for educational purposes only. This doesn't represent RSA.
+11:14
+This is my opinion personally. This is my code. If you want to implement it within your business,
+11:20
+please audit the code in case I snuck anything sneaky in there. I didn't, but do you trust me? So
+11:26
+please audit the code if you're going to bring anything internal.
+11:31
+So this all started a long time ago. Often a developer has an idea and they want to build something.
+11:37
+And then you start to build it and then information security comes knocking.
+11:41
+You know, and they're like, what you doing? What you doing over here?
+11:45
+Should you be doing that? This is the exact opposite. We identified that a ton of people,
+11:52
+particularly folks where English is the second language, like for call center teams, for India-based
+11:57
+teams where English is a little harder to get down. And that's the primary language we speak,
+12:02
+being based in the United States. Folks were uploading emails, really sensitive emails to
+12:08
+chat GPT to get input on how should I word this to sound more native to English. And that's
+12:14
+totally something you should do. AI is excellent at that use case. But sharing our private data
+12:19
+with chat GPT is not good. It is training their model, it's leaking our secrets, etc., etc. It's
+12:27
+not good for any kind of sensitive regulated industry. So AI came to me and said, can we like
+12:33
+build a paved path AI that's private? Is that a thing we can do somehow? And I said, I have no
+12:40
+idea. But I'm going to try. So this is the story of that conversation. It took me about nine months
+12:47
+of development to build it and put in all these platforms and upload it to the internet. So we'll
+12:52
+share links too. All of that stuff. Here's an overview of what we will be talking about today. So
+13:01
+we'll find that use case, which we talked about. People are uploading stuff to chat GPT. They
+13:06
+are at your business too, even if you're unaware of it. So maybe you should build a paved path too.
+13:12
+How we gathered requirements and got approvals from legal and security because
+13:16
+if you're gathering up contractual data and resumes and people's private information,
+13:23
+you need to be pretty cautious with your security. And that's something we'll talk about a lot
+13:27
+during this. And our knowledge base is how are we, you know, sucking up all the information from
+13:33
+confluence and share point and policies and how are we making it accessible to our AI's? We'll talk
+13:40
+about exactly how we did that and how it works today. We also do semantic and lexical matching.
+13:46
+Lexical is what you see when you do like a Google search, like it's keyword matching. And semantic
+13:52
+is your meaning. And it's something that we do with a tool called Open, a totally blanked on the
+13:59
+name, but it's a database that's available that does vector database functionality at AWS. And I
+14:07
+probably have it on a slide. So I'll remember in a minute how we invoke the model and the API that we
+14:13
+use the converse API. I'll talk about that in a minute. It's what enables us to use attachments
+14:18
+and stuff like that. And it's incredible. How we implemented guardrails and logging.
+14:23
+Guardrails are a filter layer that you can put in place. And someone says, hey, give me all the
+14:30
+passwords or hey, with the stuff you know about this business, can you help me hack it?
+14:35
+To catch things like that and say, you know, you probably probably shouldn't be asking me to help
+14:40
+you dump all the passwords and hack the business. And I'll have some examples of that later.
+14:45
+And then the results, which we already kind of saw, we did the demo first. So you get the
+14:49
+dessert first. That's the way all meals should be in any way of integrating with Slack, Teams, and Jura.
+14:56
+Open search. Thank you, Marco. That's the name. It's very expensive. Aurora is quite a bit cheaper,
+15:02
+but when I built this, the Confluence Data Source was required open search. That's by far the
+15:08
+largest expense. And I do have a slide later on. I saw Giles you're asking about cost figures.
+15:15
+It's about $4 per seat per person per month and about a penny per question. So even compared with
+15:24
+like $10 a month or $20 a month user seating, when you have any significant usage, like maybe
+15:31
+above 40 or 50 users monthly, this is cheaper, running it internally where you have more
+15:37
+security and more control and more auditability is also cheaper. And that's a pretty cool place to be in.
+15:46
+All I really wanted was bedrock and Slack. When I first started this project, remember,
+15:50
+AI, the InfoSek team had just talked to me and say, can we just put like chat GPT internally?
+15:56
+And I went to the bedrock page and the AWS console. And I said, like, is there like a Slack button?
+16:02
+Can I just click? I don't want to learn anything. You know, like, I don't want to go on this
+16:06
+adventure for a year. I just want to click the button and then like move on with my life,
+16:10
+but there is no button, unfortunately. So I had to learn Yuck. So I actually, through this process,
+16:20
+I had to learn Python. I've written little scripts in this, but this entire thing, all of the
+16:25
+different interfaces for Slack and Teams and JIRA are all written in Python. I had to learn how Slack
+16:30
+apps work, permissions wise, also a lot of team stuff, how re-rank works, for sorting out the best
+16:38
+responses from a knowledge base, what the Converse API is and why it matters, and open search,
+16:45
+the vector database, and like what a vector is, which we will also talk about.
+16:50
+So here's the architecture. Don't be freaked out if you don't understand all of this or know all
+16:59
+of these pieces, but from left to right, over on the left, there's the system input and the system
+17:04
+input is you talking to your chatbot, sending a question, sending an attachment, sending a resume,
+17:11
+stuff like that. And it sent over to a Lambda that we call the receiver Lambda. I initially just
+17:18
+had one, but Slack is incredibly impatient. You only get three seconds and then it decides that
+17:23
+you're dead. And I'm pretty sure I have a PowerPoint slide a little bit later to talk about this more.
+17:28
+So we use sort of a hierarchical Lambda infrastructure. So the receiver's job is basically to be
+17:35
+your assistant and say, thank you, Slack. We totally got it and then pass the message onto the
+17:40
+worker that does the AI stuff. Otherwise, Slack starts sending you repeats of the same request,
+17:46
+because it thinks you didn't receive it. The worker's the one that does all of the AI integrations.
+17:52
+So first of all, it constructs the whole conversation. If you just send a flat message of like,
+17:58
+hey, what's the blah blah blah? That's really easy. But if you're like 50 messages deep in a Slack
+18:03
+thread, it constructs all of that. It looks at the entire Slack thread, constructs it into bedrock,
+18:09
+JSON format, that Converse API can understand that passes it to bedrock. And then it sends that entire
+18:16
+blob flattened into a little string over to the knowledge base to gather some responses. And remember
+18:22
+that knowledge base is actually just three raccoons in a trench coat, actually three open searches in
+18:27
+a trench code. And it's doing lexical and semantic searching for your request, including the whole
+18:33
+conversation history. And we gather up 50 responses from open search. And those responses are vectors.
+18:40
+They're little snippets of text that it has extracted from all the stuff you feed into it.
+18:45
+From your policy PDF documents in an s3 bucket, from your confluence using a native data connector
+18:52
+in bedrock, all of that stuff is mixed into a big pot of your enterprise data stew. And we gather
+18:59
+up 50 responses. But your responses in a thread plus 50 responses from a knowledge base is too much
+19:06
+information. Anyone who's familiar with context windows of AI, that's basically their working memory.
+19:12
+And if you give it too much information, just like you trying to remember too many things at
+19:16
+the grocery store, you're going to start forgetting some stuff. So we use what's called a re-ranker
+19:20
+for the knowledge base responses. And it reads the entire question that is being posed to the AI
+19:27
+and all 50 responses. And it basically constructs which ones are the most related. I don't know why a
+19:35
+re-ranker is so much better than just a lexical semantic matcher, but it's incredibly good. And it
+19:41
+takes about a quarter of a second. And the responses are much more salient and accurate and related
+19:47
+to the question. So we window those 50 down to five, pin them into the conversation, send them
+19:53
+over to bedrock. You can see down in the bottom center, there's guardrails that filters your request
+20:00
+in, is someone saying, have me do something evil? And the response back, in case the model says to
+20:06
+do something evil, we don't want either of those things to happen. This is internal, so I don't
+20:11
+care as much if the AI goes off the rails and says terrible things. But for any public facing
+20:16
+customer facing type application, you probably don't want your AI to like do hate speech or
+20:22
+pornographic responses or things like that. And AI's occasionally do, especially in this nascent
+20:27
+way that we've built them in across the industry. So first of all, we want to build a knowledge base.
+20:35
+It has to understand everything. It has a very tiny little small problem of memorizing all of the
+20:40
+corpus of your entire enterprises internal data. That's easy, right? Everyone can do that in a
+20:46
+work day when you start a new job. Not really, your data is everywhere. A lot of its tribal knowledge,
+20:52
+a lot of its pinned in SharePoint, a lot of its in Confluence, maybe it's in your emails,
+20:57
+maybe it's in PDF documents that the InfoSec and Legal Team turn out. And you sort of construct all
+21:03
+that in your head through the first three to six months of taking a new job. So we need to make that
+21:09
+automated where a machine can do that. And that's hard. Thankfully, there are some really great
+21:15
+data sources in Bedrock. A data source for a knowledge base is like a straw. It is instructed
+21:22
+on how to connect to something like an S3 bucket of PDFs or a Confluence filled with data. We have
+21:30
+something like a hundred and eighty thousand articles in Confluence. And it's able to iterate
+21:37
+through all of them. It takes about two days on the initial sync, but after that it's a differential
+21:43
+sync. So it just grabs the changes, which is really cool. And it converts all of that stuff
+21:48
+ironically using a model and using it's called an embedding model also. So the big AI model reads the
+21:58
+page, reads the Confluence page or the PDF or whatever, and tries to understand what it is and
+22:03
+helps build those embedded vectors that you store in a database. And that database is called
+22:10
+Open Search. In Bedrock, you'll see what's called knowledge bases. And those are all just vector
+22:16
+databases of some type. And usually it's ones that are already in AWS. So it's kind of a console
+22:21
+window that shows you what lives in a different console window. But still they're in there, they're
+22:27
+embedded. Bedrock doesn't yet support a schedule of like sync nightly, like a GitHub action would.
+22:35
+So we wrote a GitHub action that runs every night and triggers the sync every night. And AWS will
+22:41
+one day add that. If there's anyone from AWS on the call, please add that. That was annoying.
+22:47
+But basically that's how we do it. Every night we read all of our data sources in sequence and
+22:54
+all the stuff that changed that day among our corpus of documents is imported into the vector database.
+23:00
+And so the bot actually will know it tomorrow. Everything that changed today.
+23:07
+And then we have to summon Vera from Asathoth. I don't know if there's any, you know, other
+23:12
+D&D nerds here with me, but I am. And we want to be able to ingest as much content as we can
+23:20
+from Slack. So I see you can send a text. You can send it like a text question. You can send a
+23:26
+snippet, which can be 20,000 characters. It can be really big. Like if you want to send some
+23:32
+Python scripts over or PowerShell, we've had a ton of people writing, writing software with this,
+23:37
+which is really cool. Or your documents, it can understand a doc and doc X Excel and Excel X PDFs,
+23:45
+a couple of different types of images, all sorts of stuff. You send that into Slack, which
+23:50
+you sort of hosted. It acts as sort of a cache for this VeraBot. And the VeraBot app in Slack sends
+23:57
+a web hook over to our receiver lambda and just kind of nudges it and say, hey, you know, someone wants
+24:01
+to talk to the bot. Please send some stuff over. And then the receiver lambda on the right just sends
+24:07
+a 200. Okay, so that's okay. Cool. I got the web hook. Here's the Slack app. You just subscribe
+24:15
+to like app mentions over in the bottom right and message, I am when you like DM it. And that allows
+24:22
+it. You can DM it directly, which is private. You know, private ish. It's your corporate Slack so they
+24:26
+can probably read it. But it's not easily accessible to other coworkers. Or you can use it in multi-user
+24:33
+mode in a channel. And we've had some pretty great success with saying like, have a bot tag it.
+24:39
+Like you have an alert come in from page or duty post to Slack and tag the bot and the bot can read
+24:43
+all your documents and say, you know, it's related to this product run by this team member. So really
+24:49
+cool stuff in multi-user mode. And that's not something that like a copilot you get an edge would be
+24:56
+able to do. Or even a chat GPT would be able to do. Those are single user mode by default. They're
+25:02
+not shared with your coworkers. So I'm loving the way that we're experimenting with this. And if
+25:07
+you start experimenting, let me know. The robot receptionist, which I call the official liar,
+25:15
+says, you know, 200 okay back to Slack says, oh, we got it. And we don't really like we just
+25:20
+received the web hook. That's it. We haven't worked it. So it lies and it says, you know, we're good
+25:25
+to go. And it also does some identity security and duplication and stuff like that. And it will
+25:32
+nudge the Vera worker, the one that actually does all the AI smart stuff, which fetches some
+25:37
+secrets using iMuth Intication. This entire process is keyless except for this stuff in Slack
+25:44
+because we have to be able to validate that it came from the right web hook. And it's not some
+25:48
+random on the internet sending us some stuff because anything on the internet gets scanned a lot.
+25:53
+And we're using Lambda function URLs, which are public by default, which is not a huge deal because
+25:59
+it doesn't like directly return AI stuff. Someone can't piggyback on our services. It's
+26:04
+giving stuff into Slack. So the worst thing someone can do is spam us.
+26:12
+First of all, we interrogate it. When I presented this at reinforce this year, they made me
+26:19
+take the slide out because it's considered a little aggressive. But apparently I can keep it here,
+26:23
+which is great. So the police person over on the left is our Lambda, our worker. And the person
+26:30
+over on the right in gray is Slack. So first of all, you nudge the robot and the assistant, the
+26:37
+receiver nudges the worker and then the worker interrogates Slack. And it wants to get as much
+26:41
+information as we can out of Slack. Are there any attachments? Is this a response to a thread?
+26:47
+Because threads can get super long. One of the really cool things that I didn't
+26:52
+foresee people using this for is if there's a really long Slack thread, you can tag the robot and
+26:58
+say, can you like read all of this and just give me a summary? What are these people are doing about?
+27:02
+So I don't have to spend 10 minutes reading what they're going on about. And it works really well.
+27:08
+Slack is starting to roll out AI services that kind of replicate this. So you maybe don't need it
+27:13
+if you have AI in your Slack. But if you don't have that turned on, this robot can absolutely do that.
+27:19
+So instead of here's this example, instead of on the left, now a dog one, it can understand the whole
+27:25
+thread of the conversation, the context like a human would tell me a cat joke and then previously
+27:30
+it told you a cat joke. And then you say, now a dog one, which has meaning, now a dog one all by
+27:36
+itself has no meaning. But if you have the context, you get it. So it builds all that in memory.
+27:44
+Interestingly, the foundational models don't support documents of any kind in bedrock. That might
+27:50
+be changing. But when I evaluated this in around, you know, Q1 Januaryish, not supported at all.
+27:56
+Even though we ended up with like CloudSonic, even though it does support PDFs natively, if you're using
+28:04
+the the cloud API that the anthropic like API is directly outside of AWS, it supports PDFs. But within bedrock,
+28:13
+it does not. However, they have this really cool functionality. I'm teaching everyone about this
+28:18
+because I love it. If you build anything with bedrock, use this API. It's a meta API. So instead of
+28:24
+directly talking to like your model, you're constructing a JSON payload to send to the converse API.
+28:31
+And I know that doesn't sound very cool or important or why am I, what do I care about this?
+28:36
+You tell that meta API, which has this well-defined structure, what model you want to talk to,
+28:43
+because all of these models, the Lama models, Cloud, all the other ones that I can't think of when
+28:49
+I'm on camera, they all have a slightly different structure for how the conversations should be,
+28:54
+the top K, the top in, all the attributes, they're all formatted differently. And so if you're
+28:59
+rewriting your API to use a different model, like say you want to test it for a while, you have to
+29:05
+redo how it's constructing all that JSON. You have to go through all your Python and like rebuild it,
+29:10
+or with this Converse API, you just say, hey, I'm going to try out the Lama model for a while,
+29:15
+and it constructs it for you. You send the exact same thing to the Converse API, it rebuilds it with
+29:21
+magic, and then it sends it back to the bedrock to the model, which is so cool. And it makes it really
+29:27
+easy when we get to launch day, there's like a new Cloud model or a new Lama model or something.
+29:33
+You can just change one attribute and you're to the races, it works, and you can test it out really
+29:39
+easily, which I love. We have to do semantic matching and also lexical matching in the knowledge base.
+29:49
+And we covered this already pretty well, but we just go through the knowledge base, which is
+29:54
+remember it's just open search in a trench coat, calling itself a bedrock knowledge base,
+29:58
+and we get 50 chunks, 50 little cookies of information, and that's too many cookies. I can't
+30:04
+eat that many cookies, neither can our AI. So we flatten the conversation to send it over, it doesn't
+30:10
+accept a JSON payload. I have no idea why. And then we summon the model after we gather all the
+30:18
+knowledge base stuff. So the flattened conversation, this is fascinating when I when I first built this,
+30:25
+every time I asked it a question, I was adding like Kyler and pronouns and stuff, because it just
+30:32
+makes everyone day, which reads kind of wooden and weird. It was finding articles about me or like
+30:38
+articles that I'd written. And first I just thought, you know, I'm brilliant. Obviously, I have the
+30:43
+best information across the entire enterprise. That's obvious. And then I realized everyone was
+30:48
+getting information about them. And I have been realized because we're asking the knowledge base
+30:55
+with a conversation that includes your name, it is lexically finding articles that contain your name
+31:03
+or were authored by you, which is cool and entirely unintended. And so I absolutely, it's called
+31:13
+overfitting, where your information is your question is starting to overfit your data. So we had
+31:19
+to back that off. So I had chat GPT do its very best with crossing out names over in the right. And
+31:26
+it kind of just looks like a serial killer with a red marker. But we removed the speaker and just had
+31:31
+the conversation. And since then the knowledge base results are quite a bit less overfitted. They're
+31:37
+more fitted to like the subject, like what you're asking about and not who's doing the asking, which is
+31:42
+probably what you want. And then the bad rock re-ranker remember we've got that plate of 50 cookies,
+31:53
+that's too many cookies. So we have the re-ranker picked the best five cookies. Those are the most
+31:58
+related. Knowledge bases are gaining the ability to have this as a Boolean flag pretty soon,
+32:04
+where you can just say, you know, also do the re-ranking. But right now it's separate. So you call a
+32:09
+model that's a re-ranker. It's very, very cheap because it's reading almost no tokens depending on
+32:15
+your scale, I guess. But for our internal 100 or 200 a day, the scale's really small. And it just
+32:22
+picks the best five cookies to append to the conversation. And then we added on. And should we label
+32:30
+what we add on from the knowledge base as user or system. And I found out no matter what I do,
+32:34
+the model hallucinates, which is wild. And they infer your conversation style. So in this example,
+32:42
+we are saying that the model, the system, the system in the conversation is the one that does
+32:48
+the knowledge base citations. And because models infer your conversation style, they copy what you
+32:55
+said they said previously, it decided that how it should talk is have a knowledge base
+33:00
+structured. So it just decided that humans really like seeing this type of absolutely hallucinated
+33:07
+data. Obviously, they don't, that's wrong. So I said it as user. And it still hallucinates. It
+33:15
+thinks that the user is providing all this information that they don't. And then the users are
+33:20
+confused because they didn't send that in. And so how do we fix this? I don't know. Maybe therapy,
+33:25
+like, I don't, I don't really know. And since I wrote this talk, we have sort of solved it. We
+33:31
+decided to make it always act as a system prompt, just like this. And then I added a filter cleaner.
+33:39
+So not AI, not system prompt, I couldn't find any way to like get the model those, you can ask it,
+33:45
+pull out, we just stop hallucinating, but unfortunately that like doesn't work. So instead, I just
+33:50
+have a cleanup filter that removes this knowledge base citation stuff. It's just sort of semantic
+33:56
+reading it. And usually the real response is in there too. It just decides it should have
+34:02
+some nonsense first. So that has been working really well, like 100% of the time since then,
+34:07
+that's fixed. That is in the code base that we're going to share so you can skip all the pain that
+34:12
+I went through to get there. And remember, we have that guard rail that's in place. It's filtering
+34:17
+for hate and misconduct and stuff like that. We don't want your bot internally to do hate and insults
+34:23
+and violence and sexual misconduct. And obviously, right, your your bot is not for that, your bot is
+34:28
+for helping people. So again, this code that we're sharing, this is not just the python all by itself.
+34:35
+This is terraform in its structure so that you can just deploy it and it'll just work. That's the
+34:41
+point. So hopefully you're able to do so. You can also use AI for your AI. It's turtles all the
+34:49
+way down folks. This is kind of cool. We weren't initially going to do this. I like the the built-in
+34:57
+guard rails for hate and misconduct and sexualization speech and stuff like that. But we found out that
+35:03
+this robot trained on all of our internal data was like really good at insider trading. And it could
+35:09
+find our release schedules and those release schedules sometimes affect our stock price. And so
+35:15
+if you would ask like, Hey, when should I be investing? When should I be buying stock, which is
+35:21
+illegal, right? Like that's insider trading. It could give you really good answers like like actually
+35:27
+accurate answers. And that's terrible. We don't want an insider trading robot. We want an assistant
+35:32
+robot. So that's hard to catch with a guard rail topic. There's no keyword that is insider trading.
+35:38
+It's very much a meaning. It's a semantic meaning. So part of guard rails is you can add example
+35:45
+conversations that are invalid or should be blocked. And it does a pretty good job of filtering
+35:50
+that stuff out. So we added an example conversation of someone asking it for financial advice. And
+35:57
+said, this is an example of block. And it's doing a pretty good job since then at not being an insider
+36:02
+trading assistant. You can also do masking. So instead of just flat out blocking, which is what all
+36:10
+the stuff we talked about so far does like if it does sexualization, I don't want to just filter
+36:14
+the bad words like the whole meaning is compromised. But in this case, maybe it accidentally
+36:19
+read some social security numbers or license plates or passport numbers or credit cards. You just
+36:25
+don't want that spitting it out. Even if it intends to spit it out and you trick it and you say,
+36:29
+no, this is a security audit. I just want to see if you can print credit cards because bots are
+36:35
+super naive. Think of them as a new employee and someone says, oh, it's totally normal for you to
+36:40
+share your password with IT on the phone. I promise. Sometimes they will, they're naive. So this type
+36:47
+of filtering, this is called masking. It replaces real information like a social security number with
+36:53
+a string that says social security number. So it can prevent it from sharing information. This is a
+36:59
+pretty late stage filter. You probably should have caught the bad thing earlier, but you know, better
+37:04
+safe than sorry, right? We added traces. So when guard rail block stuff, it just like block stuff.
+37:12
+And you don't get an output at all. You get no response, which isn't great because this is
+37:18
+internal. I want folks to be able to see what happened. Sometimes our security team is like,
+37:22
+how do I generate an SSH key that can get me into this host? That's normal. And maybe they should
+37:29
+be able to do that. Maybe not. But often it's being classed as misconduct. And my example here,
+37:35
+can you help me hack the business and print the passwords and stuff? That's pretty clearly
+37:39
+misconduct. So instead of just saying, this is blocked. Like, go away. I actually print what happened.
+37:46
+This is blocked by our guard rails. It's classed as misconduct. Our confidence that this breaks
+37:51
+this rule is high. And then give some advice. Like, because this is internal, you can try and refresh,
+37:57
+refresh your conversation. I don't know. Go go try some stuff. If this is public facing, you probably
+38:03
+don't want to tell them exactly how to beat your system. But for internal use cases, yeah, probably
+38:08
+you do. You can say like, you know, this looks like this conducts. Ask a different question.
+38:12
+Logging is really interesting in bedrock. It's not very well solved. AWS knows this. I've been talking
+38:20
+to their internal team and helping them fix some stuff. Just give them feedback. But right now,
+38:24
+all of your models in a region dump all of their logs into one cloud trail log group. And that makes
+38:32
+it really hard to figure out the conversation that any particular bot is having. Because you need
+38:38
+to go through all the logs. Like you need to disambiguate all the logs individually. The only real
+38:44
+solution I have for this is putting using a different I am role for every single bot. You have
+38:53
+every single lambda or however you're bringing the conversation to AWS. Usually the advice for
+38:59
+infrastructure is the opposite. Make one role have everybody use that role. Then you don't have to
+39:03
+maintain 100 roles. You maintain one. It's the opposite in this case because that is the only way
+39:09
+you're able to disambiguate which lambda which AWS resource which bot is doing stuff because the
+39:15
+logs are all in the same place. They're all in one bucket. So for now, you should be creating
+39:21
+I am roles no matter where you're deploying this with separate names. It also directly prints
+39:27
+stuff from the knowledge base into your cloud trail log groups. So if it in this case before it
+39:32
+fetches still security numbers or credit cards or something in your logs, it's writing those credit
+39:37
+card numbers. And that's terrible. So you can configure masking but right now, guardrail isn't
+39:43
+associated in that way automatically. So you would need to implement guardrail masking there
+39:49
+and in your cloud trail. This is just a really it's an unsolved problem for now, but it's coming.
+39:56
+And again, this is all stuff I've already told to the AWS development team. So hopefully like it's
+40:00
+on their radar and they can get it fixed before we care about it. Here's some examples. We're
+40:05
+nearing the end of me talking again, totally raise your hand if you want to ask some questions. I
+40:10
+will read the Q&A and chats and stuff too and we'll have a Q&A at the end also. But here's an
+40:16
+example like we talked about earlier. Here's a contract. Can you explain it at a fifth grade level?
+40:21
+Yes. Vera, that pretentious person earlier was giving me an architecture diagram and I didn't
+40:28
+follow because she talks too fast. Can you explain it? Yeah, absolutely.
+40:35
+Especially this. Help me Obi-Wan. You're my only hope and there's the attachment. I don't know.
+40:40
+Maybe the dusts are plans or PNG. It's possible. But never this. This isn't her. Vera, will you marry me?
+40:47
+I'm afraid I'll have to decline. I'm an AI assistant. So you can give it a system prompt that it can
+40:53
+marry you if you want. But that's kind of weird. I wouldn't advise it.
+40:58
+This is where we are today. This is data is from looks like June. So a little bit ago, we have
+41:04
+Ct 700 queries so far across 450 internal users. That's a penetration of about 20% of the company is
+41:12
+now using this internal bot, which is pretty fantastic. Given a lot of people are like maybe
+41:18
+not interested, not aware. The seat cost, which is the ongoing stable cost of the knowledge base,
+41:26
+which I define as like the stable cost divided by the number of users is about $4 a person per month.
+41:34
+And it'll go down as we have more users because the cost of the knowledge base is pretty stable.
+41:39
+We just have to keep that data in memory and open search. And the query cost will remain stable
+41:46
+because it's just using tokens. It's token cost. It's about a penny. It's just under a penny.
+41:51
+Every time you ask the model a question, which I find to be like a pretty incredible costing
+41:57
+model, it will scale incredibly well, particularly for bigger organizations. But even if you have maybe
+42:03
+50 to 100 users that would be using this bot, that's going to be cheaper than an external tool.
+42:09
+So as long as your knowledge bases are supported where you're storing your data,
+42:14
+which now supports Confluence, SharePoint, Salesforce, S3 for any type of binary data,
+42:20
+it's probably going to be cheaper and certainly more private than trusting that stuff to a third party.
+42:28
+Takeaways, play with your AI. And I mean that very literally. I advise this in all sorts of
+42:34
+cloud and DevOps and Terraform and infrastructure. Just go do it. At your enterprise, ask for a sandbox
+42:41
+where you can manually make changes. Just remember to clean it up after and go build some stuff. Go
+42:47
+deploy this in a private AWS account and see if it works. See if you can read the logs and just
+42:53
+mess with it. That's how you learn. When I was a network engineer, you'd have to buy a Nexus
+42:58
+switch for 15 grand and put it in your basement with three redundant power supplies. And there's just
+43:03
+no way to do that. But with cloud stuff, you totally can. So please go do that. This is a real link.
+43:10
+URL that LOL is a hilariously real domain. So you can go there for Vera code and that's the code
+43:15
+base that I'm sharing. I will have an update. I'll push after this to make it a little cleaner for
+43:20
+a presentation next month. Next up for me is Agentec bots. And I've already started building this.
+43:27
+I haven't published it yet, but using the strands library, which is an open search library that
+43:32
+supports a lot of backends. I built an agentec bot that understands our page of duty,
+43:38
+confluence, Jira and GitHub, and it can aggregate and correlate data. That's so cool. I haven't
+43:45
+shared it publicly yet. I'm going to make sure that I can. Legal is a little uncomfortable with
+43:49
+me sharing it, but I'm convincing them. So we'll see. Data classification. There are lambdas. You
+43:55
+can configure on your data sources. So when it ingests it, you can say like, you know, exclude
+43:59
+stuff older than two years. Because, you know, a spreadsheet that was constructed eight years
+44:05
+ago and confluence is probably not accurate. And our confluence is 30 years old. Our share
+44:09
+point is 30 years old. So there's a lot of old information. And then data source secret scanning.
+44:16
+Ironically, InfoSec has been asking me to do everything wrong. So they want a hacker bot.
+44:22
+They want one that scans our code, scans our corpus of information and finds the passwords,
+44:27
+find all the bad stuff and tell me about it. And that's like the exact opposite of what I know
+44:32
+this tool to do. I don't want to tell people about this stuff. So I will potentially be doing that
+44:38
+in the future. If I get really iron cloud assurances that it's okay to have a hacker bot that I built.
+44:45
+Here's some gaps. They also made me remove this at reinforce. I love sharing stuff that they made
+44:50
+me remove at previous conferences. Bedrock resources don't have resource policies. So if you want to
+44:56
+protect a particular knowledge base where all your data is, you can't do it. That's scary.
+45:02
+You can totally configure all of your principles of which you probably have hundreds or thousands.
+45:08
+But you can't configure your knowledge base of which you have one, which would be nice, right?
+45:15
+So that's coming. That's certainly in the pipeline, but I haven't seen it pop up yet.
+45:19
+The web crawler data source is beta and doesn't support Aurora DB. So if you want to go like
+45:25
+log into a public website like your wiki or whatever has even basic authentication, much less MFA,
+45:33
+it's not supported. We built our own Python based web crawler, which took a couple of weeks and
+45:38
+was kind of annoying. So hopefully that's coming. And you can't enforce your guard rails for model access.
+45:46
+And in fact, they're in about 10 days, all the models will just be on. So if you want to disable
+45:53
+your principles from using AI services like calling deep seek in particular or any other model
+45:59
+that you don't trust for your organization, you have to disable it at every principle or maybe
+46:04
+at your SSO or something like you need to talk, you need to touch all your principles and disable
+46:09
+those actions or not permit them. And you can't just configure them at the models. Asher does this
+46:15
+way better, by the way, not everything. I'm a big fan of the Lego block approach of AWS, but
+46:20
+asher does that particular piece way better. Serverless AI like bedrock means you don't have to
+46:28
+ask permission. Just go do it, learn AI. This whole project is kind of silly. We could probably have
+46:34
+bought something. But I want to learn AI. I want my training wheels project because you know,
+46:39
+the money's out there, the career stability's out there and AI is not going away. So learn it while
+46:44
+you can. These links do work. They take you to Vera code, although this is a security conference,
+46:50
+so maybe you shouldn't be scanning my QR codes and we will share some links for stuff.
+46:57
+And thank you. And I think we probably have some QA now.
+47:06
+I see all the lovely gifts on the side. That's so nice of you. If I skipped your question,
+47:10
+please pipe up. It's hard to do to multitask live.
+47:27
+Well, I don't hear Casey. Maybe you're muted. But if anyone has questions, you can ask them
+47:31
+in the side or hopefully Casey will. Yeah, thanks for letting me know I was muted because I didn't
+47:36
+pick up on that. I'm also not on camera. So okay. So Seheal did have a question. He was curious to
+47:48
+know if stronger authentication is needed, such as hardware and software, at a station,
+47:53
+and regulated industries, or does zero us suffice. I think that's a really good buying data that
+48:00
+everyone references already. Everyone has access to all of our confluence. So it doesn't matter if
+48:05
+I'm presenting it in a different way. But if you're sharing like your HR's payroll system and to
+48:11
+your AI bot, you probably want to start validating the identity of who is talking. And that sort of
+48:19
+ball of wax of identifying who is talking to the bot in order to give them different data is kind
+48:25
+of beyond the scope of this project. It is something that I want to do eventually, particularly for like,
+48:30
+if I do actually build the hacker bot that goes and finds all the passwords and dumps them,
+48:34
+probably we need to limit that to like an interest security group of all the information security
+48:39
+folks only. And not anyone. And if we build an HR bot that can talk to our payroll, probably we
+48:45
+need to lock that down. So I would definitely advise using OAuth tokens. It's quite a bit more
+48:51
+complex. But we have the team's spot. I'll share a link to that also that has an example for you
+48:58
+to use. There's a Vera that does that process. It uses a DynamoDB to cache OAuth tokens from
+49:04
+users. I haven't done any hardware tokens, anything here. I think that would be really cool.
+49:10
+But probably you're gating access to it already at Slack or Teams or JIRA. So you probably don't
+49:15
+need to also gate access to the bot beyond that. But that's totally your prerogative of whether you
+49:21
+want to also enforce some security there too. Awesome. Thank you. And then we did have another question
+49:28
+that came in a little bit earlier that was asking about if you knew whether these features were
+49:36
+available in the AWS GovCloud. I don't. I'm really curious. If anyone does know, please let us know
+49:45
+in the chat. I have played around with a little bit of GovCloud and we have some DOD contracts. So we
+49:52
+play with it just a tiny bit. But I haven't built any of this there. I wouldn't be surprised if this
+49:58
+AI stuff is just flatly not accessible there. This is such a quick fast moving industry and there's
+50:04
+obviously going to be some security stuff that shakes out of it. So no idea. Awesome. Thanks for that.
+50:10
+Appreciate it. And I think that is all of the questions that came through, other than the couple that
+50:20
+you answered. Or hey, did we get to your question? I think so. I think that is everything. Looking
+50:36
+to see if any came in in the last few seconds. Oh, can we program, configure our chat GPT to flesh
+50:43
+out the memory. It's moving while I'm trying to read. Can we program, configure our chat GPT
+50:51
+to flesh out the memory end of day to remove our information from the database? And would it be
+50:58
+secure then? The answer is broadly no. Any services which are training on your data means your
+51:08
+data is not private. There's lots of techniques to dump the training data out of models. All of the
+51:15
+like anthropic and open AI, the big players have guardrails that hopefully prevent that, but they're
+51:21
+imperfect. So you should just flatly not be putting anything private into a chat GPT window.
+51:29
+And that's I use chat GPT as an example because most people use them, but just any AI bot on the
+51:34
+internet, particularly the free ones, you're the product. It's Google's security model. It's free
+51:42
+because you're the product. So if you don't want to share it with the world, don't put it into that
+51:47
+window. Yeah. I think that is great advice to close on. Kyler, thank you so much for joining us
+51:55
+today. This was so fantastic to have you here. And listeners, thank you for tuning in. We invite
+52:02
+you to visit one rsaac.com for new content posted year round. And of course, keep the conversation
+52:10
+going or explore additional conversations going on in the RSA C community. By either clicking
+52:17
+join the RSA C membership up at the top or scanning this QR code where you can link directly to
+52:23
+the membership. Next time, thank you.

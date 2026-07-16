@@ -1,1 +1,312 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+So this is joint work with Theo Benson and CMU, my colleague Bilal and my advisor Marco.
+0:25
+So today I'd like to convince you that observability at scale is a hard problem and I'll walk you through the system,
+0:31
+microview, that we build to address this problem.
+0:35
+Okay, first, what are microservices? I guess most of you are familiar with this picture.
+0:41
+So microservices is a disc concept for which we break down an application into many modular components,
+0:48
+which are typically deployed as Linux containers, each with its own stack.
+0:54
+We get fancy things like faster development, we get elastic scaling,
+0:58
+however the tradeoff is in complexity.
+1:01
+And the reason is that with microservices, because the fact we have many more modules and
+1:06
+this is running on its own stack, the failure surface tend to increase and it's way more complex
+1:12
+to ensure the health of the application. So how do we manage that complexity in practice?
+1:18
+The answer is observability. And specifically in our work, we focus on metrics,
+1:23
+which is one type of observability data produced by microservices.
+1:28
+Metrics are essentially time-series that expose the application or runtime state of each microservice.
+1:35
+So they might include things like the number of connection if the microservice is a database or it
+1:41
+just can be the CPU consumption or memory usage.
+1:45
+So if we look at production systems, the number of metrics that microservices generate is
+1:52
+exploding. To be concrete, this is Uber. And according to their own engineering blog,
+1:59
+their observability pipeline in just 500 million metrics per second, 500 millions.
+2:05
+And of those roughly 20 million per second get persisted to long-term storage,
+2:10
+which now if you do the math on an AWS managed prometheus instance, it sum up to around 21
+2:17
+million dollars per month with 150 days of retention, which is a reasonable assumption in practice.
+2:25
+So in this work, we take a step back and we reconsider the end-to-end workflow of metrics collection
+2:31
+system. So in production monitoring systems such as prometheus, every microservice gets
+2:37
+instrumented with dedicated observability modules. These modules, which I call metrics exporters,
+2:44
+are in charge of reading metrics value and exposing them over the network.
+2:48
+Then a central collector that lives on a separate node pulls the metric values from every
+2:54
+exporter at a fixed schedule, which is what I call the scraping interval.
+3:00
+Now the problem is that the collection process does not come for free.
+3:04
+In production servers, operators typically try to keep the CPU utilization high to improve efficiency
+3:12
+and save cost. However, because the metrics exporter and the application workload now co-exists on
+3:19
+the same node, metric collection can actually affect the application's SLOs.
+3:26
+So to quantify this, we run a simple experiment with a front end microservice in Kubernetes,
+3:32
+and yellow intervals here correspond to the collection cycles. On the left side, we plot latency
+3:38
+and on the right side, we plot throughput in terms of number of requests per second that the
+3:42
+front end can sustain. And we can observe that both get almost two times worse during the collection
+3:48
+cycles. And well, you may say one obvious solution is to collect less frequently to minimize the
+3:55
+occurrence of these contensions. However, this creates attention with the requirements of today's
+4:02
+microservice applications. The bugging microservices targets very specific failure modes,
+4:07
+such as cascaded and metastable failures, that require engineers to investigate about cause-effect
+4:14
+relations that occur on short-time scales. However, production monitors samples much more slowly.
+4:21
+For example, prometius recommends engineers to scrape every 10 seconds to a minute.
+4:28
+This example shows a concrete case of a cascaded failure involving two microservices.
+4:33
+On the top left plot, we can see that the failure propagates from the payment service to the
+4:39
+other service, and on the bottom left plot, vice versa. While these two cases show different
+4:49
+cause-effect patterns, they actually appear identical without fine grain monitoring.
+4:57
+So in summary, we can identify three requirements for an ideal metrics monitoring system.
+5:03
+First, and by thinking to the uber case, an ideal monitoring system should maximize storage utility.
+5:10
+And by storage utility, I mean that a monitoring system should try to persist only those data that
+5:15
+contain useful insights while disregarding irrelevant, redundant data.
+5:21
+Second, as we just said, we want fine grain visibility, and third, we don't want the monitoring system
+5:27
+to contend with the application workload. So over time, our community has built several methods
+5:34
+to cope with these dimensions. One obvious method is sampling, which is the approach used by
+5:42
+open telemetry, prometheus, and many other production monitoring system. If we do sampling,
+5:48
+we are essentially trading storage utility and time resolution for low overheads.
+5:55
+Secondly, other approaches propose metric selection, such as SEV, in which to improve storage utility,
+6:02
+we try to discard correlated metrics, which are metrics that variate with correlations.
+6:09
+However, these approaches do not address the other two requirements.
+6:15
+Finally, the community proposed RDMA-based collectors, like zero, to bypass the HOS CPU.
+6:22
+This type of approach can, in principle, scrape metrics at final resolution and do not create
+6:26
+contensions. However, it does not address the storage utility and still ship every metric to the backend.
+6:34
+Microview, our system, is the first approach that satisfies all the three requirements simultaneously.
+6:40
+With microview, we argue that the fundamental limitation of today's monitoring systems
+6:46
+is that intelligence is essentially centralized. By centralized, I mean that if we look at where
+6:52
+metrics are processed today, which is represented on the left side here, all the analysis happens offline
+6:58
+at the collector. As a result, on this architecture, all the metrics that microservice produce are
+7:04
+collected, regardless of their significance. Instead, our idea with microview is why not moving
+7:12
+the intelligence close to the source and instead of shipping every raw metric and analyzing it later,
+7:17
+analyze them online next to the service that actually produces them.
+7:22
+And ultimately, with microview, our goal is to ship only this subset of data that actually matters.
+7:29
+Okay, so why does this make sense in practice and what actually we mean for local analysis?
+7:35
+So, well, our intuition here is that while failure attribution typically requires a global
+7:40
+centralized analysis, failure detection is actually local. For example, here on the left,
+7:47
+we list several types of performance issues and on the right, the corresponding metrics that would
+7:53
+present significant variations if such issues occurs. And we can see that for a broad class of
+7:59
+performance issues, it is actually possible to detect them online, locally, using local available
+8:06
+metrics. And so, with this in mind, the goal of microview is to provide real-time local
+8:13
+access to the metrics of any given microservice and based on the metrics detect locally anomalous
+8:19
+conditions. Then, once anomalies are detected, microview provides local feedback that include
+8:26
+which performance problems have been detected and which are the metrics that show the symptoms.
+8:32
+Finally, these feedbacks can be input to observability exporters.
+8:37
+Exporters here include metrics exporters as well as exporters of other observability data,
+8:42
+such as distributed tracing as we will show in our evaluation.
+8:47
+And now, a natural question here is about the cost for this fine grain access. Why that should be
+8:53
+more convenient? And how fine grain we can achieve? And so, for this, we actually have good news.
+9:00
+We run a experiment in a control environment and the experiment according to our measurements
+9:07
+demonstrates that the costs are actually dominated by remote ingestion and not by local access.
+9:13
+So, in this experiment, we measure the CPU consumption of a COD matrix exporter in a Kubernetes
+9:19
+environment and we scale the number of containers on the x-axis. Our baseline here is when we access
+9:26
+metrics every 10 seconds locally and we ingest from the remote collector every 10 seconds.
+9:33
+Now, when we reduce the local access to one second, we get around two x increase in the CPU
+9:41
+consumption. But when we reduce also the remote ingestion to one second, we almost hit 10x.
+9:49
+Okay, so far, we made the case for local access to metrics. However, there's still one overhead
+9:56
+that we didn't consider and which involves processing the wealth of metrics to realize the analysis
+10:03
+cycles that micro-machroview envisions. So, the question here becomes can we analyze metrics locally
+10:10
+without paying for it? And to answer this question, we first ask ourselves what are the characteristics
+10:17
+that an ideal anomaly detector needs for microservice metrics? Our first observation is that the
+10:23
+behavior of many microservice metrics is actually correlated. For example, for the Redis key value
+10:30
+store, we can see a strong correlation between the cache rate and the number of key
+10:34
+exploration or other similar metrics. So, this leads us to our first requirement, which is using
+10:42
+a detector that is able to capture complex correlation patterns in multi-variate variables.
+10:49
+Our second observations is that the microservice environment is actually very dynamic.
+10:55
+For example, measurements that meta report about 10k deployments per week.
+11:01
+And this leads us to our second requirement, which is adaptivity. So, ideally, we want our
+11:07
+detector to require minimal operator knobs. And we have the lightweight requirement from before.
+11:16
+So, the natural family for these methods is actually dimensionality reduction, which like PCA or
+11:24
+SVD can match the three requirements. Here, we assume that metrics can be seen as a matrix that
+11:31
+evolves over time once new samples or metrics are collected for each local scraping interval.
+11:37
+And by using PCA or SVD, we can reduce the metrics to subspace, which essentially would be
+11:45
+naturally able to capture multi-variate pattern, and also would be able to require adaptation
+11:52
+with minimal operator knobs, because we can always recompute the subspace. However, the fact that
+11:58
+we need to recompute the subspace when the new metrics sample is collected, it violates our lightweight
+12:05
+requirement, because this operation is very complex. So, to copy this, we actually borrow from
+12:12
+matrix sketching, which is an approach proposed in different community. I will skip in the interest
+12:17
+of time the details here, but it's essentially a way by which we can approximate the original
+12:24
+matrix by a smaller matrix, which we call sketch, and obtain the subspace directly from the sketch.
+12:33
+So, the nice property of this is that the sketch can be updated in streaming, so we don't have to
+12:38
+append the new metric sample to the original matrix, but just recompute and incorporate the
+12:43
+knowledge in the sketch itself. And by doing that, we can actually compute the reconstruction
+12:53
+error to detect when a sample presents an anomaly. Please refer to our paper for the full mathematical
+13:00
+details here. So, in this way, we have solved our original problem, which is how do we ensure that the
+13:09
+processing cycles do not overload the CPU of the host, and we did this through lightweight sketches.
+13:17
+The second architectural methodology that we use is by offloading this sketch execution to
+13:24
+infrastructure processing unit, which are more and more common in data centers. By doing that,
+13:30
+we ensure that this sketch is isolated by a user who worked load, and the CPU cycles are
+13:36
+dedicated to profitable workloads such as microservices. Also, for the details of the architecture,
+13:42
+please refer to our paper. So, in our evaluation, we focus on answering the question, why our architecture
+13:53
+ensures smarter sampling decisions for our observability exporters. We have three case studies,
+13:59
+and we will focus on the bias trace sampler in this talk. So, bias trace sampler essentially aims
+14:08
+at collecting, maximizing the number of distributed traces collected among the symptomatic traces.
+14:18
+These are the traces that suffer from the performance anomalies that we discussed before.
+14:23
+So, we evaluated this across two workloads, and we are injecting short-classing anomalies,
+14:28
+shorter than 30 seconds, to assess the ability of the sketch to fire actionable insights.
+14:37
+And we evaluate the coverage of symptomatic traces, and the overheads due to the false positives.
+14:44
+So, this is our result. We compare microview with the baselines of head-based sampling,
+14:51
+which are random samplers in open telemetry, and we also compare microview without the frequent
+14:58
+direction sketch, but instead using dimensionality reduction baselines that we said are impractical
+15:05
+in practical settings. On the left, we observed that microview matches or exceeds the coverage
+15:14
+of the dimensionality reduction baselines and ensures way higher coverage than head-based sampling
+15:20
+methods while keeping the overhead limited. And lastly, we evaluate the scalability of microview
+15:30
+on the IPU cores. So, for this experiment, we measured the performance on a single core,
+15:37
+on the blue field, the two implementation, and we observed that microview can actually sustain
+15:43
+up to 256 pods with one single IPU core. And we also compared the throughput when
+15:55
+during the local scraping loop, when we use RDMA to access the host memory, and compare microview
+16:02
+with a threshold-based approach, which is the ideal case, and with the in-out encoder, which is
+16:08
+the approach that offers best accuracy, but is impractical because it requires retraining.
+16:15
+And we can see that the microview delivers 2.4 to 2.5 higher throughput than this method.
+16:23
+So, going back to our requirements, we started from identifying the requirement for fine
+16:33
+time resolution, and we addressed this by letting microview access through direct memory access
+16:40
+at sub-second granularity, the matrix from the IPU to the host memory.
+16:45
+Second, we highlighted the need for high storage utility, and microview ensures this by providing
+16:52
+actionable insights to observability library. Finally, we mentioned the requirement for low
+16:58
+host overhead, and microview to address this, use these sketches for streaming operations,
+17:04
+and those sketches get offloaded to the IPU to further lower down the overheads.
+17:10
+So, microview, it's open source, and available at this link, and I thank you for your attention,
+17:16
+I'm happy to take any questions.

@@ -1,1 +1,594 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+I'm going to be talking about an antivirus driver that had a vulnerability in it and that
+0:09
+vulnerability was actually used by a ransomware group and they repurposed the driver in order
+0:15
+to kill other antivirus, before they delivered the ransomware.
+0:20
+So before we get into this, let's just check it out in action so you guys can see what
+0:23
+I'm talking about.
+0:24
+So here we have a process hacker to show you what's running.
+0:27
+I have ESET installed on the system.
+0:30
+ESET was actually the original target of the ransomware group.
+0:32
+They're trying to disable ESET.
+0:34
+So here we have E-CURN running.
+0:37
+We try to kill it with administrator privileges and we can't do that.
+0:41
+We don't have permissions to because it is a protected process.
+0:44
+Then we run this malware script which invokes the vulnerable driver and you can see here
+0:50
+the process is being killed repeatedly.
+0:53
+You can see it's trying to respawn but it's being killed on a loop and basically nullified
+0:57
+it by this malicious script.
+0:59
+OK, so how did all this happen?
+1:01
+What's going on here?
+1:02
+How is this even possible?
+1:04
+Let's back up and we'll talk a little bit about how all of this unfolded.
+1:08
+So we first became aware of this around December 2021 when someone on our Discord, if you're
+1:13
+not on Discord, go check it out.
+1:15
+Lots of interesting stuff like this going on on there.
+1:17
+I don't really know how to explain Discord on here.
+1:19
+I'm sure most of you guys already know what it is but if you don't it's kind of like
+1:22
+a forum with more organized categories and whatnot.
+1:25
+So anyways, so someone on our Discord posted this malware and asked us to take a look at
+1:31
+it and when we looked at it we realized, oh shoot, this is actually pretty effective at
+1:35
+killing antivirus processes.
+1:37
+In fact, it can kill any protected process, even E-LAM processes if you guys are familiar
+1:41
+with like the early run antivirus process.
+1:45
+This can get rid of those.
+1:46
+So any sort of AV, EDR, etc can be killed by this.
+1:51
+And so when we took a look at it, we reshowed to the AV company who's responsible for the
+1:54
+driver immediately and informed them about that.
+1:57
+They actually already knew about this and they've been taking steps to sort of remedy this
+2:00
+issue already by the time we reshowed to them.
+2:03
+And actually I held off on making a video about this because at the time I didn't quite
+2:06
+understand how the driver signing protection process worked for Windows and I wanted to
+2:11
+learn more about how that worked.
+2:13
+And also I feel like there's some subset of our reverse engineering community that takes
+2:17
+shots at antivirus a lot and I don't want to be part of that.
+2:21
+I don't want to put anything negative.
+2:23
+But since December of 2021, there's actually been a few blog articles published on this vulnerability
+2:30
+and there have been some real remediation steps taken in order to make sure that the
+2:34
+driver cannot be abused like this in the future.
+2:37
+So I decided now it's probably the right time to make the video.
+2:40
+So the point of this video is not to throw a shade on them.
+2:42
+It's just to explain the technicalities of how this all works, how it could be abused
+2:47
+for other drivers in the future.
+2:49
+And what the process is when you find a vulnerable driver like this, what do you need to do?
+2:54
+So without further ado, let's jump in and start taking a look at how all of this works.
+2:59
+All right, so I've just pulled up the script in our analysis VM here and opened it up in
+3:04
+sublime so we can take a closer look at it.
+3:06
+Now the nice thing about this malware is it's written in PowerShell so you can pretty much
+3:11
+just read what it's doing.
+3:13
+It's not obfuscated at all.
+3:15
+So I'll just take you quickly through how it works here.
+3:18
+And of course, the most interesting part is actually the driver.
+3:21
+So we'll get into that in a minute.
+3:22
+So the first two commands here are just to start the driver as a service.
+3:28
+So they create it and then start it.
+3:30
+And as you can see here, they expected to be in the Windows directory.
+3:35
+Of course, it was moved in there manually by the operator prior to running the script
+3:39
+or via another script.
+3:41
+So one thing we know right off the bat here is that it has to be running as admin.
+3:45
+You can't move files into the Windows directory without running as admin and you can't start
+3:52
+services like this without running as admin.
+3:54
+So the attacker has to have admin privileges on the host.
+3:57
+So now that they've started it as a service and they can actually access it, there's a
+4:01
+little bit of setup in the script here.
+4:04
+Most importantly, the process list in this script just includes EKRN which is the ESET
+4:13
+kernel driver, the driver that's used for scanning by ESET.
+4:18
+So there's only one process in the process list here.
+4:21
+This is the targeted process list which they're going to try to kill processes from.
+4:25
+Now there's other versions of this, of course, that have many more processes in that list.
+4:28
+We're just taking a look at one of the earlier versions of the script that we saw that has
+4:32
+only one process.
+4:33
+Next thing they do is they have a little bit of template code here.
+4:37
+Those of you who have used PowerShell to interact with the Windows APIs, we'll know what
+4:41
+this is.
+4:43
+They are just creating PowerShell wrappers for these Windows API calls, CreateFile and
+4:48
+DeviceIO control.
+4:50
+And of course, what they're going to do with this is they are going to use CreateFile
+4:53
+to get a handle to the driver and then they are going to use the DeviceIO control to actually
+5:00
+interact with it.
+5:01
+And we can see as I'm highlighting those API names, you can see they're showing up here
+5:04
+in the rest of PowerShell.
+5:06
+So let's take a look at that right now.
+5:08
+They use CreateFile with a named pipe here and this is a name pipe which is used to
+5:15
+access the driver.
+5:17
+So they create a handle to that named pipe and then they call an IOctal using DeviceIO
+5:22
+control and then they use CreateFile to access another named pipe here and create a handle
+5:28
+to it which they save as H.
+5:31
+Then they have this little while loop here.
+5:33
+They loop through the loop a thousand times each time through the loop for each entry
+5:38
+in the process list here.
+5:41
+They call GetProcessName with the name from the process list.
+5:45
+So they're just calling GetProcessName to get a handle to the process EKRN.
+5:50
+And then once they have that handle, they actually get the process ID and they pass the process
+5:56
+ID to another DeviceIO control command for this IOctal with the handle that they had previously
+6:04
+open to the named pipe.
+6:05
+Because you are not familiar with user land interaction with drivers, this is how it works,
+6:10
+you open a handle to a named pipe which allows you to communicate with the driver and then
+6:15
+you use your IOctals so each one of these IOctals will be a function in the driver that
+6:21
+you can call from user land.
+6:23
+So what we'll do next is we will open up the driver in Ida and we'll take a look for
+6:29
+these IOctals and try and figure out what they are.
+6:32
+And actually just one thing before we open up that driver in Ida, let me just show you,
+6:37
+so there's no magic on my sleeve, I will show you a sig check, dash A on our driver here.
+6:45
+So you can see that it is in fact signed and it was signed in early 2021.
+6:50
+So I'm just doing that to show you that this is a valid sign driver and that is why it
+6:56
+was actually able to be used by this script.
+6:58
+So let's open that up in Ida now.
+7:00
+Okay, so we've opened the driver in Ida and now what we want to do is hunt for those
+7:06
+IO control clothes or IOctals.
+7:09
+So let's hunt for this guy right here.
+7:12
+All right, we have one match.
+7:17
+Let's take a look at this code.
+7:18
+I'll go to the pseudo code view because it'll be a bit easier to see what's going on here.
+7:22
+All right, you can see this is actually in decimal we needed in hex, I'll press H. There
+7:27
+we go.
+7:28
+Now we can see that this is actually a big case statement and you can see that it's handling
+7:33
+all of the different IOctals and of course this is the one that we care about right now.
+7:39
+And so what it does when you call it is it actually calls this function here.
+7:43
+So let's give this a function.
+7:45
+So this is and we'll give it the control code here.
+7:52
+All right, let's see what this actually does.
+7:57
+It's taking in an argument here, setting the argument to be seven.
+8:01
+V7 is clearly a little struct here for ZW open process.
+8:06
+We can look up this API and figure out what that struct is.
+8:12
+So it's going to be a P client ID, which of course is just a pointer to a client ID.
+8:16
+And we know the client ID is just the process ID and the thread ID.
+8:20
+So what we can do is we can create a local type here, view, sub view, local types, right
+8:26
+click insert, paste in our client ID struct.
+8:33
+All right, so we just edit the void pointers to be D words.
+8:40
+I don't know why the void pointer wasn't working here.
+8:44
+Okay, and then we can change the actual type here.
+8:46
+So why turn it into a client ID for our client ID.
+8:52
+There we go.
+8:53
+That's going to fix this up a little bit, right?
+8:55
+So after fixing that up, we know that our one is going to be the process ID.
+9:00
+Okay, so looking at this, we can now tell that whatever process ID is being passed to the
+9:06
+Iocto call, they're actually opening a handle to that process.
+9:11
+So this is going to be a handle.
+9:16
+And then they are going to terminate the process.
+9:20
+And that's pretty much all this Iocto does.
+9:22
+So you can see this is very simple, very straightforward.
+9:26
+All you need to do to terminate a process using this driver is just call that Iocto and
+9:32
+pass it the PID of the process that you want to terminate.
+9:36
+Now, because this is a kernel driver running with higher permissions, it's able to terminate
+9:42
+any of these any virus or EDR processes.
+9:46
+So in a nutshell, that was a vulnerability.
+9:48
+The fact that any user land process can call this.
+9:51
+There's no restrictions on it.
+9:52
+And of course, because of that, you've just been given an incredibly powerful tool where
+9:58
+you can kill any protected process as long as you have it min rights.
+10:03
+So that was the vulnerability that's being exploited.
+10:05
+It's very straightforward, very easy to see.
+10:07
+And of course, the only tricky part was to track the Iocto from the call and identify where
+10:15
+it was actually being used here in the driver right here.
+10:21
+So you can see there's many other Ioctos here that can do other stuff.
+10:25
+We haven't investigated those too much.
+10:26
+Like I said, this driver is now not able to be loaded on a fully patched up to date.
+10:32
+Windows 10 and Windows 11 hosts.
+10:34
+So it's no longer very useful.
+10:37
+However, there's other vulnerabilities if you guys look closely at some of the other
+10:40
+Ioctos.
+10:41
+I'll leave that up to you guys to take a look at.
+10:43
+And the fix that was put in place was to remove the ability to call these from a user land
+10:49
+process directly.
+10:51
+There's some additional filtering that was added in the patch version of the driver.
+10:54
+I'm not going to cover that in this video.
+10:56
+Again, this video is more about just triadging the vulnerability and the malware that was
+11:00
+taking advantage of that vulnerability.
+11:01
+So in a nutshell, that's basically how it works.
+11:04
+And you can see here, even though this is a driver, it's running in the kernel.
+11:08
+It's actually very easy to reverse engineer statically.
+11:11
+There's no obfuscation or anything like that.
+11:13
+This is a non malicious driver.
+11:15
+It wasn't intended to be used maliciously.
+11:17
+So it's very easy to read the code statically and figure out what's going on.
+11:20
+Okay, so now that we understand the technical details behind the vulnerability and how it's
+11:25
+actually abused by this ransomware group, let's take a look at the process that unfolded
+11:30
+after the driver was identified as vulnerable.
+11:34
+So there's a few blog articles on this, as I mentioned before.
+11:38
+There's a nice rundown from Mandiant published on February 23rd, where they describe their
+11:43
+tracking of the Cuba ransomware group, which they refer to as UNC2596 or UNC2596.
+11:52
+So that's the group that they're tracking as deploying Cuba ransomware.
+11:57
+And in this blog, they talk a little bit about the tools that are used to deploy the ransomware.
+12:02
+And one of the tools they name, this is their internal name, is Burnt Sagar, very nice pun
+12:08
+there on Cuba ransomware.
+12:10
+So Burnt Sagar is actually just a version of this process killer that we just looked at.
+12:16
+And it uses the same vulnerable driver, except the difference is in this case, it has a whole
+12:21
+list of processes that it's trying to kill, not just ESET.
+12:25
+So there's a whole list of different antivirus, EDR, that the ransomware group terminates
+12:30
+before they deploy their ransomware.
+12:32
+So this was published, like I said, in February of 2022.
+12:36
+And then just after that blog post on February 26th, there was another blog post from Aeon,
+12:43
+which basically described the same tooling, the same tool set, same vulnerable driver,
+12:47
+and tied it into a specific ransomware engagement, an incident response engagement that they
+12:52
+were engaged in in December 2021.
+12:55
+So those two posts came out, good recap of not only the tooling that we're describing
+12:59
+here with the vulnerable driver, but also the ransomware and the overall kill chain that
+13:04
+was involved in deploying the ransomware.
+13:06
+Now fast forward to May of 2022 and trend micro releases a blog post, which is again,
+13:13
+just running through the same tool set, the same deployment methods, except this time for
+13:19
+ransomware called AVO's locker.
+13:21
+So the same exact tool suite is being used, but for AVO's locker.
+13:25
+And what's interesting about this blog post is trend actually reached out to the antivirus
+13:30
+company whose driver was being used and got a comment from them.
+13:34
+So I'm just going to quickly read that comment for you guys here.
+13:36
+So this is from the AVO company whose driver was being used.
+13:40
+They say we can confirm the vulnerability is an old version of our driver, which we fixed
+13:46
+in our release in June 2021.
+13:50
+We also work closely with Microsoft so that they released a blog in the Windows operating
+13:54
+system, 10 and 11 only.
+13:57
+So the old version of the driver can't be loaded into memory.
+14:00
+So that sounds like a good response.
+14:02
+So we get a little bit more detail.
+14:03
+The update from Microsoft for Windows operating system was published in February as an optional
+14:09
+update.
+14:10
+So this was not required.
+14:11
+This is not pushed out to all systems.
+14:13
+It was just optional, which explains why the driver continued to be used by other ransomware
+14:18
+groups after it had all been reporting.
+14:20
+And then Microsoft continues that a security release was released in April of 2022 so
+14:26
+that fully updated machines running Windows 10 and 11 are not vulnerable.
+14:30
+So to recap, they released an optional update in February for everybody who opted into
+14:35
+that update.
+14:36
+And then they released a security release for all machines 10 and 11 in April so everybody
+14:41
+should be patched against it.
+14:43
+So that's the timeline in June 2021.
+14:46
+This is reported to the antivirus company.
+14:50
+They released their own internal patch.
+14:52
+They fixed the driver.
+14:53
+I guess report it to Microsoft.
+14:55
+It's unclear when they reported to Microsoft whether it was right away or whether it was
+14:59
+later in February because the vulnerable driver continued to be used by the Cuba ransomware
+15:05
+operators up until at least December of 2021.
+15:09
+At which point it was reported again.
+15:10
+We became aware of it on our discord.
+15:13
+We reported the driver to Microsoft at this point using Microsoft's vulnerable and malicious
+15:18
+driver reporting tool.
+15:20
+I highly encourage you guys to report drivers via this service if you come across one.
+15:26
+Then we also reported it again to the AV company who had created the driver and they said
+15:31
+that they are already aware of it.
+15:33
+So this happened around the December timeframe.
+15:36
+And then in February, Microsoft released a optional update that would prevent the driver
+15:41
+from loading in that time frame somewhere.
+15:44
+Avos Locker began to use the driver.
+15:47
+And then in April, Microsoft released an update to all systems blocking the driver from being
+15:52
+loaded.
+15:53
+So that's the timeframe in a nutshell.
+15:55
+It's still a little bit unclear about when exactly things were reported to Microsoft, but
+15:59
+that's basically the timeline as best as I understand it.
+16:02
+Now the part that I didn't quite understand when we first looked at this driver is of course
+16:06
+drivers have to be signed in order to be loaded.
+16:09
+And that's the whole point of why this driver is so powerful.
+16:12
+It is signed so you can actually use it.
+16:14
+Now what I didn't quite understand is why you wouldn't just revoke the certificate for
+16:19
+the driver.
+16:20
+But it turns out it doesn't work that way.
+16:22
+It turns out that once you signed a driver, it's good to go.
+16:26
+There is no certificate revocation list per say for drivers.
+16:32
+What?
+16:33
+Instead the way it works is Microsoft will actually block these drivers once it becomes
+16:38
+aware of them being vulnerable or used maliciously.
+16:42
+So what does that mean?
+16:44
+That means that the best way to prevent this sort of activity is to use the Microsoft
+16:50
+vulnerable and malicious driver reporting service.
+16:54
+So it's really simple.
+16:55
+All you do is just upload the file to them and let them know what you think it is if it's
+16:59
+vulnerable or if it's malware and they will do the rest of it.
+17:03
+Now again, it's unclear whether this was actually what was responsible for their initial release
+17:07
+in February or whether it was the AV company reporting it to them or both.
+17:12
+But this is the only weapon that we have now to prevent signed vulnerable drivers from
+17:16
+being reused until they go onto the Microsoft block list.
+17:20
+The cert is never revoked.
+17:21
+I mean, of course, you could revoke the signing certificate, but that would revoke it
+17:25
+for all drivers.
+17:27
+So that's not great.
+17:28
+So that's it for this.
+17:29
+I hope you found it interesting and informative.
+17:32
+Most importantly, if you like this kind of content, remember to go check out our Patreon
+17:36
+many more of our scientific airing tutorials, techniques, live stream recordings.
+17:41
+Everything is up there on Patreon if you're interested in this kind of stuff.
+17:44
+Give us a like and subscribe.
+17:45
+Don't even do that.
+17:46
+Who cares?
+17:47
+Nobody likes anything anymore.
+17:48
+Go follow us on Twitch.
+17:50
+If you like this kind of stuff, we're mostly streaming on Twitch.
+17:52
+But we make the occasional YouTube video once in a while.
+17:55
+So anyway, hope you guys enjoyed this.
+17:57
+Keep exposing the mechanics behind the malware.
+17:58
+Stay curious.

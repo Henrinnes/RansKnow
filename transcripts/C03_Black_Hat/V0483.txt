@@ -1,1 +1,874 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hello everyone.
+0:05
+Thank you for taking my talk.
+0:06
+I hope you had an awesome lunch.
+0:12
+Today I want you to join me in a journey about hacking smart cities.
+0:19
+One billion a time, a city of a thousand zero days.
+0:22
+I called it project brain fog because you will see how the, yeah, I'm going to show you
+0:28
+the slides how it goes and then you'll see why I named it project brain fog to be honest.
+0:34
+So I'm going to start off with showing you some kind of, some smart giants, right?
+0:40
+This is a sub-an media center in Hollywood, the guys that gives you the Emmy Awards for
+0:46
+television series.
+0:51
+This is his majesty's custom survey venue offices or buildings in Newcastle, United Kingdom,
+0:58
+Blacks office.
+1:00
+This is the largest residential building in the world, Nordstrom, 472 meters.
+1:09
+You know this one, right?
+1:11
+Takiwaki building in London.
+1:14
+The terminal two Dublin airport, Google offices in Dublin as well, including Microsoft
+1:21
+building in Israel.
+1:23
+So all of these have something in common.
+1:26
+And today we're going to talk about one specific controller from a different specific vendor.
+1:33
+First of all, who am I?
+1:34
+My name is Joko Kursic.
+1:37
+Offensive security engineer researcher for ING in Netherlands and then also a founder
+1:43
+and information security engineer in of zero science lab, which is a Macedonian information
+1:48
+security research and development laboratory.
+1:51
+I've 18 years of experience.
+1:53
+Used to hack a lot of ICS systems, all team environments, of course, heavy experience
+1:59
+in irrigation systems hacking radio signals and broadcast signal intuition, television
+2:04
+network streaming services, web application firewalls.
+2:08
+So my background varies depending on the projects each year.
+2:13
+So this is, I think, the last cry for help or for awareness that I'm trying to do here
+2:18
+with building management systems and building automation system controllers.
+2:22
+This has been talked years ago, also decades ago, let's say from Bill Ideos at back at
+2:28
+2014 about building management systems.
+2:30
+I also talked about this in 2019.
+2:33
+I own your building management system and then still vendors continue to focus on control
+2:40
+or rebranding instead of security in 2025.
+2:46
+Now for today talk, we're going to talk about motivation or what's my motive.
+2:51
+A background history about different kind of acquisitions.
+2:57
+800 plus zero days and patching 1000 vulnerabilities within a single controller, impacting exposure
+3:04
+and inclusion.
+3:05
+So why building management system or building automation system?
+3:09
+It's at the intersection of IT and OT.
+3:12
+It's a critical infrastructure, physical cyber security systems, high value impact and
+3:20
+weak security posture.
+3:21
+The usual legacy protocols, lack of encryption, authentication, default credentials, patching
+3:27
+is rare because uptime is prioritized over security.
+3:33
+I want to talk about just a short what is MEP.
+3:36
+MEP stands for mechanical electrical plumbing.
+3:38
+Usually people don't know this but when you develop a building or building the building,
+3:44
+you put the pipes, you put the electricity wires and everything in between, this is it.
+3:48
+And then you start connecting with building management controls.
+3:54
+Motivation of course, I'm always fascinated and motivated by these weird machines, legacy
+3:59
+machines or new technology but still something that controls physical world.
+4:05
+Directly impact the human being.
+4:09
+Cybernetic loop feedback, the output is considered as an input and then it circles in a forever
+4:16
+loop like a thermostat, right?
+4:18
+Control theory and ICS OT security that's given.
+4:21
+So this specific BMS, which is called Aspect, was on a flat network during a security operation
+4:28
+project and we saw that it's connected with also access control system and a lot of different
+4:32
+fields controllers within the network.
+4:35
+And it was exposed to the internet even though it has a private link not connected to the
+4:40
+IT network, still a lot of them are exposed.
+4:45
+So this is the controller that we are talking about.
+4:49
+We're going to talk about two controllers actually but this is the main focus because
+4:52
+I was surprised also when I found out this on the, it's exposed on internet using these
+4:57
+device search engines.
+4:59
+This is a Java based Webindication server that uses basically translation from the control
+5:07
+panel that it has also in PHP and then uses the Java foundation to translate backnet
+5:14
+protocols and modbus or backnet IP, MSTP, everything in between for building automation
+5:20
+controller networks and protocols.
+5:23
+There are variants Nexus, Matrix 2, Aspect, Enterprise, Studio, Tick clients that connect
+5:29
+with the control itself on a local serial connection.
+5:33
+There are more controllers, Flexion, it's called Flexion or Backnet Building Control.
+5:37
+We will talk about this later.
+5:38
+A bit of a background.
+5:40
+So US based company, American Automatrix developed the Aspect FT or Facilitating Technology
+5:47
+in 2008, released in 2009.
+5:51
+In 2013, silent controls from University College of Dublin, spin-off as a company bought American
+5:58
+Automatrix in 2013 and then in 2020, ABB acquired silent controls.
+6:04
+So this is all numbers and business that we don't care.
+6:09
+Classic oligopoly move which means control first innovation later for strategic marketing
+6:16
+approach.
+6:18
+I tried to search what happened and why this is exposed and what happened with my results.
+6:24
+I will show you this in a minute.
+6:26
+The only thing I found online with their documents is the except for ABB Mergent Acquisition Policy
+6:32
+and then they mentioned data security only in one document that I found.
+6:36
+What they did or American Automatrix and silent controls also did not do any security audit
+6:42
+or security testing of their product.
+6:45
+So ABB acquired it, rebranded it first with logos and everything but security remained
+6:51
+untouched.
+6:53
+The usual marketing claims SSL higher security standards remote control using a browser.
+7:01
+I want to read you one or two sentences like cybercrime and so on, but ABB silent aspect
+7:06
+put some extremely effective barriers in their way.
+7:11
+Integration with SSL and HTTPS takes security to a whole new level of fortification against
+7:14
+hacking and unauthorized intrusions.
+7:17
+Communication with the browser is fully encrypted.
+7:22
+Typical building automation control or building automation system controller network, BMS.
+7:28
+Once we get into that management interface on the different layers of networks, you have
+7:34
+automation, you have field controls, field devices.
+7:38
+The thermometers, the water pressure sensors, the CO2 sensors, the access control system,
+7:45
+elevators relay systems, public announcement system, everything as a component of device
+7:50
+comes under the BMS.
+7:53
+Attack surface mandatory, right?
+7:55
+External access, we have network protocols, components devices which we are interested
+7:59
+in and then the firmers will.
+8:01
+Trade vectors and impact zones of course allow discomfort and physical harm as well as
+8:07
+monetary impact.
+8:10
+The vendor did say the best networking practices or network security best practices don't expose
+8:17
+your devices on the internet.
+8:20
+Under no circumstances should the BMS solution be exposed to the internet?
+8:24
+Adapted zero exposure policy for ABB silent devices on the internet five times, yes, but
+8:30
+in their own cyber security architecture, this is what it is presented.
+8:36
+Also the integrators or the suppliers maybe don't follow that much.
+8:40
+Of course, the vendor provided this disclaimer to unknown reasons.
+8:48
+Just market as connected to the internet.
+8:52
+Using marketing to say, okay, you can use a web browser, you can connect remotely and
+8:57
+you should use VPN secure access.
+8:59
+These are mentioned things from the vendor of course.
+9:02
+I'm going to go down a bit in the technical details just a bit because 800 zero data is
+9:10
+that I cannot explain how it started and where it does meet me in the middle for example
+9:17
+because of the name brain fog.
+9:19
+I literally received like this in the head for two weeks went to the doctor to check what's
+9:27
+happening because as much as I started to discover it's really, you know, you have an
+9:32
+idea in a broader sense what actually is exposed on internet as I showed you the first slides
+9:41
+and the smart giants.
+9:42
+So Java PHP JavaScript bash L files binary compile L files and Linux kernel modules.
+9:50
+This is what's in the firmware itself.
+9:54
+I forgot to mention that this firmware hasn't been updated in 18 years.
+10:01
+I'll show you what I mean by that and it started to evolve in 2024 in 2024 April.
+10:07
+This is when I started to discover the zero days and communicate it with the vendor and
+10:14
+report it 1000 bugs.
+10:18
+This is symbol the mix.
+10:19
+The jar is actually as aspect FD program.
+10:24
+Let's say HMI.
+10:26
+This is the one that controls the devices and the network and the protocols.
+10:31
+I did a differential analysis reverse engineering and source code review pretty straightforward.
+10:37
+This is what I did to see what has been added.
+10:40
+This is what I did for a H for the PHP which are more than 250 files of a PHP specific programs
+10:46
+that does specific tasks.
+10:50
+So bugs and buildings under the microscope 800 plus zero data vulnerabilities.
+10:56
+Silly bugs ahead.
+10:58
+Silly.
+10:59
+I'm going to show you some of them because the usual one the usual suspects are really
+11:03
+obvious code execution using exec PHP without escape shell CMD function.
+11:11
+These are what we discovered and there's more than our service deprecated function back
+11:15
+doors, web socket insecurities, no authentication of web socket for example for communicating
+11:20
+with the device itself.
+11:23
+So I have down separated this in three categories.
+11:26
+The first is admin control panel code which you saw the interface in the beginning.
+11:31
+The login does the main for updating updating Linux operating system to update or to manage
+11:39
+the users for that device to access and to manage the specific functionalities of course
+11:46
+networks, IP network settings and stuff like that.
+11:51
+Similar examples right.
+11:52
+Call of you till of course web.fz news protocol for sharing and advanced color nothing features.
+11:58
+Execux fixing 381.
+11:59
+The version 381 of aspect is important because this is where they started to the vendor
+12:03
+started to really patch for securities.
+12:07
+Not knowingly what has been patched no CVs, no change lock, no transparency.
+12:13
+Another young settings they have this programs for connecting to the internet but the device
+12:17
+should not be connected to the internet right.
+12:18
+They say them them they say that themselves.
+12:22
+I use different tools for differential analysis but this is just one example.
+12:26
+SSH update is was added up authentication in this version only with required ones validate
+12:33
+hitter PHP which is the main authentication file.
+12:36
+So when you see a file that does not have this included or required then that file can
+12:41
+be accessed directly with either attacks.
+12:46
+Silent patching guys.
+12:51
+Typical silent patching you know what this means.
+12:55
+So what happens in 381 they introduce a lot of security in place.
+13:00
+It's a secure functions right to escape to sanitize the validate.
+13:04
+This set string post base name for patroversals and stuff like that.
+13:08
+After four years by the way.
+13:10
+So they acquired the silent control in 2020.
+13:13
+In 2024 March they released the 381 version with security enhanced capabilities right.
+13:21
+So what has been unaddressed and this is where the head starts to spin.
+13:25
+You have session scripts which is complicated.
+13:27
+Validate hitter is the main one and they they added a new folder out of the house.
+13:32
+Auth that added a different kind of validations.
+13:36
+This is the Edoer searching for begin authorization hitter which is not present and then excluding
+13:41
+with minus L with grip to see which scripts can be accessed directly on the internet with
+13:46
+data dedication and you can just shut down the controller.
+13:49
+Shut down the building.
+13:50
+Do whatever you want.
+13:52
+Creativity is unlimited here.
+13:55
+Some authentication checks were left commented out with slash slash right.
+14:01
+Some authentication is a condition like this example.
+14:04
+If the content in a post parameter is not set, require authentication otherwise if I set
+14:10
+it it's not going to require a authentication.
+14:13
+So you can override really difficult serious dangerous functions here debugging options
+14:18
+or just shut down exactly brick device itself.
+14:21
+This is the main edit override is the dangerous file let's say.
+14:27
+A lot of different files had this code badass mode MD5 checks on bypass.
+14:34
+So when you go in the get request expert mod up, you can skip the MD5 check which is the
+14:39
+pre determined package instalment of specific version of by call or coloring features and
+14:45
+then you can bypass this.
+14:47
+So this in turns can result in remote code execution.
+14:50
+I created a functional issues exploit that looks like this.
+14:53
+You see the may function show you here by collision back door PHP.
+14:59
+It does have some criteria to check which files are installed by order but you can reverse
+15:04
+the logic and just create this.
+15:06
+This was silently patch as well because of this fix into 302.
+15:12
+They reported they removed it because it was concerning security.
+15:17
+And there's a story behind it because they didn't say that I did discovery but they
+15:23
+did advisory publishing and then they lied because somebody else reported this vulnerability
+15:27
+which is not true.
+15:29
+So there's a whole story behind it in a collaboration process.
+15:32
+Two example of what really happened they patched the authentication as you can see on the
+15:36
+right side they added validation but they forgot to fix the path traversal which is this
+15:41
+example using string position at line or I guess which you can just bypass by using these
+15:51
+a parameter which is the user input as a pro concept just show them this and it was still
+15:56
+vulnerable of course.
+15:57
+Again similar approach they added authentication to the right side but they forgot to fix
+16:02
+the code injection here using exec here right.
+16:08
+Silly bugs guys.
+16:11
+You want root no problem you need to chain up skewed to the case as a guest escalation
+16:16
+of previous to a am user a am user which is American automatrix default username and the
+16:24
+system added program it just receives anything that's written as a command inside and then
+16:28
+it's going to use pseudo shell execute that file no security no checks on nothing and
+16:36
+then a m root dot pie was born I'm going to I want to explain how this works because
+16:41
+when you see the main user login page like this control panel when you type guest guest
+16:47
+as a user and possible you receive this message in but it's not me using the possible and
+16:51
+this is the code about a log in PHP right.
+16:55
+It says if you know blah blah blah whatever it redirects to with this message but online
+17:04
+at 24 the status you already are authenticated it doesn't check the group even if it says
+17:11
+it does it's a bit complicated but I want to get too much into it so when you go set up
+17:15
+that PHP it just directly shows you as logged in so you have the session.
+17:21
+Guest is only determined or produce 4hmi access for the mix dot job for the aspect of
+17:27
+50 and this is what you see when you log in successfully.
+17:32
+So again another exploit was born and you have remote root connection.
+17:39
+The kernel code I'm going to just brush over it a bit faster I guess there's a separate
+17:46
+report written for Bucknet mstp so what is Bucknet mstp it's a serial protocol that communicates
+17:54
+on the serial connection RS485 from the controller to the device itself and it uses
+17:59
+a daily training topology to just ask for master slave for client server token passing
+18:07
+so you need to request a token and then the server it can be anyone to approve okay you
+18:12
+can speak now and then this is how it communicates right and these are the headers and the frames
+18:17
+that you need to calculate so this is how it works.
+18:21
+Half controller and a bus controller you have token request acknowledgement and this
+18:25
+is how it works.
+18:27
+mstpk this is developed by maybe ABB I'm not sure.
+18:34
+It's a Linux kernel driver implementing Bucknet mstp protocol a data communication protocol
+18:39
+the key functionalities it initializes mstp state machine it uses function I have created
+18:45
+a script that enumerates all the IOCTLs and you can fuzz this kernel driver for training
+18:50
+purposes I guess it's a bit difficult to create a proof of concept but you need to be
+18:54
+on a serial like twist pair wire connection within the facility or in the building.
+19:01
+Rogue device think about that perspective only.
+19:05
+Out of bounds right of course there's a send frame function vulnerable to buffer of
+19:08
+law classic buffer of law so once you take this into consideration you see that the vendor
+19:14
+did not include any security code reviews or static analysis or sustooling or because they
+19:24
+were not supposed to be on the internet so the program is still actively updated in 2024
+19:29
+but still remains vulnerable you know semi patches and stuff like that.
+19:35
+This is the main call to k malok which is alok entry symbolic link to Kalmalk entry and
+19:41
+then if it's more than 501 bytes in the frame it doesn't reset the previous state and
+19:49
+this is just for preparation of sending the packet or the frame from the device to device
+19:54
+from the controller to the device this is where you can overflow if you set it from a
+19:58
+rogue device to act to have more than 501 bytes because it doesn't reset the previous
+20:05
+frame and this is the how and where problem the loop line 69 is the problematic one because
+20:11
+it's the loop and it's just you know fills in the buffer over and over again so you can
+20:15
+get like minimum 8 bytes of data overwriting or registers.
+20:21
+I put this as an example to see how it looks like a backnet mstp communication you see
+20:26
+that always there's one device calling another and then this one here calling another
+20:32
+one just to see who's the master who's the slave whatever for token and then backnet
+20:38
+APDU starts communicating basically what to do is APDU and the DPDU is how to get it there classic
+20:49
+backnet communication from the vendor no problems no plans for corrective measures the hm interface
+20:56
+code there was a file called json proxy and it's vulnerable to uneducated serverless
+21:03
+that inclusion it's basically a bridge from admin control panel to pitch to ng admin
+21:09
+or hmi or java based mix.john it's all the same wording so from the left side you can
+21:16
+see the vulnerable file and from the right side after reporting it they fixed it adding
+21:22
+authentication right here then they added port if it's a number then they added application
+21:30
+as a white string of letters then they added like 1 2 3 4 servlets to check if they are
+21:36
+in white listing but you could do any servlet through this file this is the syntax and this
+21:44
+is an example how you can contact the project info servlet and the project info servlet for
+21:49
+example gives you spits out the credentials in plain text user default default is the possible
+21:55
+did gave me an idea to look even more further and then I discovered the authenticated HTTP
+22:05
+servlet and in authenticated HTTP servlet authorize function you can see string host request
+22:12
+get remote address if host equals ignore case local host then return true for authorized
+22:19
+basically means that you are authorized if you are from the local network so what I did is
+22:26
+just the same not json proxy but directly calling the servlet like this and then specifying
+22:33
+the host 127 0 0 1 with authentication you also drop or leak the credentials in plain text
+22:40
+so I can imagine what you can do these are the basically ones that are vulnerable to this
+22:46
+authenticated HTTP servlet Java file and you can do anything you can just add user admin add you
+22:53
+know change the network configuration download file upload file execute code with just specifying
+23:00
+host header in the request and they just removed project info when I reported this right because I
+23:07
+reported a proof concept that shows project info called by with the local host host and they just
+23:14
+removed this one you know they didn't do holistic approach okay let me see what else is there
+23:20
+right so this happened with a lot of files you report one thing they just fixed that and below
+23:25
+it another line there was a SQL injection for example so they stated as a cv they stated due to
+23:31
+an issue in configuration code that was intended for debugging purposes was included in the market
+23:35
+release of the aspect Ft I don't think so right I don't really don't think so that this is
+23:44
+debugging purposes because if you see the the satellites also for user manager network managing
+23:52
+ntps sort of that IP config group manager what docs the Ft control service of file download
+23:59
+service this is not debugging this is pure functionality wise and it's really yeah exploited the
+24:07
+vulnerable debugging purpose code is one of the vulnerable files that allows this authorized function
+24:13
+and you can see that there is a cell in which you can see that Apache user can do anything that
+24:20
+root group can do basically a semi remote root exploitation like this of course if I reported this
+24:28
+to the vendor they will remove all the HTTP downloads server and nothing else right they will
+24:33
+remove they will remain this there are a lot of different debugging codes as an example you see if
+24:40
+it's if the user agent is equal to java slash one or java one or jscp capital letters then you
+24:47
+can you know require certification equals false then you can see how I test for lower letters
+24:54
+and capital letters and the green one is authenticated and this this is default server just for testing
+25:00
+like presume an example of how can you do some kind of damage or reacting interacting directly with
+25:08
+controller or devices underneath it you can execute code like this and change temperature for
+25:15
+example or leak water or change the sensor to not dethrashable to lower the threshold to not
+25:21
+detect that much CO2 and then it can get into parking garages you can get on a longer run it can
+25:28
+damage your lungs and it's not healthy right so the other controller is back net building control so
+25:34
+they released it silent control released it in 2019 in 2020 of course ABB acquired silent controls
+25:40
+and they just immediately rebranded it same story no security this is the main GUI of the HMI
+25:48
+flexion right I analyze it arouse js to see what's happening and I search for process creation
+25:57
+there are 20 root remote code executions in this one and there are multiple variants like six of
+26:03
+them I think there are two unauthenticated one is like the login directly login functionality that
+26:09
+you can just inject doing a command injection directly and please tell me there's a backdoor there's
+26:18
+a backdoor of course they removed it they said yeah we removed it because it was not necessary anymore
+26:27
+and because it allowed security concerns so still dizzy ABB silent firmware version timeline
+26:38
+march 2044 this is where it starts to happen and then the the last four was direct results of my
+26:45
+research with working with the vendor first reported vulnerabilities are in 2022 or 2023 CV
+26:52
+and they assigned CVSS 7.2 and I think that should be 10.0 critical and that's another story because
+26:59
+with the vendor we had a communication then it started to go off rails let's say and then they
+27:04
+started assigning CVs for 10 files or 10 vulnerabilities as one CV and also CVSS downplaying and that's not
+27:12
+cool and this is the kind of a roadmap of CVs related to the aspect system and the flexion as well
+27:22
+and in 2024 it starts to go like this right so in total I got 69 CVs maybe I need more I don't
+27:32
+care about CVs but you know vendor did downplay the game a bit um by the way I think you noticed in
+27:42
+the first slide or second slide that I also wrote a white paper about this journey and it's available
+27:49
+at the end as well you can see this and then from further details you can check out the white paper
+27:55
+vendor communication did start really well I reported two proof concepts or three just to see
+28:01
+how the maturity level of the security team in the VB was and I saw that they just fixed maybe 50
+28:09
+and they didn't credit and then later they credited then they said yes reported by a different
+28:15
+party it's a mess guys the internal organization I mean the internal team was a mess a lot of
+28:22
+different publications of documents that don't follow up contradictory to their policy as well
+28:27
+reported zero days in version three eight one three two as soon as they publish and rush publishing
+28:35
+a patch by three months or four months I needed to just check it again because they didn't verify
+28:42
+with me before the you know sending the 302 version as a firmware to check if they really fixed it so
+28:47
+they said oh yeah we had to publish it really quickly without providing any details so I decided to
+28:53
+go on Vince platform from the kernel melon university reported more there with them of course on
+29:01
+board it I received thank you questions not answers why did you do this why did you do why did you
+29:06
+waited four years after the acquisition to start patching and first do a rebranding right and then I
+29:14
+gave up like vendor subs communication march in September that was the last advisory published by
+29:19
+the vendor everything is detailed in a white paper with bibliography and everything one thousand
+29:24
+plus buildings were exposed this research public knowledge is also from the vendor directly you see
+29:32
+a center headquartered in Italy having house in Belgium budge call if I may be in Dubai airport in
+29:39
+New Delhi everything is affected how I do I know this these are the you know public information
+29:45
+you can enumerate I guess doubling Google office walkie talkie building still exposed online
+29:54
+this is a McMaster University and museum in Canada Ontario this is what it looks like the below
+30:01
+right is the HVAC air conditioning system I guess HVAC systems and the above you see the the
+30:08
+sylon and flexion and aspect everything in between American natural American museum of natural
+30:13
+history 23 buildings it's it's about 200 or 198 square one hundred and 98 thousand square meters
+30:21
+a huge building with a lot of buildings within and then they are exposed as well because they
+30:25
+said it like this excel London is about 125 thousand square meters but they're not using a vivid
+30:33
+they're using a different solution I tried to see if they're exposed they're numb still it's like
+30:38
+try to lower down the temperature of it right this is what you can do guys so what could possibly go
+30:42
+wrong they warned warned us in the past multiple times you see the news back doors in this type of
+30:47
+VMS was you know present remotely can shut down with one click I saw a lot of stuff mission
+30:56
+puzzle ICS attacks so I have a quote with from Levi Tully most severe data breaches
+31:04
+authorization I like to have direct physical impact right malicious attack on building automation
+31:09
+can have significant threat to the health and welfare of people the biggest threat is that no one
+31:14
+appreciates okay you know this is a movie I'm a movie junkie and this is you know this guy
+31:21
+for mission possible to or IMF impossible mission force he uses a same a similar framework
+31:29
+which you can see that he's an animation and this is a building control exploit kit all right
+31:33
+so he opens the valves to you know put the light to go there but it on hand just jumps in and
+31:39
+mission possible right building control I know from hackers pull on the roof must have a leak
+31:45
+same approach this is the example how it looks like what you see when you log into the HMI
+31:56
+you can control air conditioning of course you can control boilers you can control
+32:03
+fire system electrical outlets I can just cut the power here and you cannot switch off
+32:09
+overriding you can melt ice rings for hockey tournament directly remotely without anything
+32:17
+the chiller controls that fire system as well the impact is I can just damage the equipment here
+32:23
+the paperwork I guess anything can happen this is my exploit kit this is just an example it's not
+32:31
+really hacking walkie-talkie building just a picture but I have also these action scripts on the left
+32:37
+right you can do whatever you can do it's too small lights fire alarm public announcement system
+32:46
+it's not like a digital signage system as well you know the screens everything is connected so
+32:51
+basically the end result would be the guy gets the girl right this is what we're doing we do this
+32:57
+because of this right we want to impress for whoever you know it's important basically but this is
+33:05
+I don't know if it's really actually possible because you need to hack three different buildings here
+33:10
+maybe it's not the same controller but it took really a lot of effort for this guy to get the girl
+33:17
+and this is where he kisses her right you all know this root cause analysis the oops hiding
+33:23
+CVs and downplaying severity isn't a risk management it's risk manufacturing M&A without security
+33:29
+due diligence imports legacy backdoors and unpatchable liabilities and 18 years without ssdlc or s1
+33:38
+that's not legacy it's just pure negligence so when I realize that no secure code review
+33:45
+then fine okay just started to just diving deeper and deeper it's always the same issue always the
+33:52
+obvious bugs there are some kind of advanced bugs when I show you some logic bugs of course and
+33:57
+obscure authentication mandate independent cv assignment and enforce accurate cvc's I reported
+34:04
+the vendor to the cna to the midtre right because they are cna they they are certified certified naming
+34:10
+authority cv in a naming authority because they did not assign multiple cv's for multiple with
+34:17
+these multiple files different logic and different approach they said no we cannot assign 100 cv's for
+34:24
+100 RCE's right it's a different logic asset eventory strut modeling red teaming of course and
+34:31
+requires bounce patch defenition so the real truth is that from 2008 and to 2024 everybody didn't
+34:39
+remove the documents that say yeah we are offering enhanced security and this is where they stated
+34:46
+that from 2009 released until 2024 enhanced security but the real evolution of security started in
+34:54
+2024 march from their side and onwards so let's hope the vendor did start removal because this was
+35:03
+like one year and almost two years ago right in 2024 April they started immediately contacted
+35:08
+the suppliers the integrators and the vendor that's using their products to remove internet
+35:13
+connection from the exposed buildings I want to just remembering the telek 25 x this is the
+35:21
+danger of software control of safety critical systems you can you know do damages guys really
+35:28
+overconfidence engineer overconfidence and and I assume that it's one developer because I saw
+35:33
+some kind of research I did some research who is the main manager of the developing of this
+35:37
+firmware or software it's only one guy engineers dismiss the end user reports severe deaths this is
+35:45
+in 1980s and I will take now questions and thank you for the for your attention and the organizers
+35:52
+as I want to mention that so if you have any questions guys please you can use that microphone I think
+35:59
+somewhere there yeah let me know
+36:07
+you
+36:12
+these are the resources of course they're going to be published also officially on the blackhead website
+36:16
+but you can see the white paper is the brain fog the brain fog slides are the the usual default ones
+36:21
+without the low at the end right and the exposed giants is the list of exposed 369 buildings total
+36:30
+with address zip code and 65 schools 200 cities 30 countries it's global cybersecurity incident
+36:37
+so thank you again yeah question yeah thank you very much for another very depressive talk
+36:49
+it seems that as a member of the security community we haven't learned anything in 30 years but
+36:54
+I just want to pick your brain on these smart buildings because yes this interface is terrible
+37:03
+but at the end of the day it relies on backnet which is a completely stupid
+37:11
+unsecure protocol and those big buildings have plenty of points where you could just connect
+37:21
+to be to become an insider and everything you can do through the interface you could do it by
+37:27
+directly injecting backnet commands so I mean I just I just don't understand why this this thing
+37:37
+keeps you know being used can you can you comment on that it's a great question I'm also asking that
+37:45
+the world why do they keep doing this and why still continuing to market as hey using a browser
+37:52
+you can do anything remotely now it's easier it's convenient but it's not supposed to be like that
+37:56
+because building managers are part of the ICS world or OT technology so they should be not exposed
+38:02
+or at least put some VPN access secure access solution at least that and then you have to be
+38:10
+physically present to start manipulating backnet protocols and then there's an alternative with
+38:16
+backnet there's backnet called SC which is the secure component of the backnet protocol which
+38:21
+uses encryption I don't know maybe it's a legacy systems that are already working so who cares
+38:26
+about changing them it's works we have remote access it's a private link but they are exposed so I
+38:32
+don't yeah I cannot answer the question I don't know why I was the reason still into 2025 or
+38:37
+4 still happens because I know plays where they have super duper biometrics access control for the
+38:44
+people to enter their data centers yeah but backnet is the protocol that will open the exit
+38:51
+emergency doors in case of fire so if somebody can send just one UDP packet it can open the door
+38:57
+for somebody waiting outside it will enter the desenter without any problem yeah that's ridiculous
+39:03
+easily triggered by even one UDP packet can trigger the fire alarm and the fire alarm have its
+39:08
+own connected you know reasons what happens once this activates it's gonna open doors close
+39:14
+elevators and everything so it's a bit yeah I see us this is what it is any more questions
+39:26
+hi nice to see a fellow zero science lab member we've talked about this before obviously and
+39:35
+it's a great research you can read the details but I wanted if it's possible for you to share
+39:41
+what's the silliest of bugs in the series of thousands that it's your highlight of this research
+39:50
+mine is the god mode cheat code as in I am whatever was it debugger something happy to hear yours
+39:58
+yeah the most silly bug yeah I gotta say that's the the one with guest guests that was the silly one
+40:05
+because it's like client-side security you are you're saying invalid admin user in a password but you
+40:10
+you should just visit set up PHP and then you're logged in this is how you know because of the code
+40:15
+but it's really silly how they did that it's their mistake as well it's not like intentional
+40:21
+I think they misfigured misconfigured something there so yeah I think that that's one that one
+40:27
+wasn't my favorite one with the guest any more questions we are above time guys so okay if
+40:41
+somebody wants to reach out afterwards I'm open to you know discussions and questions thank you
+40:47
+again

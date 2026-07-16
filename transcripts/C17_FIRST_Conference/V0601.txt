@@ -1,1 +1,288 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Thank you guys so much. Can everyone hear me?
+0:07
+Cool. So, why risk or? I'm sure we've all been there. There's complaints about inaccuracy.
+0:15
+It touches on so many metrics that go across the department. And one of the things that interested me more as I got into this is there's a few mental anti-patterns that really make this scary to touch for people.
+0:25
+And let's talk about what this actually looks like. Right now most teams have several different groups who are submitting funding data. All of these people have good reasons to push high security risks, but they all have different definitions of high security risk.
+0:39
+And we're really leaving engineers to decide who to please. One of the anti-patterns here is if you want to deprioritize any one of these scores separately, well you risk offending that team because you're basically saying, hey, your high priority is not actually high priority for the company.
+0:53
+And this is a simplified view. Let's get that straight. The reality is we have more teams, different volume, different standards, different expectation, Galisco's on. We've all seen the types of reports that hit our desk. You see one and it's completely out of the field of what you're used to. That happens every day.
+1:09
+And what we have in the news, what we see a lot of people trying to solve this with is new risk scores. So I've seen them do some good things, summarizing data, maybe lowering the volume, but in the end it doesn't deal with the primary problem that all of this risk data is just going in the same heap. It's getting mixed all together.
+1:24
+And all this leads to a very predictable outcome.
+1:28
+Too many criticals. And you know what they say, when everything is critical, nothing is.
+1:35
+So does this affect your team? Now you may feel in your gut, but if you really want to find out there's a very simple check to make this visual. Super basic sequel. All you're going to do is take your findings, ring them by severity, and then see the pyramid that creates.
+1:48
+Now of course, before you run any sequel, talk to your local DB admin. I'm not responsible for any of the things that a little bit.
+1:55
+So what it ours look like? Well, we found out that high security risks were making up 50% of our findings. That was a pretty big deal. It was one of the biggest complaints we set here engineers saying all the time, this is high security risk. I don't actually believe it is.
+2:08
+And then when I saw this, I knew what needed to be done. We needed to make our own risk score. We need an open framework. We needed to be neutral and we needed to be audible so that when we make any changes, we can always back up our findings.
+2:20
+And we also don't make any team feel like they are being signal out for reducing their risks.
+2:25
+Look at us now. We've made significant progress where now criticals are the least likely finding. Now many people will see this and they'll think, isn't that cooking the books? This is the second anti pattern and actually to explain that we'll go back a few sides.
+2:43
+Remember, when everything is critical, say it with me. We fail to meet the core function of our risk prioritization system. The reality is, if your risk score is an actionable, then nobody is really going to care. I always think of this. If a moderate is in the queue and a critical is in the queue, they're basically the same if they don't get fixed.
+3:01
+What we're really trying to break down is what is the relative difference between the risk? Because in the end, once we have that lined up, we're going to sign whatever score we want.
+3:09
+Now, keep in mind that priority pyramid we made is going to be in the background. We are going to make another pyramid. That pyramid is just to diagnose the problem and at the very end, find if you're in a good place to stop and leave the risk-scoring process for another day.
+3:24
+Now, if despite everything, your risk pyramid is still messed up, you have an engineering problem. Sadly, there's only so much we can do from our high level, but I wanted to make that clear that this isn't going to solve anyone's problem. It's just going to illustrate whether you can solve it now or if there's another thing outside of the security org.
+3:40
+Now, I'm going to hand this off to Zach. He's going to talk a little bit about GitHub specifically and how RK study works and some of the engineering back in parts too.
+3:48
+Awesome. Thank you so much, Sophia. Let's take a closer look at what this looks like at GitHub.
+3:54
+So, first, just a quick terminology piece. In the vulnerability management program, we primarily deal in Findix.
+4:02
+So, a finding to us is just an asset vulnerability pair. So, for instance, we could have one service with a hundred different servers that all have the same vulnerability, and so that's going to create a hundred findings.
+4:16
+So, as you can imagine, that's going to yield a lot of different vulnerability data. So, in our production database, we've got about a quarter of billion findings over the lifetime of the finding, which averages out to about 200,000 new findings per day.
+4:34
+And every single one of these findings needs to be routed to the right team with the right priority, with the right SLA or deadline.
+4:42
+And so, part of the problem here is that we are getting this data from 25 different sources and counting as new teams continue to integrate with us and we get more data through the funnel.
+4:55
+So, largely, these sources can be divided into eight different categories, but the key takeaway here is that each of these sources has its own enrichment pipeline, its own idea of severity, and its own data shape.
+5:12
+So, let's take a look at some examples.
+5:16
+Here we can see that with these six different sources, we have a wide variety of different metadata that gets sent in.
+5:25
+So, we might have everything from CVSS to its own proprietary risk score to just having a severity label and a pros description.
+5:35
+And so, that begs the question of how do we compare these risks to each other? And the opportunity here is one score to rule them all.
+5:49
+We decided to make a single risk score to unify everything. And so, what that looks like is normalizing severity across 25 different sources, incorporating real world risk intel such as EPSS and CISA-Kev, factor in asset credit, sorry, asset credit, quality and exposure, and work for both CVE and non-CVE findings.
+6:15
+One of the things that makes this successful in our eyes is to make this score be transparent. And so, one of the ways that we did that is with a strict versioning system.
+6:29
+We accomplished this by dividing the risk score calculator into four main components, an abstract base class, to enforce a consistent contract across iterations, a versioned calculator, so that every time we iterate, it gets its own file, and we can see how everything has changed and maintain a consistent paper trail.
+6:51
+We also maintain a risk map so that we have the weights and the variables stored in an easily accessible place so that diffs can be stored, and which Sophia will talk more about later, and we maintain risk score details.
+7:07
+So that every single score shows every variable and how they were multiplied or added together so that engineers and other stakeholders can see how the risk score was calculated.
+7:18
+So, let's take a look at how this slots into our pipeline. We have here a dumbed-down diagram of the ingestion funnel that we use in the vulnerability management program.
+7:30
+So, each source has its own worker, which will send in finding data to our vulnerability aggregator, which will group things together, and create a notification, which will get sent to a team in the form of a GitHub issue.
+7:46
+From there, that has a really good idea of where to send these findings, but it doesn't have anything to say about prioritization, criticality.
+7:58
+So, we decided to hook in here. When we process a notification, we funnel in all the metadata that we get from every related finding, combine it, process it, get the risk score, attach it to the notification, and then send it back out.
+8:17
+And so, you might be wondering, so how do I actually build the risk score? Great question. The answer is very carefully.
+8:28
+So, we utilized a three-step process here of first taking inventory of all of our data, and then constructing the risk score itself, and then tuning, which is a consistent, constant cycle of improvement.
+8:46
+So, to start out, we want to take inventory of the different sources that we have. We need to factor in not only what sources we have, but what the most prominent sources are.
+9:00
+The reason for that is because that's going to dictate the shape of the data that we're going to have, which leads me to the other half of taking inventory, our metadata check.
+9:10
+Once you know what your sources look like, you'll know what kind of data you have access to, and also what sort of data you're still going to need to find to further enrich your risk score.
+9:20
+Some metadata may be measuring the same things. Other metadata might be completely novel based on your organization's risks or access to data.
+9:29
+However, we wanted to get as much data as possible, so that we could have as complete a picture as possible, which is especially important when you're dealing with further constraints, such as trying to be federally compliant.
+9:41
+And so, we would use all this to construct the risk score, which Sophia is going to talk a little bit more about.
+9:49
+Thank you so much, Zach. Getting over the gritty stuff, now we're going to get into it.
+9:54
+The paper on your desk is for this part of the cycle. I want you to think about what metadata you have, if you have any additional things and what we've talked about.
+10:01
+This is a simplified version. You could totally rip it off from me. I do recommend fine tuning this to your organization and what you have.
+10:07
+Before we get into it, though, let's get some reminders. So, who is your audience? There's four main audiences. We have course engineers. They want things to be transparent.
+10:15
+Even if it's kind of funny, because a lot of people, they just need transparency so that they don't have room to argue.
+10:21
+Because when they argue with other things, they'll say, oh, well, why is this this way? Can hold a discussion about why you picked a vendor, but if you can point to a source, because people are a lot more confidence to not argue, because they don't want to get into that. If they see it's a whole project.
+10:33
+The next thing is executives. Executives ironically, of course, they want zero security vulnerabilities. They're a little more practical. They're more looking at, okay, what's my ROI on this investment?
+10:42
+How are we actually doing in burning down our backlog? Security teams, of course. This is one thing I was really proud of.
+10:48
+Is by opening this up, we talked about, including more metadata for a lot of teams. A lot of teams were excited. A lot of teams said, oh, we have metadata that we are trying to get in.
+10:56
+And it was still a messy process about where exactly that went, and whether that would feed into our end score. So that was something really inspiring that I saw a lot of people get excited for.
+11:04
+Finally, auditors, what happens if something goes wrong? This is why we talk about transparency so much. I want to be very serious.
+11:11
+We're in a risk of versus industry, and it can be very scary to touch on these things, because you're worst case scenario, you lower a risk score.
+11:18
+Something happens, and then an auditor is asking why do you do that. That's why we talk about audibility, transparency. You can follow the whole train of how a risk score is composed, and make arguments on each step of the process on why we chose that decision.
+11:30
+Cool. Let's get straight into it, metric groups. Very basic, these are the highest levels that you're going to be going. One thing to keep in mind when we're talking about metric groups is that they are always going to be included.
+11:42
+You can do defaults to kind of get around that, but you have to have at least one vector available for each source for these.
+11:49
+In our case, we're trying to make sure we're ready for FedRAMP O12, so we have three basic ones that are required. Threat is in order to do the CEV information, and then another aspect is when we talk about impact.
+12:03
+In my mind, you can't really identify impact without assets, so base and assets work together.
+12:08
+When you're looking at this, you're thinking of formulas, how can these interact together, and I think it can get a little bit.
+12:14
+You want to get into the numbers, but let's step back and let's try to look at this qualitatively. How do these actually interact, and let's game out some scenarios of what this may look like?
+12:23
+For example, if something has a test asset, but the base score is really high, and the threats really high, how do we consider that?
+12:31
+Or another situation. What if the base score is really low, the assets are really valuable, and the threats are very high? How do you want to handle that?
+12:38
+In our case, we kept it very simple. We're multiplying everything by itself. It made sense. If you go through all those scenarios, you'll find that when one of those factors is zero, the risk score really doesn't make too much sense.
+12:49
+The other rule we had, which is that the base impact score and the asset actually interact together. I want to bring it up because at the metric group levels, you're also going to be looking at how these interact at the highest level.
+13:02
+Now, the EGLE item on you may have noticed, isn't this just CVSS 3.1? I did totally steal that.
+13:09
+We've taken the skeleton, I'll say, of how they've modeled their vectors and how they've integrated all this different data together. But we've added our own weights and our own values of how that data actually gets processed to make the final risk score.
+13:24
+The thing I'll just say, they do call it an open framework, so I think I'm justified. Cool. With vectors, we're trying to get as many as we can. I know Zach talked about those metadata. Really, there's so many different ways you can reduce the vectors and importance that there's not too many reasons not to include one if you haven't.
+13:41
+As a previous slide, a lot of these are from CVSS, but we're providing our own special sauce to make them unique and how they actually work. Just a brief note, we do talk about values in this. For folks who don't know, a value is basically just an arbitrary level to a vector, so low, medium, high, easiest way to think about it. We'll move on.
+13:59
+Cool. We're going to do a sample vulnerability to show you how this walkthrough looks like. We talk about GISRS, which is our GitHub risk score as we now call it. This is a Python vulnerability current, CVSS score 7.5 that tell many people would see in the organization. Cool. This is CVSS 3.1. We're good, but what happens if it's not? For 4.0, the one thing is it's pretty easy to convert back. Of course, there's a little rounding questions you have to ask yourself, but if you always estimate up, you're usually pretty safe. First question I know people will ask, why do you do not?
+14:29
+If you look into the details behind it, it's a lot harder to modify, the underlying characteristics. It's a very survey-based, so it's possible, but I think for an organization to implement that, it's a lot bigger lift. The other thing I want to talk about is converting to CVSS from non-CVSS types. Everyone just likes that idea. The reality, though, is most teams are only assigning for severity, low, medium, high, and critical. It's actually pretty easy to convert those. You can get some wiggle room, but let's say you don't want to do that. You're getting a lot of pushback.
+14:59
+You can always have a generic score bypass. In our case, we weren't trying to do that because, as we mentioned, the base and the asset score interact together. There's a little bit of limitations if we don't have that underlying characteristics. Cool. So now, Threat, this is probably the biggest one. There are so many talks. I actually don't know how many talks are just about Threat at this conference, but it's a big topic. There's a lot of different data source we can look at.
+15:28
+EPSS is a classic. The one question you've got to ask yourself is, what's your organization's internal EPSS thresholds? Everyone has a different propensity for risk, and every organization also has a different threat landscape. So that's something to keep in mind. GitHub, I was told, we can't have a 0% threat. We have to have a 0% threat if we want to lower the risk score.
+15:47
+So I just took EPSS and did .001 and rounded up. Work perfectly. They didn't argue. So that's a good idea. EPSS goes down to like, I think 14 zeros or something. So you've got a lot of wiggle room if you have anyone saying, oh, well, we don't know 1%. Keep in mind, it's over time though. So if your SLA is over one month, you're going to need to multiply the EPSS by itself in order to get the true EPSS score over that time period.
+16:11
+And of course, EPSS changes, that's something to keep in mind. The other one I really want to talk about is qualitative threat, which is our grab bag for analyst input. It is also for policy, if a policy changes and now says, hey, this type of vulnerability is a bigger deal.
+16:25
+We can just ratchet up that policy factor in the qualitative threat and increase our ability, or I increase the risk score across the board. The other thing is weaponization, you know, a lot of different vendors are providing weaponization data separately.
+16:36
+And you can assign your own scores of what you think that will actually impact your overall risk. And then the last two will go very quickly.
+16:44
+Public access, credit-based, vulnerable vulnerabilities. Pretty easy. The only thing I'll note is that credit-based vulnerabilities is the top.
+16:51
+Anything past that, I just call an incident. If other people are being exploited, it pretty much means you should be acting on it right now.
+16:59
+So we treat that as the highest threat. And then finally, asset. As I said before, we're pulling this from CPSS. The main thing I was thinking about here is how do we define a test asset and how do we define our crown jewels.
+17:12
+The nice thing is these actually filter quite well into normal attestation work that inventories do. So PII data or the type of sensitivity of data storage, we're going to mass-write to confidentiality.
+17:22
+Tagradi is probably the most difficult because it touches so much. But you can find your crown, your core infrastructure pretty easily. And then availability, of course. I think a lot of teams are already tracking availability in their own internal systems.
+17:34
+So that one's a no-brainer. And then I mentioned that this is related to the base score because of the rule we've defined in our corporation. But you can define other rules. Maybe your company has a lot of assets that are physically present.
+17:47
+So maybe you want to include physicality in your asset score. Jokingly, this is another thing to look for CVSS. They have so many great vectors. And even if people have disagreed about the exact score, I've seen very few people actually disagree with the vectors and what they're saying about a vulnerability because it is hard to describe these complicated tools.
+18:06
+Cool. Now what are we going to do with vectors? We've got to pack them up tight. We have so many options to collapse them together. So that's why I say don't worry about adding as many as you need.
+18:15
+So to cover it really simply, face risk, CVSS 3.1, pretty easy. Threats, the biggest thing I noticed is that a lot of threat sources have over-lying data. So, you know, EPSS considers weaponization and then maybe tenables, VPR also considers weaponization.
+18:30
+So you want to make sure you're not multiplying or adding those together multiple times when like a weaponization hits on a CV that could result in three different separate threat vectors going up.
+18:40
+So instead we collapse it all together. We just say what's the max threat? If you have a high threat, we're going to move on that. And then if we decide later, oh, this threat source isn't as valuable as we think, we can lower it down.
+18:51
+And then assets, I think it was pretty easy to understand that really what an asset is is a cumulative sum of all its requirements. So that was our choice to make a sum of it.
+19:02
+Pretty nice. Waits. Okay, we're almost done guys. This is the easiest and the least important, most important part of the process. Most important because this is what's going to configure it all, but least important because, say, said, this is the easiest to modify.
+19:15
+Your weights should be the most open and you really should be looking at these quite often. And let's take an example of what that CVE looked like. If you looked at the slides before in the corner, we were adding all our vectors.
+19:25
+Yeah, this is a mess. Nobody, nobody's going to actually read this. This is just a point of reference and to make it easier to diagnose at the very end.
+19:32
+And then what, oh, later we'll show you what that looks like, but our new risk source 3.0. We've taken all that data and we've figured it out to reduce it to a low risk, which was very good.
+19:43
+Now, to get into how we define some of the weights, I'm going to use acid as an example because it's the one I got the most questions on.
+19:49
+So I mentioned integrity being more important than the other CIA triad. And the reason I say that is because when I thought of the lowest risk attacks for those, they were actually the only ones that really posed a real threat.
+20:01
+So I'm going to imagine a service that has no availability requirements. And if someone attacked it, it would be annoying. Wouldn't really be the end of the world.
+20:08
+Same with confidentiality. Maybe they're tracking an employee, but if that's a test asset that's not really having anything private, not the end of the world, still a risk.
+20:16
+So we keep it at one. But with integrity, we have crypto mining. We have malware infrastructure, which is another thing.
+20:23
+It's crazy how the smallest assets can be used in other attacks against other organizations, especially GitHub. We have to worry about that because we're such a trusted domain.
+20:30
+It's a huge thing.
+20:32
+Cool. And this is the second pyramid we built. It comes together pretty nicely. Like I said, you get the weights and then you finally can construct that entire setup.
+20:40
+And that all leads to get out of the risk score.
+20:45
+And then I want to give an example of what this actually looks like. This is directly from our platform. So an engineer will go to a security finding.
+20:52
+There's a separate page that says vulnerability and it lists all the vectors and where they are. You'll notice that we don't actually have all the value for all that yet.
+21:00
+So we have only rolled out one part of this risk score. We're still in a long term process to roll out.
+21:05
+And even that one part, which was just correcting CV severity for threat data, has increased our reliability of severity score incredibly.
+21:13
+So I say get started on this process. It doesn't have to be perfect. But just starting to have your own internal risk score gives you the control to actually change what your team's priorities are versus relying on a third party source.
+21:25
+Tuning in ever ends. This is going to keep going on forever. You want to tune right after you make your pyramid because this is where you're really going to see how these score shake out.
+21:33
+Some requirements that we got to think about. So first is the aspect of what's the actual bucketing for severity. So the idea is most teams I actually base their SLA's off severity and not risk score.
+21:45
+So keep in mind those boundary points are going to be a huge aspect of friction. If you find that most of your vulnerabilities rely on that boundary point, it's going to be pretty bad.
+21:55
+Cool. And then we map that out to get some of the details of the score. So what's your max? If your max goes over 10, people tend to not like that.
+22:02
+So you can also have a UI versus an actual max. Because in the end, like I said, we're just trying to figure out one critical from another.
+22:09
+Media is a good gut check just to make sure that your score actually makes sense on the paper. And the mode is actually pulled from my previous data where we were looking at what is the most common vulnerability we have.
+22:19
+Now we're going to put some numbers to that. So we use FedRAMP, the RFC, ZERZER12 as an example. So these are three vectors that we've already mapped out. And then we have the time to remediation. And now we can apply that right to the score and start gaming out scenarios.
+22:33
+Does that SLA match with what our federal requirements are? And also, doesn't make sense. And that's the next thing, which is example scenarios.
+22:43
+I have quite a few listed here, but you can just go through them. I actually use LLM to generate large scenario maps and then found those tricky points and game them out with our team to see what we thought we could change to make this more accurate.
+22:54
+So example, CD, we have a high base score, exploit in the wild, is 7.2 actually what we want? Does that make sense? Or is that different? Cool. Well, we've covered a lot today. I hope you guys have written down a lot about what your company looks like. And now make your own risk score.
+23:09
+Opening the Florida questions, if anyone has any questions or preferably, if anyone has a unique metric group that I have not brought up or a unique vector, I would love to hear it. Thank you.
+23:21
+Thank you.
+23:28
+Come on guys, no questions. I guess we explained everything perfectly.
+23:39
+I think I went a little fast so I can go back a few sides for folks here. Very quick. There's just a two notes that I skipped over to make sure we had time for questions. Oh, we do.
+23:50
+Cool. Thank you very much for this. How do you account for changes like EPSS changing on a daily basis as an example? Do you go back and reassess everything every day?
+24:07
+Want to hear your opinion on this? Yeah. Zach talked about this a little bit in where we hook into the notification process. It's further down the line. So if an EPSS changes, it's not updating all the individual security findings. It's updating the notification at the very end.
+24:23
+We are updating that pretty often about every I believe two days we get that updated and that percolates through to the end. One other way we reduce the volume is by taking the highest score.
+24:33
+We did some calculations to figure that out and we just take that out of the whole thing. We don't have to calculate every CVE. We know that some are very low risk already and won't reach the max.
+24:43
+Is that a published? I'm going to call it standard. Is that something that anybody can look at how you're doing it and trying to apply it to ourselves?
+24:56
+This is a really good question because I was so much on the fence about this. I really want this presentation to be about making your own internal risk score. We can of course share ours. I think the weights is the one thing we want to avoid because one that doesn't imply a little bit of our security priorities, which is a risk for our team.
+25:12
+But at the same time, I think it also is removing the best aspect of this tool, which is that you get to customize it to what your organization sees fit.
+25:20
+But yeah, I definitely we've talked about that. I know we probably have to polish it a little bit, but we can try to get that out pretty soon.
+25:27
+All right, I got a question. One of the things I like about what you're describing and building your own risk score is not looking just beyond CVSS, right?
+25:43
+Looking at other factors. Did you consider external response? If you look at traditional risk metrics, you might say, well, there's no reason to freak out over this particular vulnerability.
+25:59
+But let's say it for some reason, it really hits the web hard. People really start worrying about this. Like that external kind of threat. Have you considered that at all?
+26:10
+Yeah, so that's a great example for where the qualitative threat vector comes in. We haven't included that yet, but it was part of the discussions.
+26:18
+I think the thing that's tricky is that when there is a lot of public outcry, it breaches the boundary. I've talked about this before. Where do we define an incident versus regular remediation?
+26:28
+There's a point where once it hits the public zeitgeist, we're responding personally versus letting an automated system handle that.
+26:35
+But yeah, we could adjust qualitative threat, for example, if we believe that one risk would look particularly bad if it was exploited, even if the risk was pretty low.
+26:44
+But yeah, that was the main goal of qualitative. It really would be a catch all for all those changing external environmental factors that we need to consider.
+26:51
+Cool, I think that's all the time we have, but we'll be around if anyone wants to talk and all things risk or and thank you all so much.

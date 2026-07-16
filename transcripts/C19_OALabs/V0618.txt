@@ -1,1 +1,352 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Well done, life!
+0:00
+Hi folks and welcome to an oil labs Patreon exclusive tutorial.
+0:04
+So today we're going to be talking about the anti-dbug features in black matter ransomware.
+0:09
+This is requested by one of our patrons.
+0:12
+And so what I want to do is I want to show you how to defeat these anti-dbug features with X640 Bug.
+0:18
+First I'll go through the steps that you would use just in the debugger to quickly kind of bypass these features without getting too in depth into what they are.
+0:28
+Then stick around after the debugging session and I'll open up the malware in Ida and show you guys exactly what these anti-dbug features are, which will be easier to explain once we've decompiled the code.
+0:40
+And before we get started debugging, I want to remind you that the debugging environment that we have set up here is the Flare VM install, which we described in an earlier Patreon post.
+0:49
+So if you want to follow along at home, follow that post, get Flare VM setup in a Windows 10 VM so you can follow along.
+0:56
+And we also have the silahide plugin installed in X640 Bug and X32 debug, which we'll be using for this tutorial.
+1:04
+So that's another post on our Patreon.
+1:06
+Make sure you follow that and have silah installed before you start debugging.
+1:09
+Alright, so with that, let's open our black matter sample in X640 Bug and see if we can't figure out what's going on here.
+1:16
+Okay, so we've loaded a sample up here in X640 Bug and X32 VOR debug has automatically set a breakpoint on the entry point to the PE file.
+1:26
+So we can just execute here until we hit that breakpoint.
+1:28
+So you can see now we've stopped on the entry point and this will automatically be set by X640 Bug.
+1:34
+So whenever you open a PE file, that's an executable, not a DLL.
+1:38
+It'll automatically put a breakpoint on that entry point and you can always just run to the entry point.
+1:42
+So that makes it a little bit easier to get to the code that we want to actually debug here.
+1:46
+So the best way to trigger these anti-dbug features is to just simply step through the code until we say some sort of issue.
+1:53
+And that's what I'm going to do here.
+1:54
+I'm going to use the step over function, this button here.
+1:57
+And what that does is that I'll step over functions.
+2:00
+It executes the code in the function without diving the debugger into each instruction in the function.
+2:06
+So this is a quick way to execute these functions and try and identify where we're having issues.
+2:11
+So let's skip over the first function.
+2:13
+No issue so far.
+2:15
+I haven't noticed anything in the debugger.
+2:16
+There's no errors thrown.
+2:17
+This is a push.
+2:18
+So we don't expect anything weird to happen here.
+2:21
+Let's skip over this function here.
+2:24
+And now you can see that we have an access violation issue in this function here.
+2:29
+So that means that we've tried to execute some code that is not possible to execute.
+2:34
+Either there is a write protection on the code or the code doesn't exist at all.
+2:38
+In this case, we can see the little hint here showing us that there's actually null bytes.
+2:43
+So it looks like there is actually no code at all where we want to execute.
+2:46
+So that tells me that something's gone wrong here.
+2:48
+And at this point, I don't know what's gone wrong.
+2:51
+But we know that this sample executes fine in a sandbox.
+2:54
+And of course, you could go and infect a VM with this and the work fine.
+2:59
+So the only thing that we introduced here is the fact that there's a debugger.
+3:02
+So that tells me this is some sort of anti-dibugging trick.
+3:05
+And that's our first hint here.
+3:07
+Now, I didn't show you guys running this in a sandbox, but usually that's the first thing we do.
+3:11
+Is we want to run it in a sandbox or run it without a debugger attached in a safe environment,
+3:16
+in a virtual machine and see how it behaves.
+3:19
+So in this case, we already knew that there was an anti-dibug feature here.
+3:22
+I just wanted to trigger it.
+3:23
+And so we've triggered it here.
+3:25
+Now what I'm going to show you is a quick black box approach here.
+3:29
+So we're not going to try and identify what the anti-dibug feature is.
+3:32
+We're simply going to use our plugins.
+3:34
+We're going to go to silo hide.
+3:36
+We're going to go to load profile.
+3:39
+Basic profile is fine.
+3:41
+Don't need to restart to apply changes.
+3:43
+OK, but we do need to restart because we already hit this exception,
+3:46
+which has been cleared actually by the silo hide message, but it was there just a minute ago.
+3:50
+So let's reload the binary to clear that exception and we'll start stepping through the code again
+3:54
+and see if we bypass this anti-dibugging control.
+3:58
+Restart the binary.
+4:00
+Run until the entry point.
+4:02
+Step over that function, which gave us no trouble before.
+4:05
+Step over the push.
+4:06
+Step over this function.
+4:08
+Oh my goodness, what happened here?
+4:09
+So the process has stopped or the debugger has detached from the process.
+4:14
+Let's take a quick look in our process explorer here and make sure that it isn't still running
+4:20
+in the background without the debugger attached.
+4:23
+So let's scroll down here.
+4:25
+I only see x64 debug running.
+4:27
+I don't see any other processes.
+4:29
+So sometimes the reason why I check this and this is process explorer.
+4:33
+Again, if you're using the flare VM install, you can just pull it up by typing in process
+4:37
+explorer in the start menu.
+4:40
+The reason why I check here is because there are some anti-dibug tricks which might detach
+4:43
+from the debugger and to continue to run the process.
+4:46
+It's quite dangerous because then you're not actually attached to the process while it's
+4:49
+running.
+4:50
+In this case, it looks like the process did exit.
+4:52
+There wasn't an attach, but this behavior is different from the behavior that we observed
+4:58
+without silo hide.
+4:59
+So that means something must have definitely changed in that function that we were just
+5:02
+looking at.
+5:03
+So that gives us a clue that we want to look at that function with silo hide enabled and
+5:08
+see if we can't figure out what's going on here.
+5:10
+So let's reload our binary.
+5:12
+We'll run to the entry point.
+5:14
+We'll jump over this function which didn't give us any problem.
+5:16
+We'll jump over the push.
+5:17
+Now instead of jumping over this function, let's debug into it and see if we can't figure
+5:22
+out what's going on here.
+5:23
+So I don't want to get too deep into the assembly code here, but what we're going to do is we're
+5:27
+going to turn this into a graph view by pressing G. So we can more quickly isolate the
+5:32
+control flow of this function.
+5:33
+Of course, you can read it if you press G to flip back to text view.
+5:37
+You can read it just like this, but I find if you go into the graph view, it's a little
+5:41
+bit easier to see the branches here.
+5:43
+And so we want to talk about those a little bit.
+5:45
+So what we're going to do now is we're going to step through this function and hopefully
+5:48
+identify what's giving us problems here.
+5:51
+So let's jump through these instructions here.
+5:53
+I don't really expect anything too interesting to happen in our setup here.
+5:57
+What I'm looking for is when this call is taken.
+6:00
+I want to see what's actually happening here.
+6:02
+So let's continue through here.
+6:05
+We're going to jump to negating eax.
+6:08
+So we're going to invert it here.
+6:10
+We're going to jump to this little setup here.
+6:14
+And I want to see what that call is.
+6:16
+So let's go here.
+6:17
+And now that we're on the call here, we can jump to it and we'll have to go back, press
+6:22
+G to get out of our graph view here, jump to our EIP here.
+6:26
+Now we've jumped to another memory segment in the program and you'll notice something
+6:32
+interesting here.
+6:33
+We are going to jump to this eax address, which is being resolved with an XOR function.
+6:38
+So we move this address into eax, then we XOR it with this address, then we jump to
+6:42
+the result.
+6:44
+This is a type of light of the sketching where you want to hide the final jump address,
+6:49
+but it is not the one that is holding us up here because of course we could follow
+6:52
+this no problem in a debugger.
+6:54
+And where does it jump?
+6:55
+It jumps to set information thread, which is an API call in the NTDLL.DLL module.
+7:02
+So the fact that this is an API call means that this is some sort of light obfuscation
+7:07
+for the API calls.
+7:09
+For some reason they want to hide the fact that they're jumping to this API call.
+7:13
+Now we can just run into this API call here and then run until return.
+7:18
+So we know that there's a problem with set information thread.
+7:22
+So let's look that up in Google, see what MSDN has to say about that particular function.
+7:27
+Maybe see if there's any anti debugging tricks with that.
+7:30
+Let's go to set information thread here and see if there's any anti debugging features
+7:35
+related to it.
+7:36
+Looks like there is a blog post on this.
+7:38
+I'll link this blog post below the video if you want more information about how this
+7:43
+works, but we can go here and look at what set information thread does.
+7:48
+It can be used to hide a thread from the debugger and once the thread is hidden, the debugger
+7:53
+won't receive any more events related to the thread.
+7:56
+And of course we haven't spawn any new threads in our process when this function was called.
+8:01
+So that means they must be passing the main thread to this, which means that they're
+8:05
+hiding the main thread from the debugger, which causes this problem that we're seeing
+8:08
+here.
+8:09
+So now that we know what they're doing in this function, why don't we skip over it and
+8:12
+see if there's any more anti debugging features that we need to bypass.
+8:16
+So let's restart our binary here.
+8:18
+We'll run until the entry point, skip over this first function here.
+8:22
+Now we don't need to push zero because it's an argument that's being passed this function.
+8:26
+So why don't we just change EIP to point to the next function.
+8:30
+We'll copy address here, point to the next function after this anti debug function.
+8:36
+And why don't we rename this anti debug function by pressing shift semicolon and we'll add
+8:42
+a label anti debug.
+8:44
+Okay.
+8:45
+So let's see if we can call this an execute, execute no problem.
+9:08
+So let's just minimize our debugging session here.
+9:12
+We'll click run and there we go.
+9:15
+Let's just stop this before we've ran some of our whole machine, but you can see we've
+9:19
+dropped the ransom note now.
+9:20
+So no more anti debugging issues.
+9:23
+So in a nutshell, that's how to bypass these anti debugging features.
+9:28
+You need to enable silahide to hide the debugger and then you need to bypass the set information
+9:35
+thread anti debug feature, which is a simple function call that you can skip over.
+9:40
+So if I was just trying to debug this quickly, that would be enough for me and I could get
+9:43
+on with my debugging.
+9:45
+But stay tuned for the next part where we open this in Ida and explain what these features
+9:48
+actually do and why sometimes it's better to statically reverse engineer things before
+9:53
+going to the debugger.
+9:55
+That's actually one takeaway from this tutorial.
+9:57
+Debugger is not always faster or easier.
+10:00
+Sometimes it's faster to get a look at things statically in Ida, figure out what they do,
+10:04
+and then you're armed with the knowledge of what you need to do in the debugger.
+10:07
+So stay tuned for part two where we analyze these anti debug tricks statically in Ida.
+10:13
+And if you have any questions, remember to reach out to us on Discord.
+10:16
+We're always this thing.
+10:17
+Let us know what you think.
+10:18
+And if you have more suggestions for tutorials like these, let us know.
+10:21
+See you in the second part.

@@ -1,1 +1,430 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+I'm sorry, I'm sorry.
+0:02
+I'm sorry, I'm sorry.
+0:04
+I'm sorry.
+0:05
+I'm sorry.
+0:06
+I'm sorry.
+0:07
+I'm sorry.
+0:08
+I'm sorry.
+0:09
+I'm sorry.
+0:10
+I'm sorry.
+0:11
+I'm sorry.
+0:12
+I'm sorry.
+0:13
+I'm sorry.
+0:14
+I'm sorry.
+0:15
+I'm sorry.
+0:16
+I'm sorry.
+0:17
+I'm sorry.
+0:18
+Hello, everyone.
+0:19
+Welcome to my presentation.
+0:21
+My name is Chuan Yu.
+0:23
+Today, I will present our work,
+0:25
+keep on supporting deterministic traffic on standard nicks.
+0:29
+So this work was done during my PhD at UConn in collaboration with University of Iowa
+0:35
+and NASA Johnson Space Center.
+0:37
+So in short, in this paper, we solved the last inch problem of TSN when we integrate with the commodity and stations.
+0:46
+So we designed a traffic scheduling mechanism using just standardized nicks.
+0:53
+So we also built a prototype on the, based on the Raspberry Pi,
+0:57
+which is available on our GitHub.
+1:00
+So I'll start with the background.
+1:03
+So today, the mission critical applications, like autonomous vehicles, spacecraft and smart factories,
+1:10
+they are typically also the network system.
+1:14
+So they also include many sensors, actuators, and controllers,
+1:18
+and those devices are all interconnected by a communication network.
+1:23
+And in those mission critical systems, the crackness depends on both data crackness and timing crackness.
+1:31
+So for the timing crackness, specifically, the network packet must arrive with bounded latency and bounded data.
+1:39
+So on the left, we show a system has a good average latency, but it has a long tail.
+1:45
+So that means some packets takes much longer time to arrive.
+1:50
+So that may be fun for the general system, but it's risky for the real time system.
+1:55
+And on the right, we show that the average is slightly higher, but there's no long tail.
+2:01
+So the latency and the data is tightly bounded and predictable.
+2:05
+So this is required by the real time system.
+2:10
+So to achieve the deterministic communication, the traditional solution is using domain-specific system, like those can-bas.
+2:19
+So each domain is connected by a dedicated layer of keyboards.
+2:23
+So this way, you can get extremely reliable packet delivery, but it's also expensive,
+2:29
+and with high keyboard complexity, and fundamentally have very low bandwidth.
+2:35
+So the industry is now moving towards a converged architecture,
+2:39
+which aims to replace those domain-specific bars with a single Ethernet backbone.
+2:48
+However, the standard Ethernet is designed as a best effort,
+2:53
+which can introduce the large theater when multiple traffic wants to pass the same switch at the same time.
+3:00
+So it can cause the random quilling delay.
+3:04
+So that's why the time-sensitive networking, the TSN, is designed to solve this by two features.
+3:13
+The first one is the network-wide synchronization, so that means every switch and the annotations in the network,
+3:20
+they all share a common clock.
+3:23
+And the second one is the time-aware scheduling, so based on those clocks,
+3:28
+so each switch will follow a global schedule, and those exactly one to forward which packet.
+3:38
+The entire pass is scheduled in advance, so no two traffic will use the same results at the same time.
+3:46
+So there's no random quilling, and the latency is for a deterministic.
+3:51
+If we look at this example on the right, so every color of the cell is reserved transmission time slot,
+3:58
+and they are all calculated before running the network.
+4:02
+So if we take the green one, the F2 as an example,
+4:06
+it's supposed to leave the administration at T2, and start transmission at the first switch at T3,
+4:13
+then transmit at next switch at T5.
+4:15
+So every switch around the way has a slot waiting exactly for this traffic.
+4:23
+But one challenge in TSN is it assumes that the administration is also perfectly deterministic.
+4:31
+But in practice, the commodity end stations are not deterministic,
+4:36
+and this mismatch fundamentally breaks the end to end determinism.
+4:40
+So if we zoom into the blue region, so it breaks here when the end station introduced data.
+4:47
+So suppose the end station sends the traffic F2 just a few microseconds late,
+4:54
+so F2 will arrive at switch after it's reserved slots,
+4:58
+so the slot is gone, and F2 has to wait for it.
+5:01
+And every downstream switch slot for F2 will stay empty.
+5:06
+And if it is sent early, it's actually worse, because the F2 arrives before the slot opens,
+5:12
+so it's sitting in the switch buffer occupying the Egress port.
+5:16
+So when another traffic, the orange one, F6 arrives, so it gets delayed.
+5:21
+So in both cases, a tiny end station data can cause the cascading effects to the downstream,
+5:27
+and totally mess up the TSN schedule.
+5:32
+So why the end station determinism is so hard?
+5:35
+Because a network packet master travels the OS, the memory, and the PCIe bus,
+5:41
+and every single stage can inject the random delay,
+5:45
+and those random delay can accumulate in the end.
+5:48
+So we show the data between the packets schedule time and their actual release time as the NIC,
+5:55
+so the distribution has a long tail, which breaks the TSN's assumption on the end station.
+6:04
+And the existing approach to solve this problem is by using hardware scheduling of loading,
+6:11
+so which has a hardware scheduler and the PDP timer as the NIC.
+6:16
+And the application can set a schedule time when sent out packet,
+6:21
+and the NIC will hold that packet until that exact moment, and then release it on the wire.
+6:27
+Because the clock is on the NIC, so the PCIe, the software, the software,
+6:32
+in the middle, they don't affect the eventual timing.
+6:36
+So this gives us a very high accuracy, but it's not very flexible,
+6:41
+because this hardware function is not widely supported in those commercial NICs,
+6:47
+and it also requires to install the new NIC hardware,
+6:52
+which can be expensive and in some legacy systems,
+6:56
+you may not even have a PCIe port to install those new NICs.
+7:01
+So to bypass this unbounded delay and the PCIe data in the software,
+7:07
+without relying on the hardware functions, we propose a key palm.
+7:12
+The key palm is to emulate this hardware clock using some physical network properties.
+7:20
+So if we force the NIC to continuously trust me,
+7:24
+to fix the size of the dummy packets at the physical line rate,
+7:28
+then the number of the packet will become a perfect clock tick.
+7:33
+So here we show how that works.
+7:36
+The first step, we use the polymode driver to constantly push the same size dummy packets to the NIC,
+7:43
+and because the NIC sends an underlying rate, so there's no gap between each packet,
+7:49
+and each packet has the same size.
+7:51
+The DMA run itself becomes a fairly called timeline,
+7:54
+and each slot perfectly represents a precise future time.
+8:01
+And then when the application wants to schedule a packet, let's say at T2.
+8:07
+So instead of waiting until T2,
+8:09
+it can simply find the corresponding future slot,
+8:13
+and insert the packet right away.
+8:16
+And by doing this, we can make sure that the packet release time as the NIC will be exactly T2.
+8:26
+We will first show why this can work.
+8:29
+So the key idea relies on the assumption that the NIC can transmit packets with predictable timing at line rate.
+8:37
+So here we first validate this by a simple experiment.
+8:41
+So we basically just use iPurf to send packets at different utilizations,
+8:46
+and we timestamp each packet when they actually live on the level here.
+8:52
+So we see that at 50 and 80 utilizations, the result has a high variance,
+8:58
+but as the line rate, the variance drops to 6 nanoseconds,
+9:03
+which means at line rate by the packet index,
+9:06
+we can perfectly predict their time when they leave the NIC for each packet.
+9:15
+And this observation is consistent on different hardware platforms,
+9:19
+so which is not dependent on specific hardware.
+9:24
+And another obvious question is,
+9:28
+if we keep transmitting at line rate, so well, this floods the network.
+9:33
+So our second observation shows that it won't hurt the network.
+9:37
+Because we construct those dummy packets by intentionally use the crop-tid CRC code,
+9:44
+and those crop-tid packets are immediately detected and dropped by the NIC at the first half of the switch.
+9:52
+So this is also a basic Ethernet standard function.
+9:56
+And our measurement shows dropping those dummy packets introduce no bandwidth
+10:01
+or timing overhead on the receiver side.
+10:06
+So based on this CRC idea, we designed the architecture of KIP-On,
+10:10
+which has two layers.
+10:11
+The first layer is the core drive model on the left side,
+10:15
+so which aims to achieve deterministic at single node.
+10:21
+That's what we are focusing on today.
+10:23
+So there are two components.
+10:24
+Why is the SAP PMD, which keeps the NIC at line rate,
+10:29
+and the scheduling part, which handles the how to construct the crop,
+10:33
+and the packet scheduling logic.
+10:36
+And on top of the core drive, we have two extensions for the N20 integration
+10:40
+with the test and network, but we won't cover it's internal expectation.
+10:44
+If you're interested, you can check the details in our paper.
+10:51
+So the core challenge of KIP-On is how do we keep the NIC always on,
+10:55
+because every idle moment will break the land-rich property
+11:00
+and destroy the timing determinism.
+11:03
+So to achieve this, we use a polling mode driver
+11:06
+that cycles through four steps.
+11:09
+The first step, we initialize the DMA run with the dummy packets,
+11:13
+which has the wrong static code.
+11:15
+And the second step, we carry the consumer index,
+11:19
+so we know how many packets the NIC has already transmitted,
+11:23
+so we can use this as a timer.
+11:26
+And then instead of dialoguing the memory for those already transmitted packets,
+11:31
+like the traditional DMA run, we reclaim them as the dummy packets,
+11:35
+by simply overwriting the wrong CRC code.
+11:40
+And next step, we advance the producer index.
+11:43
+This way, we ensure the producer index is always ahead of the consumer index.
+11:49
+And we repeat the step 234, the NIC will never say the run being empty
+11:55
+and the transmission will always KIP-On.
+12:00
+And next, we show how do we construct the hardware code, PDB code.
+12:05
+Because the land-rich property, we can use the number of the transmission as a code tick.
+12:11
+So this gives us a two-way mapping between the time and the run index.
+12:17
+The time will equal to the number of the transmission times the transmission time,
+12:22
+past the offset.
+12:23
+And the offset is to synchronize the EPHC with the clock in the other clocks in the network.
+12:30
+And this packet counter can be tracked by the consumer index,
+12:34
+as we discussed in the previous slides.
+12:39
+And on the other way, we can also map the schedule time to the run index.
+12:44
+For example, if you want to, in this example, if you want to schedule at time T6,
+12:49
+the system starts at T0, so T6 will be the 6th start.
+12:55
+And if you want to schedule further in the T10,
+13:00
+because the run will repeat, so you can find the position by mod the ring size.
+13:06
+So you'll know the T10 is in this position.
+13:14
+And for the schedule logic, when the application schedule,
+13:19
+like, yeah, when the application schedule packets,
+13:23
+given the schedule time T, first step, you will use EPHC to calculate the corresponding run index.
+13:29
+Then we check if that index is available or not.
+13:33
+So it should have the wrong si-ac code, which means no packet is scheduled here.
+13:39
+If it's available, we pack the data into the fixed size,
+13:43
+and we reset the CRC to be cracked.
+13:47
+And then we just override the dummy packet at that position.
+13:51
+And Nick will send that packet in the future when the consumer index reaches that slot.
+13:59
+And here one challenge is the schedule time.
+14:02
+It cannot be super far away in the future,
+14:06
+because the run buffer only has a limiting size.
+14:09
+So to solve this, we put another dynamic lens priority queue before the DMA run
+14:15
+to hold the packets from the application based on their schedule time.
+14:20
+And we only release them to the queue when it's close to its schedule time.
+14:29
+And next we go to the evaluation.
+14:32
+So for the evaluation, we compared people with hardware based approach, the IGB,
+14:38
+and the standard Linux driver G&ET.
+14:42
+So we send a periodic traffic with different periods from 200 microseconds to one millisecond.
+14:50
+And we check their data when they actually sent out on the wire.
+14:55
+So from the result, we can say the standard Linux driver, which is the dock bars,
+15:01
+which shows a high average geager of approximately five microseconds.
+15:07
+And the hardware approach, the IGB, can achieve much better about 7.7 nanoseconds of schedule accuracy.
+15:16
+So we should smash better than the software.
+15:19
+And for the keep on, we operate in the software so we can achieve the 3.7 nanoseconds data.
+15:28
+And we can add a higher than the hardware based approach above the scheduling accuracy.
+15:35
+And one potential concern is if the CPU cost is high when we keep the NICOLV sound.
+15:42
+So in practice, this overhead can be pretty low by functioning the batch size and the slot size of the polymer driver.
+15:51
+So by doing this, we can load down the CPU utilization to under 10%.
+16:00
+And finally, to wide-dates keep on realistic setting, we deployed it on the RACI cyber-physical test pad,
+16:08
+which is the test pad for the research of deep space habitat.
+16:12
+So the main challenge in this test pad for the communication system is to integrate those legacy devices,
+16:19
+which use other protocols like IS-232 or analog signals into the TSN network.
+16:25
+So we use the Raspberry Pi as gateway and we run those critical traffic with both default Linux driver and keep on.
+16:34
+And we run 12 critical flows across the four TSN switches with one millisecond control period,
+16:42
+which reflects the real RACI workload.
+16:45
+So we show them with the default Linux driver, the schedule completely breaks,
+16:50
+so that delay spikes can go about one millisecond.
+16:54
+And deadline are missed.
+16:55
+But if we use keep on with the same hardware, we can achieve sub-micro-second data end-to-end and meet every single deadline.
+17:07
+So in short, we try to figure out how to achieve deterministic package transmission without relying on specific hardware.
+17:14
+And we try to use some EtherNAS, the physical property, with some software design to achieve deterministic.
+17:22
+Okay, thank you.
+17:24
+I'm happy to take any questions.

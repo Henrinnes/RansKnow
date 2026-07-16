@@ -1,1 +1,420 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Have you seen graphics like this? This 
+apparently describes a tunnel. But…
+0:05
+what exactly is a (secure) tunnel? And what 
+does this have to do with VPNs and proxies?
+0:11
+The term “tunnel” is something that really 
+confused me years ago when I started to learn
+0:15
+about computer science. Like… I know what a tunnel 
+is. But it made no sense as a technical term.
+0:21
+In this video series I try to make the 
+videos that I wish I had back then,
+0:25
+and I hope at the end of this video you somewhat 
+have an idea of what the f’ a tunnel is.
+0:30
+To understand this video however, you 
+should already be familiar with what
+0:33
+a “server” is and what a “protocol” is, and 
+also what network layers are. Lucky for you,
+0:39
+I made those exact three videos already. So maybe 
+check them out before this one. Or keep watching,
+0:44
+and when you start to get confused, 
+then checkout the other videos.
+0:47
+In the video about
+0:54
+network layers I explained that you can think 
+of the whole network stack as a blackbox. If
+1:00
+you want to transmit some text to a specific IP 
+and port, just hand it over, and moments later
+1:06
+it magically appears on the target computer.
+You can do the same with netcat on a computer,
+1:10
+you can listen here on port 1234, 
+and then you can connect to the IP
+1:15
+and port. Entering some text and sending it, it 
+will magically appear on the target over there.
+1:19
+If you understand this, then understanding 
+what a tunnel is will be easy.
+1:24
+Let me show you a small example program that I 
+have written in python. I called it forwarder.
+1:29
+It does what the name says.
+You can pass in a source ip and port,
+1:33
+and a destination IP and port.
+It will then create a socket to
+1:36
+listen on this IP and port, so basically it is 
+a server that is listening on localhost 1337.
+1:41
+And when a client connects to this, it will 
+establish a new TCP connection to the target
+1:46
+host and port. This is just an endless loop, 
+and if the client sent some data, it will read
+1:52
+this data and send it to the remote target. 
+And if the remote target sent some data back,
+1:56
+it will be sent to the client. As you can see, 
+this program simply forwards any data sent to it.
+2:03
+Let’s do a quick local experiment. I execute this 
+forwarded and I listen on localhost 1337, and I
+2:09
+forward all data to localhost 1234.
+Then I execute netcat with a listener
+2:15
+on port 1234 and we are ready.
+So the target netcat program is
+2:20
+listening on 1234, but we have a forwarded that 
+forwards everything from 1337 to 1234. When we
+2:28
+now execute netcat to connect to 1337, we can see 
+that the forwarded got a new client connection,
+2:34
+and connected to the target netcat. And 
+when we send some data, it gets forwarded.
+2:40
+Also if we respond with some 
+text it gets forwarded back.
+2:44
+And now wait for it. Of course we can put 
+this forwarder program on a server on the
+2:48
+internet. Here I listen on all interfaces 
+on port 1337. And I forward all incoming
+2:55
+data to the host ipinfo.io port 80.
+ipinfo.io is a website that can display
+3:00
+your IP address. So with curl ipinfo.io 
+you can get this json data with your IP.
+3:06
+And now comes the magic trick. Let’s do curl but 
+this time we use the server with the forwarder.
+3:13
+Curl http:// port 1337. -v to see the 
+HTTP data. And then we also have to add the
+3:21
+correct host header. But unimportant details.
+If we execute this now, we can see that the
+3:26
+forwarded received the request from the client 
+and forwarded it, and we get the response back.
+3:32
+And what a surprise. Our IP has now changed 
+and is the IP of the forwarder server.
+3:40
+And I hope you know now what we just did. 
+We created a simple proxy. *boom* mindblown.
+3:47
+I would maybe also call this already a tunnel. 
+We used this server to tunnel connections from
+3:54
+here to here, but I think there is a small 
+nuanced difference about the term tunnel
+4:00
+that is worth exploring more. But first 
+something else, we will come back to that.
+4:05
+Of course this is not a very secure proxy. We just 
+forwarded the plain data over the network. So a
+4:11
+network attacker who can observe the traffic. 
+Like those elite starbucks wifi hackers. They
+4:17
+can just see what we sent. So while we obscured 
+the real IP for the target website we contacted,
+4:23
+somebody could still sniff this traffic. 
+But we can easily build on top of that.
+4:28
+Let’s add some crypto to 
+it and encrypt the traffic.
+4:31
+Here is the forwarded again with a very small 
+modification. I call it the XOR forwarded.
+4:37
+And it’s basically the same as the old 
+forwarded, except that before we forward
+4:42
+the data to either the target, or back to 
+the client, we run XOR encryption over it.
+4:48
+Obviously this is not secure either, but 
+I think it’s enough to illustrate how it
+4:53
+works. Crypto is hard and it would be a bit 
+distracting I think. Let’s keep it basic.
+4:57
+So now we can do this.
+On our server we can now
+5:01
+run the XOR forwarded targeting the 
+ipinfo.io host again. And listen on
+5:07
+port 1337. However when the connected 
+client sends data, it will use XOR on
+5:13
+the data before forwarding it to ipinfo. So it 
+now expects the data to be XOR encrypted before.
+5:20
+To do this we can now also run the 
+xor forwarder on our local machine. We
+5:24
+listen on local port 1337 and we forward the 
+data to our proxy server port 1337 as well.
+5:32
+If we now execute curl targeting our localhost 
+listener, this XOR forwarder takes the clear text
+5:38
+data and runs xor over it before forwarding it to 
+the server. The server then receives the data and
+5:45
+runs XOR over it again. Basically decrypts it. And 
+then forwards the clear text data to ipinfo.io.
+5:52
+We basically just built an encrypted 
+secure proxy to forward data between
+5:58
+these two computers. So when now an attacker 
+is eavesdropping on my network connection,
+6:03
+they don’t know what data was actually sent and 
+received. Of course xor they could easily decrypt
+6:09
+it. But. you know.. I think the idea is clear.
+Now look at this. How does this look like. Well,
+6:15
+this already kinda looks like a basic VPN setup.
+You have a local VPN client installed on your
+6:22
+machine, and it connects to the VPN 
+server. In between it’s encrypted.
+6:27
+However there is a big difference. And that 
+also introduces the concept of tunnels.
+6:31
+In our simple proxy setup we just 
+forwarded the content inside of TCP.
+6:36
+If you watched the video about the network layers,
+6:38
+you can imagine this just to be double. 
+This is us, this is the proxy server,
+6:42
+and this is the target ipinfo.io.
+We send text over there,
+6:46
+it gets unpacked. Maybe XOR decrypted. And 
+then packed again forwarded to ipinfo.io.
+6:51
+Real VPN protocols use a bit more magic. 
+Because it uses these layers in a beautiful way.
+6:57
+When you fall for those VPN ads and get 
+yourself a VPN, you intend to use it like
+7:02
+a proxy. But the purpose of a VPN is very 
+different. VPN technologies are usually
+7:08
+intended to provide you access to a VIRTUAL 
+PRIVATE NETWORK. A WHOLE NETWORK. That’s
+7:14
+what corporate or company VPNs are for.
+Because real VPN client and servers do
+7:19
+not just forward requests like a basic proxy, 
+but it actually packages up the entire packet.
+7:26
+Let’s look at this with blackboxes. First 
+blackbox. If you want to contact ipinfo.io
+7:31
+through a VPN, for you it is transparent. The term 
+transparent means that you don’t need to know,
+7:37
+or see, what is really happening. It just 
+works. So you contact ipinfo.io and magically
+7:43
+you get a response with an IP that is not your 
+machine’s ip. But the IP of the VPN server.
+7:49
+So let’s break away
+7:51
+one layer of the blackbox and look deeper.
+Mh… this looks like just a regular TCP connection.
+7:56
+Exactly like shown in the network layer video. We 
+just send TCP packets from our computer to ipinfo.
+8:02
+So where is the VPN server?
+It’s hiding even more layers below.
+8:07
+It’s basically this black box down here.
+VPNs actually tunnel, the whole IP and TCP packet.
+8:14
+So before this was like the physical layer. The 
+IP and TCP packet were here really transmitted
+8:19
+through a wire to the other computer. But this 
+is the beauty of layers. Instead of physical
+8:24
+wires you actually have a VPN network here, 
+which consists of all the same layers again.
+8:31
+So let’s look at a made-up VPN protocol, 
+I will call it OpenVPN just to have a
+8:36
+real-life reference, but of course OpenVPN 
+works a bit more complicated in practice.
+8:40
+Anyway. So whatever data is given to the VPN 
+protocol, well, as mentioned this data is a
+8:47
+complete packet with IP and TCP header, but ignore 
+that. It attaches a VPN layer on top of it. Like
+8:53
+an OpenVPN packet header. Maybe we also encrypt 
+the whole data. We give that to the TCP layer,
+8:58
+the IP layer. They add their things. Send 
+it over the actual wire to the server. The
+9:04
+VPN server. It unpacks the IP layer. Then the 
+TCP layer. Gives that to OpenVPN server. It
+9:10
+does it’s openVPN stuff like decrypt 
+the data. Which we know is an actual
+9:15
+full IP and TCP packet. And just puts this 
+pack onto the wire in it’s local network.
+9:21
+And this is what a tunnel is. On our 
+computer we can just use TCP and IP,
+9:27
+to send some data to a target server. Maybe 
+within a VPN network. The OpenVPN software,
+9:33
+client and server, then takes this 
+whole TCP/IP packet, wraps it,
+9:37
+or encapsulates it within an openVPN 
+packet. Uses then of course TCP/IP of
+9:42
+the actual computer network to transmit 
+it to the server. It gets unpacked. And
+9:47
+placed within this corporate internal network 
+and it can reach there an internal server.
+9:53
+This is the beauty of network layers 
+and abstractions and blackboxes. You
+9:58
+can plug them together in weird 
+ways to create amazing solutions.
+10:02
+Now there is one last thing that I want to 
+mention, because this was kinda theoretical
+10:06
+and you might wonder how can you write your own 
+VPN. How can you grab a whole TCP/IP packet,
+10:11
+to wrap it, send it to another server?
+It is of course very complex to do that.
+10:16
+There is a reason why people use existing 
+protocols and implementations like OpenVPN,
+10:21
+tinc or wireguard. But essentially they use 
+a feature called TUN or TAP. This is like a
+10:28
+virtual or emulated or faked network card.
+Your laptop has for example a built in wifi
+10:34
+network card. And this shows up to the 
+operating system, and to other programs
+10:38
+as a network card here. This network card is then 
+configured to handle certain traffic. This means
+10:43
+if you want to send a TCP/IP packet, the operating 
+system knows according to the assigned IP address,
+10:49
+subnet mas and gateway address, which interface to 
+use. And then the operating system hands over this
+10:55
+IP address to the actual physical hardware network 
+chip. Which then takes this raw data and turns it
+11:01
+into radio signals or voltage on an ethernet wire.
+And TUN and TAP is the same. They are also network
+11:07
+interfaces. But they are non existent network 
+card. You can tell the operating system, please
+11:12
+route almost all traffic over this virtual network 
+card, and then actually behind it is a program.
+11:19
+the system gives this program the complete TCP/IP 
+packet and expects you to act like a network card,
+11:26
+so you can now send it over to your VPN 
+server and release it into the network there.
+11:31
+And if you look up a basic TUN/TAP programming 
+tutorial, this is what you can see there. First
+11:36
+you somehow have to create such an interface. 
+This depends on your operating system if you
+11:40
+need to install additional drivers or so. But 
+if you have now created such an interface,
+11:46
+you can write a program that opens this 
+tun interface. and reads from it. If you
+11:52
+send a ping targeted to that ip network, 
+the operating system will then forward
+11:56
+the ping packet to your program, and 
+your program reads the whole packet.
+12:02
+So if you want to go a bit deeper on a 
+technical level, I really can recommend
+12:06
+to you this excellent blog post. It’s a bit 
+older, so some commands and function names
+12:10
+might have changed a bit, but overall 
+this is still how it works. And it also
+12:15
+expands on this basic read example and has here 
+a section on how to implement a full tunnel now.
+12:20
+I hope this helped you to kinda understand 
+what it means to have a proxy, a tunnel,
+12:25
+a VPN, and so forth. It is complex, 
+but also in some way kinda simple.
+12:30
+If you like these videos explaining 
+computer science terminology,
+12:33
+let me know in the comments what other 
+words are confusing to you. See you soon.

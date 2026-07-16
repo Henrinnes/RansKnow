@@ -1,8 +1,592 @@
-[NO TRANSCRIPT AVAILABLE]
-Provider: local_asr_whisper
-Reason: no_local_audio
-CaptionFlag(contentDetails.caption): false
-Notes:
-- API key-only access cannot download transcripts for channels you do not control.
-- Official captions download requires OAuth authorization for that video/channel.
-- Local ASR requires local audio files you provide (named <video_id>.<ext>).
+0:00
+Thank you. So I'm Martin. I'm here to talk about automated attack technique.
+0:09
+Training. But first off, I'll start with some light entertainment because I'm Norwegian
+0:12
+and we're in Denmark and there's a funny word. If you've ever felt like you didn't know
+0:17
+whether to laugh or cry, there's actually a word for that. In Danish, this means to laugh
+0:24
+and in Norwegian, it means to cry. Let's call some confusion up through the ears.
+0:30
+But anyway, back on topic, this is the agenda. I figured it was probably not a good idea
+0:36
+to stand in front of a room full of incident responders and lecture them on incident response.
+0:41
+So I'm just going to give you a simple example of incident response to prove the point.
+0:47
+And I'll also assume that most of you are familiar with my attack. So I won't go into
+0:54
+depth on that. After that, I'm going to tell you about how we made a semantic model of
+1:01
+dependencies between techniques from my attack and on how we took that one step further
+1:07
+to create a data-driven model for creating chains of techniques that you might observe during
+1:12
+an attack. And then finally, I'll relate our work to some work that was done by micro
+1:19
+ingenuity in parallel and some conclusions at the end. But anyway, incident response,
+1:27
+this is a simple example. So it's just here to illustrate the point, nothing else. Let's
+1:33
+say you have an organization with a very simple infrastructure, you have the internet on
+1:37
+the left, you have a firewall, you have a client network, another firewall, and then a database
+1:43
+server. And the database server is kind of important so we don't want that to be compromised.
+1:48
+So you get some alerts, you see some weird internal discovery commands being run on a computer,
+1:56
+you investigate, and you're really okay, this is probably some kind of adversary behavior,
+2:01
+but you don't really know where they came from. And then you investigate some further and
+2:05
+you see, okay, there was some remote desktop connection with a valid username and password,
+2:10
+and it came from over here. Okay, so we investigate that computer. There you see that the user
+2:20
+of that computer was tricked into executing some power shell, which I'll notice something
+2:26
+bad from the internet. The attacker used always credential dumping to get some credentials,
+2:33
+which enabled them to log onto this other computer, but also to this one. So now we have
+2:39
+three computers. And the third one, you see another RDP session to that one with a different
+2:44
+username and password. And you investigate the computer, you see, okay, they exultated
+2:51
+a file from the user's desktop, called password.xslx. Of course they wouldn't store their database
+2:59
+server password in clear text in the file like that, right? Of course they wouldn't. So, okay,
+3:05
+database server compromised. There goes the weekend. But what's the point? Incident response is
+3:13
+itrited. We collect data, we analyze it, we get some findings, which leads us to collect more
+3:22
+data, analyze that, and run, run, run, run, we go. And each iteration, we might ask ourselves
+3:30
+these questions. What did most likely happen before this observation? And what's most likely
+3:37
+happened, likely to happen after? And this can guide us when we try to collect more data
+3:44
+for analysis. It can help guide us when we try to scope the incident and figure out what
+3:49
+happened. Boy observations in this context, I'm really talking about techniques and sub-techniques
+3:58
+for my to attack. And as I mentioned initially, I'm not going to go through attacking detail.
+4:03
+I'll just go ahead and assume that you're familiar with it at the very least and that you know
+4:09
+what techniques and sub-techniques are. The final piece of background that I'll mention is how we share
+4:17
+information about incidents. Because there have been several presentations at this conference
+4:24
+about how to extract structured information from human readable reports, which is one way of
+4:28
+sharing. Aaron had an excellent one earlier this week. We share indicators lists and we share
+4:34
+technic lists. And of course, there are other options like attack flow that where you can potentially
+4:40
+share not just the techniques but the relationships. But in my experience, most sharing is technic list.
+4:47
+I'm a technic list. Those are our starting point. For a semantic model of dependencies. The key
+4:58
+observation that this old builds on is that techniques do not live in isolation. A technique requires
+5:06
+something. It could require information like if you want to launch a fishing attack, you need to
+5:12
+know your target email address. If you want to log on to a remote service, you might need valid use
+5:20
+a name and password. So the technique has requirements. In addition, the technique provides something.
+5:27
+And what it provides might be required by other techniques. So if we can define for every technique,
+5:35
+this is what's required. Sorry. And this is what it provides. Then we can use that to chain these
+5:45
+techniques together. So let me give you a simple example. I think user execution is the funnest
+5:52
+technique name of the mall. But it just means that someone clicks a file or it's nothing much
+5:58
+to cover. But anyway, fishing and user execution. So those are two techniques for my
+6:03
+attack. Fishing requires, as I mentioned, information. You need to know which email address to
+6:12
+send that to. I mean, it's super simple. But if you want to model this formally, it's actually
+6:18
+a requirement. And what does it provide? Well, if you're thinking about fishing with an attachment,
+6:25
+it provides the ability to deliver. And the boxes here are abilities and ellipses are techniques.
+6:33
+Tool delivery is the ability to deliver an arbitrary payload to the target system. Now, that's
+6:43
+required for user execution, but you also require access to malware or that tool in the first
+6:50
+place, which we call tool available. So those two combined are required by user execution, which in
+6:57
+turn provides user local user privileges, file system, access and code execution. So the way we
+7:10
+approach this, we needed to develop this vocabulary of abilities because there wasn't real, we checked
+7:15
+sticks, we checked mic, we checked various, we checked anything we could get our hands on. We
+7:19
+didn't really find anything that fit the abstraction level of my attack techniques. So we made our own.
+7:26
+I know the XKCD about standards, and we tried to avoid that, but we ended up doing it ourselves.
+7:32
+And then the really labor, and as a part of this, we reviewed every single technique and
+7:37
+subjectake in my attack, and then we defined which abilities are required and which are provided
+7:44
+by this technique. And then we developed a tool that would take a list of techniques, all
+7:51
+these definitions of provides and requires, and an adversary objective like exultation or data
+8:00
+destruction. And then it would try to create stages of an attack, which I'll show in a minute.
+8:09
+And in case you're wondering what this weird name is, ProVREC is just an abbreviation for provides
+8:14
+requires. So an example of what this tool looks like. If you give it a list of techniques, it will
+8:24
+start on state one, it will execute the techniques that don't have any requirements. In our case,
+8:29
+gather victim identity information, email addresses and obtain capabilities malware.
+8:33
+Those techniques, when executed, provide the abilities info email address and tool available.
+8:40
+And as you saw previously, tool, sorry, info email address enables phishing,
+8:45
+parapaging it with spare phishing attachment, which again provides tool delivery and tool available
+8:52
+until delivery are required by user execution, which again provides all these abilities.
+8:59
+And what we end up with here is actually we've taken a list of techniques and we sorted them into
+9:05
+stages. So what is telling you is these are the techniques that are possible to execute at each stage.
+9:13
+And if we look at a small text warning, I'm not sure this is going to be readable. Can you see that
+9:21
+in the back? Yeah, anyway, this is of actual data from the solar wind incident based on an
+9:29
+attack navigator layer. And of course, this is slightly cherry-picked, not all examples work
+9:36
+that well. But this is not doctored in any way. So we actually got six stages going from the initial
+9:44
+stage of discovery, initial access, all the way up to collection and acceleration.
+9:48
+But as I said, this only tells you something about possibilities. On the questions I showed you earlier,
+9:59
+they're talking about probabilities. And this doesn't tell you anything at all about probabilities.
+10:07
+It's just telling you that in stage one, you are able or the attacker will be able to use these
+10:12
+techniques. So in order to address these questions, we took this one step further.
+10:21
+So we developed a data-driven model, which I will explain now. And step one was collect available data.
+10:33
+And by available data, I mean lists of techniques and sub-techniques order by incident.
+10:38
+So all we need is just for every incident we need, just a list of the techniques and sub-techniques
+10:43
+that we were found. Problem there was that there wasn't that much data available,
+10:50
+which was a big issue when we tried to use a data-driven model.
+10:56
+The second step we did was to compute statistics that we could use to train the weights of our model.
+11:02
+And this might be a bit tricky to understand. I'll try to explain it as best as I can.
+11:11
+Remember we had techniques and we had abilities and we defined the abilities.
+11:15
+So for each ability, if we observed a technique in an incident providing that ability to another
+11:25
+technique that requires it, we would count that as one instance of that technique providing that
+11:32
+ability. And then we kept doing that for all the data we had and sorted the statistics by ability.
+11:42
+And I'll show you an example of that later on. And then finally, we used Markov chain Monte Carlo
+11:46
+simulations to explore the most likely attack chains and I will explain that too. So 0.1.
+11:55
+Data sources. Which one of these is the worst data source or the one we shouldn't have used?
+12:03
+But we used it because we were desperate for data.
+12:08
+N-A-I. So that's it?
+12:15
+Well, actually not. I would say the first one.
+12:17
+The thing is we wanted techniques per incident. The adversary groups in attack are techniques per
+12:29
+threat actor. And in some cases, those are collected over time here the more than 10 years.
+12:34
+So they don't really tell you anything about the incidents. But since we were desperate for data,
+12:38
+we took what was out there. So we included that as well. Which might have slightly skewed our results.
+12:45
+So that was 0.1 data sources 0.2 statistics. This is what it looks like for the ability tool available.
+12:53
+And if you're fast at mental arithmetic, you might spot that this all adds up to 100,
+13:00
+which was actually by accident or a coincidence when I made this presentation. But it's very convenient
+13:10
+because that makes percentages super easy. And also probabilities. So if you sum up the numbers
+13:17
+here. So of course, everyone knows T1588.002, right? That's obtained capabilities tool.
+13:27
+And in 59% of the cases, we saw that technique providing tool available to another technique that
+13:36
+required it. So that's the most frequently observed technique. Then on to that was 1.2.
+13:45
+Number 3 was Mark of Chain Monte Carlo. And I think in Montreal in 2023, ANSI had an excellent
+13:53
+presentation on something they called Anomark, where they explained Mark of Chain using a cat
+14:00
+amalgam, which I found really good. And plagiarism is the most sincere form of flattery. So I'm just
+14:06
+going to steal that, but I'm going to do it with dog instead. So my sister has a dog. And if I
+14:13
+am to model the states of that dog, I would say he can sleep or eat or play. That's basically what he does.
+14:20
+So a Mark of Chain is a set of states and transitions between those states with transition probabilities.
+14:27
+The Mark of Property, which is important, is that the transition probabilities only depend on your
+14:36
+current state. So you don't track history at all. So if the dog is sleeping when he wakes up,
+14:42
+there's an 80% probability that it's going to eat and there's a 20% probability that it's going to
+14:47
+play. So 0.8 and 0.2. And of course, these are nonsense numbers that are just made up.
+14:53
+They probably don't correspond to reality at all. And there should probably be more states here.
+14:58
+But the thing is, if I had taken the time to just observe that dog 24 hours a day, and every time
+15:07
+there was a state change, I was no doubt down. And I would use that to compute these transition
+15:14
+probabilities. What would that be? Machine learning? We're basically computing the weights of a
+15:23
+model based on real world data. It's super simple, it's super performance, but I would argue it's
+15:30
+still machine learning. If you're learning the transition probabilities of a Mark of Chain, you are
+15:37
+training the weights of a model based on data. So what does this look like? I mean, this is super
+15:43
+simple. What's a state in our approach? This is a state. So a state consists of the techniques we
+15:51
+have observed so far, in this case, only user execution. It's the abilities required by the
+15:57
+techniques observed so far that haven't been provided yet. So you might remember that user
+16:05
+execution requires tool available and tool delivery. So they're on the list. And then finally,
+16:10
+it's a list of the abilities provided by the techniques observed so far.
+16:18
+So the next transition in this Mark of Chain would be that we tried to provide one of the required
+16:25
+abilities like tool available. And remember this, the statistics. So there's a 59% chance that
+16:38
+it would be obtained capabilities tool. So the probability of that state transition is 0.59.
+16:48
+And then the new state would be that we add that technique, we removed tool available from
+16:53
+the requires part and we added to the provides part. But that's not the only option. There are
+16:59
+10 other possibilities with lower probability. And this is for a single ability. So what happens
+17:08
+when you do these multiple ops? A number of potential states increase exponentially.
+17:19
+So what we ended up doing, we didn't want to build this whole Mark of Chain because it becomes
+17:24
+very large. So we used Mark of Chain Monte Carlo simulations. And what Monte Carlo simulations mean in
+17:31
+this context is if we start with user execution, the state on the right there, we'll just pick a
+17:39
+transition at random according to the probabilities. So there's a 59% chance that we'll pick the top
+17:44
+one and so forth. And then we just keep doing that until we reach an initial access technique.
+17:48
+Or if we're unable to go any further. And in the end, if we have a valid chain where we actually reach
+17:56
+an initial access technique, then we will say, okay, this is one possible chain, we've seen that once,
+18:03
+and then go on to the next run. And by default, we do this 100,000 times and then we just count all
+18:09
+the unique chains that we have observed. In addition, we do some aggregation, like we can aggregate
+18:15
+sub techniques to techniques, we can aggregate equivalent techniques, which means techniques that
+18:19
+have the same provides and requires to limit the number of different chains that you get to get more
+18:26
+useful results. And a real world example of this looks like this from the tool. So the most
+18:33
+frequently observed chain, I mean, I know this is super simple, doesn't really add any value and
+18:39
+so forth is just to illustrate it. But in 69.77% of the cases, we're so fishing followed by user
+18:47
+execution. I think the second place was exploitation of external systems. Now, if we're a bit more
+18:57
+reckless and we start at what's I exultation over C2, once again, we have small text,
+19:04
+this is the most frequently observed chain when you start the exultation over C2, so in 2.02%
+19:17
+of the executions or the simulations, we observe this exact attack chain and this is already aggregated
+19:23
+up to the technique level, so we don't use sub techniques either. So why is that? It's because the
+19:31
+more steps you have, the more possibilities there are, which means that it's less and less likely
+19:38
+that you will see the exact same chain. But then circling back again, we didn't really try to
+19:50
+answer that, we didn't really try to make long chains, but it would be nice. So
+20:00
+did we answer these questions? Well, if we go all the way back here,
+20:08
+we basically, our tool looks backward. So we start at some technique and then we work our way
+20:16
+back to initial access. So I would say yes, at least we're able to say something about what
+20:25
+did most likely happen prior to the observation. The other one is a bit more tricky and I don't feel
+20:31
+comfortable proclaiming that we've solved that question as well. Our tool can help because
+20:39
+by default it tries to move all the way back to initial access, but that's configurable, so you
+20:44
+can tell it that now I want you to stop at, I don't know, command and control or collection. So you
+20:51
+can start with extra illustration and only go back to collection techniques, which means you could
+20:57
+use it to test out possibilities, but it doesn't work as well for the second one compared to the first one.
+21:08
+So some good news and some bad news. There was an excellent keynote on Monday on
+21:13
+human bias. I'm not going to repeat that, but that's an issue when mapping to my
+21:21
+attack. Visibility is an issue, detection coverage is an issue. So our data sets are highly biased,
+21:29
+which means that the probabilities are highly biased, but over time we hope that can improve,
+21:35
+because as we get better visibility, as we get better coverage, as we become better at mapping
+21:39
+to my attack, the data quality will become better. Then as I said, we didn't have enough
+21:49
+training data, and that was really painful. Furthermore, we didn't care about the infrastructure
+21:56
+and attack at all, which is not optimal because in many cases what the adversary behavior is more
+22:03
+influenced by the infrastructure and attack than their SOPs or preferences.
+22:10
+The thing is, maybe we can do a race of hands. How many of you have done incident response where
+22:17
+you had a machine readable infrastructure model available, which actually represented the
+22:24
+infrastructure under attack? I don't see any hands. Okay, that's my experience, too.
+22:34
+So we thought, okay, it's usually not available, so maybe we should try to make something that
+22:39
+you can use anyway. So that's what we did. But of course, it's possible to extend this
+22:47
+approach to include the actual infrastructure under attack as well. As I showed you, it doesn't
+22:53
+really work well on long-term actions. Now, some good news. My turn to nudity did some work in
+23:00
+parallel with what we did, and they released what they call the technique inference engine.
+23:08
+And the technique inference engine is a recommender system. So if you've ever watched Netflix,
+23:14
+you see a couple of movies or TV series, and then Netflix tells you that, oh, maybe you should
+23:20
+watch these movies, too. That's based on a recommender system. So I recommender system learns what
+23:26
+you will most likely like or enjoy or buy based on the behavior of other users in the same system.
+23:34
+That has similarities with what you've watched or rated. The thing with a recommender system is
+23:41
+what they did, that you give it a list of techniques, and it will tell you what other techniques you
+23:47
+should probably have seen in the same incident. But it has no concept of before and after. You cannot
+23:53
+ask it what happened immediately prior to this. It's still useful, but it's different from what we
+24:01
+did. But the best thing is they published their training data. It's more than 6,000 incidents
+24:07
+available on GitHub that we could use. And that was super, super useful, and we're very happy about
+24:18
+that. So we took that data, and then we went back to the drawing board, or not the drawing board to our
+24:24
+tool. And I'm going to show you a graph that's going to need quite a bit of explaining, unfortunately.
+24:34
+This is self-explanatory, right? No, okay, what this graph shows you. It's a box and we
+24:43
+screwed plot from statistics. On the left, the left one is our original old dataset. The right one
+24:51
+is from the micro-engine Unity Thai dataset. What I did here was you remember these abilities like
+24:57
+tool available? For each ability, I picked the highest transition probability. So for tool available,
+25:04
+that would be 0.59, right? Because obtained capabilities tool was transition probability 0.59.
+25:16
+I did that for all the abilities, and then I used that to create a box and we screwed plot.
+25:21
+So you might wonder about those outliers. Or is that really obvious? What those are?
+25:27
+I mean, the 1.001s, we have a single observation. We have one single observation of a technique
+25:35
+providing that ability, and then the transition probability becomes, and the other ones are the
+25:41
+outliers at the top are similar. So those were cases with very, very few observations. But one key
+25:49
+takeaway, the line in the middle of the box is the median value. And the median value is lower
+25:56
+for the Thai dataset than for our whole dataset. Which means that the performance on long attack
+26:04
+chains will be even worse. Because the median probability is lower. The medium, okay, this is,
+26:15
+I don't know if that made any sense. Key takeaway is this doesn't help with long attack chains.
+26:24
+Really. Another key takeaway is thumbs up to my community for publishing the dataset that
+26:31
+actually helped us a lot. And it's super useful. This talk is actually based on a journal paper
+26:43
+from ACM's Digital Threats Research and Practice. That paper contains lots and lots of details
+26:52
+that I had to skip in order to fit this into 30 minutes. If you're interested in more, including
+27:00
+math and the more formal definitions and all sorts of fun, then please have a look at that.
+27:07
+And then the second one, second and third links, the second link is to our semantic model tool.
+27:14
+And the third one is to our Markov chain onto Carlo tool. But the key takeaway I want you to have,
+27:22
+it's not really, I mean, there's two takeaways. The first one is the obvious one. We might use this
+27:28
+to help an incident response. And that's fair enough. Might be useful, might not, I don't know.
+27:35
+But I think the most more important takeaway is this tool is a generic chaining tool.
+27:43
+The MITRE attack stuff is just a configuration file. We've also used it to chain CVSS vectors
+27:51
+to explore potential exploit chains. And we presented that work at the first vulnerability forecasting
+27:59
+technical colloquium last year. And there might be other problems where this is a meaningful
+28:07
+approach to solve them. So the main takeaway here should be that, okay, we have something we can
+28:15
+put in our toolbox for future use. So if we ever come across a problem where this kind of
+28:24
+chaining approach would be appropriate, you can actually use this tool for that. You can create
+28:29
+another configuration for it. And we've done our fair share of stupid things in projects before,
+28:36
+like we made a generic tool and then we tailored it for one use case and then we realized it's
+28:41
+much better to have a generic tool and a specific one and then we went back and then in the end,
+28:47
+we modified it back to a generic tool. But as open source ISC license, which is VSD compatible,
+28:56
+please check it out if you find it interesting. And finally I didn't do all of this by myself.
+29:03
+Here are two of my colleagues as well that were authors. There's a whole bunch of other colleagues
+29:08
+that did a lot of the work and they're in the acknowledgment section of that paper.
+29:15
+Some of them are here today, like Mourna. So thank you for that. I'm about one minute early.
+29:24
+And I hope there are some questions. First of all, let's thanks, I was speaking.
+29:34
+Of course.
+29:35
+Martin, very good presentation. Very interesting. I'm quite impressed. It's really. And this is giving me
+29:45
+some idea when I was looking at your presentation. And I'm wondering if you looked into
+29:51
+the transition graph using game theory. Because technically, I see transitions graph that are
+29:59
+basically for an objective that the attacker has to do. And I was wondering if you could not just
+30:05
+calculate a kind of Nash equilibrium for the objective of the attacker. So meaning at some point in time,
+30:11
+finding out if the optimal pass for that. I don't know if you evaluated that.
+30:16
+Sure, Tonser, no. We haven't looked into that. So that definitely sounds like an interesting area to explore.
+30:22
+I should maybe also mention that the work I presented here on the paper are actually the results
+30:32
+of first in the horizon 2020 project, followed by a project funded by the research council on Norway
+30:39
+over a time period of like seven years. So we did the semantic part in the horizon project. We did
+30:45
+Markov Chain Monte Carlo in this other project. And we're definitely open for exploring
+30:51
+more in the future. So I count at least five speaker lining up for questions. There won't be time for all of
+30:58
+them. So just say one, two, and three. If there's still time, there's you, but that's the order in which you
+31:04
+showed up. So please go ahead. I'm aware that it will probably even worsen your statistics. But have you
+31:12
+considered maybe making the points between the notes more granular? Like for instance, there is
+31:21
+that requires and provides. And in some of the cases, you can say that it provides execution on
+31:29
+unique systems or on Windows systems. So what about that? They're kind of touching on the point
+31:36
+about infrastructure there because we tried to keep it separate from infrastructure, which makes it
+31:42
+maybe less precise, but usable in more cases. When you start, we have done some, if you actually go
+31:50
+look at GitHub, we have some relevant four statements in there that try to classify what kind of
+31:58
+infrastructure this technique is relevant for. We don't use that in a tool, but the data is available.
+32:03
+So yeah, we've had similar thoughts, but we haven't explored them in depth.
+32:14
+Yeah, so maybe you can answer this for the answer. No, to keep it short, but or we can discuss it later.
+32:19
+It feels like MCMC, okay, it gives you probabilities, but if you had the data, would a causal model
+32:26
+be better in this sort of scenario? If we had that sort of data? Maybe. I mean, the reason we went
+32:32
+with that and not something more sophisticated is because we had way too little data. And then,
+32:38
+of course, thanks to my trend of new, we suddenly got more data. So what we could do is, yeah, look at
+32:44
+other options, more sophisticated models. That's the third takeaway. Have a look at the data from Ty.
+32:55
+It's an excellent resource, something that can be used for a lot of other stuff than what we did,
+32:59
+and what Mitra and De Nute did. So, awesome, really awesome talk, amazing work, thank you.
+33:07
+I was also thinking, did you consider in your research to put a cost at the end of the chain,
+33:15
+or maybe have a way to that companies can assign their own costs at the end of the chain,
+33:22
+and then basically you have the classical thing probability to reach that end of the chain,
+33:27
+times cost, right? That would actually, you know, you can work backwards and see what is the most
+33:32
+cost effective step to disrupt something in the chain? Yeah, and that's the Miranda Risk Management
+33:39
+territory. That's something we're working on now. Well, not that exact thing, but it's a good idea,
+33:44
+so maybe we should have a look at that. Okay, is it, oh, you're talking, okay,
+33:53
+you need to work. Okay, is it possible to update the probability of something along the way,
+33:59
+like so say an analyst is working through an incident and finds out, oh, this is the case that
+34:04
+this happened, we could rerun the model and then recalculate the probabilities based off of that.
+34:09
+Oh, you could modify the statistics file directly, if you want. Okay, get even set the
+34:14
+probability to one for that specific ability. Yeah, it was imagining a world where an analyst
+34:18
+is going through this and loops and kind of, yeah, I mean, we don't have a guru for it, we don't
+34:23
+even have a guru for the tool itself. So everything is command-line, but yeah, it's possible, but that
+34:28
+would be editing and config file and running it again. That's fine, cool, thanks. In contrast to my
+34:35
+estimation, we do have time for another question, so the answers are very fast, thank you Martin.
+34:42
+Is there any other question in the audience? Good, then I guess we can thank Martin again for
+34:50
+this great presentation.

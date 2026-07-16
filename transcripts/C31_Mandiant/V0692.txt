@@ -1,1 +1,178 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Welcome to getting to know Google SecOps.
+0:04
+I'm John Stoner and today we're going to take what we previously learned with statistical
+0:08
+search as a bit further and look at additional aggregation functions and calculations that
+0:13
+can be performed in UDM search to ask more complex questions of your data.
+0:21
+We already discussed that statistical search is an expansion that goes beyond the tabular
+0:26
+results set into aggregated data by common values and generating calculated values.
+0:32
+This time we are going to use additional concepts like placeholder variables, aggregation functions,
+0:38
+and mathematical operators that are part of URL and apply them to our statistical search.
+0:44
+If you've written URL rules, some of these concepts may be familiar to you.
+0:49
+As we build our search, you may look at how I build it and think there might be a different
+0:54
+way to go ahead and approach this problem and chances are you're probably right.
+0:59
+There isn't a single way to achieve the same outcome but we're going to show one method
+1:04
+today and you may uncover additional methods that you want to use and that's great.
+1:09
+Finally, there are a number of other URL functions available to work with data and we'll
+1:14
+use a few of them today.
+1:16
+Just know that there are additional capabilities that can be used when working with your data
+1:20
+set.
+1:24
+We're going to start where we left off in our previous video with Corlite TCP Network
+1:30
+Connection Events.
+1:32
+This time we want to generate a listing of the top IP pairs based on Event Count.
+1:40
+One approach we could use would be to add both the principal IP and target IP fields to
+1:46
+the match section.
+1:48
+I'm going to use a placeholder variable called IP pair and the strings.concat function
+1:54
+to combine these values into a single variable with a pipe to separate the two values.
+2:01
+Additionally, my data has an annoying IPv6 address of colon colon 1 on one of the servers.
+2:08
+After creating this placeholder variable, I'm going to exclude IP pair values that have
+2:13
+this value in the field.
+2:16
+From there, we can match on this new placeholder variable and then like we've done previously,
+2:21
+generate an event count, sort by the count and limit our results to 10 rows and run our
+2:27
+search.
+2:31
+Our results are the IP pair in the match section and the count from the outcome section.
+2:37
+Now let's use another aggregation function with our results.
+2:42
+The aggregation function of sum will take all of the values in a field and add them up
+2:48
+based on the aggregation value.
+2:50
+In this case, our IP pair.
+2:52
+We can add the sum of the cent bytes and another sum for the receive bytes to our outcome
+2:58
+section.
+2:59
+Let's also adjust the order section to sort by the sum of the received bytes.
+3:08
+Now in our results, we have four columns, the IP pair, the number of events that match
+3:13
+this IP pair, and the sum of the cent and the sum of the received bytes between these
+3:18
+two IP addresses.
+3:20
+This is looking pretty good, but perhaps we want to add some sort of explanation for each
+3:25
+row to denote something about our data.
+3:27
+Like, is this an internal only or includes external addresses?
+3:33
+We could use the net.ip in range citer function to look at the IP address and return a
+3:39
+Boolean value if the field matches the citer block provided.
+3:44
+Because we have aggregated our results set, we need an aggregation function in front of
+3:49
+our conditional statement, that is the if then L statement.
+3:53
+So we can prepend this entire statement with the aggregation function of array distinct.
+4:02
+In this case, if the principal and target IP addresses are both part of the provided
+4:06
+net block, we want to go ahead and return internal only, and if not, we will return external.
+4:16
+This provides us a nice summary of each pair with some key values.
+4:21
+If we wanted to refine this further to provide additional granularity on the data flow,
+4:25
+we could do that as well.
+4:27
+While there is a directionality field in UDM, let's build our own to indicate if data
+4:32
+is flowing between two internal addresses or from outside to inside or from inside to outside.
+4:39
+This time, we have multiple conditional statements nested within one another, that is if this,
+4:46
+then that, else, a new if statement, and so forth.
+4:52
+When we run our search, notice our descriptive column now displays a few different outputs
+4:58
+depending on the IP pair values.
+5:01
+I realized I used the net IP and range citer function in the last two examples of this
+5:06
+search.
+5:08
+And some of you may be asking yes, but what if I have a number of IP ranges I want to
+5:12
+include in this search, and they are non-contiguous?
+5:16
+Could I do something similar?
+5:18
+The answer is yes, with citer lists.
+5:21
+We could construct a similar nested conditional statement using AND as well as NOT with the
+5:27
+IN citer net block list functionality.
+5:32
+Notice that like our previous examples, our conditional statements are nested within
+5:36
+the aggregation function array distinct.
+5:42
+When we run our search, we get a similar result, but we are able to use more net blocks
+5:48
+within our search.
+5:53
+In our demonstration, we have highlighted how we can add placeholder variables and aggregation
+5:58
+functions like array distinct and sum to our search.
+6:02
+It is also important to remember that there are multiple ways to achieve the same result,
+6:07
+so there is not a single write or wrong method, it really goes back to what you are trying
+6:11
+to accomplish.
+6:13
+Finally, while we just use strings.comcat and net IP and range citer, there are a number
+6:19
+of additional functions that YRL makes available to us that can be used in search.
+6:25
+Conditional statements like if then else can also be used as well as mathematical operators
+6:30
+within the outcome section of our statistical search.
+6:34
+In future videos, we will be digging into more functionality, see what I did there, that
+6:39
+is available to users in both search and rules, and we will be building some of these
+6:44
+examples using statistical search to highlight the capabilities.
+6:48
+I hope you will check them out.
+6:52
+If you want to learn more about Google SecOps, check out my blog series called New to Google
+6:56
+SecOps for more handy tips.
+6:58
+We have a number of community YRL detections at our GitHub site and are continually adding
+7:02
+more, and don't forget to engage the security community at SecOpsCommunity.com.

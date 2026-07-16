@@ -1,1 +1,804 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Thank you everyone for being here.
+0:02
+I really appreciate it.
+0:03
+It's great to see a full crowd towards the end of the day.
+0:06
+We're here to talk about building a threat hunting program.
+0:09
+And for those who weren't at Gibran's talk,
+0:11
+around ransomware resilience,
+0:13
+he said something that really resonated to me that
+0:16
+there really is an over reliance in EDR.
+0:20
+If I asked people to raise their hands,
+0:22
+if they were 100% confident that their asset inventory is perfect
+0:26
+and have 100% of assets,
+0:28
+I'd call them a liar.
+0:30
+That's just not a thing.
+0:32
+I've seen as high as 90% is good enough,
+0:35
+but threat actors only need one asset.
+0:38
+So threat hunting really comes in
+0:40
+for when you don't have EDR necessarily,
+0:42
+because they're not going to catch and block everything.
+0:45
+I can tell you our red teamers are able to achieve their objectives,
+0:49
+most times, even with EDR.
+0:51
+So we're here to talk about looking for threats
+0:54
+that make it pass or security tools.
+0:58
+Here's an agenda.
+0:59
+Essentially, the objectives today,
+1:01
+you want to talk about what is threat hunting
+1:04
+or more importantly, what it's not,
+1:06
+because I think there are a lot of common misconceptions.
+1:09
+We'll talk about how we've seen companies build
+1:13
+their hunting programs, how we've given advice,
+1:16
+how we've built them at past organizations,
+1:18
+and just share some of those lessons learned.
+1:21
+And then I'd argue, maybe most importantly,
+1:24
+how do we operationalize your threat intelligence?
+1:27
+I'm sure most people will subscribe to things like SISA,
+1:31
+maybe you have a threat-and-tell platform,
+1:33
+but I can tell you there's no worse feeling
+1:35
+as a threat-and-tell analyst to give these reports to people
+1:40
+and then nothing happens.
+1:41
+So we want to make sure you operationalize the threat intelligence.
+1:47
+As far as introductions, my name is Ryan.
+1:49
+I've been with Maniant for two years.
+1:51
+My principal consultant on the strategic team.
+1:54
+So you can see, think of Maniant as,
+1:56
+in the consulting you have IR,
+1:58
+penetration testing, or offensive security,
+2:01
+and tell, and then we do kind of everything else.
+2:04
+So we do security program assessments,
+2:06
+table top exercises,
+2:08
+build threat hunting programs,
+2:10
+amongst many other things.
+2:12
+And like I'll talk about in the presentation,
+2:14
+I've helped build it at a couple of past companies
+2:16
+as a practitioner.
+2:18
+Yeah, my name's Jose Toledo.
+2:20
+I'm a senior consultant on the strategic West team.
+2:23
+You're with Maniant for just over a year.
+2:25
+Prior to that, I was in IT and OT consulting,
+2:28
+doing very similar work for about two years.
+2:30
+And then prior to that, I was in the defense space
+2:32
+for about 10 years between military service
+2:34
+and defense contracting.
+2:35
+And so I've been really fortunate to kind of start
+2:38
+as a data center administrator and do that for, you know,
+2:40
+a short of a year, someone picked me up
+2:42
+through a main cybersecurity,
+2:43
+and then I was helping build cybersecurity programs,
+2:46
+helping build threat hunting programs.
+2:48
+I do adversary emulation now.
+2:50
+I'm still a member of the California International Guard.
+2:52
+And so we trained cyber defenders to come back
+2:55
+and help their states respond to potential cybersecurity incidents.
+3:00
+And so part of that is these threat hunting programs
+3:03
+that we build, we get to exercise that once a year
+3:06
+in where I'm from FEMA Region 9.
+3:08
+And so we'll have some of those lessons learned
+3:10
+we talk about today.
+3:11
+So I'm happy to be here. Thanks, Ryan.
+3:13
+Great. Yeah. So we're going to talk about what is threat hunting.
+3:16
+So threat hunting is looking for indicators of compromise.
+3:20
+Maybe IP addresses, domains, hashes, and environment
+3:24
+that may or may not start from the word.
+3:27
+That's not what it is.
+3:29
+This is the most common thing I hear from clients.
+3:32
+We'll go in and we'll ask, you know, about their processes
+3:36
+and they're like, oh, yeah, we've threatened hunt.
+3:38
+We just got this sister article and we searched these IP addresses
+3:41
+that are known bad.
+3:42
+That's not what it is.
+3:43
+Those indicators change often.
+3:45
+We want to take that a step further.
+3:47
+So threat hunting is, it's very methodical.
+3:50
+We want a very good defined process.
+3:53
+And we're looking for the attackers, tactics, techniques,
+3:56
+and procedures.
+3:57
+What are the types of things that they're doing?
+4:00
+So we can catch those in the logs potentially.
+4:03
+So we really want to be proactive.
+4:05
+The whole point of threat hunting is finding things
+4:08
+that don't have security alerts.
+4:10
+We're going to go over, how do you develop a hypothesis?
+4:13
+And then from there, we're going to create the threat hunting.
+4:15
+The threat hunting is not for everybody.
+4:21
+We like to say some security organizations have analysts,
+4:25
+but no tools.
+4:27
+Or some companies I know, they have a million tools,
+4:30
+but no analysts.
+4:31
+And I would say threat hunting is probably not good
+4:34
+for either of those organizations.
+4:36
+We have the, you must be this tall to ride.
+4:38
+We recommend having a dedicated security team.
+4:42
+We recommend having good tools and telemetry.
+4:45
+Because we'll talk about, you can't do threat hunting
+4:48
+with no telemetry.
+4:49
+So we'd recommend having that.
+4:51
+And I'd tell you some playbooks because sometimes
+4:53
+you're going to find some things and you want to be able to react quickly
+4:56
+or escalate it to the right team.
+5:00
+Yeah, right.
+5:01
+And I joke about how this is probably one of the most important slides
+5:04
+and we might breeze through it a little quickly.
+5:06
+But to kind of start at the top, right?
+5:08
+You have to figure out as an organization what you want.
+5:10
+Do you want an ad hoc team?
+5:12
+Do you want a part time team?
+5:13
+If you're a larger organization, maybe you're leading towards having
+5:16
+a full time team, right?
+5:17
+And so you want to kind of crawl, walk, run,
+5:20
+and kind of work through those phases.
+5:22
+As you build this team, you probably want it to be comprised of members
+5:25
+of your red team, incident response team, security operations center,
+5:30
+cyber threat intelligence, things like that.
+5:32
+You need to figure out what your kind of end game is, right?
+5:36
+Do you eventually want to work your way to full time?
+5:38
+Do you want the ability to scale up and down?
+5:41
+And as you kind of do that, what's the overall mission
+5:44
+for the threat hunt program, right?
+5:46
+Who can escalate to the threat hunt program?
+5:49
+Who can activate the threat hunt program?
+5:51
+And while we're kind of talking about those things, right?
+5:54
+We also want to say, find a way to formalize what that escalation
+5:57
+procedure is actually going to look like.
+6:00
+We would encourage you to make it part of the day to day
+6:02
+for the members of this team if they're going to be spending
+6:05
+an hour or two a week, which is kind of the minimum that we recommend you do
+6:10
+that they are incentivized in their bonuses or their annual reviews
+6:14
+to actually perform threat hunting.
+6:16
+If you have a cyber threat intelligence team or if you have an incident response team,
+6:20
+you want to incentivize them and make it part of their day to day job
+6:23
+that they're kind of feeding into this threat hunting machine, right?
+6:28
+Another great test for them is that you want to consider using them
+6:32
+for validation, right?
+6:34
+So whether that's to validate the findings of a red team,
+6:37
+to validate something after an incident response,
+6:40
+to validate vulnerability management,
+6:42
+you want to make sure you're going out of your way to get that buy-in.
+6:45
+Because maturity is the fact that you can have something documented,
+6:48
+you can have something repeatable, and something you can practice.
+6:51
+And so if this is something as simple as doing it once a year
+6:55
+where you sit down and you kind of tabletop your way through something
+6:58
+and then you send them down a technical lab hole to make sure
+7:01
+that things are actually working, those are things that we're going to recommend.
+7:05
+We recommend that you have regular cadence meetings at a minimum,
+7:09
+maybe bi-weekly, and this would be a great opportunity for your incident response team
+7:13
+or your CTI team to sit down and feed information to them, right?
+7:17
+They can start to learn telemetry, TTPs, right?
+7:20
+Tactics, techniques, and procedures,
+7:22
+and they can start feeding all kinds of other information into the system
+7:25
+to kind of help build the threat hunt out.
+7:29
+And one of the biggest things we want right is buy-in.
+7:31
+And so Ryan's kind of coined a term that we've used,
+7:34
+you know, the Wall Street Journal hunts.
+7:36
+And so I've been there, Ryan's been there.
+7:38
+I'm sure a lot of you in this room have been there where you get the inevitable
+7:40
+8 p.m. text message on a Thursday or Friday, right?
+7:43
+And it's like, hey, dude, or due to it, the boss saw this thing on the news
+7:49
+and they're really concerned about it.
+7:50
+What's our exposure to it, right?
+7:51
+So get ahead of the game.
+7:52
+If you're seeing something in the news that you think is going to be relevant to your organization,
+7:57
+take that information, go feed it into a threat hunt, run it through your system,
+8:02
+get some high-level points, and start feeding it up the system
+8:05
+so that you can get that executive buy-in.
+8:07
+Because without that executive buy-in, if you're not speaking their language,
+8:10
+it's not going to matter.
+8:12
+One of the final things that we say is,
+8:14
+Ryan and I get to talk to boards all the time,
+8:16
+and the biggest thing that organizations have trouble with is justifying their existence, right?
+8:20
+And it's because they don't track metrics.
+8:22
+So we have some metrics we recommend you track.
+8:24
+One of them is number of previously undetected threats discovered.
+8:27
+This is going to be one of the biggest ones, and this is going to be, excuse me,
+8:31
+the one that's going to make you the most unique, right?
+8:34
+And so this is malware. This is TTPs.
+8:37
+This is malicious activity that the security tools in your stack did not previously discover.
+8:43
+So you have discovered those things, and now you can feed that into,
+8:46
+if it weren't for us, boss, we wouldn't have had these things.
+8:50
+We recommend you track coverage gaps identified and closed, right?
+8:54
+So these are going to be visibility gaps, and this is kind of a hard place for a lot of organizations we find.
+8:59
+Right? You're like, oh, well, you're kind of calling my baby ugly here.
+9:02
+No. Really, if you're coming into this and you're looking for logs,
+9:06
+and you have an OT system, and you have an engineering workstation that was compromised,
+9:10
+but you don't have visibility into your OT, those are things you should identify, right?
+9:15
+We have, we had a Wall Street Journal hunt that we started running.
+9:18
+We know that this threat actor likes to go through, and they go through this process,
+9:22
+and they attack these specific systems. Well, we don't collect logs on those systems
+9:26
+because we're at our cap for Splunk or whatever our security tool is that we have.
+9:30
+Kind of two final metrics we have here are hunts per analyst per month, right?
+9:35
+It's going to be just a very basic, every analyst is performing this many hunts,
+9:38
+and this is kind of the success metrics that are associated with that,
+9:41
+and then meantime to detect, right?
+9:43
+And so this is a big one, that organizations track, but what you really want to show here
+9:47
+is that if you have a successful threat hunting program, your mean time to detect
+9:51
+is actually going to be brought down over time as you get more efficient at finding things.
+9:57
+So a lot of good information here.
+10:00
+Yeah, if I get to inject a couple personal stories.
+10:03
+So six or seven years ago, I was part of a sock, just a couple of people,
+10:08
+and I don't know if for anyone who has had to dealt with SSL decryption or application allow listing,
+10:15
+it sucks, right? And it becomes kind of demoralizing because as soon as you implement SSL decryption,
+10:21
+it's always your fault until you prove it's not your fault.
+10:24
+So feeling kind of down, I really enjoy reading different security articles
+10:29
+and threatening telling such.
+10:31
+So colonial pipeline happened. I used to live in Boston,
+10:35
+and jacked up prices for gas, so hit all of us in the wallet.
+10:39
+And I basically was able to take the TTPs there,
+10:43
+look through our SIM, use something called the Tomic Red Team for adversary emulation,
+10:48
+and was able to provide our CIO some level of assurance that if,
+10:53
+I think it was Dark Side ransomware, it was going to come after us,
+10:56
+that we would have been okay. Either we would have stopped IVAT-EDR,
+11:00
+or we now have good correlation alerts.
+11:03
+And that goes also to the Wall Street Journal hunt.
+11:07
+The CIO team asked for it, and pretty quickly after that,
+11:11
+we got good executive buy-in, where I was able to do that one to two hours a week,
+11:15
+and definitely injected some joy back into the job.
+11:20
+So this is kind of an eye test, right? And it's not really meant to be a slide we're going to spend too much time on.
+11:25
+The big thing here we want to talk about is a process framework for threat hunting.
+11:32
+And so we want to talk about how do we form a hypothesis, right?
+11:35
+And that's going to be kind of the main conversation that we have today.
+11:38
+And so we look at the validity and the quality of good content that goes in, right?
+11:44
+There's a comment saying, you hear all the time, garbage in, garbage out,
+11:47
+and you want to make sure you're not putting garbage into the machine, right?
+11:50
+You want to look at past incident data, CTI data, analyst trade craft, threats trends in TTPs,
+11:56
+and then you want to assess that, right?
+11:58
+And the next phase we kind of looked to you from here, and you kind of think back to that keynote we had this morning
+12:04
+is looking at the visibility into your organization all too often.
+12:07
+We come into organizations that don't have the visibility, or as a young airman in the Air Force,
+12:13
+I get it beat into me by my first supervisor like, no your topology, no your topology, no your topology.
+12:19
+And these are the things that we keep telling people to come back to, right?
+12:22
+So if you have issues where you don't understand the asset inventory, you don't understand the topology.
+12:27
+We go back to the previous slide we just had where we say, hey, go back, identify those as lymphaxes,
+12:33
+limiting factors, identify those as constraints to the program, help feed them into the organization,
+12:38
+and give your boss some firepower to maybe get you some more money, get you some more help, right?
+12:42
+So do you have application logs, do you have OT logs, and make sure you're going around and documenting those things?
+12:49
+And as we kind of go through the hunt, you'll see, right, we can kind of go down to the acquire phase
+12:53
+and start looking through our systems, and sometimes right out of the gate, you're going to find a true positive
+12:58
+and guess what, this becomes a test of exercising your Incident Response Plan, you know, you know, sounding the horn
+13:04
+and going through the rest of that process. And so the rest of this kind of process framework
+13:08
+we'll talk about here in a second.
+13:10
+Yeah, and that leads into probably my biggest advice. Never start a threat hunt on a Friday afternoon.
+13:16
+You don't want to pull those threads, find something and be like, ah crap, you know, they're going my weekend plans
+13:22
+because you can't leave it until Monday likely, so, you know, save that for Monday through Thursdays if you can.
+13:28
+Now I find one of the hardest parts is how do we develop hypothesis? Where do we get those from?
+13:34
+So my favorite source is, SISTA has really good detailed write-ups, deeper report, if anyone's familiar with that.
+13:41
+Really great, breaks down all the TTPs across the whole life cycle, makes it really easy.
+13:48
+One thing you'll find, and we're going to talk about some of our favorite threat hunts, there's some that if you're part of an incident,
+13:55
+those will sit with you for the rest of your career. So no matter what company I start at, my first two threat hunts are always the same
+14:03
+because they were how we were burned from previous incidents at previous companies.
+14:07
+So that's why you're working with your Incident Response Team.
+14:10
+I'd also encourage you to think outside the box, so we're very threat focused, but what are your key controls?
+14:16
+And how are we validating that those are actually the case? And we'll talk about a couple of those control breaks,
+14:22
+um, moments you go into some of the threat hunts. I'd also highly recommend, have a threat profile,
+14:28
+and we really encourage, we don't want to encourage you to have to pay all this money.
+14:33
+This essentially should all be free, this is mostly process.
+14:37
+But you should be developing threat profile. What are the three most relevant and recent threat actors against your industry?
+14:45
+And then I'd highly, highly recommend, use an adversary emulation tool like Miter Caldera.
+14:51
+I use atomic, red canary atomic red team. We have a paid solution of Manian security validation, but create those logs.
+15:00
+Well, think about what are those tactics they're using, run it in a safe environment where it's going to generate traffic,
+15:06
+run your threat hunts search, and validate that it actually works. And you want to keep validating, because I've learned
+15:12
+there are a million different ways to say who am I using WMIC or who am I as the binary.
+15:18
+So you want to understand all the different ways that way you're not limiting yourself.
+15:22
+And when we talk about feeding into these hypotheses, right, we talk to organizations all too often that,
+15:29
+well, why do I need a member of my red team on my threat hunt team, right? That's blue team versus red team.
+15:34
+You want somebody on your team, and it doesn't have to be a member of your red team, but you want somebody who can kind of take that analyst trade craft
+15:40
+and kind of think like the bad guy is going to think, right? And so you have tons of organizations that are going out there
+15:46
+and mapping to Miter attack so that you can go and track, let's say, a Manian blog post we'll talk about later on scattered spider.
+15:53
+And what the attack chain looks like and how to defend against it, you can find those things and you want to build a bench of good information that you're going to have
+16:00
+so that you can work your way into this and ask yourself some questions, right? When you're building this hypothesis and you're going to have the input,
+16:07
+you want to prioritize based on confidence, right? Does your source have a history of providing good information that can actually be actionable, especially to your organization, right?
+16:17
+You want to prioritize it based on the expected ease of the search, and that's kind of a conflicting one, right? If we have a large amount of systems that have a specific operating system with the high CBS score that are out in our, excuse me, in our, like our vertical organization right now,
+16:33
+those are things that we're going to want to look at, right? And so as we're kind of taking those things and saying, well, some of those servers are going to be hard to get to, that's going to be a higher priority, right?
+16:42
+But it's going to be kind of a system that you build with your organization. You want to talk about the target and the searchable data of relevance, right?
+16:48
+So it could be high across the board, and this is where a great Wall Street Journal example comes in, right? The boss gives you the call.
+16:55
+Tons of stuff is going off on the news. Well, boss, that doesn't affect our industry or it only specifically, excuse me, specifically affects this specific software and good news.
+17:03
+We don't use it or upgraded past that, right? This is information you're going to want to build into that hypothesis and then maybe practice putting that in and saying, here's our hypothesis.
+17:11
+Here's our findings. It's not relevant to organization. And then that's going to be kind of that last point that we recommend is looking at potential impact, right?
+17:19
+So if the actors were successful, does the activity that they're going to have have the possibility of having a significant damage to the organization?
+17:27
+We see stuff that's CBSS4, really low CVS scores, but if you have a very large surface of attack and these things are publicly accessible to the internet, everybody knows that low CVE is not really, you know, as low anymore, right?
+17:41
+Suddenly, it's a bad Friday for us now.
+17:44
+Yeah, and I think most of us have the battle scars of log for Jay. I think there are people still patching log for Jay.
+17:50
+But ThreadHuntering is really powerful because you can see how our ThreadHunter is exploiting it.
+17:55
+So you might have some compensated controls, but you can have some level of assurance that you know how ThreadHunterers are exploiting it and then creating these ThreadHuntering that are happening on a recurring basis.
+18:05
+So you have some level of assurance that you might catch if it does happen.
+18:10
+On screen, we have an example of a hypothesis. We really like having a good format like this. That way, no matter what analyst is doing the ThreadHunter,
+18:19
+you have the same format. So we're going to start with who the ThreadHuntering is, or maybe it's derived from a previous incident.
+18:26
+What's their objective? What's their infrastructure? Are we talking about cloud? Are we talking about on-prem?
+18:32
+Are we talking about just a Windows environment? That way we can identify what logs we might need.
+18:37
+And then who is it affecting? Is it affecting everybody? Is it affecting executives? Is it just our industry?
+18:43
+That way you can build up a use case library. Once again, you don't need a paid tool, you use an Excel file, but it's really nice to keep track of those metrics like Jose talked about to prove your worth because hopefully you don't catch anything or you don't catch things often, but you want to show what you have looked for one because if you bring in a new analyst, it's really good training.
+19:04
+And two, so you have a good track of it, so two people aren't conducting the same ThreadHuntering.
+19:11
+And then just a terminology here, so we have a ThreadHuntering Sprint, so you're going to start with your hypothesis, one hypothesis can turn into one and more mission, and then you get down to those sub techniques of your Hunt Analytics.
+19:23
+So there's different ways to have lateral movement or exfaltration, so you just want to keep going as in depth as possible. That way you have pretty comprehensive ThreadHuntering.
+19:35
+Now to my favorite slide, so what I'm picturing tonight is you're all going to go back to your hotel room, you're going to be looking at your sim and you're going to think, where do I start? What ThreadHunter should I have?
+19:46
+So we're going to give you some of our favorite ThreadHunter I think have good applicability for almost any organization.
+19:54
+The first one we talked a little bit about this if you're in Gibran's talk is post-Recon compromise. So ThreadHunter gets into the environment, in this case we're assuming it's a Windows environment, they're likely going to run some Recon type commands that, you know, they're trying to figure out where they're at, what domain they're in and such.
+20:16
+The problem is there is not one EDR that I've seen so far that's going to create an alert on this. So we'd recommend and we'll show an example query, it's kind of pseudo detection query or logic.
+20:29
+If you have five of these in five minutes or three of these in five minutes, that's pretty suspicious.
+20:35
+They're going to be developers who run IP config or assistant, Fower, who am I?
+20:40
+Which is going to be noisy, but anytime you're increasing it and you're seeing these often in one machine or maybe across a couple of machines, this all of a sudden becomes pretty high fidelity.
+20:49
+The other thing I'd offer and there's purpose behind each of these is event log event ID 4688 of process creation with command line auditing is not enabled by default.
+21:00
+We would highly recommend enabling that and that's where you start with this hypothesis and then document the constraint of we don't have this enabled.
+21:09
+Maybe that creates additional cost or additional resourcing, but we need it in order to connect this threat hunt.
+21:17
+So I'm not going to go through all the hunt query.
+21:21
+I will say generative AI is your friend, but it's not full proof, no matter what, you need to tailor because I'll show in a future example.
+21:32
+It created a really big gap in one of these detections. So a really good place to start, but I'd highly recommend continuing to prompt it to get to a good place.
+21:41
+So here's some of the most often used and I read, like I said, I read you for report all the time, things like NL tests, who am I, past, bliss, understand what you are is right out there.
+21:52
+If you see three of these in five minutes, I would definitely go and investigate.
+21:58
+This one also is near and dear to my heart. So once again, to go to kind of a personal work story, I worked for this company who used this IT software that helps deploy other software and such.
+22:10
+Major vendor, I'm guaranteeing everyone's heard of here. And we had a hypothesis that we thought developers were using PowerShell and we thought they were using credentials and clear text, which they were.
+22:23
+And they wouldn't admit it and that's really powerful where you can say, well, here you go kind of thing.
+22:28
+But as we did that query, we found this application that's highly privileged, had domain administrator credentials in clear text running on command line arguments.
+22:39
+And we provided that to them and they're like, oh, got it and then eventually fixed it. But we were able to find this from a different hypothesis.
+22:47
+And now this is one of them that I will always search for no matter what company I go to because we don't want to see those credentials and clear text and we had to switch them, which is never fun.
+22:58
+So same thing, 4688, not enabled by default, really helpful to have. But this is a really good trust but verify type search.
+23:08
+So this is where to create these queries, I was using generative AI and the original query said it excluded command prompt and PowerShell, which are like two of the most important things and you probably where you see it the most.
+23:23
+So I said, hey, like you excluded those, I needed those are like, oh, absolutely, you're right. Let me include those back.
+23:29
+So don't take it for a face value. Make sure you're reading the actual detection and tuning it as you go along.
+23:39
+Another one, this is a really good example because anyone want to raise their hand that they're ingesting backup logs like admin type logs into their sim.
+23:50
+Probably not many here. So threat actors love that because you can't necessarily put EDR if it's an appliance.
+23:58
+So this is another really good example to have the use case first that threat actors are disrupting backup jobs, maybe changing mutability, deleting backups, editing or deleting backup schedule jobs.
+24:15
+But you're not going to have these until you have that use case or hypothesis.
+24:20
+So this is technically for VEM but I'm sure there's similar ones for all the major backup vendors.
+24:26
+Really the point here is this is what we're seeing threat actors use as far as disruptive type things.
+24:33
+And if we're able to create that use case and create that detection logic, then we'll be able to detect it when our security tools would it.
+24:42
+This is another one of my favorite ones that you find kind of peaks and tug of the little head out every chance it gets.
+24:47
+And so we get to go around and look at organizations and talk to them about how they do account management and identity and access management, all these things.
+24:55
+And inevitably we end up talking about service accounts and service accounts in the cloud and they end up, oh well we want to manually manage them and our administrators use them all the time.
+25:03
+And well we're not too concerned about non-repudiation and well we go out of our way to make sure interactive log on is not enabled.
+25:09
+Don't worry we do it all the time and then inevitably we end up finding out something like maybe they had a follow on red team.
+25:16
+Hopefully that's where they found out or maybe they unfortunately had a cybersecurity incident that came out and said well we don't actually verify and we have one account that has interactive service log on enabled.
+25:28
+And it was because the guy was working on it before he left and well he's gone and nobody else had a note of that and change management.
+25:33
+And so if it sounds like this story is kind of old it's because it's a story we hear all the time and it's a story I've been on the other side as a practitioner of right.
+25:39
+And so with this hypothesis we're looking at a threat actor abusing a compromised hyperblished service account to perform an interactive log on to a domain controller and they're going here to put in back doors and ex-filterate data.
+25:51
+Some of the logs that we look at to find something like this would be windows event log 4624 type 2 and type 10 which is interactive and remote desktop log on user and any behavior analytics and the EDR logs.
+26:04
+Yeah and I'm hoping you all would consider something like this a key control where we're trusting the validating and this is another one that any company I ever start with have been burned in an incident in the past because we forgot it I wanted them.
+26:15
+And we'll have this running every single day to make sure that we do properly have interactive log in blocked.
+26:23
+And before I run through this hunt query this is another one of those prime examples we're having a member of your red team who would probably check for one of these things on your team would come for right because you talk to we sit through red team debriefs all the time and we're here in big things right like we identified bloodhound and then we identified accounts that we could access that had interactive service log on and then they start going their way or they go.
+26:44
+ADCS or they go some of the other hot topic names that you're seeing out there right now but inevitably interactive service count log on and then someone's going to get it maybe have some alert fatigue and then they're going to say well it's just IT working on IT stuff again who cares if it was Saturday at five Jose's kind of a night out right like he just likes to work late or maybe he likes to watch TV shows during the weekend he shouldn't.
+27:06
+So we can look at this hunt query right we're looking at 4624 log in types to and 10 and the user accounts are in service account names from the active directory service accounts but we have exclusions right it's not in the service account admin jump post and we go through and and have legitimate use cases that you know Ryan and I would harp on making sure that you have documented and if for some reason they were going to be changed it would have to go to a change review board for somebody who's not your friend.
+27:33
+And is going to question you preferably a person you don't like so that they question you even more I'm telling you you're going to get burned by this it's it's it's it's a thing yeah and I hope it's not hope it's clear that you don't just write this query once assign it a critical severity and then like you know.
+27:51
+Wife your hands of it wash your hands of it yeah this takes time right you're going to run the query once you might not find something might be it's a good query maybe it's a bad query that's where the adversary amulation or the red team can help validate your query but you're also going to find edge cases like we found in this one here so you're going to write the query once and it might take two three four weeks operationalize it to get it to a good point where then you think about like would you be willing to be woken up at the middle of the night how confident are you.
+28:21
+And this query and that'll help determine when you're done.
+28:25
+We've got kind of our last ones before we we shift over in the presentation here and this is for remote management tools for command and control right and so with this threat actor we're looking at them deploying unauthorized instances of remote management so if you sat in the presentation that was two before this to bronze right this is something that was in the it's demo time which I wish we had something cool to say but we don't it's we'll say like it's scattered spider time or something later but it's not going to flow as well.
+28:50
+Oh there he is in the back. Thanks. And so they're deploying remote management software like any desk or connect wise onto critical servers in it administrator workstations and the whole point is to persist access and for data theft right and so for these this query we're going to be looking at 46 88 windows of an ID EDR logs network flow logs firewall and proxy logs and DNS logs and before we skip forward here I think the last three here are something that we want to do.
+29:19
+So the last three here are something that unfortunately a lot of organizations that I get to talk to don't have right DNS Jose what do I want DNS who cares about DNS.
+29:29
+The threat actor cares about DNS. Go ahead to the hypothesis please. Yeah so kind of looking at this hunt query this one's a little beefy but it kind of starting at the top here right we're looking at when is a vintage 46 88 processes with names like any desk splash top other names that you're probably familiar with.
+29:48
+So then we have a ton of exceptions that we're going through from here right the first one being the user host is not authorized for this tool right that's going to probably bring a lot of information well why is Jose in HR running any desk on his machine right now again for the six time this year like what are we doing man connection to non standard ports for these tools these tools probably aren't going to be making these changes unless you have them this is something that your documentation will help you with connecting to known malicious command and control and for sure.
+30:17
+Right and this is going to be help being fed into by your threat intel team or threat intel feeds that you're getting or subscribing to and then whether or not that has silent or hidden execution.
+30:30
+And this is one of those things that we come back to and say know your topology right like I think back to my first supervisor Larry saying know your topology if I wrote this query and we use the heck out of any desk in our organization and it's a common thing people are using to get to VDI's or what have you it's going to trigger all day.
+30:46
+And you're going to say those that Jose and Ryan got didn't know what they were talking about but part of your organization might have a very legitimate use case for something like any desk and so run this socialize it through your teams and and kind of go through what we like to call the scream test right go through and run it.
+31:03
+If a bunch of people start screaming because you started turning things off maybe turn it back on and then ask why they're screaming.
+31:09
+Yeah and you want to keep up to date with these tools like it used to be any desk team viewer screen connect but there are new ones almost every day and EDR might not catch it or block it because it's a legitimate application.
+31:21
+This is where you want to keep your your threat hunt queries up to date revisit it maybe every month twice a year something like that.
+31:29
+So now we're going to talk about operationalizing scattered spider I'm I'm pretty happy with we created these using Gemini we did some free like marketing for scattered spider.
+31:40
+For those who don't know you know we call it on 39 44 they're targeting pretty much any sector they're using highly sophisticated social engineering techniques they've been the news.
+31:52
+For UK retail manly report on aviation industry talking about critical infrastructure MGM being the big one so highly sophisticated we want to talk about some threat hunts that likely you won't get some native alerting in your security tools.
+32:10
+So we're going to look at here just just a little bit is kind of the scattered spider attack chain and I won't cover it in detail but some of the initial things that we're seeing right and things that were mentioned in the talk that I talked about earlier and you're going to see SMS fishing campaigns we're going to see sim swapping we're going to see them being really advanced at calling your help desk to get access for either MFA registration or getting into your systems we're going to see them using compromised credentials they're going to get into your environment and they're going to start doing kind of that initial reconnaissance with some of those 80 explode.
+32:40
+So they're going to start looking to establish themselves with remote management tools so they any desks and of those tools of the world to try to start getting themselves into the systems right and then from there we're going to see them start action on their objectives they're probably going to move to V sphere of e-center start creating some VMs maybe right and ISOs over a couple times make those virtual machines publicly available they might use those for some data ex filtration later.
+33:08
+And then they'll action on those objectives of probably deploying ransomware on your network taking your data and probably doing it on a Friday night when you know the second part of Wednesday is coming out or something right like and you're going to watch it.
+33:22
+As kind of an addition here the QR code on the bottom is a QR code to a Google Cloud security blog that came out earlier I think last month on defending against scattered spider and so they go through the attack chain and they talk about some of the things that they would have recommendations on.
+33:37
+So earlier when Ryan says a lot of these things we're talking about should be things that are free they are right we talk about leveraging things like generative AI we talk about leveraging things like these blog posts that are going to run through and when guys like Ryan and I come into your organization we have these large assessments we're going to run on you but at the end of the day Ryan and I have hot questions at the top of our head they're going to cover blog posts from us from specter ops from D for reports from things like that and say hey have you seen these things are they in your hands.
+34:06
+Are they in your network. Oh you got kind of quiet there it sounds like it might be in your network you should probably look at that right and so generally recommend that you maybe take a picture of that check it out later and see if it applies to your organization.
+34:19
+Yeah I know nobody's going to say yeah we read the article and we searched the IP addresses we were threat hunting because like truly last week clients were telling me that so I know everyone's better than that here after the presentation make me really happy.
+34:32
+Okay so talking about the first hunt first hunt keep me honest you know I'm not in N.T.I.D. day to day but when I've used it I did not see an alert yet for M.K.S. for adding authentication devices or MFA devices from an unauthorized location or adding additional ones this is you know really early on in the attack chain typically they're calling the help desk they're adding that MFA device or maybe they stole session tokens and add them to the event.
+35:01
+So that's where you need threat hunting to catch them a little bit early on. Ideally you're using conditional access policies so you can only add MFA devices from trusted locations and different things like that but short of that we're going to do some more threat hunting.
+35:21
+So we're going to need to ingest your on try D logs your audit logs and such.
+35:27
+As far as a hunt query we are going to look for MFA devices being added from untrusted networks so this is where knowing your network is helpful or maybe the same location adding MFA devices for multiple users sounds pretty suspicious to me if they're trying to add persistence.
+35:45
+Same kind of thing if they're adding the same phone number maybe tie that back to the threat actor and then maybe some password resets around that same time one thing we always recommend especially during an incident things are heightened we'd recommend likely disabling self service password reset especially for admins so they're not able to go into the you know go online and be able to reset passwords that way maybe you're doing that for all users if self service password reset is a thing.
+36:15
+Yeah we'll talk about the next hunt for scattered spider here so with this one they're leveraging compromised v center administrator credentials to enable ssh on ESXi hosts and the whole goal here is to deploy ransomware against the organization right and so we're looking at v center event logs ESXi audit logs host.d vpx a and audit underscore records as well as net flow logs and this is where I kind of stick my kind of advertisement for you taking net flow logs into your network.
+36:44
+So that's what you're looking for for the next time you're looking at that flow logs into your same are you tracking them do you have them going to a log aggregator at a minimum so that you can kind of come back if you ever end up in this situation and let the incident responder go through and run queries on them and then we'll talk about the query here.
+36:59
+So at the top here we're looking for ssh log and attempts to the ESXi host so say that's going to be noisy yeah it is we're going to look at authentication failed you're probably going to get a lot of administrators guys like me right who just do I've got 30 passwords and I can't remember the one for the first time.
+37:13
+So I can't remember the one for this specific one and then we're going to go forward here and come look at ssh service enabled or firewall changes right in conjunction with this so we've got some people authentication failed suddenly they start working now they're starting to make firewall changes and then at the end here.
+37:31
+We're looking to see if the ssh log in was done as root if all these things start coming up and just starting to look a little what my brother would call super sus and we should start we should start looking at things right you get youth lingo in this time too you got it all I had to and we don't expect you to know the V center logs are the guests logs is there certain things they're enabled by default or not enabled by default.
+37:55
+There are great articles out there man is part of the article talks about the specific logs what might be helpful for threat actors because you can't ingest all of the things but we recommend there's a lot of great resources out there to understand what you should enable it's like I said most things are not enabled by default and you're likely not ingesting them into your sim.
+38:15
+So in closing we want to talk about the types of things that you'll take away hypothesis I put an example and you may have taken a picture ready but what a well formed hypothesis looks like and then where those sources are to reemphasize things like M trends rise in DBI R D for a poor intelligence or your past IR or working with either your internal red team or a third party red team there are many hypotheses that can be out there.
+38:45
+And then we want to make sure that we hit the point home on metrics right and I want to come back and say a common sentiment we get when we go into do these assessments is.
+38:53
+Jose Ryan I have a four person cybersecurity team do you really expect me to track metrics yeah because you could open up an excel spreadsheet you can open up Google sheets whatever you're going to do something quite simple and just start tracking the information that you have and here kind of like I said the metrics that we recommend right at a minimum start tracking previously undetected threats discovered.
+39:14
+The malware the TTPs the malicious activity that your EDR or that your other tools you have in your system did not alert you on these things are going to be the things that set you apart right you want to you want to come up to your boss and say we're making a difference the second thing is new detection rules and analytics created you are feeding back into the big information security machine and you're helping make it better.
+39:38
+You want to look at those wall street journal hunts right kind of what we've dubbed it if you're seeing those things on a Friday Saturday night make a note of it I just send myself an email that all inevitably end up reading Monday morning and be like that's right I got to do this thing again and then come back and run a quick hunt right and it doesn't have to be a large thing it could be you have a small group of people that are going to get together can you make one or two hours to just look at this new threat actor is it going to affect us if it's not maybe send it up to your boss and let them know hey I'm thinking about you.
+40:07
+I'm thinking about you boss right and then mean time to detect your organizations probably tracking this if they're not maybe you're going to be the reason they start tracking it and find a way to show that that chart is starting to go down right.
+40:19
+Yeah we don't we're not saying you all have to do this like within your company I'm guessing some people here have MSS P's I would argue to push them to do it there's some MSS P's that'll just for like the really high level security articles maybe search across all their customers which is.
+40:37
+So I think it's helpful but I'd more recommend have those biweekly or monthly meetings with them and challenge them what threat hunts are you doing because that's something they should be doing if they're not you should figure out a way to formalize that that way they're looking for things that are relevant to your company and then lastly the impactful hunts we really hope that you could take away we had seven hunts up there we think likely they're all if not mostly relevant to you all we want to get you started that way you can get in that mind.
+41:06
+We want you to every time you read a security article or get a piece of threat intelligence to understand how can I search this like what if EDR missed it what if EDR is off that box what are the types of things that I can query for what are the TTPs that can eventually operationalize and put as a query.
+41:26
+And that's it thank you.

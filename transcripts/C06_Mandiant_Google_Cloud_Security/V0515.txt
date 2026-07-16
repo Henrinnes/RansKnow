@@ -1,1 +1,1424 @@
-[NO TRANSCRIPT AVAILABLE]
+0:01
+[Music]
+0:02
+When we look back at 5221's activity and
+0:06
+the post exploitation activity in early
+0:08
+December of 2023 and compare that to the
+0:11
+most recent activity, I think it's been
+0:13
+a very it's been a very apparent to me
+0:15
+that one uh they have a very good
+0:17
+understanding of how the appliance works
+0:19
+and the nuances of its behavior and two
+0:22
+they've adapted and learned more as time
+0:24
+went on.
+0:28
+[Music]
+0:40
+Welcome to another episode of Mandant's
+0:42
+Defenders Advantage podcast. I am your
+0:45
+host, Luke McNamera. Joining me today, I
+0:48
+have Matt Lynn, who's a senior incident
+0:50
+response consultant here at Mandant, and
+0:52
+Daniel Spicer, the chief security
+0:54
+officer at Avanti. Matt, Daniel, great
+0:57
+to have you here this morning. Hey,
+0:59
+Luke, thanks for having us on the
+1:00
+podcast today. Really excited to be
+1:02
+here. Absolutely. Thank you. I think
+1:04
+from that intro, you probably have
+1:05
+guessed we're going to be talking uh
+1:07
+related to some of the the research and
+1:08
+blogs we put out around a thread actors
+1:11
+uh exploitation of the Avanti VPN uh
+1:15
+solution. And I think kind of putting
+1:17
+this in in larger uh context as we get
+1:20
+into the discussion today, we have the
+1:21
+entrance report that just came out that
+1:23
+talked about exploits uh continuing to
+1:25
+be the most common way we see threat
+1:27
+actors compromise and gain access to
+1:29
+enterprises. When this report comes out,
+1:31
+we should have our zeroday report which
+1:33
+will kind of go further into that. But
+1:35
+in particular, we're continuing to see
+1:37
+this theme around uh threat actors
+1:40
+focusing on edge infrastructure as a
+1:42
+means to do the so. So, we're going to
+1:44
+talk about some of the specifics of this
+1:46
+case that that you were involved in
+1:47
+working Matt uh with Avanti, but then
+1:49
+also I think put it into the larger
+1:51
+context of what's happening into the
+1:52
+threat landscape and why we're seeing
+1:54
+thread actors do this. Perhaps to begin
+1:56
+with, we can start with a little bit
+1:59
+about this threat actor um
+2:01
+5221 and kind of how they fit into this
+2:04
+the story of you know what you've been
+2:06
+kind of focused on with researching and
+2:08
+responding to some of their activity.
+2:10
+Yeah, for sure. Thanks. I think that's a
+2:12
+great place to start. Um, so earlier
+2:15
+this month in April
+2:17
+2025, we published a blog post that
+2:21
+details the exploitation of CVE 2025
+2:25
+22457, which is a buffer overflow
+2:28
+vulnerability that would essentially
+2:30
+allow for unauthenticated remote code
+2:33
+execution uh on particular versions of
+2:36
+Avanti Connect secure VPNs. And we saw
+2:39
+this threat actor exploit uh multiple
+2:42
+highv value targets uh beginning in
+2:44
+mid-March of 2025. And we attribute the
+2:48
+activity to AN
+2:50
+5221. And AN 5221 is a Chinese espionage
+2:55
+actor. And we actually introduced them
+2:57
+for the first time in our four-part blog
+3:00
+series last year titled Cutting Edge. Uh
+3:03
+that also talks about Avanti connectse
+3:05
+secure exploitation. Uh so it's almost
+3:08
+been a year and a half now and it's
+3:09
+really uh been interesting to see how
+3:12
+they shifted their targeting and also
+3:14
+you know evolved their tactics uh to
+3:16
+keep pace with uh defenders. In this
+3:19
+most recent exploitation campaign um of
+3:21
+the appliance uh and following
+3:23
+successful exploitation we saw the
+3:27
+deployment of two new malware families
+3:29
+uh that were tracking as Trailblaze and
+3:32
+Brushfire. And these two families uh
+3:35
+sort of work closely together uh to
+3:37
+ultimately create an in-memory only
+3:40
+passive backdoor on an appliance. So
+3:43
+instead of a traditional backdoor that
+3:46
+may potentially call out periodically to
+3:48
+a thread actor C2 server, passive
+3:50
+backdoor would only activate when the
+3:53
+thread actor sends a very specific
+3:55
+sequence of bytes to the compromised
+3:58
+appliance which helps it remain more
+4:00
+stealthy. I I remember uh finding the
+4:02
+malware for the first time and just
+4:04
+doing some basic triage and I'm picking
+4:06
+it apart and just thinking like wow this
+4:09
+is quite minimal and it's almost elegant
+4:12
+in a certain way right it's written in
+4:14
+plain C it uses raw sis calls and it
+4:18
+does exactly what the thread actor wants
+4:20
+it to do and no more and I think the
+4:23
+file size for one of these was less than
+4:24
+a kilobyte in size so certainly very
+4:27
+impressive what they've done in order to
+4:29
+fit that payload into their explo
+4:30
+exploits. And I'll spare our listeners
+4:33
+the rest of the gnarly details here, but
+4:34
+we do have some more technical details
+4:37
+um in the blog that I think are a little
+4:39
+bit easier to digest uh visually. And
+4:41
+we'll include some some links in the
+4:43
+show notes to those blogs. Um yes,
+4:45
+because as you noted, there's a lot of
+4:46
+technical details about this activity.
+4:49
+Maybe as a as a follow-up to that
+4:50
+though, in comparison to some of the
+4:52
+activity noted in the cutting edge blog
+4:54
+series last year, were there some
+4:56
+interesting novel techniques that we saw
+4:58
+the thread actor do? Um, in the activity
+5:00
+noted in these two blogs, uh, we see AN
+5:03
+5221 and other actors as well, uh, use
+5:06
+some pretty interesting techniques, um,
+5:07
+that involve, uh, custom malware. They
+5:10
+trojanize um, existing files and scripts
+5:13
+on the appliance. They do living off the
+5:16
+land, evasion, anti-forensics, right?
+5:18
+You know, all the things that you would
+5:19
+expect from a sophisticated adversary.
+5:22
+And when we look back at 5221's activity
+5:26
+in the post exploitation activity in
+5:29
+early December of 2023 and compare that
+5:32
+to the most recent activity, I think
+5:34
+it's been a very it's been a very
+5:36
+apparent to me that one uh they have a
+5:39
+very good understanding of how the
+5:40
+appliance works and the nuances of its
+5:43
+behavior and two they've adapted and
+5:46
+learned more as time went on and as
+5:49
+defenders and Avanti are responding to
+5:51
+these incidents.
+5:52
+and they certainly gotten better at
+5:54
+evading detection. They gotten better at
+5:56
+cleaning up after themselves and also
+5:58
+finding new ways to persist on the
+6:01
+device. Um I think one of the more
+6:05
+interesting techniques that I've seen is
+6:08
+a particular malware family called phase
+6:10
+jam and we blogged about this in the
+6:13
+January 2025 blog uh from this year uh
+6:16
+with the zero to exploitation of
+6:20
+CV20250282. Phase Jam in particular has
+6:24
+a capability um that would block system
+6:27
+administrators from performing upgrades
+6:30
+or install patches on a compromised
+6:33
+appliance. Uh and not only would it
+6:35
+silently block the upgrade in the
+6:37
+background, but it would also actually
+6:39
+render a fake HTML progress bar to the
+6:43
+administrator to kind of give the
+6:44
+appearance that the upgrade was actually
+6:46
+in progress. So the upgrade attempt
+6:49
+itself is blocked and any tools or back
+6:53
+doors the actor left on the appliance
+6:55
+would remain on the current version of
+6:57
+the VPN uh while giving appearance of a
+7:00
+successful upgrade. Um so if you were an
+7:03
+administrator uh performing the patch or
+7:05
+the upgrade uh you may not notice that
+7:07
+something was wrong and earlier I
+7:10
+mentioned that 5221 has demonstrated
+7:12
+that um they have in-depth knowledge of
+7:15
+the appliance. Um, so they use said, uh,
+7:18
+so thinking about living off the land
+7:19
+here to sort of surgically insert their
+7:22
+malicious code into a legitimate Pearl
+7:25
+module on the appliance that would
+7:27
+support the installation package process
+7:30
+and that would intercept the function
+7:31
+call for the install. Um, so literally
+7:34
+in the code that they inserted, you
+7:35
+would see them calling the sleep binary
+7:38
+to pause execution, append a period to
+7:41
+the HTML, sleep one, append a period,
+7:43
+sleep one, append a period, etc. and it
+7:45
+would display text like finalizing
+7:47
+installation when nothing is actually
+7:49
+happening in the background. So
+7:50
+certainly very interesting. Yeah, I
+7:53
+thought that was one of the interesting
+7:54
+aspects of the blog because of course
+7:56
+with a lot of this targeting of edge
+7:58
+infrastructure with its routers, VPNs,
+8:01
+etc. One of the things that it provides
+8:03
+to the adversaries, they don't have to
+8:05
+do social engineering that like they
+8:07
+would through, you know, a spearfish.
+8:08
+But it was interesting to see you could
+8:10
+almost say a form of of uh social
+8:12
+engineering in that sort of display of
+8:15
+fake updates and making it look like
+8:17
+something is happening to
+8:18
+administrators. So I thought that that
+8:19
+was an interesting kind of piece where
+8:21
+they were still thinking through you
+8:23
+know again how they sort of could
+8:25
+manipulate or or give sort of a false
+8:27
+impression of what's going on to
+8:28
+administrators. Daniel I think to kind
+8:30
+of pull in your perspective here maybe
+8:32
+start with you know how was this
+8:34
+initially discovered? What were your
+8:35
+thoughts in when you were kind of
+8:37
+initially looking at this activity and
+8:39
+what the adversary was doing? Similar to
+8:42
+to the last several attempts against the
+8:44
+appliance since um since 2021 when we
+8:47
+introduced it, we uh have been able to
+8:50
+discover the activity through what we
+8:53
+call the integrity checking tool. And uh
+8:55
+I I I really like the integrity checking
+8:58
+tool as a as a a piece of the defenders
+9:01
+toolkit that that we introduced for our
+9:03
+appliance. I know that there's a lot of
+9:05
+attempts by the thread actor to try to
+9:08
+circumvent the integrity checker tool.
+9:10
+So that means we know that it's it's a
+9:12
+problem for them to circumvent, but also
+9:15
+it just continues to be successful
+9:18
+because it requires the threat actors uh
+9:20
+who are trying to circumvent it to have
+9:22
+perfect operational security. And we
+9:25
+know ever since AP1 uh the the landmark
+9:29
+report, right, thread actors do not have
+9:32
+perfect operational security. Um I I
+9:34
+find that to be a really interesting way
+9:36
+that we can continue to put pressure
+9:38
+back on thread actors and and uh make it
+9:42
+easier for us to detect the fact that
+9:44
+they're burning zero days early. I think
+9:46
+the other really interesting thing uh
+9:48
+really looking at the activity from from
+9:51
+March April time to exploitation is
+9:54
+really short. You know this was actually
+9:56
+um an item that Avanti had identified as
+10:00
+part of our our continued commitment to
+10:01
+to secure by design as a memory
+10:03
+corruption issue. We originally thought
+10:05
+that it wasn't possible to exploit due
+10:08
+to a lot of limitations on the ability
+10:10
+to the types of characters that could be
+10:13
+put into into this uh into this heap
+10:16
+overflow. And then um come six weeks
+10:20
+later after we resolved the issue, we
+10:23
+saw attempted exploitation by the threat
+10:25
+actor. And and that's a very very short
+10:28
+time from Avanti fixing an issue, not
+10:32
+disclosing it as a vulnerability. So,
+10:33
+somebody actually having to go and and
+10:36
+identify this this bug as a as a diff
+10:38
+and then determine how to circumvent the
+10:41
+character restrictions, the ASLR and and
+10:43
+several other hoops in order to obtain
+10:46
+successful exploitation. This isn't the
+10:48
+the activity from from 5 10 years ago
+10:50
+where it was a straight, you know,
+10:52
+command injection buffer overflow that
+10:54
+we're used to seeing. We're we're seeing
+10:56
+a a significant increase in the
+10:58
+sophistication and just the time to
+11:01
+exploitation. I I think everybody needs
+11:02
+to take that very seriously. Could you
+11:05
+describe a little bit more about that
+11:06
+tool and sort of, you know, how it fits
+11:09
+within security you put around the the
+11:12
+VPN? Yeah. So, so the ICT works very
+11:15
+similar to what you would imagine as a
+11:17
+um file integrity monitoring solution
+11:20
+for uh traditional on-prem deployments.
+11:24
+uh there's a lot of limitations on
+11:26
+hardened appliances in in terms of the
+11:27
+capabilities we can do and and the
+11:29
+performance that we can eat on the
+11:30
+system. So the ICT doesn't work quite
+11:33
+the same way, but essentially what we're
+11:35
+looking for is when the thread actor
+11:37
+wants to to make a change on the system.
+11:40
+So anytime they want to introduce a web
+11:42
+shell or and basically anything to to be
+11:45
+persistent on the box or persistent
+11:47
+across upgrade, those are the files we
+11:49
+check with the ICT. And zooming out here
+11:51
+a little bit um you know Matt your
+11:53
+perspective looking at and investigating
+11:56
+you know these particular uh CVEes but
+11:58
+then also more broadly this trend around
+12:01
+edge infrastructure what are what are
+12:03
+some of your thoughts and your takeaways
+12:05
+around this as a trend as a pattern not
+12:07
+just with this specific thread actor um
+12:09
+who's obviously shown an interest in in
+12:11
+going after VPNs u but just more
+12:13
+broadly. Yeah, great question. And I
+12:16
+think in our most uh recent editions of
+12:19
+the the zero day report that we
+12:20
+published, I think what's really notable
+12:22
+in there when we look at exploitation
+12:25
+and particularly zero to exploitation,
+12:27
+we see that China has exploited more
+12:29
+zero days than any other nation state in
+12:31
+the past few years. um and that the the
+12:34
+PRC uh they continue to be a leading
+12:38
+driver in governmentbacked exploitation
+12:40
+and also other various cyber operations
+12:43
+especially for the purpose of espionage
+12:46
+and when we look at the politics and the
+12:47
+guiding structures within the country
+12:49
+right it it makes a lot of sense um but
+12:51
+uh to kind of answer your question about
+12:53
+edge infrastructure I think it's
+12:55
+interesting to kind of look at why and
+12:58
+there's a few reasons why um but
+13:00
+predominantly I think number One is that
+13:04
+edge infrastructure often sits in an
+13:06
+elevated position within a network. You
+13:08
+know, oftent times they are the
+13:09
+gatekeepers, right? We're talking about
+13:12
+VPNs, firewalls, routers, you know,
+13:15
+different types of application gateways.
+13:17
+Uh and you could extend this to things
+13:19
+like virtualization platforms as well.
+13:22
+And if you compromise one of those
+13:24
+devices, um it's likely already highly
+13:26
+privileged. uh it maybe stores some
+13:28
+credential material uh and does some
+13:30
+sort of traffic monitoring or brokering
+13:33
+uh within an environment. So if you
+13:35
+configure out an exploit uh for one of
+13:37
+these appliances, one of the these edge
+13:39
+devices, you know, you essentially now
+13:41
+have access to every vulnerable
+13:43
+appliance exposed to the internet
+13:45
+globally. But uh what's interesting is
+13:47
+that these gatekeepers um often don't
+13:51
+get the same level of security attention
+13:54
+or investment from defenders compared to
+13:57
+things like end user endpoints or things
+14:00
+like your Windows Active Directory
+14:02
+domain controller. You know, that has
+14:04
+traditionally been your crown jewel
+14:06
+within the classic archetypal view of
+14:08
+enterprise cyber security. And you know,
+14:11
+I think that's where we're starting to
+14:12
+see the conversation uh starting to
+14:14
+shift in recent years as an industry.
+14:17
+I'd argue that we've gotten really good
+14:18
+with endpoint security. And you know,
+14:21
+we're starting to see a decreased
+14:23
+reliance on endpoints for initial access
+14:25
+in the past five or six years. Uh and I
+14:28
+can think of a few reasons why, but you
+14:29
+know, we have more detection and
+14:32
+monitoring capabilities than ever
+14:33
+before. Uh EDR solutions are becoming
+14:35
+more and more popular. uh and often seen
+14:38
+as a default uh in many enterprise
+14:40
+environments today uh and vendors you
+14:42
+know they're putting more investment
+14:44
+into making operating systems uh more
+14:46
+secure but but right now I think uh the
+14:49
+challenge is that much of the industry
+14:51
+is lacking parody on how to secure the
+14:54
+edge and also how to respond to edge
+14:56
+compromise and I think it's also worth
+14:59
+pointing out that it's not just an 5221
+15:02
+and Avanti um when we look at other
+15:05
+Chinese actors like
+15:07
+3886, you know, that have just
+15:09
+accumulated a wealth of portfolio of
+15:12
+exploits against numerous appliance
+15:14
+vendors or the recent headlines talking
+15:17
+about Volta Typhoon or Salt Typhoon
+15:19
+compromising US critical infrastructure
+15:21
+or American telecommunication companies.
+15:24
+U I think you know those actors they're
+15:26
+really taking advantage of the sort of
+15:28
+technical disparity and I think that is
+15:30
+exactly what they're after. Yeah. I
+15:32
+think one other data point you just made
+15:34
+me think of from the MTRS report too is
+15:36
+also the continued decrease in fishing
+15:38
+that we're seeing as an initial access
+15:40
+vector. Um, which I think also points to
+15:43
+probably that becoming a harder target
+15:45
+as there's been investments around sort
+15:47
+of fishing prevention and detection. So
+15:49
+similar to EDRs, you know, that being an
+15:51
+avenue that threat actors aren't
+15:53
+leveraging as much and then focusing
+15:54
+elsewhere. Um, and I think also Daniel,
+15:57
+I'd be interested in your thoughts on
+15:58
+this kind of expanding on I think a
+16:00
+point you made earlier. Maybe it was
+16:01
+Matt, but the fact that the the threat
+16:03
+actor really seems to understand and put
+16:06
+some effort and resourcing behind
+16:08
+understanding these technologies. This
+16:10
+is something that we seem to be seeing
+16:12
+with a lot of Chinese AP activity where
+16:14
+you know the whether it's stuff related
+16:16
+to some of the the salt typhoon
+16:18
+activity, some of the e other edge
+16:20
+infrastructure uh compromises, even some
+16:22
+of the the Juniper OS stuff that we
+16:24
+blogged about recently. we see time and
+16:26
+time again that there's a very in-depth
+16:29
+understanding that the adversary has on
+16:30
+the technologies. So thinking about
+16:33
+that, you know, without going obviously
+16:35
+into the secret sauce, um you know,
+16:36
+things like the the ICT tool seems to
+16:38
+play a role in sort of how you think
+16:40
+about defense, but maybe just more
+16:42
+broadly with this focus by adversaries
+16:46
+and knowing that this is going to be an
+16:47
+area of continued focus for them, how do
+16:50
+you think about kind of securing this
+16:52
+from like a design standpoint? I think
+16:54
+the um one of the the key things that
+16:57
+that I like to to add into how we do do
+17:00
+threat modeling which I think originally
+17:02
+actually came from Microsoft is just the
+17:04
+assumption that the code is available to
+17:07
+the threat actor. Right? I I don't think
+17:09
+there is a way for us to prevent the
+17:11
+thread actor from finding a way to get
+17:14
+their hands onto a piece of technology
+17:17
+and spending the time reverse
+17:18
+engineering it. So it with that in mind
+17:21
+I I think the threat model just has to
+17:23
+assume that ju just assume your source
+17:26
+code is available right and so assume
+17:28
+that they can inspect the source code
+17:30
+for vulnerabilities and if that's the
+17:32
+the default base of your threat model
+17:34
+right then then you start talking about
+17:36
+how do I eliminate vulnerabilities how
+17:38
+do I create checkpoints how do I make it
+17:40
+easier to to disable certain functions
+17:43
+in in the appliance and I think that is
+17:46
+is kind of a a key uh thing that I I
+17:49
+encourage everybody in the software
+17:51
+industry to to just assume don't try to
+17:53
+to assume obscurity because the code
+17:55
+isn't available. And I I think a lot of
+17:57
+cloud vendors especially now um who are
+18:00
+essentially edge right are um failing in
+18:03
+and considering that eventually the the
+18:07
+threat actor will will obtain access to
+18:11
+the ability to to just inspect whatever
+18:14
+whatever the piece of software is and be
+18:15
+able to find the vulnerability in it. So
+18:18
+you have to you have to make that
+18:19
+assumption. You have to go and and
+18:21
+secure the code and you have to make it
+18:24
+easier to put in mitigations and keep
+18:27
+the the service running despite the fact
+18:29
+that there may be a problem in the
+18:31
+future because I I think vulnerabilities
+18:32
+in general is a not an if but a win
+18:35
+statement. And so reducing the impact on
+18:37
+customers is is obviously really
+18:39
+important to to that extent. Of course,
+18:42
+you know, we've been making a lot of
+18:44
+investments um since we uh acquired some
+18:47
+of the solutions to Avante, including
+18:49
+what what is legacy um Pulse Secure. I
+18:52
+shared an update on where we are in
+18:54
+these commitments back in Friday on a on
+18:56
+a I'm sorry, back in February in a blog
+18:58
+post. Uh, a lot of it involves getting
+19:01
+the right resources into play, using
+19:03
+those resources to help create these um
+19:06
+these choke points, eliminating certain
+19:09
+classes of vulnerabilities. And then
+19:12
+very important is just leaning into
+19:14
+transparency and letting customers know
+19:16
+when we have an issue in the product
+19:19
+that we have fixed so they can go and
+19:21
+and do the the update. And that is
+19:23
+actually one of the the hardest
+19:24
+challenges I think in the industry is uh
+19:27
+a lack of transparency about when uh a
+19:31
+vulnerability is fixed. And I I think
+19:33
+this recent example in April where we
+19:36
+actually did a mclassification of a
+19:38
+vulnerability is a perfect example of
+19:41
+how endday exploitation gets taken
+19:43
+advantage by threat actors. So that
+19:45
+transparency is just really really key.
+19:48
+Yeah. if you want to expound further on
+19:49
+that uh that particular uh point.
+19:52
+Essentially, we identified the
+19:54
+vulnerability as um part of our
+19:57
+continued attempts to or continued
+20:00
+progress to eliminate classes of
+20:01
+vulnerabilities starting with memory
+20:03
+corruption issues. And so we we found
+20:05
+the issue. We evaluated it. We
+20:08
+determined um that because of the
+20:10
+character limitations, because of binary
+20:12
+protections such as ASLR, a combination
+20:15
+of factors that it wouldn't have been
+20:17
+exploitable. And where we ended up was
+20:21
+thread we patched it as a as a bug
+20:24
+because it still causes a crash, right?
+20:26
+We patched it as a bug. we fixed in the
+20:29
+solution and then thread actors came
+20:30
+back uh six six weeks later and and
+20:33
+found a way to circumvent what we
+20:36
+thought was just not possible to
+20:37
+exploit. So kind of tying this, you
+20:40
+know, together with the the lessons you
+20:42
+learned coming out of this and I think,
+20:44
+you know, one of the things that's very
+20:46
+apparent, you know, Matt, from from what
+20:47
+you noted earlier that this category of
+20:50
+threat actors is going to be continued
+20:52
+focused on edge infrastructure. Um,
+20:55
+there's advantages that they've been
+20:56
+able to gain and and kind of see the
+20:58
+result of as a TTP going forward. How do
+21:02
+you think about how organizations can
+21:05
+implement security around this? I know a
+21:06
+piece of this is logging and and having
+21:08
+the right logs in place to detect this
+21:10
+early on. So maybe curious both of your
+21:12
+thoughts of of how we will see kind of
+21:13
+the adversaries adapt but then also what
+21:16
+are things that organizations can do to
+21:17
+to properly uh implement uh security
+21:20
+here whether it's making sure that
+21:22
+they're you know rapidly applying
+21:24
+patches when there are uh releases
+21:26
+available. Maybe Matt we'll start with
+21:27
+you and then go to Daniel. Yeah that's a
+21:30
+great question. I think one of the
+21:32
+challenges of securing edge devices is
+21:34
+that you know oftent times they are
+21:36
+running on proprietary platforms and
+21:39
+technologies. So it can seem like a a
+21:41
+black box, you know, and if you wanted
+21:44
+to say, you know, get your favorite EDR
+21:46
+agent on one of these appliances, you
+21:48
+know, it's likely not going to be
+21:50
+possible or very very difficult um to do
+21:52
+so. And I think, you know, security
+21:54
+shouldn't be done without context or
+21:57
+without kind of taking risk into the
+21:59
+equation. And so definitely stay on top
+22:02
+of the latest trends and exploits out
+22:04
+there and any guidance or mitigations,
+22:07
+you know, best practices that the vendor
+22:08
+may already have out there uh for this
+22:11
+specific version um or type of appliance
+22:14
+um that you have. Um and I know today
+22:17
+we've spent a good amount of time
+22:19
+talking about you know zero days and end
+22:20
+exploitations, right? And I think that's
+22:23
+also really interesting because when we
+22:26
+look at how attackers are getting into
+22:28
+organizations in the past few years uh
+22:31
+there's some really interesting trends
+22:32
+right earlier you mentioned that you
+22:34
+know back in 2019 2020 you know and
+22:37
+before that you know fishing was the
+22:39
+number one intrusion vector u that
+22:41
+mandant saw you know when we look at
+22:43
+intrusion vectors in the investigations
+22:45
+that we were called in to perform but in
+22:47
+recent years and recently we're really
+22:50
+talking about you know pandemic in
+22:51
+postpandemic era where things start to
+22:54
+change uh quite drastically where in a
+22:58
+majority of cases patient zero uh when
+23:01
+we know patient zero in an investigation
+23:04
+um it was the results of exploitation of
+23:06
+a vulnerability u not always a zero day
+23:09
+um but it can also be an end day um as
+23:11
+well but I think for the average um
+23:15
+enterprise I really do think that most
+23:18
+organizations can focus on security
+23:21
+foundations and also just security
+23:22
+fundamentals and put their energy there
+23:26
+um instead of being let's say overly
+23:28
+reactive to the latest zero day or
+23:31
+headline article. There's no panacea in
+23:33
+security. Uh but I think the
+23:35
+fundamentals are often where you can
+23:37
+kind of make the most impact um in your
+23:40
+overall security uh posture uh while
+23:43
+making the best use of the the finite
+23:45
+resources um that you have. So, you
+23:48
+know, we're seeing this transition from
+23:50
+exploits being a number one intrusion
+23:51
+vector. You know, it means that things
+23:54
+like having a good vulnerability
+23:57
+management program and also a good patch
+23:59
+management program are going to be
+24:01
+important conversations that we revisit
+24:03
+again, right? It's not new. Uh, and it's
+24:05
+not the latest or shiniest concept out
+24:07
+there. Um, but it is important. Uh, and
+24:10
+attackers are not necessarily going to
+24:12
+burn zero days um against organization
+24:15
+if there are easier ways to get in.
+24:17
+Yeah, and Daniel, any thoughts as well
+24:19
+uh around that either on um you know, if
+24:21
+you're a user of uh edge infrastructure
+24:24
+and products as as most organizations
+24:26
+are, but then also for other vendors as
+24:28
+well, you know, what are some of the
+24:29
+lessons? I think we've kind of touched
+24:31
+on this a little bit, especially the
+24:32
+transparency component, but things that
+24:34
+you think were really important
+24:35
+takeaways coming out of these that you
+24:37
+think uh other vendors can learn from.
+24:40
+Yeah, I want to start on the on the uh
+24:43
+user side just double down on on the
+24:46
+importance of of vulnerability
+24:48
+management. Many vendors have security
+24:50
+advisories have ways to share
+24:52
+information. If it's a critical edge
+24:54
+asset, you should be subscribed to
+24:56
+those, right? Make sure that that you're
+24:58
+paying attention to those things early.
+25:01
+I'll also just share not just Avanti but
+25:03
+a lot of vendors in this space where we
+25:05
+we have edge appliances uh provide a lot
+25:08
+of information for configuration and uh
+25:12
+misisconfigurations you know like Matt
+25:15
+said if there's an easier way to get in
+25:17
+thread actor will misisconfiguration's
+25:19
+definitely the way that it becomes a
+25:22
+little bit easier but but also it
+25:24
+exposes you to um some vulnerabilities
+25:27
+in a a higher risk manner than would be
+25:30
+if you had configured the appliance
+25:32
+correctly or you were using it in the
+25:34
+way that a a vendor had had recommended.
+25:37
+Very common issue that that we see a lot
+25:39
+of people talking about is just exposing
+25:42
+things onto the internet for an edge
+25:44
+appliance that were never meant to be
+25:45
+exposed to the internet especially like
+25:47
+administration panels. Again, a lot of
+25:50
+vendors in this space are trying to
+25:51
+continue to advise the uh network
+25:54
+administrators, the security teams to
+25:57
+check for those things and make sure
+25:58
+that's not the case. because it makes
+26:01
+vulnerabilities that would otherwise be
+26:03
+much more difficult to exploit very easy
+26:05
+for threat actors. And then I guess for
+26:08
+for the for the the industry peers who
+26:11
+who may not have had a challenge yet, I
+26:13
+I'll just share the transparency is very
+26:16
+critical to helping your um your end
+26:20
+customer avoid risk. I think that that
+26:22
+sharing vulnerability details,
+26:24
+registering as a CNA, reserving CVEEs
+26:28
+for the issues um make it very easy for
+26:31
+the customers vulnerability scanners to
+26:33
+identify are they on the latest version,
+26:36
+right? So you're not just relying on the
+26:37
+network administrator, but you also have
+26:39
+the security team uh and the
+26:40
+infrastructure teams looking at that.
+26:43
+hopefully that that'll help protect
+26:44
+prevent them from from exploitation
+26:46
+whether that's nation state or a
+26:48
+ransomware threat actor because
+26:50
+eventually this stuff does roll downhill
+26:53
+where we start with nation state threat
+26:54
+actors and eventually the ransomware
+26:56
+actors catch up and start using the same
+26:58
+vulnerabilities. So I think those are
+27:00
+those are the key things that I would
+27:02
+really want people to take away from
+27:04
+this. Yeah, that's a fantastic point to
+27:06
+end it on and uh I think you know
+27:09
+especially realizing I think
+27:10
+conversations like this are important
+27:12
+you know in sharing kind of these
+27:13
+insights as we collectively as a
+27:15
+security industry you know face this as
+27:18
+a a continued problem thread actors
+27:19
+looking to exploit edge infrastructure
+27:21
+to Matt's point it's it's unlikely to to
+27:23
+go away anytime soon so I think
+27:25
+conversations like this hopefully are
+27:26
+helpful uh for the broader security
+27:28
+industry um and I thank you both uh for
+27:30
+being here today and helping uh do that.
+27:32
+Yeah, thank you Luke. appreciate the
+27:34
+time. Thank you. Take care.
+27:37
+[Music]

@@ -1,1 +1,462 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hi, I'm Dan Dye from Google Cloud Security.
+0:04
+I've recently released two videos related to Google's
+0:06
+model context protocol for security operations.
+0:09
+The first introduced AI runbooks for directing MCP
+0:12
+clients to perform work in a repeatable way,
+0:15
+and I shared a GitHub repo with a collection of those runbooks.
+0:18
+In the second video, I demonstrated execution of the GTI
+0:22
+Threat Hunt runbook using client as my client.
+0:25
+I received a lot of questions about the possibility of
+0:28
+repeating that demo using Google Agent Development Kit as
+0:31
+the client.
+0:32
+So I've been working on that, and I'm going to share it
+0:34
+with you today.
+0:35
+The MCP servers that I'm using in this demo are from the Google
+0:39
+MCP Security GitHub repo.
+0:41
+There are four servers, SecOps Sim, SecOps Soar, Google
+0:44
+Threat Intelligence, and Security Command Center.
+0:47
+Each of those four servers has a collection of MCP tools.
+0:50
+For example, the Google Threat Intelligence MCP Server
+0:53
+has a Git Collection Report tool that takes a report idea
+0:56
+as an argument.
+0:58
+It returns the JSON for that report to the MCP client, which
+1:01
+then sends it to Gemini for interpretation.
+1:04
+The runbooks can help Gemini with that interpretation.
+1:07
+For example, they can provide a template
+1:09
+for how to show the collection to the user
+1:11
+or how to write them into a Markdown document.
+1:13
+You're essentially injecting these instructions
+1:15
+into the prompt that sent to Gemini
+1:18
+without having to type it every single time,
+1:19
+and without giving you and with giving you the opportunity
+1:23
+to iteratively improve on the instruction.
+1:25
+When I demonstrated this in client,
+1:27
+I compared it to the coding guidelines that are often
+1:29
+provided to AIs when working in an IDE.
+1:32
+You don't want to have to tell your client that you
+1:34
+follow the Google Style Guide for Python every time you generate
+1:37
+code.
+1:38
+So you use a rules file that has that instruction,
+1:40
+and it's always in context.
+1:43
+Those runbooks in Agent Development Kit
+1:45
+are a little different.
+1:46
+We still pass runbooks like in Rich Ioc to Gemini,
+1:49
+but we also take advantage of the agent in ADK.
+1:53
+To set this up, I defined the root agent
+1:55
+using the SOC Manager persona from the rules bank.
+1:58
+Then there are seven sub agents that align
+2:00
+with the other personas.
+2:02
+In this video, four of those agents are used,
+2:04
+CTI researcher, incident responder, and the Tier 1
+2:07
+and Tier 2 SOC analysts.
+2:09
+I can dive deeper into how a subset of the runbooks
+2:12
+is used for each of those sub agents and a later video.
+2:15
+For today, let's just watch how they pass control back and forth
+2:18
+as they work through the Incident Response Plan and encounter
+2:21
+steps that are their own specialization.
+2:25
+All right, I'm going to demo security operation center
+2:28
+runbooks running in application agent developer kit ADK.
+2:34
+So first, I'm going to start up ADK.
+2:41
+Bring that into the window here.
+2:44
+My agent is the security operation center manager.
+2:49
+And my prompt is execute the malware incident response
+2:52
+plan, IRP, runbook for case ID 2483.
+2:59
+All right, and we've got our first transfer to agent.
+3:02
+To, OK, SOC analyst Tier 1.
+3:05
+It's having trouble seeing that on the screen,
+3:07
+but there it is right there.
+3:08
+So first task is being delegated to SOC analyst Tier 1.
+3:12
+That analyst is an agent.
+3:15
+So the SOC manager is delegating to this agent,
+3:18
+and that agent is first getting case details.
+3:23
+And then we see case details voluited here.
+3:28
+Next task is get similar cases.
+3:32
+And this is interesting here.
+3:33
+It says, as per previous comment.
+3:36
+So I've executed this same incident response plan a few times.
+3:41
+And each time the agents leave comments on the case wall.
+3:47
+And in subsequent executions, they
+3:49
+are able to read those comments and then act on them.
+3:53
+So it contaminates the testing a little bit.
+3:55
+But it showcases an interesting feature.
+3:58
+All right, and next it looks like we're
+4:00
+going through enrichment for the various IOCs that were detected.
+4:05
+So for example, here's an IP address.
+4:12
+And I know that there are, yep, there are domains as well.
+4:15
+Superlist.top and superstarts.top.
+4:19
+So those are going out to the Google Thread Intelligence
+4:27
+MCP server, which exposes tools for doing research for those IOCs.
+4:35
+OK, and we have another transfer to agent here.
+4:38
+So this transfer to agent is now going
+4:40
+to the CTI researcher, which is another persona.
+4:44
+And that persona is, well, they all
+4:49
+have access to all of the MCP tools.
+4:51
+But through the persona definitions,
+4:54
+they're instructed to focus on different skill sets.
+5:00
+So CTI research, all squarely within the CTI researcher
+5:05
+persona.
+5:07
+So we're seeing some results now for MITRE attack techniques
+5:13
+associated with the malware.
+5:19
+This was determined to be Ursniff.
+5:23
+And OK, and we've pivoted there from now that we know some
+5:31
+of the techniques employed searching in the SIM
+5:35
+for evidence of those.
+5:37
+So if found there were no new process launch file creation
+5:43
+involving that hash.
+5:45
+And we are constraining that to the host in question.
+5:49
+And for the user in question.
+5:53
+And again, here is MCP tool use.
+5:55
+This is search security events.
+5:58
+OK, and now we're on to step eight, which
+6:00
+is synthesize and document.
+6:05
+It was assessed as a true positive.
+6:08
+And this is an Ursniff infection.
+6:17
+Step 10, malware triage for the hash.
+6:25
+OK, and we got another transfer to agent.
+6:28
+So the CTI researcher is transferring control
+6:33
+back to the SOC manager at this point.
+6:36
+And this is interesting.
+6:37
+They're kind of communicating with one another.
+6:40
+It says, thank you.
+6:41
+Sometimes calls out the agent name.
+6:44
+And then says it's its own next step.
+6:52
+And this is also interesting.
+6:55
+A lot of times when the manager is delegating work,
+6:59
+it will give instructions to the sub agents
+7:01
+to call back to me the manager for confirmation
+7:07
+or give me the report back or yield control back to me.
+7:12
+So we're running a different runbook at this point.
+7:15
+This is the basic endpoint triage isolation runbook.
+7:19
+And the IRP's reference individual runbooks.
+7:23
+And then those runbooks also themselves have common steps.
+7:26
+So there's a hierarchy of three.
+7:28
+There are the IRPs at the top and then the runbooks
+7:32
+and then common steps.
+7:34
+And they're kind of factored out
+7:36
+so that the common steps can be used by multiple runbooks.
+7:41
+And we're seeing search security events, again,
+7:43
+called by that runbook.
+7:48
+And here again, we see confirmed this
+7:51
+is a prior analysis and case comments.
+7:54
+And then it calls out the comment numbers.
+7:56
+Established that malware test win was infected with IRSNIF.
+8:01
+And here we go again, this is kind of some internal thinking.
+8:05
+I need to confirm with a SOC manager, you, whether network
+8:09
+isolation should be performed.
+8:11
+This will sometimes prompt back, oh, it is in fact,
+8:14
+prompting back to the user.
+8:15
+So I'm going to go ahead and type yes to attempt
+8:20
+to isolate the host malware test win.
+8:23
+Now I don't believe it's going to be able to do that
+8:25
+because I don't have EDR tools configured
+8:28
+for this test instance.
+8:31
+Yeah, as noted, the sensitive responder agent
+8:34
+does not have an integrated EDR tool.
+8:38
+Now handing back to the manager.
+8:41
+OK, yielding control back to the SOC manager
+8:43
+for next steps of the malware incident response plan.
+8:47
+OK, and now we're doing IOC containment.
+8:49
+So previously we were trying to contain the host.
+8:53
+And now with IOC containment, believe
+8:57
+that we were going to add the domain and the IP address
+9:01
+to reference lists, yep, the IP block list reference list
+9:07
+and the domain block list reference list
+9:11
+are going to be upended.
+9:14
+And you can see it found some previous comments
+9:17
+relating to those reference lists not being created.
+9:22
+This tool set does not currently have the ability
+9:25
+to create new reference lists.
+9:27
+So in previous runs I saw that that was a problem,
+9:30
+went behind the scenes and created them.
+9:33
+And it is thoughtfully attempting
+9:37
+to add to those lists, again, not just assuming
+9:40
+that it's going to fail again after reading the comments.
+9:45
+Step five, containment, add to the reference list.
+9:48
+And then here you see an MCP tool call.
+9:55
+And it was successful.
+9:56
+So we have appended to that reference list.
+10:00
+And next step, we're posting a case comment.
+10:04
+This is yet again another MCP tool.
+10:08
+And I'm very impressed with the way
+10:11
+that case comments are not only left,
+10:15
+but then used in subsequent analysis.
+10:18
+OK, we just did a similar action.
+10:20
+Previously, we were appending to reference list
+10:23
+for IP block list.
+10:24
+And now this is domain block list.
+10:26
+So all three of the IOCs that are associated with this
+10:29
+have now been contained and hand in control back to the manager.
+10:34
+There's some visualization of this handoff
+10:37
+between the various personas.
+10:41
+So there are seven subagents and the SOC manager in this.
+10:47
+And as I step through, here you can see a handoff
+10:50
+from the manager to one of the subagents.
+10:53
+So event three and to five is handoff
+10:58
+from manager to agent.
+11:01
+All right, this seems to be taking a little while.
+11:05
+So I'm going to pause here and come back
+11:10
+and show the final result for this.
+11:13
+All right, so in addition to the comments that were posted
+11:16
+to the cases, there's a report and markdown that's written
+11:22
+to Desk.
+11:22
+And this is a preview of that file.
+11:26
+So again, it's case 2483.
+11:29
+And we have an executive summary.
+11:32
+We've got a timeline of the incident as well as the steps
+11:36
+that were taken for it.
+11:38
+And you can see we've enumerated the IOCs that were captured,
+11:42
+the two domains and the host and the user associated
+11:46
+with that host, the actions that were taken, this IOC,
+11:50
+and these two domains were contained
+11:53
+by adding them to reference block lists, reference lists
+11:57
+that are block lists.
+12:00
+And this is, I think, the most interesting thing.
+12:03
+It's a little hard to see here.
+12:05
+So let's zoom way in to get the details on this.
+12:10
+So this workflow diagram shows that the user prompted
+12:14
+the SOC manager, which is the root agent,
+12:17
+the root agent delegated to SOC analyst here one.
+12:22
+And then we see function calls.
+12:24
+So the function call get case full details.
+12:26
+It goes to the SecOps SOAR MCP server.
+12:30
+That's the server and that's a tool that's associated with that.
+12:33
+And then even here are the parameters
+12:35
+that were sent to that function call.
+12:38
+So that, I think, is a really great demonstration
+12:42
+of the delegation going back and forth
+12:46
+between the various sub agents and the root agent,
+12:49
+the SOC manager, and the tool call.
+12:53
+So I hope that this has been a good demonstration
+12:55
+of the potential of runbooks in ADK and app agent development kit.
+13:03
+Bye.

@@ -1,1 +1,986 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Good afternoon, everyone.
+0:04
+Such an honor to be here, my big fan of sans cti summit.
+0:11
+Many thanks to organizers and it's great to be here.
+0:17
+Let's get started.
+0:20
+I would like to present today my research on contagious interview, North Korean state-sponsored
+0:26
+red actors who target developers by the software supply chain.
+0:34
+So we're not exactly close.
+0:37
+If you look at where we are today, Washington DC and Pyongyang, North Korea, there is
+0:47
+more than 6,800 miles.
+0:52
+That's how far apart we are.
+0:54
+And we are also apart by 14 hours time zone.
+1:00
+And yet North Korean threat actors manage to infiltrate software supply chains and get
+1:08
+into developer environments.
+1:13
+So today we'll take this journey from North Korea or officially democratic peoples republic
+1:21
+of Korea to the US and back.
+1:24
+We'll look at end-to-end adversarial trade craft.
+1:29
+We will see how threat actors weaponize open source.
+1:33
+We'll look at some lures, social engineering, how threat actors target developers and job
+1:41
+seekers.
+1:42
+We'll take a look at malware zoo and you will learn why I chose this term for.
+1:51
+A set of malware families that they use.
+1:54
+We'll look at the first, second, third stage malware and malware loaders.
+2:01
+And as much as possible, let's try to wear our red hunting hats today and look for opportunities
+2:09
+for detections, for building signatures, for spotting the adversary or looking at their
+2:16
+patterns.
+2:19
+We'll finish with some defense guidance and there will be some memes along the way.
+2:26
+So a quick refresher on contagious interview is this really an interview?
+2:34
+It really is.
+2:36
+It can come as a fake recruiter.
+2:39
+Outreach.
+2:40
+It could be fake.
+2:42
+Test assignments or take home exams.
+2:45
+So it really is an interview like scenario.
+2:49
+Is it really contagious?
+2:51
+Absolutely is.
+2:53
+The goal is to get targets to run code that's malware.
+2:59
+It's been around for a long time.
+3:01
+A first infrastructure was discovered in 2022.
+3:06
+First public report came out in November 2023 from our colleagues at Aloel to Unit 42,
+3:13
+those to the researchers.
+3:18
+What about that tribution?
+3:20
+Many leading security companies attribute this activity to North Korea as well as multiple
+3:29
+governments, including US government.
+3:33
+The scale of intrusion is really wide even though it's hard to put an exact number on
+3:41
+scale.
+3:42
+There are thousands of victims.
+3:43
+There are thousands of infected systems.
+3:48
+There are hundreds of malicious NPM packages.
+3:51
+There are tens of thousands of downloads.
+3:55
+So we consider this a prolific campaign.
+3:59
+It is very much alive and active today as we speak.
+4:05
+The scale of theft is hard to quantify.
+4:08
+We don't know the exact dollar amount for this specific operation contagious interview.
+4:15
+But we do know that last year North Korea's overall crypto theft was over $2.2 billion.
+4:25
+Contagious interview is part of this.
+4:28
+We don't have the exact number though.
+4:33
+The quick intro on who am I?
+4:36
+My name is Kiril Boichenko.
+4:38
+I'm a senior threat intelligence analyst at Socket.
+4:42
+Socket is a software supply chain security company.
+4:46
+I do what I love the most.
+4:48
+I have lots of fun.
+4:50
+I hunt in the interesting data sets.
+4:53
+I reverse malware.
+4:54
+I track adversarial activities.
+4:57
+So pretty much having fun every day.
+5:00
+It's a good place to be previously.
+5:03
+I worked in cybersecurity threat intelligence.
+5:08
+As well as malware analysis at recorded futures in SIG group and subgroup called armor.
+5:17
+And I'm also sans technologies to alum.
+5:20
+So for me, this is a special honor and privilege to be here and present sans CTI summit.
+5:27
+And big thanks and gratitude to educators and instructors at the sans technologies.
+5:37
+Seriously, thank you guys.
+5:42
+Before we dive deep, let's look at some of the highlights of this campaign.
+5:49
+So we have been tracking and I've been tracking contagious interview operation for a long
+5:55
+time.
+5:56
+We see this campaign as iterative and wave based.
+6:03
+It always escalates.
+6:05
+It publishes more packages.
+6:07
+The threat actors create more aliases.
+6:10
+They are very prolific.
+6:13
+We believe that they're well resourced.
+6:15
+They use different malware families and they just don't let go.
+6:20
+They just keep coming back.
+6:22
+You can see that there are waves of dozens and hundreds of malicious NPM packages.
+6:29
+I checked today and found live malicious NPM packages as of today.
+6:39
+And there are hundreds of them and there are hundreds of thousands of downloads of those
+6:43
+packages.
+6:44
+And I personally reported hundreds of malicious packages to the NPM security team.
+6:52
+Some of the ecosystems that we protect at socket, you can see here on screen.
+6:59
+We believe that contagious interview threat actors, they're most active and prolific on
+7:04
+NPM.
+7:06
+So you know, NPM is a large ecosystem.
+7:10
+It's for JavaScript types.
+7:12
+It's one of the largest ecosystems out there.
+7:16
+We know that contagious interview threat actors also infiltrate by PI for Python.
+7:24
+And as of recent, these code extensions and that ecosystem.
+7:30
+But we focus and I hunt and analyze all of these ecosystems that we protect at socket.
+7:39
+We have actions, creates for rust extensions for Chrome, open VSEX, new Git for that net.
+7:48
+Go modules, IPI Ruby, James, Ruby.
+7:51
+So all of them, it's a lot of fun to have this data set and to be able to hunt through
+8:00
+this data sets.
+8:03
+Let's talk a little bit about software supply chain, how we build software today and open
+8:12
+source.
+8:15
+We don't build software from scratch anymore.
+8:19
+Instead, we assemble.
+8:22
+We were gluing necessary pieces together.
+8:25
+It's like we're building a house with building blocks.
+8:29
+And that's the beauty and power of open source.
+8:34
+As software developers, we don't have to be experts in every single aspect of our application.
+8:42
+We can plug and play, we can build upon, we can borrow something.
+8:48
+And that's why open sources so vast and beautiful.
+8:53
+And it also means that thread actors understand that this is a good way for them to infiltrate
+9:02
+developer and corporate networks and developer environments.
+9:14
+There is a lot of open source in average modern application.
+9:19
+In 70, 90% open source, that's a lot.
+9:23
+Last time, if you guys can remember when you were building a tool and it was pulling libraries
+9:30
+or packages, do you always know what those packages are?
+9:38
+Do you know what those packages rely in their turn?
+9:42
+This is not a trivial task.
+9:44
+And open source components are present in almost all of our modern applications.
+9:53
+GitHub hosts over 400 million code repositories with over 100 million developers.
+10:02
+Open source ecosystems like NPM or JavaScript TypeScript,
+10:08
+IPI for Python have millions of packages with billions of downloads and that's monthly.
+10:15
+So these are large ecosystems that we depend on.
+10:19
+And those are programming languages that we need for so many different things.
+10:25
+And this is circling back to contagious interview.
+10:29
+This is why thread actors understand that infiltrating these ecosystems
+10:35
+will allow them to infiltrate users, corporate networks, conduct all sorts of theft and malicious activity.
+10:47
+So some of the broader landscape of malicious packages and things that I see in many of our investigations
+10:56
+is that thread actors will learn how packaged registries publish,
+11:02
+how they host and how they distribute packages.
+11:05
+So thread actors will try to exploit it, they'll try to weaponize it,
+11:11
+they'll try to understand how this delivery system works.
+11:17
+We see a lot of type of squatting.
+11:19
+Type of squatting is creating very similarly named packages that are not legitimate and not denying.
+11:30
+So we see a lot of type of squatting, not just an NPM, but in all ecosystems that we protect.
+11:38
+It's such a ubiquitous attack vector.
+11:45
+We see lots of upvuscation that makes our job harder, not impossible though.
+11:50
+We see multi-stage malware.
+11:52
+It's like this nesting doll matrioshka style when a loader pulls a second stage malware that malware in turn turns a third malware type.
+12:05
+We see a lot of that.
+12:06
+We see thread actors use automation and AI.
+12:10
+They do it for scripting, they do it for mass publishing, they do it for manipulating download counts.
+12:21
+They do it for upvuscation.
+12:24
+We see thread actors use legitimate tools and services, something that we trust.
+12:29
+And we certainly see that contagious interview thread actors, they don't just pick one adversarial method, they'll stack them.
+12:40
+And throughout this presentation, if you can remember all of these different adversarial methods, you will spot all of them as we go through this presentation.
+12:52
+So here's an example of legitimate package on NPM registry.
+12:59
+And here's an example of type of squatted package.
+13:02
+And I'm going back legitimate and here's type of squatted very similar.
+13:09
+So what thread actors will do, they will clone, read me, it will be similar style, very similar name.
+13:19
+But if we were to install this type of squatted malicious package, the malware will run and it will start the malware chain.
+13:30
+And this is not just the website UI, it is also autocomplete.
+13:37
+These are AI assisted recommendations.
+13:41
+So type of squads is something that we see a lot in contagious interview operation and the packages that they create to deliver and ultimately reach into developer environments.
+13:57
+This package here is one of the packages that contagious interview thread actors published.
+14:04
+So these campaigns come in waves, hundreds of packages.
+14:11
+Since our last report, which was in November, they just interview thread actors published over 400 more packages, then the thousands of downloads.
+14:24
+They also create hundreds of NPM aliases, they register hundreds of email addresses to create those NPM aliases.
+14:36
+And they just keep doing this.
+14:40
+It's very much think about this as an assembly model.
+14:46
+This is not this is not a hobby.
+14:48
+This is like en masse operation.
+14:54
+Some examples of legitimate versus type of squatted packages here on this slide, you can see different examples.
+15:02
+It's like a typo here and there, switch letters.
+15:06
+It's a digit instead of a letter or it's a suffix like API or logger.
+15:12
+And you can see the libraries that thread actors are type of squading.
+15:18
+Therefore, front end, back end and for web 3 and crypto applications, crypto libraries.
+15:25
+So they will go after this high value targets because this is all initially motivated.
+15:32
+They're looking for, they're looking to steal crypto assets.
+15:37
+My colleague Rachel Cook, you can see her on the slide.
+15:42
+She explained it better than I ever could.
+15:45
+Rachel knows how to explain delicate topics.
+15:50
+So she in her video, she talks about that finger syndrome.
+15:54
+You can find this video on her LinkedIn.
+15:57
+And she explains type of squading so well.
+16:00
+And it can happen really to anyone, right?
+16:03
+When developers are rushed or tired, or perhaps they get flawed recommendations from AI assistants from search engines.
+16:12
+It really, really such ubiquitous attack vector that we see across all ecosystems that we protect.
+16:25
+So we know that it's state sponsored.
+16:29
+We know that it's quote a driven think of this as a factory model.
+16:35
+This is not an evening crew.
+16:37
+No one is brainstorming here.
+16:39
+It's a massive operation.
+16:41
+It's well resourced.
+16:44
+And it's not going away anytime soon.
+16:48
+We see the threat actors infiltrate more ecosystems.
+16:52
+They're certainly very active with an NPM.
+16:58
+Here is a diamond model of intrusion analysis.
+17:01
+So we started talking about the adversary.
+17:05
+And we'll continue to do so.
+17:06
+Now let's turn to capability.
+17:09
+It's various loaders, malware families that threat actors use.
+17:14
+Here are some of them.
+17:16
+Beaver tail, auto-cooking, and invisible ferret.
+17:18
+I promise there will be malware zoom.
+17:20
+This is it.
+17:22
+Very cute animals.
+17:24
+But the behavior of these is not cute at all.
+17:30
+You don't want any of these on your system.
+17:32
+It will be a very bad day if any one of us will get one of these.
+17:39
+And we used to see beaver tail.
+17:44
+And here on this slide, you can see a package that will look
+17:49
+at previously the one that was a type of squad at package
+17:52
+published by North Korean threat actors.
+17:55
+And here you can see in the center highlighted
+17:58
+is a code that it doesn't make sense.
+18:03
+This is beaver tail.
+18:04
+This how it is in NPM package.
+18:08
+But it's up located.
+18:10
+So you can already see some random looking functions.
+18:15
+It's underscore 0x.
+18:18
+And here and again.
+18:21
+And what we can do is we can use, for example,
+18:27
+online de-upfuscator because that upfuscation is a well-known
+18:34
+upfuscator for JavaScript.
+18:36
+And it's available online.
+18:39
+And you can also de-upfuscate it online.
+18:42
+And so here on the left hand side, you can see the same blob
+18:45
+that we were looking at inside the package.
+18:47
+It's basically one very long JavaScript.
+18:53
+And it doesn't make much sense.
+18:55
+But then we de-upfuscate it.
+18:56
+And we see partially de-upfuscated code.
+18:59
+And we can already start making some sense of it.
+19:03
+At the top, we can see that it uses curl.
+19:06
+And then there is a numeric IP address.
+19:10
+And we see port 1224.
+19:13
+And we see path slash p down.
+19:17
+Remember wearing our thread hunting hats
+19:21
+and thinking about signatures and how to detect this.
+19:24
+We see this type of C2 pattern a lot.
+19:29
+We see these paths quite a bit.
+19:33
+Then lower in that same code on the right hand side,
+19:37
+we can see that it's staging an executable python.exe.
+19:43
+And then we see a numeric IP address.
+19:45
+Again, it's the same port 1224.
+19:48
+And the path there is client slash 9.09, which
+19:55
+is a way for thread actors and for the malware
+19:59
+campaign to keep track of infected machines.
+20:05
+Here is beaver tail de-upfuscated.
+20:08
+So we're peeling back the upfuscation.
+20:10
+We're seeing more.
+20:12
+At this point, beaver tail is modular.
+20:15
+There are many versions of it in this version.
+20:18
+And there are some fundamentals across most or all of the versions.
+20:22
+So it will steal from browser credentials.
+20:25
+At the top, you can see that it's targeting Chrome,
+20:28
+Brave Firefox.
+20:30
+In the middle, you can see that it's
+20:32
+stealing from Solana wallet, but it will steal
+20:35
+from dozen other wallets.
+20:39
+In the bottom, you can see that it
+20:41
+steals from macOS keychain.
+20:44
+There are some variations to it, but we
+20:46
+see this version a lot in our investigations.
+20:50
+And then in addition to all this info stealer functionality,
+20:55
+it will fetch a second stage payload, which is in many,
+21:01
+many cases, this invisible ferret backdoor.
+21:05
+Invisible ferret backdoor will do more theft.
+21:07
+It will establish command and control channel.
+21:11
+It will do remote tasking.
+21:13
+It is also modular.
+21:15
+So we see different versions of it.
+21:18
+We even see a version of invisible ferret that
+21:21
+will steal credit card data.
+21:25
+Here on this slide, you can see that the malicious code
+21:29
+is fetching second stage invisible ferret backdoor from IP address
+21:36
+on port 80.
+21:37
+And this is the downloading of invisible ferret.
+21:43
+It will pull the payload.
+21:46
+It will rename the payload.
+21:48
+And ultimately, it will run it.
+21:52
+So truly, truly a massive operation.
+21:58
+There are so many packages.
+22:01
+And it's not going away anytime soon.
+22:04
+So this is something that we continue to hunt and see on weekly basis.
+22:10
+So just for a moment, there are
+22:12
+weekly intrusions and infiltrations into the NPM ecosystem
+22:19
+by contagious interview threat actors,
+22:22
+like every single week, like clockwork.
+22:24
+Sometimes they imagine them going to a compound
+22:28
+or maybe it's an office building in North Korea,
+22:32
+or maybe China, or Russia, we know that their operatives
+22:35
+are working from there too.
+22:37
+And then they're creating these packages.
+22:41
+They're creating aliases.
+22:43
+We're talking about high numbers, right?
+22:46
+This is quite a mass effort there.
+22:53
+So once threat actors realize that we as defenders are onto them,
+22:58
+they started creating loaders with the only goal
+23:02
+to download the second stage malware.
+23:08
+And there are a number of loaders that they use today.
+23:12
+Some of the more popular ones on we call hex eval.
+23:18
+You can see a package on this slide.
+23:22
+And in the middle, you can see some hexadecimal values.
+23:27
+They don't make a lot of sense.
+23:30
+But then we transform hex to ASCII.
+23:35
+And we see some familiar JavaScript.
+23:37
+We see require XES post.
+23:40
+We see IP address from where second stage
+23:44
+and that's Bivertail is downloaded.
+23:49
+Another example of the loader is SOAR index loader.
+23:54
+Here you can see in the middle, there are chunks of code
+23:59
+that doesn't make any sense.
+24:03
+Those are arranged in index array.
+24:06
+And then XORN scrambled at runtime.
+24:12
+And then the second stage malware is pulled.
+24:16
+Here is XOR index loader deapplescated.
+24:19
+It will also collect telemetry.
+24:23
+It will do offensive recon.
+24:24
+So it will pull information about the system, about the user.
+24:28
+In many cases, this is to tailor second stage malware
+24:32
+according to the operating system.
+24:35
+Malware arsenal of contagious interview thread actors
+24:39
+is cross platform.
+24:41
+They have payloads for windows, macOS, macOS, and Linux.
+24:47
+So they're really prepared.
+24:49
+They've been doing this for years at this point.
+24:52
+They also use encrypted loaders.
+24:55
+So you can see here is a package where they use crypto
+25:02
+library.
+25:03
+And you can see there is a key provided, ID provided.
+25:07
+We can see the encryption algorithm, which is AES 256 mode
+25:13
+CBC.
+25:14
+And then elsewhere in the same package,
+25:18
+a file called license where usually we find licensing
+25:23
+information.
+25:23
+There is this long blob of hex.
+25:26
+That's cypher text.
+25:29
+So if we have all of this information inside the package,
+25:32
+we can easily decrypt it.
+25:33
+We can take it to cyber chef, for example.
+25:37
+The hex input is in the input pane.
+25:40
+We knew the key.
+25:41
+We knew IV.
+25:42
+We put it all there.
+25:43
+We provide the CBC mode.
+25:47
+And we hit bake.
+25:48
+And we get the output, which you guys may already
+25:51
+recognize from application that we've seen before.
+25:54
+This lower, this underscore 0X functions that don't make sense.
+26:00
+But we already know how to de-opt this K-bet.
+26:02
+And that turns to be a beaver tail malware.
+26:07
+So in this case, encryption is not for security or protection.
+26:12
+It is a way to obfuscate malicious functionality.
+26:17
+So moving on with the diamond model,
+26:22
+let's take a look at infrastructure.
+26:25
+And here is a great example to put the infrastructure feature
+26:30
+into perspective.
+26:32
+We were investigating malicious package tailwind magic.
+26:37
+We found that there was a link to a GitHub account there.
+26:44
+Not just us, a brilliant researcher, Kiran Miyamoto,
+26:50
+also found this link in the package.
+26:53
+We spoke and it confirmed our assumptions.
+26:57
+So we investigated that.
+27:00
+And we found the following infrastructure setup.
+27:05
+So the victim would install malicious package, which
+27:10
+would fetch payload from hard coded, their cell URL.
+27:15
+It would pull AutoCookie malware from GitHub repository.
+27:21
+The AutoCookie on the infected system
+27:23
+would establish by directional command and control channel
+27:28
+for remote asking for additional theft.
+27:31
+And that GitHub account was quite interesting
+27:37
+because it provided a good insight into threat actors operations.
+27:42
+There were 18 repositories.
+27:45
+You see on the bottom tailwind magic, also,
+27:48
+by the way, type was quoted because the real name
+27:51
+of a legitimate package is tailwind merge.
+27:55
+So tailwind magic here, malware loader.
+27:58
+Also, second from the top, you can see Tetris Mike.
+28:03
+And that was a part of a malware server setup, delivering
+28:07
+AutoCookie malware.
+28:09
+So analyzing all of the 18 repositories
+28:14
+in that GitHub account, we found all of them
+28:17
+to be supporting malicious operations
+28:20
+of contagious interview operators.
+28:23
+Not just malware, but also various lures
+28:27
+and repose that were designed for developers
+28:32
+to clone, run, and unfortunately,
+28:36
+used to infect them as a delivery mechanism.
+28:41
+AutoCookie that we discovered in that campaign,
+28:46
+you can see some of the functionality of the malware.
+28:49
+At this point, the lines are blurred
+28:52
+between AutoCookie and Bivertail.
+28:54
+They are becoming very similar.
+28:56
+Predactors innovate.
+28:57
+Please don't take them if there is a mass production going on
+29:03
+that they don't innovate and that this is all.
+29:06
+And then interesting, they continue
+29:08
+to change versions, update their code,
+29:13
+change versions of their malware samples.
+29:17
+But they use these families across many different campaigns.
+29:23
+Let's move on to the victim's feature of the diamond model.
+29:28
+And here, please keep an eye on lures
+29:32
+and how threat actors target developers and job seekers.
+29:39
+Here is a report from a developer who was targeted.
+29:44
+They were approached on LinkedIn with an assignment.
+29:49
+And they were asked to build something
+29:53
+using a fake recruiters code base.
+29:59
+The developer got suspicious.
+30:02
+They paused.
+30:03
+They ran the code inside a container.
+30:07
+And they traced the code to malicious NPM packages.
+30:12
+Four of them on the bottom that you can see.
+30:15
+All of those packages that we also investigated
+30:19
+and attribute them to contagious interview threat actors.
+30:24
+And here on LinkedIn, the threat actor
+30:27
+is not happy that the target ran the code inside a container.
+30:32
+They're trying to convince them to run the code on real system.
+30:37
+Here's another report from a victim
+30:40
+who got a request to clone and run code from Bitbucket.
+30:48
+The recruiter then disappeared.
+30:50
+Deleted their accounts, removed all the messages.
+30:54
+Someone else reporting on a very similar situation
+30:59
+when a fake recruiter approached them
+31:02
+claimed ties to university that couldn't be verified.
+31:07
+Here's an example of a cloud bucket.
+31:10
+Here's a Bitbucket and note the naming theme.
+31:15
+It's really themed as recruitment.
+31:19
+So there is IE work underscore higher.
+31:22
+We see a lot of that.
+31:24
+There is a malicious file iCloud-code
+31:28
+and also namesake malicious NPM package.
+31:32
+Here's an outreach by direct messaging on LinkedIn.
+31:39
+A fake recruiter is reaching out with a Google Doc.
+31:44
+And Google Docs look polished.
+31:48
+There are different positions.
+31:50
+The salary is lucrative.
+31:52
+It's between 200 and 300,000 US dollars annually.
+31:58
+And somewhere there in the document,
+32:01
+there are instructions for an NPM package.
+32:07
+You're linked to a code repository
+32:09
+in this as part of the social engineering
+32:13
+attack and a part of the malware chain.
+32:17
+Sometimes there are test requirements.
+32:19
+Similarly, well polished, they lead developers
+32:23
+to the repo, to clone and run,
+32:27
+and that's part of their malware chain.
+32:30
+Here's a victim is reporting about installing
+32:33
+an NPM package called ESLintDetector.
+32:38
+They also say that scammers looked really legitimate,
+32:41
+that they are still active on LinkedIn,
+32:43
+that their profiles, they look authentic,
+32:45
+that they have company pages.
+32:48
+And they believe that maybe ESLintDetector package
+32:51
+was not denied.
+32:53
+And it wasn't.
+32:55
+We know that this package was part of one of the waves
+33:00
+of contagious interview operation.
+33:03
+And take a look at the C2 endpoints.
+33:07
+Once again, there are some repeat patterns.
+33:09
+We see this 12th, 24th port.
+33:12
+We see P down, uploads, client.
+33:16
+These are some of the recurrent C2 patterns
+33:19
+that we observe in these attacks.
+33:22
+So at this point, we completed the diamond model.
+33:27
+Learned quite a few things about contagious
+33:29
+interview threat actors.
+33:31
+We know some of the hallmarks, right?
+33:33
+The use of fauve postcation.
+33:35
+We know that they're trying to infect cross platform
+33:41
+that they deploy same malware families,
+33:46
+although sometimes different modules and versions of them.
+33:50
+We see how similar script is.
+33:53
+We already identified some of the similar patterns
+33:57
+in their C2 mechanism.
+33:59
+And we understand that this is an iterative,
+34:03
+repeatable adversarial playbook.
+34:05
+They just keep doing these things
+34:09
+in certain patterns that we can spot.
+34:14
+So we'll learn about some threat hunting opportunities.
+34:18
+But let's keep an eye on all of these things.
+34:23
+The more the barrier, more red flags,
+34:25
+more interest we should take in this.
+34:28
+Defenses, if I had to tell you two things,
+34:31
+that and improve your packages and libraries
+34:35
+before you merge your code, deploy, dependency, firewall.
+34:41
+Feel good and kudos.
+34:42
+First is a developer spotted an infection
+34:45
+because of our report.
+34:46
+The second is 7-80th military intelligence brigade
+34:50
+to interest in our report.
+34:51
+And that's a great day.
+34:53
+We felt good about this.
+34:55
+In kudos to my team, Philip, Sarah,
+34:58
+Kush, Peter, and of course, Paras,
+35:00
+who are starting all of this adventures for us.
+35:03
+And thank you all for your interest
+35:05
+and attending this talk.
+35:07
+Thank you.
+35:08
+Thank you.

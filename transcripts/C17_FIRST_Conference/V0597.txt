@@ -1,1 +1,486 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hello everyone and welcome to our presentation. In this session we're going to talk a little
+0:09
+bit about an AOS security tool that we built and a lot about the methodology that we use
+0:16
+to get there. So who are we exactly? My name is Steve DeVero. I'm a senior security
+0:23
+engineer for AWS, specifically for the AWS security incident response service. My focus
+0:29
+is intelligence, threat research and incident response. Hello everyone. I'm Wamsik Krishna.
+0:36
+I work with Steve DeVero on the security incident response team in AWS. I'm a data scientist
+0:41
+and my work includes using ML and AI to extract useful insights and patterns from straight
+0:47
+data. Hi everyone. I'm Sydney Sude. I work on the customer incident response team as a security
+0:52
+engineer and I'm an incident responder and I focus on turning lessons learned from threat
+0:57
+research into actionable outcomes for AWS customers. Awesome. So what this presentation is about,
+1:04
+I spoke a little earlier about that and it's really to help everyone here gain from the lessons
+1:11
+that we learned and the mistakes that we made as we're building out this AI security tool. We're
+1:16
+going to some of the critical questions that we asked ourselves as we were building this out,
+1:22
+some of the decision criteria as we were integrating AI into our workflows. And so there's some really
+1:29
+interesting things that we found in the previous slide we talked about sorry in the previous session
+1:34
+presentation they talked about hybrid AI and we kind of found the same thing as well.
+1:39
+Before we do that though, let's kind of get a temperature of the room and have a poll about why
+1:45
+you're using AI at work. So feel free to click on the QR code and the possible options for that
+1:52
+question are I'm not using AI to generate code to create content because my boss told me to any of
+2:05
+those or other. And as we're waiting for those results I live in America now so I can't stand
+2:14
+silence I'll tell you a joke. Why did the how did the threat actor evade the senses? He ran somewhere.
+2:23
+Yeah I know that great. Good. I'm sorry you know I make good for the results it was a problem of the joke.
+2:34
+Okay great so what have we got? All right so it's looking like generating code and creating content
+2:41
+yeah and that's kind of what we found as well as we were going along this journey for creating this tool.
+2:57
+Okay so today at a high level we're going to talk about understanding the business
+3:02
+which forms a foundation of really all the automation opportunities that you have. We're going to
+3:07
+talk about consumer and creator personas the decision making criteria that we use when we actually
+3:12
+built a hybrid AI tool that implemented human logic and AI. We're going to talk about questions
+3:18
+that we face and lessons that we learned. So understanding the business we found that a prerequisite
+3:25
+to actually being able to automate anything was understanding what we actually did. We needed to
+3:31
+know the tasks that we were doing and we needed to know what was repetitive about those tasks where
+3:36
+were the inputs clearly or almost clearly defined and consistent and then where could we consistently
+3:42
+or somewhat consistently apply AI and logic to solve that problem. So we actually had this is a
+3:49
+leadership ask to be honest with you. We had leaders say we need to start implementing AI more
+3:53
+into our work and so what we did was operational discovery. We wrote down every week in our team
+3:58
+meeting what are we actually doing that's repetitive like just manually humans as what are we doing
+4:05
+and over time a trend surface in that document on what we could actually have opportunities to
+4:10
+automate. This became our automation roadmap and so people the questions that we asked are
+4:17
+why are we doing this work and do we need to do this work. There's an element of human judgment
+4:21
+that we could not replace for many tasks but when we asked this question some of those are parts
+4:26
+of those tasks could actually be replaced. The challenge that we faced was we didn't have enough
+4:32
+headcount to do the tasks that we needed to do. We needed threat analysts looking at incidents
+4:37
+and finding trends across this incidents. We didn't have enough people to do that so we lead into
+4:42
+a hybrid solution that ultimately helped us attack and solve this problem. So as a frame for
+4:50
+this conversation as well four types of AI use cases at a very high level content creation,
+4:55
+code generation, the conversational workflows and data analysis. This presentation focuses heavily
+5:02
+on data analysis. We're from security teams at AWS. We see security incidents on the customer side
+5:08
+at the shared responsibility model and so we're looking at data analysis and a little bit of code
+5:12
+generation. And when speaking about the journey from becoming a consumer to create a let's first
+5:21
+dive deep into what each of these mean. So using AI as a consumer we all consume AI. We all use
+5:27
+AI tools in our daily life for our productivity. Some of those cover what Sydney previously spoke
+5:33
+in the previous slide which is using chat, JPD or Claude to make your dinner reservations or
+5:39
+we all use code generation tools in our VS code. We all love web coding and we all use summarization
+5:44
+features to summarize a research paper for us and also we all use it for data analysis and many
+5:50
+other purposes in our daily life. So using AI as a consumer is asking a question and getting
+5:56
+something out of it and we going and doing something with that information versus creating AI
+6:01
+and build tools. Here is where things get creative. Here is where we embed AI into our daily
+6:07
+applications and we create pipelines, we create custom agents, we find our custom models and in my case
+6:13
+I create a custom AI models to improve thread coverage percentage and create live investigation
+6:19
+agents which have been very wonderful and very useful in helping our wonderful instant responders
+6:24
+to their daily jobs. And the main question is how do we bridge this gap, how do we go from using
+6:30
+AI as a consumer versus embedding AI into everything that we do today. And what are the questions
+6:37
+we need to ask ourselves and what are the measurements that we need to consider and I'm going to walk
+6:42
+through all of this with an example. So here is a case study for tool that we actually built
+6:48
+which is a thread data extraction tool. So what this tool aims to do is that as an input it gets
+6:54
+logs, log data from actual security case and then it aims to extract useful thread information
+7:00
+like IP addresses, skill chains, your summaries and etc. And we employed a hybrid method to do this.
+7:07
+A hybrid method consists of a block where you do traditional programming and you use AI
+7:12
+and top of it to enhance what you achieved using the traditional programming. So let's dive deep
+7:17
+into that. The first block is the deterministic logic layer. So here is where a traditional python
+7:24
+recursive DFS code is used in our tool specifically to kind of take in the input of raw logs and then
+7:32
+separate out threat actor activity from it. So what the output is the output is threat actor activity
+7:39
+cloud rail logs. And then out of this activity we have an enhancement layer which takes in the
+7:45
+CSV data and creates your kill chains and summaries and other stuff that I'm going to dive deep into.
+7:51
+And just like any other application we need strong validation for this hybrid approach as well.
+7:57
+So our validation mechanism included a few custom validation models and also human in the loop.
+8:05
+And let's dive deep into the thread data types. Yeah, so I'm going to talk specifically about
+8:11
+the thread data that we were ingesting into the tool. Who here is familiar with AWS Cloud
+8:17
+Trail logs? Anyone? Okay, great. Awesome. So for those that aren't Cloud Trail log is an event record
+8:26
+for an action performed in an AWS account. And that action can be performed by a legitimate user,
+8:31
+owner of the account, or in the case of the account is compromised a threat actor. So for example,
+8:38
+here in the log record, file image, you can see the event name is create user. And so one of the
+8:46
+problems that we had was identifying first of all whether that action was performed legitimately
+8:52
+or by a threat actor. And we eventually were able to determine that it was performed by a threat actor.
+8:59
+But there's a lot of information there as well on that screen. So you have the event name create
+9:04
+user, but you also have the IP address and also some request parameters and the request parameters.
+9:11
+Bumps you will go into that a little bit later. They can contain resource names or fields
+9:18
+created by the user. So for example, with this specific event name create user, the user could be
+9:25
+hacker 123 or just administrator or something like that. But that's important to note because
+9:32
+this is the threat data that we're capturing. And so we're capturing this, this gets logs for every
+9:36
+single action on the control plane in an AWS account. And there are like thousands, hundreds of
+9:43
+thousands, millions of those depending on how long the account has been up and what's happening in
+9:47
+the account. So that's yeah, that's the threat. And then so we have this threat data. What do we
+9:54
+actually do with it though? How do we make it mean something to people? So we identified that
+9:58
+there was a gap where we had data. We didn't have a way to talk about that data and categorize it
+10:03
+into common trends. And so we created the threat technique catalog for AWS, which is an extension of
+10:08
+the MITRE attack framework. You can see the orange boxes. Those are AWS specific IDs. That's AWS
+10:14
+specific content. And we've actually written based off of observations of what we see in threat
+10:19
+actors do during security incidents. So you can find this by searching threat technique catalog for AWS,
+10:25
+little recap of how we got here. So we have threat data, the basic building blocks of what surface
+10:29
+this. And then up next, we're going to talk about the AI enhancement layer and the tool we actually
+10:33
+built. So with that context of cloud trail data and threat technique catalog, let's dive deep into
+10:40
+the AI enhancement layer that we spoke about a couple of slides ago. So the deterministic layer gave
+10:46
+us an output of threat actor only cloud trail logs activity. And now what AI enhancement layer aims to
+10:52
+do is to build a set of kill chains on top of that. As we all know, kill chains are defined as a
+10:57
+sequence of actions that has a threat actor performed. And to do that, first, we converted the CSV data
+11:04
+form to a graph. Because in a graph, we can easily separate out the threat actor activity.
+11:10
+And then it'll be easy to trace the root cause. So after we convert the data set from CSV to a graph,
+11:16
+what we did is we traversed before traversing what we did was to classify each API call by using
+11:23
+threat technique catalog. So each node that you see there represents an API call that has been
+11:28
+classified using TTC. And the classifications are initial access discovery impact and etc. So in
+11:34
+that example, the first node that you see in yellow is an initial axis. And the last one that you see
+11:38
+is an impact action. So now we traverse every impact action back to its initial axis to know
+11:45
+how the threat actor performed something from the beginning like console login. So we traverse these
+11:50
+multiple parts and we have this multiple sequences of actions. But we can't call them kill chains yet
+11:56
+because there's a lot of noise. There's a lot of binaing activities in between. We need a way to
+12:01
+filter through all of these and solidify our findings. To do this, we used the power of embeddings.
+12:06
+We embedded each API call and then we kind of compare the similarity of that embedding to the
+12:14
+impact action to let us know if that particular API call is important or not. If that is not
+12:20
+important, let's say that's like a read only action. That's a binaing action. There's no place for
+12:24
+it to be in the kill chain. So we just remove it using this context. So after we do this pruning
+12:30
+and we do a set of semantic ranking because we have the context now and we rank these
+12:34
+kill chains in order of importance. And then only then we use an LLM to generate and pick the
+12:41
+set of kill chains for us. So as you see, we did not give the LLM a power to pick kill chains from
+12:46
+the set of logs. We did a thorough processing and then used LLM only on a defined set of kill chains.
+12:54
+So just like with any other tool, we have validate kill chains as well. And the way we do it is we
+12:59
+generate a summary just based on the kill chains and we compare it to the summary which we have at
+13:04
+hand which is like the case summary or the summary extracted from the case ticket and etc. And this
+13:10
+will let us know how good the kill chains are and let us know the quality.
+13:16
+So results, let's look at how this tool changed a previously very manual, very tedious process
+13:23
+where a responder or someone used to manually do all this log analysis and the correlation ability
+13:31
+which is correlating common patterns across the cases was very limited because it was manual.
+13:37
+But with the usage of our tool, we are able to now process huge files as an example you see
+13:43
+990 million records in under 20 minutes or 25 minutes. And we are searching across billions of
+13:49
+actions across hundreds and thousands of cases to find what's common between the security cases.
+13:54
+And we've been successful in finding a few patterns that are common across the cases and we
+13:59
+don't deepen to it. We've got to know that there was common's detector behind those security
+14:04
+cases. So how cool is that? Yeah, I wanted to talk about that a little bit as well. So we're
+14:09
+interesting for this iteration of the tool like CloudTrial logs. But you can use this methodology
+14:16
+to have any type of log ingestion in your environment as long as you know what you're looking for
+14:20
+specifically in terms of threat data, you can use that with this methodology.
+14:27
+And the measurements that matter. Think of this as questions that you ask yourself to decide
+14:33
+whether to use AI or not. Let's dive into what these are. The criticality of output.
+14:38
+How important is the output to the downstream processes? Let's say you gave the AI model to
+14:44
+the power to generate a number for you or a score for you. And based on that score, let's say
+14:48
+allow them is triggered. You probably might not want to do that directly. You might want to use
+14:53
+a traditional regression model or a deterministic model to do that because AI's output as you know
+14:59
+is non-deterministic and can vary and this could trigger a lot of noise in the downstream applications.
+15:05
+And who or what is affected? As I said, downstream applications, if it is critical, better use
+15:11
+a deterministic model. And also accuracy versus throughput. Sometimes we all ask this question whether
+15:17
+the speed of output is important or is accuracy very important. Sometimes AI struggles to
+15:24
+generate accurate output as a human word. So let's keep that in mind before we choose an AI
+15:30
+solution. And also what are the acceptable error rates? Like if there's a margin of error that we
+15:34
+can allow, definitely use AI to get a creative answer and also consider volume of inputs.
+15:40
+And systems and permissions as well. So when architecting a solution like this,
+15:45
+a really intelligent in general, if the tool itself were to have some kind of unauthorized access,
+15:51
+what kind of scope systems permissions does that tool have access to? What changes would that
+15:56
+tool be able to make if any? Sometimes there's a legitimate use case to be able to put files
+16:00
+somewhere, right? So just having a model and doing that threat modeling on what the systems and
+16:05
+permissions at that tool is actually touching. And here are some of the challenges we faced while
+16:12
+developing this application. The first is speed versus accuracy, like the point that every
+16:17
+free touch upon in the previous slide. So AI can produce quicker results or hybrid AI can produce
+16:22
+quicker results, but it often struggles to generate an output that's as accurate as a human.
+16:28
+So that is something we had to consider and find to not model to suit a human level alignment.
+16:34
+And also the ground root data sets. So before we got access to a live case data, we had used
+16:39
+simulated or redeemed data sets. But the problem that we observed was the data sets were too
+16:44
+carefully crafted to suit a particular type of an attack and this did not prepare the model to
+16:49
+face the messy reality of a data set that we see in production. So the model was too perfect and
+16:55
+it was not able to differentiate between noise and what's actually, you know, what's actually
+17:02
+interested. So that was something to consider. And data privacy as well. So we had the
+17:08
+face questions around what kind of data are we handling, how are we protecting this data and
+17:12
+ensuring that we're not using any actual customer content in our process. So there were some
+17:17
+constraints that we worked through there and it was truly a balance between how can we improve
+17:22
+the model but also make sure that we're doing the best and most accurate data privacy as possible.
+17:27
+So for trust and scale, two lessons. We found that loss of trust was actually loss of use,
+17:38
+which actually is loss of value. We actually had an incident responder say, if I can't trust this,
+17:43
+why should I use it? Why? This doesn't add any value to me because I have to actually check it
+17:48
+after I use this. So what we found was that when we enabled incident responders with knowledge,
+17:53
+specifically what the inputs were and how the tool actually worked with the logic was at a very
+17:59
+high level, they were more likely to be able to make a judgment call on the output when they're
+18:03
+actually applying it during incidents and using it after the fact as well. And the second lesson is
+18:10
+that POC is not equal to production. Everything works great in the POC, right? You manage in a small
+18:15
+scale, the inputs are defined, the outputs are defined. You are the only user running it on a local host.
+18:20
+You know what the expectations are, but when you try to scale it, it often doesn't scale as
+18:26
+linearly when it comes to AI models, specifically because they have set throughput because if you give
+18:32
+it 1000 requests per second, it might not be able to handle because you don't have as many service
+18:36
+deployed. So you need to be careful about the infrastructure and the scale of the product from
+18:42
+the D1 and design your prototypes appropriately. And other lessons learned between cost and
+18:50
+hybrid solutions. token use is kind of pretty expensive and that might be expensive for you,
+18:55
+your company, I mean not a few or a thread actor obviously you can go steal tokens, but using AI
+19:02
+without actually fine tuning it does cost a lot of money. And so what we found was a hybrid
+19:08
+approach was actually better for us. So a lot of the deterministic things that VAMShi spoke about
+19:14
+earlier. Also we noticed that there were some downstream effects. If we identified going back to
+19:23
+the CloudTrail event record earlier, if we identified that that specific CloudTrail event was
+19:29
+authorized and then we earlier iterations of the solution found out that it wasn't authorized,
+19:36
+then there's like massive downstream effects like we wouldn't get the right
+19:40
+privilege escalation methods or kill chains. So we were very specific about what we wanted to know
+19:47
+100% and be pure about in terms of that versus giving it to AI to tell us. So yeah, definitely
+19:53
+cost and hybrid solutions are an important lesson that we learned. Yeah. And so some more questions
+19:59
+that we asked ourselves throughout the lifecycle. So when does it need to be human versus when does
+20:05
+it need to be automation? What is that critical judgment call that judgment point and that often
+20:09
+changes, right? Okay. Accuracy requirements as well. So how are we validating the outputs of
+20:18
+our AI? Do we have a validation strategy and we have we actually defined what accurate is? We
+20:24
+need to know what those requirements are before we actually architect the tool or at least during
+20:28
+the testing and development of the tool. And finally security implications. So more threat modeling,
+20:35
+what did we, what is the security implications on our attack surface because of this tool? Does
+20:40
+it update our attack surface? Does it diminish? Does it add to our attack surface? What is there
+20:45
+anything publicly accessible? If not, what about privately? What if the tool was used in an authorized
+20:50
+way? What are the security implications of that? All right. So just wrapping up some key takeaways.
+20:58
+First of all, you know, AI is a tool in a similar way that a calculator was a tool and a computer was
+21:05
+a tool back in the day. You know, we're going to make use of it. It hasn't quite replaced this
+21:10
+just yet. But the ones that are at the forefront of that are using it as much as they can.
+21:16
+So you want to understand your business before automating it. And that's pretty key because we're
+21:24
+doing this not for fun, we're trying to get the most value out of it and you'll do that if you
+21:28
+understand your business first. Candidates are repetitive tasks, things that you do automatically.
+21:36
+And I want to caveat that with even though it's repetitive, you want to make sure that the
+21:40
+output that you use is your confident in. And so again, talking about the hybrid approach,
+21:47
+using that deterministic layer was very key for us. You want to build your trust frameworks
+21:53
+up front because how can you trust something, how can you use something if you don't trust it?
+21:58
+And Sydney alluded to that earlier about Responder is not using it. They trust it now because there's
+22:03
+a different version of what we use. But definitely build that into your calculus. And plan for
+22:11
+production scale from the beginning. You may not need to implement it, just be aware of it and
+22:16
+consider that in your design as you're building out your solution.
+22:21
+Lastly, consider cost implications of scale as well. And that's another addition to
+22:27
+planning as you're building out. Awesome. And yeah, time for Q&A and let's continue the conversation.
+22:37
+We have about five minutes.
+22:46
+Thank you very much. Indeed, we have around five minutes, so any questions?
+22:58
+Thank you for the talk. One question is like maybe I'm not clear about it. The 25 minutes
+23:11
+with the 990 million lines, was it like one AI agent on its own or AI with human? I didn't
+23:20
+understand it, to be honest. Yeah, so the tool that we built is basically it was one model.
+23:28
+We didn't use an agent. It was just a security tool that used AI and we combined that with
+23:34
+deterministic layer on top of that. And we used that to analyze a massive log file and it was
+23:42
+like almost a billion rows. And typically we would take an instant responder weeks or months to do
+23:47
+that. And we did it in 25 minutes. We were able to get a lot of output. I generated output
+23:54
+combined with that deterministic layer. To add to that, the deterministic layer had parallel
+24:00
+processing which which parallely processed the whole file in a deterministic DFS wave. So it's
+24:05
+way faster than AI agent or LLM looking at all those 990 million records one by one.
+24:10
+Right. Okay, so it was because also on the slide before you wrote something like you have a
+24:15
+live incident response assistant, was it than this? It was a different agent. We just used
+24:21
+it for example. Okay, okay, okay. Thank you. Yeah, great. Thanks.
+24:27
+Thank you. And was there any other question? Any hands?
+24:32
+If not, we'll be around. Come find us out in the break or on LinkedIn and we're happy to talk and
+24:38
+answer questions. Thank you. Thank you. Thank you very much.

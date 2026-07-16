@@ -1,8 +1,906 @@
-[NO TRANSCRIPT AVAILABLE]
-Provider: local_asr_whisper
-Reason: no_local_audio
-CaptionFlag(contentDetails.caption): false
-Notes:
-- API key-only access cannot download transcripts for channels you do not control.
-- Official captions download requires OAuth authorization for that video/channel.
-- Local ASR requires local audio files you provide (named <video_id>.<ext>).
+0:00
+Hello listeners and welcome to this edition of our RSA C webcast series.
+0:05
+Thanks for tuning in. I'm your host, Hattiana Sanchez.
+0:09
+Today we're really excited to be joined by Derek Melber as he discusses active direct
+0:13
+research certificate services known as ADCS, the common attack factors and path around
+0:19
+it, and provide insight on how to secure your ADCS.
+0:23
+And now I would like to pass it over to our guest so he can formally introduce himself
+0:27
+before he gets started. Derek, over to you.
+0:30
+Hi, Tatianna, before I start, oh, there we go.
+0:32
+Okay, I see the screen share now. Okay. Hi everyone.
+0:35
+Derek Melber here. It is an absolute pleasure to be here.
+0:40
+And I think I have a pretty good topic for you today.
+0:46
+In the active directory world, ADCS has really floated to the top as a very high breach
+0:53
+factor. So what I've done today is I've put together some information about really
+1:00
+blue teamers, how they can go in and follow recommendations and alerts to fix things related
+1:09
+to their ADCS environment. So it's going to be a very interactive time together. And
+1:17
+we're going to be jumping in between different interfaces and different environments because
+1:22
+I really want to make this as action oriented as possible for you so that when we're done,
+1:28
+you know, exactly what you can do around ADCS to secure your environments. So I'm actually
+1:35
+going to, for now, jump off camera and I'm going to share my screen so that we can get
+1:41
+started with our event. So obviously we're going to be talking about escalation paths.
+1:51
+There's been a ton of research around us and the research has really given us insights into
+1:58
+first of all the complexity of trying to figure out if you are exploitable, but also giving us
+2:07
+very clear direction on how to secure these environments. So this is a disclaimer about the
+2:15
+event. So please go through that. And this is a little bit more in depth about me. I have been
+2:23
+a Microsoft MVP for 23 years. I just received my 21st MVP in July. I was very proud of that.
+2:33
+I've also written some books. I pulled a couple out of the shelf here to give you a picture you
+2:39
+can see here. The one in the background is the Securing Windows Server 2003, which may or may
+2:46
+not be on anyone's desk. But my claim to fame is my resource kit, my Windows Group Policy Resource Kit,
+2:55
+from Microsoft Press. Some of you may actually have this book. This is kind of my crescendo of
+3:02
+writing books. Hopefully I don't have to write anymore. I also have had the opportunity to
+3:08
+travel the world. I've spoken in over 35 countries. The one thing I can tell you is active directories
+3:16
+at the same, no matter where you go. It's the same problems, the same issues, the same everything.
+3:22
+So everyone around the world, and I know that there are some people in different countries on
+3:27
+this broadcast, dealing with AD is something that we all do. I just joined GuidePoint about six months
+3:36
+ago. So GuidePoint Security. And I'm spearheading all of our active directory security initiatives.
+3:44
+So we do assessments as well as we do engineering around consolidations, migrations, anything that
+3:51
+someone needs around active directory moving into IntraID and hybrid as well. This is my email.
+3:58
+Please use me as a resource. It's kind of my addition to the community. I'm on LinkedIn. There's
+4:06
+my LinkedIn. I try desperately to help the community as much as possible around active directory.
+4:12
+So connect with me and I'm prolific on LinkedIn trying to share as much information as possible.
+4:20
+So what is on our agenda today? Well, first of all, we're going to talk a little bit about the
+4:25
+basics of the ADCS architecture. Then we're going to actually go through the different escalation
+4:32
+paths and the attack vectors around that. This is extremely important because it's not always
+4:41
+very simplistic or straightforward what the escalation path is. So we kind of need to break it
+4:47
+down and understand where these different escalation paths exist. And we'll talk about where you can
+4:54
+actually go in and secure these settings. Then we'll talk about some detection and mitigation strategies.
+5:02
+I will review some free tools. We will also be looking at some free tools as we go through
+5:09
+the session. And then I'll give you some overall hardening recommendations so that we have
+5:15
+everything organized at the end so you know exactly what to do. So let's first of all talk about
+5:21
+the architecture. And this is extremely important because many of the escalation paths do require that
+5:28
+certain certificate authorities are in place. So the traditional architecture of a CA is you have
+5:36
+the root certificate authority. And within Active Directory you can only have one per the entire
+5:43
+forest. So it's not like you could have a multitude of these, let's say per domain or anything like
+5:47
+that. You basically have one Active Directory certificate service and then of course one root
+5:56
+per forest. Then you have the enterprise certificate authority which is your issuing CA.
+6:03
+And then you have something called the NTI store. Now what this does is this lists all of the
+6:09
+enterprise CA's that can authenticate an Active Directory. So it's kind of I wouldn't call it
+6:15
+DNS but it's kind of your central list of all of your enterprise CA's which of course you can have
+6:20
+multiple enterprise CA's but you definitely have one root. Now again I go over this because some
+6:28
+of the escalation paths that we're going to look at actually require a structure to be in place
+6:34
+because it has to move through the structure in order to basically take over the environment.
+6:41
+Now we also need to talk about some of the different details around certificates. So first of all we
+6:48
+have certificate templates. The certificate templates, nothing you need to download.
+6:54
+They actually come along with ADCS. We'll go in and look at this in just a minute.
+7:00
+Each certificate template has a variety of configurations. Now what we're going to see is that
+7:07
+certificate templates actually are versioned. So there's different versions. Older versions have
+7:13
+fewer configurations. Newer versions have more configurations. But some of the more important
+7:19
+configurations that you're going to be dealing with, one is called an EKU, an enhanced key usage.
+7:27
+Now what you see here is it has different ways and purposes that it can be used for. White
+7:33
+client authentication, PKNET, client authentication, smart card. There's an any purpose. So there's
+7:42
+many different EKU configurations. There's also issuance requirements for the certificate to be issued.
+7:51
+So this is an area where you're going to see over and over again in the escalation paths that if
+7:57
+this isn't set up properly, it could actually lead an attacker to allow for an escalation through ADCS.
+8:06
+Then we have different flags that are set up. You'll see here that this particular flag
+8:13
+being rolling flag. You can enroll as anyone. You have no password needed. Those are configurations
+8:20
+that are typically exploitable. So when we start moving through this, it's important to understand
+8:27
+different configurations. And when you look at an escalation path, you kind of have to understand
+8:33
+where to go to make these configurations. So what I want to do now is I want to give you a little
+8:39
+bit of a tour. And I want to give you a tour of the different areas within the interface that you're
+8:47
+going to have to go based on the recommendations of these solutions that tell you that you have
+8:55
+an escalation path. So first and foremost, what we're going to do is we're going to jump into an
+9:01
+active directory environment. Now, once in the active directory environment, I'm actually going
+9:09
+to come down here and I'm going to go to my certificate authority. Now, what you see here is
+9:17
+the basic certificate authority. Mine's not very big. It's just kind of a demo. And you'll see that
+9:24
+we have certificate templates here. So the certificate templates are going to list here for me
+9:31
+hopefully. And the certificate templates, these are the ones that are brought into the environment.
+9:39
+Now, what I mean by that is if I go to certificate templates and I select manage,
+9:46
+you're actually going to see all of the certificate templates. So this is an important
+9:52
+deviation because what we're going to see is depending on where you are, you're going to have different
+9:59
+configurations of the certificate templates, the environment, and these details that I'm talking
+10:07
+about. So let's walk through some different areas where you're going to have to go to look at
+10:11
+configurations. First, I'm going to go to issued certificates. And you'll see that I have certificates
+10:17
+here for domain controller exchange and then CEP encryption. So if I go to this one, you'll notice
+10:24
+that I can open it. And I have some different configurations here that as we go through the
+10:31
+recommendations, you're going to see that you have to come in here to look at them. So this is an
+10:36
+issued certificate. If I look at the details, you can see information about the version,
+10:43
+when it was applied, here you have enhanced key usage. So some of these settings are here
+10:50
+that we have already talked about that you may have to come in and then you have the certificate path.
+10:56
+So that's one area that you're going to have to come in and be responsible for knowing how to
+11:01
+get there. Now, another one is actually at the certificates templates that are in the environment.
+11:09
+So if I select one of these, let's pick on this CEP encryption and I go to properties,
+11:14
+you're going to see that here isn't very much in order to configure. But depending on the
+11:21
+certificate template, you might actually have different properties. So be aware of that.
+11:27
+Now, as I said before, if we go under our certificate templates manage, we're going to see the
+11:33
+full list of certificate templates. And if I pick on one here, that's a version one,
+11:40
+we're going to see that under properties, it only has a couple of tabs. But each of the tabs
+11:47
+give you the ability to make configurations. Here you'll see that you have this
+11:52
+EKU configuration. You also have security. So under security, this is where you define
+12:00
+the groups. Let's not put users here, right? We never want to put a user on an access control list.
+12:05
+But you'll notice that permissioning is very important for these exploits. And sometimes when
+12:11
+the permissions are incorrect, you may have to come into here and look at those. Now, if maybe we go to
+12:18
+level two or version two certificate, you'll see that I have some additional tabs here.
+12:27
+And so now I have different configurations, different requirements. Here you'll see manager approval,
+12:34
+you'll see authorizations. So a lot of the things I've already mentioned are going to be listed here.
+12:40
+Right? We have the different configurations here. And again, security. Now, let me jump down here to
+12:47
+a version four. Version four has even more configurations. So keep in mind, depending on the type
+12:57
+of certificate template that you're looking at, you're going to have a variety of different configurations.
+13:03
+I truly feel that this is kind of where some of the confusion comes in around how to correctly
+13:10
+configure ADCS and the templates as well as the issued certificates. Now, we're not done. We've kind
+13:19
+of done a tour of the certificate authority, but we also may have to go into adc edit.
+13:28
+Right? We don't do this very often, but most of us have been in adc edit. So we go to the configuration
+13:35
+partition and then down under your services, you have public key services. And notice here you have
+13:43
+your certificate templates configurations. So if I click on one here and I go to properties,
+13:51
+you'll notice that I have the actual attributes of the certificate here. What you will notice is as we
+14:00
+start going through the recommendations on how to secure them, you're going to have to go to a variety
+14:07
+of places. And it's going to clearly tell you where to go. You just have to be aware that, you know,
+14:13
+security, you know, we've seen the security tab now three or four times. You have different security
+14:19
+tabs based on where you are in the environment. Okay, let's get out of adc edit. And then if I go back
+14:29
+and look at the list, you'll notice that we also have PowerShell. Not every configuration is in
+14:36
+a GUI. So you may have to run some PowerShell commands in order to make the modifications either to
+14:42
+the CA, the certificate templates, the public certificates, or even the attributes for the certificate
+14:51
+template that's located in adc edit. And then even beyond that, you may have to run various commands
+15:00
+in order to configure the environment to secure it. So there's a lot of different moving parts
+15:05
+around ADCS and when you want to secure these certificates. Now let's talk about the common
+15:12
+attack vectors and escalation paths. So what we're going to go through here is we're going to go through
+15:17
+some details related to these escalations. And I want to show you how complex it can be in order
+15:26
+to figure it out if you actually have an issue. And then what some of the free solutions give you
+15:34
+around guiding you through the fixes. So let's just talk about escalation one. Okay, this is related
+15:41
+to a misconfigured certificate template. Right? Pretty basic. And notice you have to have a
+15:47
+root CA that must exist. Right? You have enrollment CA trusted for this NTF. So remember I was going
+15:56
+through the structure. And so these are requirements in order for escalation one in order to exist.
+16:05
+Okay? Now an existing template is published to the enrollment CA. Right? So this is that chain.
+16:12
+And we have that published certificate. Right? Now the issues on the template are there's no manager
+16:21
+approval. There's no authorized signature. So remember I just showed you that in the interface.
+16:28
+It allows the enrollee to supply a subject alternative name. Right? The subject alternative name
+16:34
+is going to come up quite a few times. And then it has an EKU which allows for authentication in the
+16:41
+forest. So with all of this configuration. Now the attacker can take advantage of this configuration.
+16:52
+Okay? In order for you to see this and compile all this analysis. This would be very difficult to do
+17:01
+that. Right? Because it not only is the template. You'll notice here a principal, right? An object,
+17:07
+user or group has enroll rights on the existing template and enroll rights in the enrollment CA.
+17:16
+So with all of these things in place. This is something that can be exploited. Now as we get
+17:24
+towards the end of our session, I'm going to be talking about some red team tools, attacker type
+17:29
+tools that can actually see this type of information just with a command. But there's also some
+17:37
+tools that can help you see this information. I would consider them more purple team type tools.
+17:43
+Let's go look at one now. So I'm going to come in here to my bloodhound environment. And this bloodhound
+17:51
+environment has already evaluated the active directory ADCS environment. And you'll notice here that
+17:59
+it has some information about tier zero. But we're not going to go into the background of bloodhound.
+18:04
+But what I want to show you is there is an ADCS escalation one flag. Okay? Now let's break down
+18:15
+how you can see this inside of a tool like this. I'm going to come down here to the details and
+18:22
+we're going to explore this particular escalation. Now you'll notice here, right? First of all,
+18:30
+this is the escalation path. So if we start breaking this down, you're going to see that the escalation
+18:37
+path starts with authenticated users. That's never good. Then it moves through different parts of
+18:45
+the environment. Right? So I have a user. I have another user. I have a escalation smart card.
+18:55
+And then I have some different parts. And at the end, what this is able to grant me access to.
+19:02
+Right? Oops. If I go over here is to the domain. So this basically is telling me that I can start
+19:08
+without the any Katie users, which everyone is part of maneuver through these objects and certificates.
+19:15
+And in the end, I can take over the domain. This is extremely difficult to see in the environment.
+19:23
+Right? So what Bloodhound is showing you here is you actually have the ability to look at the details
+19:33
+of the different aspects. Right? So each of these points in which you can hop through. Bloodhound
+19:44
+is showing you the details, the certificate chain. It's showing you any type of detail helping you
+19:50
+understand that particular object or hop. Right? And then over towards the end. Right? So here's
+20:00
+the certificate. And it tells me details about, you know, what's going on and the specifics around this.
+20:09
+So what Bloodhound or another tool like this is showing you is the path that an attacker can take to
+20:17
+move through the environment. Obviously, the attacker has the ability to run this solution depending
+20:26
+on the access that they have in the environment. Then they can follow the path that is given to them
+20:33
+through different tools. But what I want to show you is not the attack path itself as much as
+20:42
+how in the world do you remediate this? Inside of some of these solutions, you have the full blown
+20:50
+ability to look at how you can remediate this. I think it's clear that the complexity here is pretty
+21:00
+high. So how would you know where to go in the environment to actually secure this? Well, this is
+21:07
+where the recommended remediations and the steps come in. Right? So here you can see it's giving me
+21:13
+information telling me just kind of what I did for you, the composition of the certificate or the object.
+21:21
+Right? Giving you all these details, telling you, walking you through this. Then this kind of walks
+21:29
+you through and says, Hey, let me ask you some questions. Is there to certificate template and use?
+21:34
+Right? If so, you need to use this remediation. Which principles are enrolled? Use this remediation.
+21:42
+Now, those words help, but where do I go in the environment to actually remediate this?
+21:50
+Not all of us are ADCS gurus, right? We may be responsible for ADCS, but we're just kind of keeping
+21:57
+it afloat. So what this provides is now a detailed step by step of how you can actually
+22:09
+secure your environment. Notice that it's showing you to go into the security templates and manage
+22:16
+where I showed you before. It then tells you go under the security tab and make sure that certain
+22:21
+things are configured. It tells you to go in in certain other areas, right? It's walking you through
+22:27
+step by step on how to secure this. So the first remediation is actually in the certificate authority,
+22:35
+the certificate manage, right? It's a security tab. Here, it's now sending you to adc.edit,
+22:41
+which is why I was telling you to go to adc.edit, telling you to go to a specific attribute and configure that.
+22:51
+And now it's telling you exactly what to configure it for. So with a solution like this,
+22:59
+you have direct information about how and where to go and remediate all of the different issues
+23:08
+that you have, which this particular solution found for you. And you can see here that now I'm
+23:17
+having to go into different tabs. I'm having to go into different locations in order to do that.
+23:24
+So I wanted to show you this not only from what I showed you where to go, but this is clearly
+23:31
+giving you that direction and different tools. We're back in adc.edit to fix another area.
+23:38
+We're having to set specific settings like this one right here specifically is setting different
+23:43
+EKUs. Here's manager approval. And this is a pretty lengthy one because remember, if I jump now
+23:54
+back into my slide, it has multiple configurations on the template, which are in question. So it's
+24:01
+walking you through all of these different areas. Now I'm going to give the folks at Spectorops
+24:08
+a lot of credit for breaking this down. The Spectorops folks have done so much research on these
+24:17
+escalation paths, giving you this detail and exactly how to go and configure and clean up these
+24:24
+environments. So this is just escalation one. Misconfigured certificate templates. If I look at escalation
+24:34
+two, it's also misconfigured certificate templates, but it basically has the EKU set to any purpose,
+24:44
+or there's no EKU at all. So again, each of the escalation paths has a different misconfiguration,
+24:54
+whether it be for a template, an issued cert, or the actual CYA itself. Escalation three,
+25:03
+right, is a misconfigured enrollment agent template. So as you notice, there's no issue
+25:10
+requirements, which of course sounds bad, right. The certificate request agent is the EKU,
+25:16
+EKU, right, and there's no enrollment agent restrictions. So if this were to be found in the
+25:23
+environment, you could go through the steps on exactly how to remediate this type of issue.
+25:31
+The next escalation four, right, is a vulnerable certificate template access control. So this one
+25:39
+is really about security. This one basically says, all right, I've given too many permissions,
+25:45
+and it's very similar to what we have with an active directory. It's called shadow admins, right.
+25:51
+If I have shadow admins and active directory, that means that I've given a user that's really not
+25:57
+an admin, too much privilege within the active directory environment. It's very similar here,
+26:04
+it just happens to be within ADCS and a certificate template. The next one is related to this attribute,
+26:12
+right. And so this attribute, if this is flagged, you would have to go in and configure it to make
+26:20
+sure that it meets certain requirements. Escalation seven has a vulnerable certificate authority access
+26:28
+control. Again, this is more related to security, but you'll notice it's different permissions that
+26:35
+can be abused. So each of these allow a different in-road into that. Now notice that I went from
+26:42
+escalation one, two, three, four to six, and now seven. I skipped over five on purpose. We're
+26:49
+going to come back to five. So if you're thinking what happened to escalation five, we're going to
+26:54
+come back to that one. That one's a pretty important one. Escalation eight is related to NTLM, right.
+27:02
+Now NTLM of course is back in active directory, right. Kind of a history lesson or reminder within
+27:10
+active directory, there are four authentication protocols. There's land manager. There's NTLM version one.
+27:20
+There's NTLM version two. And then there's Kerberos. This one is basically saying that NTLM is
+27:29
+still allowed in active directory, which for all of us that are AD admins, we know that by default,
+27:36
+Microsoft is allowing land manager and NTLM, but we can get rid of it. We want to hopefully get rid of it.
+27:42
+And in the next escalation, I'm going to show you some ways to do that. But this one is an NTLM
+27:49
+authentication relay attack. So if you have NTLM in the environment, most pen testers will tell you
+27:56
+that they're going to go directly after NTLM to try to get move laterally and gain privileges
+28:02
+within active directory. So this is a pretty important one when it comes to not only ADCS,
+28:08
+but also it's relying on NTLM authentication within active directory.
+28:14
+Next is another NTLM relay, right. And this one actually has a couple of different cases. You'll
+28:21
+notice that this one has Kerberos authentication set to a certain level, right. It allows
+28:28
+weak certificate to account mapping. And then the case two has a different configuration
+28:35
+and it's set to this. So let's talk a little bit about NTLM within active directory and what
+28:42
+you're going to do to get rid of that. So I'm going to jump back to my active directory environment.
+28:49
+And I'm going to come over here to group policy. So within group policy, you have different
+28:56
+configurations. You've had them for a long time, some of the settings, but you have some newer
+29:01
+settings that I want to point out to you. So I'm just going to open up a GPO, right. All GPOs have
+29:07
+the exact same settings. So within my GPOs, I'm going to come down here to my computer configuration,
+29:15
+policies, my Windows settings, my security settings, my local policies, and then my security options.
+29:24
+So it's kind of hidden down here. But if I scroll down about halfway or a little bit more,
+29:32
+you're going to see that I have some controls around NTLM. So right here, I have Land Manager
+29:40
+authentication level. This setting has been here for a very long time. Also, I have Land Manager
+29:48
+hash value. Now, you will see that this hash value is actually configured. This is a default setting
+29:54
+of enabled. So does that mean that it's allowing the hash value? Well, we all know within group policy,
+30:02
+you have to worry about the double negatives. So this says, do not store the hash, and that's enabled.
+30:10
+So this is important. And I highly recommend that you not disable this in your environments. We want
+30:19
+to ensure that we're not storing the Land Manager hash. It will work fine. I've never seen this
+30:25
+cause an issue in any active directory environment. And that's probably why Microsoft actually set it
+30:31
+to enabled around. I think it was 2008. One of the service packs is when they actually set this
+30:37
+to enabled. Now, the one that's actually really important is this Land Manager authentication level.
+30:44
+So what are the options here? Well, the options here are actually pretty
+30:51
+plentiful, right? So we have six different options. What I can tell you is the first four options
+31:03
+are related to the client requesting. It is not
+31:09
+the domain controller responding. Okay? I know the language here looks like that, but I'm telling you
+31:18
+that the first four settings, right? These first four settings here are really related to the client.
+31:25
+So these settings aren't really what we want to focus on. We want to focus on these last two.
+31:31
+And notice the last two say refuse. So if you can figure out your environment,
+31:43
+you can actually get rid of Land Manager and NTLM. Most organizations can't just come in here and say
+31:50
+refuse Land Manager and NTLM because we have legacy applications and legacy services that are
+31:57
+relying on these authentication protocols. How can you discover if you're using NTLM? Well,
+32:09
+there's a couple of different options. I'm going to throw out some different solutions to you. One,
+32:13
+you can actually just set up auditing, right? So if I scale back out of here, you'll see here the audit
+32:20
+policy and the advanced audit policy. Either one of these allow you on a domain controller to track
+32:27
+authentications. Within the details of that, you can see which authentication protocol is being used.
+32:35
+Now, for some of you, this might be an easy task, right? Let's say I have less than 250 clients,
+32:42
+workstations, and maybe I have a couple of domain controllers. But for larger organizations,
+32:47
+that's just not feasible, right? So there are some different solutions out there that can help you
+32:53
+actually see and it analyzes for you in a much better way whether or not you have NTLM, right?
+33:02
+Now, I'm going to throw out some different tools just because I've seen them and I know that
+33:07
+they're good tools. There may be other tools as well. But you just need to make the decision for
+33:13
+yourself. So Manage Engine has a tool called AD audit plus that can help you with this. And SilverFort
+33:20
+also has a tool that can help you track down these different tools or these different authentication
+33:28
+protocols. Now, I also want to show you back in the GPO what Microsoft has done around this.
+33:34
+You'll notice here that I have some restrictions of NTLM and some of them say audit. What this will
+33:41
+do is this will not stop the NTLM traffic. It will just flag it as if it would have been stopped
+33:49
+and it will tell you in a special log in the event viewer if you had NTLM traffic that would have
+33:55
+been stopped by you actually basically denying the traffic. Okay? This is very powerful because now you
+34:06
+have the ability to track at the the detailed level this type of information. So I encourage you to
+34:13
+come in here, start looking at some of these settings around NTLM because they can really help
+34:18
+you control your NTLM traffic. And of course it all comes back to potential exploits. And in this
+34:28
+case, this escalation 10 exploit which allows for an NTLM relay. Okay? Fantastic. Now escalation 9,
+34:38
+you'll notice I skipped 9 and I went to 10 while I'm back at 9. The reason is some of these actually
+34:44
+have really unique ways that they can be exploited. This one is was found to basically allow an
+34:58
+attacker to impersonate any principal in the forest. The attacker can extract the NT hash if any
+35:06
+user in the forest and the attacker never needs to interact with the actual target user. That is
+35:13
+pretty spectacular and amazing from an attacker standpoint. I mean, how would you even determine
+35:19
+that you are under attack with this? So some of these exploits are so unique that it's almost impossible
+35:29
+for your sim and your sock team to even notice the attack is going on. Now this one actually has
+35:36
+quite a few details around it. You'll notice that the root CA enrollment CA and existing template
+35:42
+needs to occur. But the template itself has some very unique configurations. So this is an area
+35:51
+where now you have to have the right tool to help you along with this. So what I want to do is I
+35:59
+want to jump into another tool that potentially you can use to determine this. Now this is a free
+36:08
+tool, right? Very similar to Bloodhound Community Edition that you can download and install and run
+36:14
+against Active Directory. And you'll notice that it also detects escalations. This is an escalation
+36:22
+eight, right? So it's telling you to the description around that. It's telling you the likelihood of
+36:28
+compromise. It's telling you which machine actually has this escalation. And then it's giving you
+36:35
+remediation steps. The reason I wanted to show you a different free solution is this is radically
+36:42
+different than the other solution that I showed you, which is the attack path to you. This one is
+36:48
+just analyzing the environment and giving you a description. And instead of giving you the detailed
+36:55
+remediation steps, it's sending you to basically a Microsoft knowledge base to walk you through those
+37:02
+remediation. So each tool has a little bit different view and what it's providing you to give you
+37:09
+the remediation. Now if I jump back into my first tool, right? And I come down here, you'll notice
+37:18
+that I do have an escalation nine and I have an escalation 10. If we go to escalation nine,
+37:25
+you're going to see that I still have the ability to hit explore, right? I still have the ability
+37:32
+to see the attack path. And then if I look at the actual template, it's giving me the details
+37:40
+around that template very similar to what we saw before. If I go back to the escalation,
+37:50
+you'll also notice that here I have the same detailed remediation.
+38:00
+But notice in this case, it's not a GUI based, right? I may have to go in and run certain queries
+38:08
+in order to see this in order to fix it. This one's telling me I have to run a PowerShell command
+38:17
+to make a configuration plans and path that force you to tour of the different CA properties,
+38:28
+management, and add C-Edit, and then PowerShell in order for you to go in and remediate some of these.
+38:35
+So this is just a totally different view of that. And you'll notice that here, it has found a variety
+38:42
+of different escalations, right? I have a one, I have a six, I have a nine, I have a 10, and these
+38:48
+escalations are very difficult to determine, right? And here's a scenario B for escalation 10.
+38:55
+So I don't feel that this is really something that a human could actually determine,
+39:06
+that there's an escalation path, unless it's one of the basic ones like two or three where there
+39:10
+is just a couple of configurations. In order for you to see all of these permutations,
+39:15
+you really need a tool to help you with that. Now, I've left for the crescendo of our escalation paths,
+39:21
+number five. The reason for number five is because of the work,
+39:28
+specter ops has done around this, right? You'll notice this scenario chart in the middle.
+39:35
+What escalation five is is a potential combination of privileges and configuration
+39:43
+that allow the attacker to create the environment for an escalation one attack, which is very unique.
+39:53
+This is so complicated. Specter ops spent so much time putting together these scenarios. And you'll
+40:01
+notice that each scenario has a different type of configuration that meets that criteria for that
+40:09
+scenario. Now, if we just look at one of them, this is what that path would look like inside
+40:18
+of an attack path tool. Now, I will also comment, hot off the presses this morning, Microsoft just released
+40:27
+attack path analysis inside of Azure AD. That's pretty awesome. So I want to throw that
+40:33
+out there that specter ops isn't the only attack path company, but they've done so much work on this.
+40:39
+I wanted to show you what they've done. Now, this is just one attack path through the environment.
+40:46
+Remember that chart that I just showed you here with regard to the permutations, right? This one.
+40:53
+Let's look at that graphically. This is that graphically. And you will see,
+40:59
+depending on the configuration that you have or multitude of configurations, it could potentially
+41:06
+open up all of these unique attack paths, which is why escalation five is really so important.
+41:16
+escalation five has many permutations to it, which make it pretty lethal and very difficult for
+41:23
+you to actually determine if there's an attack path. Now, escalation 11 through 16 are pretty new.
+41:34
+Most of the tools can't even detect this yet. They're still working on the analysis to be able
+41:40
+to detect if you have an escalation 11 through 16. So this concept around ADCS escalations
+41:51
+is constantly growing and constantly becoming an issue, which is why I really wanted to have this
+41:58
+session with you so that you could get on top of this. When I ask pen testers specifically,
+42:07
+if they've ever seen an ADCS environment that wasn't exploitable, the answer is no.
+42:14
+They always have some exploit in ADCS that's possible when ADCS is up and running. So I strongly
+42:23
+encourage you to walk through some of these scenarios so that you can secure your environment.
+42:29
+Now, what are some detection and analysis strategies? Well, first of all, you have a couple of
+42:36
+different tools. You have certify and you have certify. Both of these are typically used
+42:45
+to buy red teamers to try to find the escalation paths. You also have an ADCS template
+42:53
+PowerShell module, which allows you to enumerate and analyze templates and look at permissions.
+43:00
+So these are some free tools that you have at your disposal. You also have other free tools,
+43:07
+such as tools from Chaosoft, which give you a very lenient POC and they can discover
+43:14
+escalation paths one through eight. Chaosoft also provides other tools in their suite around AD,
+43:23
+which are pretty powerful, Simperous, which is Purple Night. I showed you that particular tool,
+43:30
+right? That's a free tool and that gives you the ability to see escalations one through eight.
+43:36
+They also have an attack path discovery tool called Force Druid. That is also free.
+43:42
+And they have a suite of tools, which are pay for, kind of like Chaosoft, which give you additional
+43:48
+areas around active directory. And then of course, what we've been focusing on primarily
+43:55
+is Bloodhound. There's Community Edition and the Full Blown Bloodhound Enterprise Edition,
+44:03
+which is possible. They look at escalations and I probably need to update this one through 10.
+44:11
+And they also have the ability to look at active directory indicators of exposure. So this is
+44:17
+some pretty awesome suite of tools that will help you not only with ADCS, but will help you with your
+44:23
+overall active directory security initiatives. So what are some mitigation and hardening strategies
+44:33
+that you can put into place? Well, I've kind of broken it down here into these different areas for
+44:39
+you, right? So first of all, remove unnecessary subject alternate name permissions. This is for
+44:46
+the certificate template itself, right? So as you go through your templates, make sure that all of
+44:52
+these are correct, right? Implement proper enrollment permissions, right? Remember we talked about
+44:58
+manager and multiple signatures. EKU restrictions, right? You can need to make sure that the key use
+45:07
+is proper and it's set to the right notations, right? And then you need to have the overall
+45:14
+approval workflows for the template put in place because otherwise the attacker can bypass
+45:19
+the workflow and they can just take advantage of the template. Next, we have the CA configuration
+45:27
+itself, right? Security around the CA. We talked about this this attribute in flag. We need to make
+45:35
+sure that the correct approvals are in place. We have permissioning and we have the audit policy
+45:41
+configuration to track the details around what's happening for your CA. And I showed you that audit
+45:48
+policy and the advanced audit policy, either one of those can be used. And if you have questions
+45:54
+about how to set those up, please email me and I'd be more than happy to give you the details on that
+46:00
+around the group policy settings. Next, we have the network security controls. First and foremost,
+46:07
+tearing, right? If you have tearing in place, right? Tears 0, tier 1 and tier 2, now you're actually
+46:16
+limiting the attack surface of the attacker even though you might have an exploitable configuration
+46:22
+in ADCS. Why? Well, now they can't exploit NTLM relay. They can't exploit credentials that are maybe
+46:31
+on a machine that an admin logged onto that shouldn't have logged onto, which rolls into lease
+46:37
+privilege, right? Make sure that your end users have lease privilege. Make sure your admins have
+46:43
+lease privilege, right? Let's use PAM solutions, right? Let's use PAM solutions. So your privilege access
+46:51
+management and your privileged identity management solutions are vital here to help reduce the attack
+46:57
+surface, right? Reduce the total number of administrators, right? One of the things that you'll also see
+47:03
+in Purple Night is it's going to flag privilege accounts for you. So not only is it helping you
+47:10
+secure ADCS, it's also going to point out where you have privileged accounts that maybe you didn't
+47:16
+even know about. Maybe shadow admins, maybe someone has privileges through user rights. All of these
+47:23
+things are extremely important for you to look at to reduce the overall attack surface. And then,
+47:28
+of course, we had a pretty lengthy discussion around NTLM. And if you have any additional questions
+47:34
+about that, please email me and I'd be happy to guide you through that as well. So what are the
+47:39
+key takeaways for today? First of all, the ADCS architecture is extremely important for many of these
+47:48
+escalations. Without the right structure, the attacker doesn't have the ability to use all of them.
+47:56
+I'm not saying break the architecture. I'm just saying be aware of the architecture that some of these require.
+48:03
+We looked at the common attack vectors and escalation paths. We looked at mitigation strategies
+48:10
+and free tools. Someone asked what are the recommended alternatives to the default
+48:15
+Intune Certificate template that uses subject alternative name, so as an considering we have NDE
+48:23
+as configured. We're looking for a secure and compatible template that supports device or
+48:28
+user authentication without relying on SAM, ideally aligning with Intune and NDE as deployment best practices.
+48:36
+That's a good one. I don't know the answer directly, but please send that to me in an email.
+48:45
+And I would be more than happy to help you track down the recommendations that is obviously a very
+48:50
+specific use case. It's also an Intune. And I will tell you that SpectorOps has some amazing videos
+49:01
+related to Intune configurations as well. So that's going to be the first place that I go to help you
+49:06
+with this to see if SpectorOps has any recommendations around that because they've been doing a ton of
+49:12
+research around that. I apologize, you don't know that off the top of my head, but I'll be more than happy
+49:16
+to help you. So email me and let's work on that together. Thank you. And the next question is
+49:22
+if you are standing up a new ADCS, are security faults in place?
+49:29
+So if you stand up a brand new ADCS, just like if you stand up a brand new active director
+49:34
+environment, you're not secure. So be very careful about the defaults with any, and I don't want to
+49:43
+kick Microsoft in the shins too hard, but with any Microsoft environment, most of the time, Microsoft
+49:50
+takes the approach of backward compatibility and ease of use versus security. They've done a great
+50:00
+job each year kind of changing that. But for example, to stand up a brand new active directory domain
+50:07
+controller, it supports land manager. So we need to be cautious about the defaults. And so when you
+50:12
+stand up a brand new ADCS and in the environment, I just showed you that was a brand new ADCS and
+50:18
+that purple night ran against it and I already had an escalation path. So that just tells you
+50:23
+immediately a brand new AD with brand new ADCS has escalation paths. So that's why I'm encouraging
+50:31
+everyone go run a tool against your environment, either one of the red team tools that I showed you,
+50:37
+you know, run bloodhound community addition, something so that you can see if you're exploitable.
+50:43
+Thank you, Derek. And just as a reminder, Trial listeners, that Derek did provide free tools.
+50:48
+So you guys can do this today. Next question for enrollment agents. Is it enough to have manager
+50:55
+approval and also do enrollment agent restrictions? Okay. So yes, for some of the escalation paths.
+51:05
+So if you have manager approval for some of your templates, but you have the other configurations
+51:11
+also set, that would be your EKU, that would be security configurations. So it can't be linear,
+51:20
+right? We're talking about a multitude of configurations, but certainly having the manager
+51:26
+approval is one of the most important settings or having multiple signatures. That is definitely
+51:31
+one of the recommendations that you're going to have for remediation, but that may not be the silver
+51:38
+bullet to fix that escalation path. Thank you. And last question. Is ADCS logging still disabled by default?
+51:48
+I don't know. I'm going to guess that it is. And the reason for that is Microsoft changes
+51:55
+auditing for every single operating system. And part of that is what the trend is. They're
+52:04
+saying in the field and what they kind of get complaints about with what's logging too much.
+52:09
+So for example, with an active directory, depending on the version of domain controller operating
+52:16
+system, you have different auditing set up in each version. So ADCS will be the same. So go in
+52:24
+and just verify if the auditing has turned on. And if not, be cautious because you could get too much
+52:33
+auditing to fill up your logs too quickly, or you could hammer the poor server if it's logging too much.
+52:42
+I'm just going to ask one more question because it came in. What would you recommend for ADCS logging?
+52:48
+Normally I turn off all the ADCS logging on. So in my opinion, your logging of ADCS is from
+53:01
+an attack standpoint. What I would do first and foremost is find out if you have an issue.
+53:10
+That way you now can go create a clean, secured ADCS environment and now you turn on auditing.
+53:19
+And I would only turn on auditing for what you're going to look at and what you consider to be
+53:27
+something that your SOC team is going to be aware of and you want to put into your SOC maybe with
+53:32
+some alerts. If you want some guidance around what that minimum would be and then maybe each level,
+53:39
+email me and I'd be more than happy to kind of give you some guidance on the actual auditing that
+53:44
+you should turn on from the very beginning to not overload your environment. But please,
+53:50
+make sure that you're secure because if you're not secure, auditing is just telling you that someone
+53:57
+broke in versus someone is trying to break in. So definitely secure your environment first.
+54:03
+Derek, thank you so much for being here today and presenting. And as you guys heard Derek
+54:10
+multiple times, he is here to help. So if you have any questions as well, please keep the conversation.
+54:15
+Go on questions and unlock valuable opportunities with our AI group discussion and our RSAC
+54:20
+membership platform by scanning this QR code. And please check one RSAC for new content posted
+54:26
+year round. Derek and listeners, thank you guys so much and until next time.

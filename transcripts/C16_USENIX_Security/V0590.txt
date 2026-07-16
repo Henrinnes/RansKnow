@@ -1,1 +1,476 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hey guys, this is Mayank.
+0:20
+Thanks for joining the talk.
+0:22
+I will talk about the journey of where we define the Ubers failover architecture during
+0:31
+in multi-regions.
+0:32
+We have multiple regions and we wanted to make sure that how do we failover from one
+0:37
+region to another region during the disaster or any other scenarios where we want to do.
+0:46
+So right now, I mean we will call it this is the words most expensive insurance policy.
+0:51
+We have around 6000 plus micro services.
+0:55
+We do around 62 trillion RPC per week across those micro services.
+1:02
+We have dual region active active.
+1:04
+I'm talking about our stateless or the serving infrastructure.
+1:09
+So we have dual region active active region where we have trips are served from both the
+1:14
+regions.
+1:16
+And that's 50% of the traffic almost 50% of the traffic goes into another region.
+1:21
+We have almost 4 million CPU cores globally from stateless services side or micro services
+1:28
+side.
+1:29
+And our utilization was not that good.
+1:32
+It was around 20%.
+1:34
+And pretty much half of this fleet sits idle because we want to be ready for the failover
+1:41
+from one region to another region at any time from reliability perspective.
+1:46
+So we have let's say we have this region A, this region B and we have multiple zones.
+1:52
+50% traffic is going in each region.
+1:54
+And then we move services from one region to another region.
+1:58
+Traffic from one region to another region if some region have a problem.
+2:03
+So basically we need to figure out what why we are actually getting this insurance form.
+2:09
+So we full peak failovers where we need to move all the cities to another region, all
+2:16
+that traffic to another region.
+2:17
+It's less than 20 hours per year.
+2:21
+And that is a declining trend because we are investing lot of in region reliability at
+2:26
+Uber.
+2:27
+So our trend is declining.
+2:30
+So we had 25 failovers in 2020 and we have 13 in 2023.
+2:37
+We have 5 in 2024.
+2:40
+So it's pretty much 0.23% the fraction of that year that justifies the doubling the entire
+2:48
+fleet.
+2:49
+Of course this is very important because we don't want to be down for a single second from
+2:54
+Uber's perspective but this is a huge insurance we need to buy in terms of further reliability.
+3:02
+So we wanted to make sure that how do we when we are redefining the whole failover architecture
+3:07
+how do we control this in terms of without compromising on the reliability to make sure that
+3:15
+we are efficient and reliable at the same time.
+3:21
+So we have two problems.
+3:22
+One is our utilization.
+3:24
+We have 20% utilization.
+3:26
+Ideal is 80% of the machines are pretty much not doing anything that used to the case.
+3:32
+And then there are another issue which is fail closed dependencies from important services
+3:37
+to a less important services.
+3:38
+So let's say we have some services which is serving the trips and some services which
+3:43
+is some dev services.
+3:45
+But people have these service graph where they have a fail closed dependency on each other
+3:51
+and that causes a non-important services if goes down your important services will go
+3:56
+down and you actually impact reliability.
+4:00
+So it's a shared root cause.
+4:01
+We say we need to have a SLA model which we used to have a SLA model which treats all
+4:09
+the microservices equally and there is no differentiation of the business criticality
+4:14
+and that was one of the things which we wanted to see if we can improve on.
+4:20
+So we started with this Uber's failover architecture.
+4:23
+It's one initiative and pretty much two goals.
+4:26
+One is reliability and the efficiency.
+4:29
+Reliability is because of these lower important services goes down because they are not as robust
+4:35
+as the trip serving services or higher reliability services.
+4:39
+They can go down very often and because of that your trip serving gets impacted.
+4:45
+So that is one of the challenges which we wanted to take.
+4:47
+And of course in doing this we want also wanted to make sure that our efficiency we are
+4:53
+not taking 2x the capacity for both the regions.
+4:57
+So our goal was we will move our 2x capacity to 1.3x and we improve our utilization from
+5:04
+20% to 30% and maintain 4-9 reliability for important services and 3-9-7 reliability
+5:13
+for less important services.
+5:16
+So that was our goal when we started this.
+5:21
+So we moved our services into multiple categories.
+5:29
+Our always on services which is T0 and T1.
+5:33
+They actually going to be always available even whatever one region goes down on another
+5:38
+region as we have today.
+5:40
+We tiered our tier 2 services which is less important than co-trips or flow services and
+5:48
+we will actively migrate from one space to another space in less than 10 minutes so that
+5:55
+we can still those services are not impacted in terms of reliability but they are moving
+6:02
+around across our clusters.
+6:04
+And then tier 3 to 5 we said these are our RT of 1 hour and we will bring them down and
+6:12
+then we will bring them up into another clusters within 1 hour.
+6:17
+And then there are some non-production services which we will say during the failover we will
+6:21
+not restore them at all and we will restore them once the ones over both the regions are
+6:27
+up and running.
+6:32
+So this is our UFA architecture where orchestrating how this orchestration happens.
+6:39
+We have something called outage mitigator, OMG.
+6:43
+Where what we do is we do as soon as there is a region failover happens, OMG figures
+6:49
+out okay this is a full peak failover.
+6:52
+We have to move all the services, we have to move all the cities from one region to another
+6:55
+region and then it starts moving cities.
+6:59
+In parallel in the region in the destination region it goes and start killing all the
+7:05
+non-production services and tier 3 to 5 services which is less important.
+7:10
+And it also starts to go and clear up the create new clusters for batch where the batch
+7:18
+services are running.
+7:19
+We kill them and then move all those active migrate services from the steady state clusters
+7:26
+to those batch clusters.
+7:28
+So this happens parallelly when we are actually migrating cities.
+7:31
+So these are like two parallel pipelines runs right where one pipeline actually goes and
+7:36
+then moving traffic from another region to this region.
+7:40
+And there is another pipeline which go and kill services migrate them into active migrate
+7:44
+or restore them later categories.
+7:48
+Also it moves the networking in terms of how do we migrate this when we are migrating
+7:56
+these services, how these networking should be set up in terms of to black hole the traffic
+8:02
+or in terms of move the traffic to another clusters etc.
+8:07
+So this happens like this is like a massive parallel orchestration which happens across
+8:13
+the over infrastructure to make sure we can do all these steps without having any impact
+8:20
+to the service reliability.
+8:27
+I try to put them into a sequence diagram where it says OMG detect speak failover, it locks
+8:34
+deployments, networking it will go and black hole all the traffic for tier 345 and non-production
+8:43
+services and then compute evict all the non-production services and tier 345.
+8:53
+And then it also goes in parallel goes and kill all the batch clusters within 8 minutes.
+9:00
+So this all happens within 5 to 8 minutes and we will talk about the timing in the next
+9:06
+few slides.
+9:08
+And then we have something called cracker which is like a build deployment system, a
+9:16
+deliver system where what it does is you have you can you distribute your builds across
+9:22
+the network through P to P. We need to make sure that these images are prefetched before
+9:32
+the services can because otherwise it will take hours to bring up the services right
+9:36
+we need to restore services within few minutes.
+9:40
+So we make sure that we have these prefetched images into the zones and the clusters so
+9:45
+that we don't take hours to bring up the whole infrastructure.
+9:50
+We bring up everything within few minutes and then we activate migrate services like
+9:55
+with the services for tier 2 which we talked about in the previous slide.
+9:59
+We also activate those services from steady state clusters to failover clusters to batch
+10:04
+clusters so that those the space will be emptied for important services because the
+10:12
+traffic is doubling for those services.
+10:15
+And everything get restored within an hour pretty much into in the conjunction of the
+10:21
+steady state clusters and the batch clusters.
+10:24
+And within that time all the cities also migrated so within one hour your system becomes
+10:30
+pretty much as a steady state cluster as it was before one hour right.
+10:35
+So everything gets restored within an hour.
+10:37
+The help we took the the machines we take it from actually from the batch clusters and
+10:43
+the batch services are down for the time when there is a failover.
+10:47
+And we always only kill lower tier batch which is very less important and they have like
+10:53
+48 to 72 hours SLAs.
+10:59
+So this is some picturization of how we do migrate the active always active services.
+11:08
+So what happens this is a you can see this you know steady state cluster the AO is always
+11:16
+on which actually a guaranteed resource.
+11:19
+And this AM and RLs are running on the shared or the borrowed resources from AO.
+11:27
+So AO is a tier 0 tier 1 services which is running and then they have the failover buffer
+11:32
+of 2x which actually in the steady state we use AM RL and AM and RL services to run right.
+11:42
+So they we go and play around with C groups we make sure that is our shares and limits
+11:50
+are set accordingly for each container.
+11:53
+And based on that we can get the borrowed resources from AO.
+11:57
+As soon as there is a failover happens the traffic doubles and when the traffic doubles
+12:03
+AO actually claim back all their shares right because this traffic is happening the utilization
+12:10
+increases for all the active on always on services and it claim back all the resource and
+12:15
+it happens within milliseconds.
+12:17
+So you don't impact any latencies or any error rates for the important services.
+12:23
+However we move AM and RL services.
+12:26
+So RL services will be completely down and we move AM services within a few minutes to
+12:32
+batch clusters so that if you see after the failover all the always on services occupies
+12:39
+all the space in the cluster and AM services goes run and RL services goes out and run
+12:45
+on to the batch clusters.
+12:52
+So another thing is we can bring down these services basically because we have confidence
+12:59
+that these lower tier services will not impact our higher tier or important services.
+13:06
+So what we do is we have like fail 400,000 plus fail closed violations which we go which
+13:12
+we actually fixed it.
+13:14
+We went ahead and looked at each and every RPC call path.
+13:18
+We saw if this RPC is going to impact is a fail close or fail open right.
+13:24
+If this RPC is a fail close and if it is doing if it is crossing a tier boundary we go
+13:31
+and fix that.
+13:33
+And by doing that we did this like runtime analysis which we did 3000 plus violations.
+13:39
+We call it dependency FX.
+13:40
+We rolled it out.
+13:42
+We did the static analysis.
+13:44
+We called it RPC shell which we actually before even go into the code deployment that RPC
+13:52
+shell go and detects it uses LLM to make sure that we do all the code analysis of the
+13:59
+all the code and see if this particular change or there is a fail close dependency between
+14:05
+the two services.
+14:07
+We fix them.
+14:10
+That is a snapshot right and then we need to make sure they are not regressed.
+14:16
+So we also deployed some we also developed something called canary regression gate.
+14:21
+Any deployment of any services goes through that gate in the deployment process and we go
+14:26
+and black hole all the RPCs from higher tier to lower tier for the services which are going
+14:33
+to be killed and make sure that any deployment does not get out of this gate until unless
+14:40
+that is tested and verified that there is no fail close dependencies.
+14:46
+So that is very important.
+14:47
+So we need to build these systems in terms of making sure you are not regressing from
+14:53
+the state.
+14:55
+And of course we have Janai mobile testing we call it drag on which goes look at all the
+15:01
+screens of the app.
+15:06
+So the app which you have we go run those user workflows through that and see if injecting
+15:12
+any failures to these services is causing any implications on the app.
+15:17
+So these are the four things which we do and we fixed all those 4,000 plus fail close
+15:23
+violations.
+15:24
+In 2025 we didn't have any fail close violation reliability issue.
+15:31
+So that means any higher tier service any tier service any important services like tier
+15:36
+01 does not brought down because of some tier 2, 3, 4, 5.
+15:41
+This is a huge win for us.
+15:42
+This used to be the issue where any tier 5 services goes down and tier 0 impacted.
+15:47
+We didn't have any zero it has a zero impact in production in 2025.
+15:54
+We ran a lot of production drills.
+15:56
+We ran a lot of peer hours.
+16:00
+We ran a lot of testing.
+16:02
+We have like 170 plus staging drills to make sure each and every part of the system works
+16:09
+before we deploy.
+16:10
+And we have this iterative approach of returning the course and end of it we return almost a
+16:16
+million course actually more than a million course when we finish the project last year.
+16:22
+Now let's talk about how we go into this real failover scenario.
+16:27
+So this is a real failover failover data.
+16:31
+The failover initiated at 815 and full capacity online was 822.
+16:37
+Within 7 minutes we were able to kill batch.
+16:41
+We were able to kill all the services and we started all the capacity and we started moving
+16:48
+the services.
+16:49
+If you look at this you can see within 10 within less than 20 minutes we were in the steady
+16:56
+state from a tier 2 services and tier 1 and 2 tier 0 and 1 and tier 3 services will be
+17:03
+actually almost around 30 minutes.
+17:06
+Mark we were all running.
+17:08
+This is the production data.
+17:10
+We were able to and of course always on services have no impact which we can see from this
+17:17
+graph.
+17:19
+Before they start of the failover and within the failover and after the failover you can
+17:23
+see there is no error rate changes in this graph.
+17:27
+This is top 100 cities across Uber.
+17:29
+This is the error rates across top 100 city of Uber and we see without before failover
+17:35
+and after failover and within failover there is no impact in the error rates which actually
+17:40
+shows that we fixed all the fail cause dependencies.
+17:43
+There is no regression to a tier 0 tier 1 services and there is no regression to the whole
+17:49
+infrastructure.
+17:54
+The utilization which is one of the goal we can see after we released all the 1 million
+17:58
+course our steady state utilization reached to 30 percent and after the failover it was
+18:05
+around 50 percent.
+18:08
+So pretty much we return 1.025 million course.
+18:12
+We moved our 2x to 1.3x.
+18:15
+Utilization increased 31 percent and our SLA for non-important services is 3.9s and 4.9s
+18:22
+for important services.
+18:24
+Pretty much lesson learned.
+18:26
+I mean you need to test.
+18:28
+You need to do lot of testing before you do.
+18:30
+Make sure each and every part of the infrastructure is tested.
+18:35
+We can run the drills and pretty much improve overall quality by doing all these fail
+18:42
+close fail open dependencies.
+18:46
+We still have new problems to tackle.
+18:50
+We can extend this to stateful services.
+18:52
+We can do elastic capacity.
+18:54
+Use elastic capacity more often than only in the failovers and we need to also do a trade
+19:00
+off between batch and real time.
+19:05
+Yes pretty much that is all from my side.
+19:09
+Reliability and efficiency are not at odds.
+19:11
+You can do achieve both which we could do it through this project.
+19:18
+Any question?

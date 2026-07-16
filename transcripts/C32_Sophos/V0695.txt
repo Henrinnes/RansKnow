@@ -1,1 +1,266 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hi everyone and welcome to our cyber short series of softwares.
+0:10
+LinkedIn live series with the goal to bring you insights on trending cyber security topics.
+0:15
+Later to research on the threat landscape and everything in between.
+0:18
+I'm Susie Evershed and I'm joined today by Morgan Dumbasski,
+0:22
+threat intelligence analyst at softwares. Thank you for joining us again, Morgan.
+0:26
+Thank you for having me. I'm very excited to be here.
+0:29
+And on your birthday.
+0:36
+So you've done a great piece of research for us, which we shared on our blog.
+0:39
+Before we get into the details of it, for anyone unfamiliar with QMU,
+0:45
+which apparently is how we say it, what is it and why is it all like this so attractive to attackers?
+0:51
+Yeah, that's a great place to start.
+0:54
+QMU, which I feel like I always want to pronounce it as chemo or something else,
+0:58
+but it stands for quick emulator.
+1:00
+And it's basically an open source machine emulator in virtualizer, which sounds very fancy,
+1:06
+but you can kind of just think of it as a tool that lets you run an entire operating system inside
+1:12
+another operating system or putting it in even simpler terms.
+1:16
+It's like a computer inside a computer.
+1:19
+So the core appeal really comes down to what virtualization does for an attacker.
+1:24
+So when you run a virtual machine or what we call a VM,
+1:30
+you're creating a completely self-contained environment.
+1:33
+So if you're an attacker who's managed to get onto a network and you want to operate without being seen,
+1:38
+spinning up a VM is essentially like pulling a cloak over everything that you're doing.
+1:43
+So your tools, your commands, your lateral movement.
+1:46
+None of it is directly visible to whatever endpoint security software is running on the machine
+1:52
+that you're sitting on. And on top of that, QMU specifically is a portable binary.
+1:57
+So that means that it doesn't require any installation.
+2:00
+They can just drop it and run it, which means that there's really no setup process that could
+2:05
+trigger an alert. So it's a pretty low friction way to create a very high value blind spot.
+2:12
+Yeah, absolutely. So with that blind spot, why can't endpoint security EDRC
+2:19
+what's happening and why should defenders care about attackers using VMs in this way?
+2:24
+Yeah, so the way that EDR works is it sits on the host operating system and it watches what's
+2:30
+happening there. You know, the process is running. The file is being touched. The network
+2:34
+connection is being made. So when a guest of VM is spun up from a host or EDR perspective, it just
+2:40
+sees one process, the QMU emulator, but has no visibility into what's actually running inside of it.
+2:48
+I kind of like to think of it as like having a security camera that only watches the front door
+2:53
+of a building, but the actual theft is happening in a completely hidden basement that the camera can't see.
+3:00
+But I think that the more important question for defenders specifically is what that actually means in
+3:05
+practice. You know, it isn't just about evading detection. I mean, that is a really big part of it
+3:10
+for attackers, but it's also about the capability that it can grant an attacker being able to sit inside
+3:16
+your network for possibly weeks or months completely undetected. I mean, they can take their time
+3:22
+doing reconnaissance and mapping your environment and identifying your most valuable systems. And
+3:28
+unfortunately, they can also stage everything that they would need for a ransomware deployment. All
+3:33
+while your EDR systems are reporting just no problems across the board. So that's the real danger
+3:39
+because in many cases, by the time that you know something is wrong, the attacker has likely already
+3:45
+done everything that they needed to do. Well, that's terrifying. Thank you.
+3:50
+This technique, you could play a decent veteran with machines as far as it's not new. It has been
+3:55
+documented before. So can you walk us through how the techniques evolved? And like, you know, touch on
+4:00
+maybe what other, I mean, there's a kind of worms here, but like maybe just touch on what other
+4:05
+vectorization tools have been abused along the way. Yeah, I mean, that's a great question. It's
+4:10
+really helpful to understand how this technique has evolved along the way to see why it has been
+4:17
+and has become such a persistent challenge. So like you said, while the concept of using virtual
+4:22
+machines for malicious purposes isn't entirely new, I think one of the cases that got a lot of
+4:28
+attention earlier on was Ragnar Locker back in 2020. So in that incident, you know, attackers didn't
+4:34
+just use existing virtualization software. They actually deployed a full Oracle VirtualBox
+4:41
+installer onto the victim machines, along with like a specially configured lightweight windows
+4:47
+virtual machine. And then they executed their ransomware entirely inside this guest VM. And it was,
+4:54
+it was clever and it worked. And by 2021, more ransomware groups were experimenting with these
+5:00
+VM-based tactics broadly. So we started to observe abuse of Microsoft's Hyper-V feature.
+5:08
+So attackers would enable it through PowerShell on compromise systems and create these hidden
+5:13
+virtual machines running, you know, lightweight Linux systems for command and control operations.
+5:19
+And, you know, we also saw VMware and ESXi hypervisors also becoming targets, particularly for
+5:26
+threat actors seeking to encrypt multiple virtual machines simultaneously from a single compromised
+5:34
+management interface. And now in 2025 and 2026, we're seeing QMU continuing to be abused in similar
+5:41
+ways. And the constant across all of these examples, whether it's virtual box, Hyper-V, VMware,
+5:51
+QMU, there's a lot is that attackers have recognized virtualization as a reliable method to create
+5:58
+a detection blind spot. So the specific platform that's being used, you know, kind of matters less
+6:03
+than the core principle because the goal is are always the same. It's getting into a layer that the
+6:09
+EDR protections like simply can't see. Okay, great. And think about the research, the blog itself.
+6:17
+If everyone's people go and read the in there, you describe two active campaigns that you've
+6:22
+tracked using this approach. Can you give us a top level view of what those campaigns tell us about
+6:27
+the different ways QMU is being used? Yeah. So, you know, what was interesting about tracking these
+6:34
+two campaigns is that they share the same core idea, which is using QMU to hide activity. But,
+6:39
+you know, the way they put it to work was quite different. So in one campaign, which we call stack
+6:45
+4713, which we've tied to, um, payouts, King, ransomware, they kind of use QMU for like a dual purpose.
+6:53
+So QMU, uh, they deploy it and it is hosting like an Alpine Linux VM disk image. And that disk
+7:01
+image contains their little attacker toolkit. So tools like Adaptix C2, which is a post-exploitation
+7:08
+framework that, you know, some probably could compare to Cobalt strike and other tools like open SSH,
+7:14
+which they then use to set up a covert reverse SSH backdoor. Or in other words, they basically
+7:20
+used it to create a secret remote access channel into the hidden VM while bypassing those endpoint
+7:28
+detections. And in contrast, the other campaign that we discussed in the blog, which is stack 3725,
+7:36
+they leverage QMU more as an active attack workstation. So in this campaign, the attackers very often
+7:43
+gain access by exploiting Citrix devices through Citrix Bleed 2 before, you know, along with other
+7:49
+activity deploying QMU, which is also hosting that Alpine Linux VM disk image. And they use it to
+7:56
+just manually compile and run their full attack suite inside the VM, including tools like
+8:02
+impact it, bloodhound and metasploit for things like credential theft and network reconnaissance.
+8:07
+And when you look at their trade craft as well, you can also see differences in their persistence
+8:14
+mechanisms and their execution. So stack 4713, they use a schedule task named TPM Profiler
+8:21
+to establish persistence and to launch QMU with these high level system privileges.
+8:27
+While stack 3725 ties its QMU execution to its screen connect persistence mechanisms. So how
+8:35
+they're setting these things up to run long term differs as well. So these variations kind of show
+8:41
+that attackers aren't just using QMU as a in the same way as a generic hiding place, they're tailoring
+8:46
+it to their specific operational needs, whether that's ransomware staging, tunneling or, you know,
+8:51
+actively compiling tools. Thank you. And just I'd like really quick kind of touch on that. I mean,
+8:57
+we describe them as campaigns. A campaign is, is that kind of just like one incident that we've tried?
+9:02
+Like can you just like very good. Yeah, that's a great question. No, it was a great question. It's
+9:08
+when we notice a continuing string of behaviors across multiple incidents. So certain behavioral
+9:16
+elements that are unique and we see, you know, replicated across multiple incidents is what we
+9:22
+track as a campaign. It differs a little bit from an intrusion set or threat actor where you can
+9:27
+usually tie it to a persona or an identity or a specific set of actors versus a campaign is just
+9:33
+a set of of TTPs or behaviors that we see continually being used. Thank you. So you have an
+9:42
+organization is only looking for traditional malware or suspicious processes. What warning signs
+9:47
+do you think they could easily overlook in this kind of attack? Quite a few, honestly. I mean,
+9:54
+if you're only hunting or looking for like known bad process names or signature based malware
+10:01
+detections, this technique is likely going to sell right past you. I mean, what you'd be missing
+10:06
+are things like a scheduled task with a totally innocuous sounding name. You know, I just mentioned
+10:11
+that scheduled task TPM profiler. That sounds like a legitimate Windows system task. You could also
+10:18
+be overlooking things like a large file sitting in unusual directory that's been disguised with,
+10:25
+you know, a DLL extension to look like a system file or you could be missing outbound SSH
+10:31
+connections coming from what appears to be a legitimate process. And none of these things necessarily
+10:36
+are going to light up a traditional AV or EDR alert. They require someone who's actively looking
+10:43
+and hunting for behavioral anomalies, you know, things that are technically allowed but just don't
+10:48
+make sense in the context of that environment. Excellent. Thank you. Stepping back from QMU specifically,
+10:55
+what's the big takeaway here for the security industry? Are there like implications for endpoint
+11:00
+detection, for example? Yeah, I think the honest takeaway is that in point detection alone is just
+11:09
+not enough, especially in cases like this. And I think this research really illustrates why.
+11:14
+You know, if an attacker can spin up a VM and operate entirely outside of the EDR's line of sight,
+11:21
+then no matter how good your endpoint tooling is, you have a blind spot. And the response to that
+11:26
+can't just be, you know, get a better EDR, get better endpoint detection. It has to be about
+11:32
+layering your detection. So combining that endpoint to limitory with things like network monitoring,
+11:38
+identity signals, cloud to limitory, and then using behavioral analytics to connect the dots
+11:44
+that no single one of those layers would catch on its own. And another point that I'll make is that
+11:51
+defenders also kind of need to establish baselines for what's normal in their environment because
+11:57
+every organization has a different network and different requirements and different things that
+12:00
+they need. Because I think both the presence of unexpected virtualization tool uses and the
+12:08
+absence of expected tooling can be significant. So for instance, like in environments where developers
+12:14
+regularly use QME for testing or IT staff routinely manage hyperv virtual machines, you know,
+12:22
+a sudden drop to zero activity in these tools could also indicate that security monitoring has
+12:27
+been tampered with or that legitimate administrators have been locked out or even that the attackers
+12:33
+have replaced those legitimate tools with malicious versions to, you know, avoid generating that
+12:38
+normal to limitory. So that kind of anomaly as well where, you know, your expected behavior disappears
+12:44
+or is tampered with can be just as important a single signal as like new suspicious behavior when
+12:50
+hunting for, you know, sophisticated types of defensive Asian. So the focus really has to come
+12:55
+like shift to what the attack looks like behaviorally not just where it's coming from.

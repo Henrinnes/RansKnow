@@ -1,1 +1,1556 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Always a fun one to talk about.
+0:01
+Let's talk about DLL sideloting and DLL hijacking,
+0:06
+which are not quite the same thing, but they're similar.
+0:09
+So I'm going to use my favorite metaphor
+0:12
+for DLL sideloting and DLL hijacking.
+0:14
+So DLL hijacking is like, you're going into a party,
+0:21
+let's say, you're trying to get into the party.
+0:24
+And you get there before somebody
+0:28
+who's officially on the list.
+0:30
+And you say that you're them before they can get there
+0:33
+and they let you in, right?
+0:35
+So you're kind of hijacking the list.
+0:38
+You're getting there first, you're getting in first
+0:40
+and you can do whatever you want.
+0:41
+DLL sideloting is more like you show up
+0:45
+with somebody who's on the list.
+0:47
+And they don't necessarily know you're there,
+0:49
+but they go into the party and you kind of follow a man
+0:52
+and you're like, I'm with them.
+0:54
+And once you're in, you're able to do whatever you like
+0:56
+in the party.
+0:58
+And this is really difficult because in this metaphor,
+1:01
+the people who are, they, they, you're on the list.
+1:04
+The people you came with are on the list.
+1:05
+So as far as the people hosting the party are concerned,
+1:08
+only the approved folks are in there,
+1:11
+but that's not the truth.
+1:13
+Something else is stuck in.
+1:15
+All right, it is one o'clock.
+1:22
+So I think we should kick off this 2026
+1:26
+Threat Detection Report, SecOps Weekly.
+1:29
+This is our final official Threat Detection Report Special.
+1:33
+And this week it is an Intel team takeover,
+1:37
+which is very exciting.
+1:39
+We're like pirates, like nice pirates.
+1:43
+So I'll go ahead and do introductions for those of you
+1:45
+who are new or who are just joining us.
+1:48
+Hi, my name is Steph Rianne.
+1:50
+I'm a senior intelligence analyst at Red Canary Z Scaler.
+1:55
+You all have seen me before, probably on SecOps Weekly.
+1:57
+You'll be joined every month to talk about intelligence insights.
+2:00
+I'm very excited to be here again this week
+2:03
+for our Defenders on Defenders Special.
+2:07
+Tony, who are you?
+2:09
+Hi, I'm Tony Lambert.
+2:10
+I'm a senior malware analyst on the Intel team at Red Canary.
+2:13
+And I've been here for far too long.
+2:16
+And I've also done a lot in the IT space for a while.
+2:18
+I've done a little bit of desktop, systems admin stuff,
+2:22
+Intel malware analysis detection engineering.
+2:27
+A little bit of everything that I didn't know I had an option
+2:29
+when I graduated high school.
+2:31
+It's kind of been a journey to discover so far.
+2:33
+I think it's exciting.
+2:34
+A journey is exciting.
+2:36
+So if you all have been following the Threat Detection Report
+2:39
+at least for the last few years,
+2:41
+you'll know that this is not the first time
+2:43
+that Tony and I have jammed out on themes from the prior year.
+2:48
+This is our third annual Defenders on Defenders conversation.
+2:52
+And so what we do as part of this every year
+2:56
+is Tony and I talk about what are some things
+2:59
+that really popped out to us when we look back over the year.
+3:01
+So in the Threat Detection Report,
+3:03
+we talk about trends, we talk about techniques,
+3:06
+we call out some other kinds of things
+3:09
+that we have seen over the year we call out our threats.
+3:12
+But there's always some interesting themes
+3:15
+that it's nice to get to talk about in a little bit more detail.
+3:18
+So Tony and I have picked three things
+3:21
+that we think it would be good to highlight two defenders.
+3:25
+And so we have a whole defenders on Defenders slide.
+3:28
+So there we are.
+3:29
+This is what we're doing today.
+3:30
+So Tony and I are going to talk about first things first.
+3:35
+No JS.
+3:36
+I remember it was getting to the end last year at a message
+3:38
+to Tony and I'm like, Tony, we're going
+3:40
+to have to talk about no JS malware
+3:42
+because this has been a recurring theme over the course
+3:46
+of the year across a lot of different threats.
+3:49
+When I messaged Tony about that was when
+3:52
+second, a chivalent compromise happened
+3:55
+with the infium package compromises.
+3:59
+But let's talk a little bit more about what this is
+4:02
+and why adverse series like it so much.
+4:05
+What are your thoughts about this Tony?
+4:07
+Why do adversaries like no JS so much?
+4:11
+So adversaries to some extent are
+4:14
+used to trying to do kind of a living off the land thing
+4:18
+with sort of scripting with all this different stuff.
+4:21
+But all of the native scripting stuff on Windows
+4:24
+now has some sort of visibility into it
+4:28
+from EDR platforms now has something to counteract it
+4:33
+for each action.
+4:35
+There needs to be an equal and opposite detection control,
+4:37
+something like that, one of Newton's less known laws.
+4:41
+But there's the cool thing with no JS, just like Python
+4:46
+and some of the other scripting languages
+4:48
+that are not necessarily native to Windows,
+4:50
+they can be represented in a multitude of ways.
+4:54
+They can be compiled into executables.
+4:56
+They can be individual scripts.
+4:58
+You can make them all in one executable package
+5:02
+to run on Windows natively if you need that too.
+5:07
+And because of just this wide multitude of representation,
+5:14
+there are a lot of different telemetry patterns in EDR,
+5:17
+a lot of different telemetry patterns
+5:18
+for antivirus and anti-malware to kind of fire on as well.
+5:23
+And some of that we can even cover here.
+5:24
+But because there's just all of that different option,
+5:30
+it really kind of muddies the water of detection,
+5:32
+trying to get it to where, all right,
+5:34
+I want to capture these malicious Node.js apps,
+5:37
+but I also want to capture these malicious Node package
+5:40
+compromises, which have to completely different patterns
+5:43
+but are fueled by the same language.
+5:44
+Yeah, exactly.
+5:45
+Like it's there, they love to use it if it's already there.
+5:49
+And I'm getting ahead of ourselves a little bit.
+5:50
+We talk a little bit more about why adversaries like it
+5:53
+on the next slide.
+5:54
+These are some threats that we just wanted to call out
+5:56
+as being part of this trend that we saw over this past year.
+6:00
+So we have to just ask Jackie, family,
+6:03
+and we use that to cover all of those,
+6:06
+like term to cover all of those malicious Node.js applications
+6:09
+that are mass creating as like a PDF tool
+6:13
+or some kind of question tool,
+6:15
+which was number two for 2025.
+6:17
+We saw it in tamperchef,
+6:19
+which, a calendarmatic is the other kind of popular theme,
+6:23
+the calendar app, so we've seen with this.
+6:25
+Also included some JavaScript code.
+6:28
+We saw it with Node in it rat, which is Mocha Manakin,
+6:31
+which is earlier in the year.
+6:33
+It's one of the things we like about defenders
+6:35
+on defenders in the threat detection report
+6:36
+is we get to look over the course of the year.
+6:39
+Sometimes it feels like looking back into ancient history
+6:42
+with all the way back, all the way back to May of last year.
+6:45
+But we were seeing Node in it rat leveraged
+6:49
+and then of course we had the shy-holy compromises
+6:51
+at the end of the year.
+6:52
+So I just want to call those out as some specific examples
+6:55
+of why we felt like this was a good theme to discuss.
+7:00
+And so this is sort of getting back into why adversaries
+7:03
+like it so much and some of the key characteristics
+7:06
+that we see.
+7:09
+So like we had mentioned,
+7:11
+we've got adversaries leveraging
+7:13
+in a lot of different campaigns.
+7:15
+The script writing under the trusted binary is so huge
+7:19
+as defenders have gotten a lot better
+7:21
+at detecting those behavioral patterns.
+7:24
+If they're able to kick off execution processes
+7:26
+with a trusted binary, as you all know,
+7:28
+it just gives them that little bit of extra time
+7:32
+to attempt to get shenanigans onto a system
+7:35
+or even pull down those follow on payloads
+7:37
+before they get detected.
+7:39
+Because as you all know,
+7:40
+it's all about everybody's speedrunning everything.
+7:43
+We're speedrunning to detect it.
+7:44
+There's speedrunning to execute it.
+7:46
+Absolutely.
+7:50
+And talking about the executing
+7:53
+under the trusted binary part,
+7:54
+that was that's something that could even kind of become
+7:58
+a problem when we're searching for indicators of compromise.
+8:01
+So let's imagine like just as Jack, your tampered chef,
+8:06
+both of those are nodeJS applications.
+8:08
+And both of those have JavaScript code package
+8:11
+with them in addition to a node runtime.
+8:14
+And so the stuff that gets executed,
+8:16
+the actual process name that you see in EDR
+8:19
+is going to be, you know, recipelister.exe.
+8:23
+And so the question then becomes,
+8:25
+hey, can we use the hash for recipelister.exe
+8:28
+as an indicator of compromise?
+8:32
+Well, the answer kind of depends.
+8:34
+Like it's more complex than just a guess or no
+8:36
+because there are some adversaries that will sign
+8:40
+their node runtimes and have like a recipelister signature,
+8:46
+digital signature associated with it.
+8:48
+And in the cases where adversaries sign those node runtimes,
+8:51
+yeah, we can definitely use those as indicator of compromise.
+8:54
+But if they don't sign it, well,
+8:56
+that's just a generic node runtime
+8:59
+that may or may not have some specific like metadata for it
+9:02
+that your operating system has in its fly-assistant table.
+9:06
+But if you use that as an indicator of compromise,
+9:08
+then you end up getting a lot of false positives
+9:10
+across node applications that are in the rest of your enterprise.
+9:14
+So that is something that has absolutely been a challenge
+9:17
+for I know us and probably other folks over the year
+9:20
+because the question just comes up of like,
+9:23
+how do you even catch up to all of this?
+9:25
+If it's not binary content,
+9:29
+if it's not the executable content,
+9:30
+it's just JavaScript inside that runtime.
+9:33
+Especially if your org uses a lot of this legitimately
+9:36
+for production or for development,
+9:39
+makes it extremely difficult to catch all of the little things
+9:43
+that are happening with these kinds of executables
+9:47
+and these kinds of scripts.
+9:50
+And another thing that adversaries like about them
+9:51
+like with all scripts, it's easily tweakable.
+9:54
+So especially if you're trying to do some kind of string pattern
+9:57
+recognition to detect maybe malicious commands.
+10:02
+Fortunately, we've got some good detection options
+10:06
+for script execution that will highlight
+10:09
+things like different flags or specific execution commands
+10:14
+that are used or the way that they're used.
+10:17
+We've got a bunch of those in the threat detection report.
+10:19
+But adversaries, they still love scripts.
+10:21
+And one of the things I wanted to point out
+10:23
+with these node.js applications is it's not just node.js,
+10:27
+they stack this with other scripts as well.
+10:29
+So we'll see node.exe executing power shell
+10:34
+or something like that or node.exe pulling down
+10:38
+some additional scripts to use.
+10:41
+It's not just this one thing.
+10:42
+Usually this is kind of layered or sandwiched in
+10:45
+with other kinds of scripting language,
+10:50
+which is very popular for adversaries still.
+10:52
+If you all look at our TDR techniques,
+10:53
+you'll see that scripting languages are still hugely popular
+10:57
+for adversary execution.
+11:00
+Absolutely.
+11:00
+And if we have time to answer one question while we're here
+11:04
+about node stuff.
+11:06
+So one person asks, how much of this stuff can be detected
+11:10
+using just static analysis like malware analysis
+11:13
+or static analysis of files at rest maybe?
+11:16
+That's a good one.
+11:17
+Oh yeah.
+11:18
+And are there any fileless patterns?
+11:20
+So your stuff like your tampered chefs
+11:24
+and your just ass jackies are a little bit easier
+11:27
+to do as static analysis because those
+11:30
+will have JavaScript bundled into an archive on disk.
+11:34
+And your anti-malware controls can scan those.
+11:38
+If you're doing malware analysis,
+11:39
+you can easily unpack those archives, the ASR archives
+11:44
+that have that JavaScript.
+11:46
+For some of the other threats that were a little bit more
+11:50
+insidious, they looked slightly different.
+11:53
+So for Mocha Maniken, what adversaries did in those cases
+11:57
+is they would drop a node runtime to disk
+12:00
+and the entire node archive that runtime was legitimate.
+12:04
+It's self, those were legitimate components.
+12:06
+And then they specified malicious command lines
+12:10
+to the node runtime using a dash.
+12:12
+I think it was a dash e command line flag.
+12:15
+That sounds right.
+12:17
+And in that case, that is fileless execution.
+12:19
+It's not necessarily artifactless.
+12:21
+If you're using EDR command line telemetry,
+12:23
+you can still catch up to that.
+12:25
+But in that case, static analysis for files
+12:28
+didn't really help as much because those were in the command line.
+12:33
+Good question.
+12:34
+And if you all have any other questions,
+12:35
+we're going to have some time at the end.
+12:37
+So questions about this or any other questions that pop up,
+12:40
+feel free to throw them in the chat.
+12:41
+And we will circle back to those.
+12:44
+All right.
+12:46
+Next topic.
+12:47
+Always a fun one to talk about.
+12:49
+Let's talk about DLL sideloading and DLL hijacking,
+12:53
+which are not quite the same thing, but they're similar.
+12:57
+So I'm going to use my favorite metaphor
+12:59
+for DLL sideloading and DLL hijacking.
+13:02
+So DLL hijacking is like, you're going into a party, let's say.
+13:09
+You're trying to get into the party.
+13:12
+And you get there before somebody who's officially on the list.
+13:17
+And you say that you're them before they can get there,
+13:21
+and they let you win, right?
+13:23
+So you're kind of hijacking the list.
+13:25
+You're getting there first.
+13:27
+You're getting in first, and you can do whatever you want.
+13:29
+DLL sideloading is more like you show up
+13:32
+with somebody who's on the list.
+13:34
+And they don't necessarily know you're there.
+13:37
+But they go into the party, and you kind of follow a man,
+13:39
+and you're like, I'm with them.
+13:41
+And once you're in, you're able to do whatever you like
+13:44
+in the party.
+13:45
+And this is really difficult because in this metaphor,
+13:48
+the people who are, you're on the list.
+13:51
+The people you came with are on the list.
+13:53
+So as far as the people hosting the party are concerned,
+13:56
+only the approved folks are in there.
+13:59
+But that's not the truth.
+14:00
+It's something else is stuck in.
+14:02
+This is way oversimplified.
+14:04
+But it's a very good explanation, because in thinking
+14:08
+through it with controls, like anti-malware,
+14:10
+application-allow-listing, things like those,
+14:14
+a lot of those controls will kind of say,
+14:17
+all right, executables on the list, we're good to go.
+14:20
+If you've the best way, it used to have
+14:23
+to do software restriction policies and active directory,
+14:27
+and listing out those executable names that were legitimate,
+14:29
+well, if it could side-load into MS Word,
+14:34
+that was an easy way around that software restriction policy,
+14:39
+all sorts of stuff like that.
+14:40
+But I love the comparison, because that's
+14:42
+very much a good way to visualize it.
+14:46
+So it's tricky.
+14:48
+It's tricky to defend against, right?
+14:50
+Because when you've got these side-loaded pieces of malware,
+14:57
+it does a couple of things that are really challenging
+14:59
+for defenders.
+15:01
+It's using something legitimate or something
+15:03
+that appears to be legitimate for that initial execution.
+15:06
+And then once it's side-loaded in, in some cases,
+15:10
+it's very difficult to detect.
+15:12
+I want to call out Lacherdactis specifically
+15:15
+for being one of those threats that once it gets
+15:18
+side-loaded in, it executes in memory,
+15:21
+which makes it very difficult for defenders,
+15:24
+which is why adversaries like to do it,
+15:25
+if they're able to do it.
+15:27
+It's a little bit trickier, I think,
+15:29
+to accomplish this successfully, you
+15:31
+have to have some better trade craft.
+15:34
+But it means that a lot of adversaries
+15:37
+that do have been trade craft leverage this to a great effect.
+15:40
+We also, as we mentioned here, we call out
+15:43
+hijack loader, start-of-goal-finch,
+15:45
+start-of-using side-loading to deliver an execute
+15:48
+roomcoast toward the end of the year.
+15:52
+And so, yeah, if you have more questions about this,
+15:55
+not only are we here, but there's also
+15:56
+some other good examples in the blog
+15:59
+and in the protection report as well.
+16:02
+So what do we want to say about prevention?
+16:05
+How do we keep these people from sneaking into the party
+16:09
+alongside the legitimate applications?
+16:13
+So when you look at, there are some public facing detection
+16:20
+analytics that elastic and some other folks have done.
+16:23
+And we've even recommended some of the past of things
+16:26
+that would potentially stand out.
+16:32
+The stuff that I end up using as a good example
+16:35
+is because EDR focuses a lot on specifically the process
+16:42
+of the name and not necessarily as much
+16:43
+as the DLL image loads.
+16:46
+Something I know we rely on quite a bit
+16:48
+is looking for suspicious windows process,
+16:51
+or like windows processes that usually live in system 32,
+16:54
+syswav64, those folders, have they showed up
+16:58
+in weird places on disk?
+17:01
+Are they executing from a user's folder instead
+17:03
+of where they're supposed to live in system 32?
+17:07
+That was something we would see quite a lot with like
+17:10
+drydex malware several years back, something like that.
+17:13
+Some adversaries have gotten wise to that nowadays
+17:17
+where instead of just doing your native windows,
+17:20
+syswav64, system 32 binaries,
+17:23
+they'll bring in some obscure app that nobody has ever heard of.
+17:27
+Maybe it's a portable app, something like that,
+17:29
+where they might find Steph's favorite calendar app.exe
+17:33
+that was published in open source.
+17:35
+They figured out that that has a weird version.dll
+17:38
+side load, and then they'll bring that in.
+17:41
+And that is something that is very much a whack-a-mole
+17:45
+sort of perspective.
+17:48
+There's not really a good way to just have a generic anything
+17:53
+that loads in version DLL, because a lot of things
+17:55
+will load in version DLL.
+17:57
+And there are some legitimate version DLLs.
+17:58
+So you have to kind of do some sort of magic
+18:02
+around looking for suspicious file modifications
+18:04
+and user folders, suspicious process executions
+18:07
+from user folders in ways that aren't necessarily
+18:11
+expected for your organization.
+18:13
+It's not all magic.
+18:14
+And this shock mentions this as well.
+18:17
+And I would like to call out that we actually have a blog,
+18:20
+a reicanery blog from several years ago,
+18:21
+about base lining and figuring out
+18:25
+what should execute from what directory,
+18:27
+and creating behavioral detectors based on those baselines.
+18:33
+So yeah, like a shock says, the question
+18:36
+is, is it fair to say this has to be caught before the DLL
+18:38
+makes it to the system, or even before it gets loaded?
+18:41
+Because of the legit characteristics, it displays,
+18:44
+it's hard to compare against a baseline once the DLL is loaded.
+18:48
+Absolutely.
+18:48
+I think that is very fair to say, a shock.
+18:52
+I wouldn't say it's impossible, again,
+18:53
+because you're going to have some other behavioral indicators
+18:57
+that hopefully look suspicious, some ways that it's
+19:00
+executing, some other kinds of executions,
+19:04
+interesting command lines, maybe some script loading
+19:07
+that it doesn't usually do.
+19:09
+But base lining those locations and those behaviors
+19:13
+ahead of time, very helpful.
+19:15
+Something I've noticed from the malware analysis side
+19:18
+that it seems like a lot of the typical things
+19:22
+that we see for paste and run or click fix attacks now
+19:25
+that we see, like they will have these stages where they just
+19:28
+have a power shell script or just an executable
+19:30
+get downloaded or something like that.
+19:33
+Most of the time when we see DLL side loading coming in,
+19:35
+there is some sort of container file getting downloaded.
+19:39
+There's going to be a zip archive container,
+19:42
+an ISO container, a VHD container, something like that.
+19:46
+And the ISOs and the VHDs can be mounted by windows,
+19:48
+someone double clicks on them and nobody's the wiser.
+19:51
+Or if this is a click fix, paste and run style attack
+19:55
+that uses side loading, it'll be a zip archive
+19:58
+that automatically gets unzipped and then starts running from there.
+20:02
+So networking controls that can inspect that sort of stuff
+20:05
+can potentially help before it even hits the disk.
+20:07
+Yes, absolutely.
+20:08
+That's a great point.
+20:10
+And I realize our theme for the year is adversaries
+20:13
+like to use what you already have.
+20:16
+Yes, absolutely.
+20:17
+I even realize that our three topics come under a broader theme
+20:21
+of they love to rummage around and figure out
+20:25
+what's already in your environment and use it.
+20:27
+We've had other people and other threat detection
+20:30
+report episodes talk about RMMs, which
+20:32
+is very, very popular as well this year.
+20:34
+But I mean, let's talk about this.
+20:36
+This is our final kind of theme and thing
+20:39
+that we wanted to talk about.
+20:40
+We've already touched on it a little bit this episode,
+20:42
+which is low bins and low boss.
+20:47
+The interesting thing about a lot of this
+20:49
+is that there are a couple of different mindsets
+20:53
+that adversaries will get into.
+20:55
+And we see this sometimes with adversaries.
+20:57
+We see this with red teams, different folks, all sorts of stuff
+21:00
+where there are some people that immensely
+21:02
+love to bring in their own malware.
+21:04
+They will love to bring in their own C2 agents,
+21:06
+their own frameworks, their own rats.
+21:08
+And then there are some folks that will say,
+21:10
+you know what, if I can just do it all in PowerShell,
+21:12
+let's do it all in PowerShell.
+21:14
+And there's also a third perspective of what
+21:18
+if we just do the best of both worlds
+21:19
+and do that perspective where maybe we
+21:23
+want to bring in our own Adaptix C2 agent,
+21:26
+our own Net Support Rat.
+21:29
+But we use PowerShell as kind of the glue
+21:33
+that glues together stages.
+21:35
+You know, you don't really trick someone
+21:37
+into downloading Net Support Rat and running it.
+21:40
+Like if you try to do that,
+21:41
+AV is probably going to intercept something.
+21:45
+But doing that pasted run and having like five stages
+21:49
+of nesting doll PowerShell in here,
+21:52
+like we'll end up getting around some of those controls.
+21:55
+Absolutely.
+21:57
+And you know, a lot of, we didn't call out all of the threats
+22:00
+that we have seen this year, leverage low bins and lowboss,
+22:04
+but it's a significant number of them.
+22:06
+At some point during their execution chain,
+22:09
+we'll do some living off the land
+22:10
+by near your description and again.
+22:12
+So we mentioned specifically here,
+22:15
+we saw a room post, do a little bit of that,
+22:18
+delivered with four files.
+22:21
+At the end of the year,
+22:22
+Scarlet Goldfinch started using finger
+22:25
+in paste and run executions and leveraging that.
+22:29
+We saw a cleanup loader add a lot of other kinds of loaders
+22:33
+love to use run DLL32 or RegServer32.
+22:37
+That's been true since like the QBot Backbot,
+22:40
+Pink Slipbot days.
+22:42
+It's just a really common way for adversaries
+22:47
+to get a lot of use off of,
+22:49
+like you said, they kind of cast a wetter net
+22:52
+and they're more likely to have successful execution.
+22:55
+If they use something that's already,
+22:56
+they know it's probably already in your environment
+22:58
+and it's gonna fly under the radar
+23:00
+or is going to give them additional opportunities
+23:04
+to evade detection for stuff like finger
+23:06
+that people probably aren't.
+23:08
+They probably don't have specific finger detections.
+23:11
+Sometimes they do, but very often, you know,
+23:14
+it depends on kind of the time that defenders have had
+23:17
+to go in big shut out to the lowboss project
+23:20
+and take a look at some of the things
+23:22
+that are really frequently used or abused by adversaries.
+23:26
+And as for like why some of them get used,
+23:30
+like there's kind of a wide variety of motivations
+23:33
+because some of them use little bit type things
+23:39
+to achieve certain goals like downloading
+23:42
+or things like that.
+23:43
+That's what finger is being used for us
+23:45
+to kind of do that illicit download versus four files
+23:50
+is kind of used as a process hierarchy break
+23:54
+trying to break up that chain.
+23:57
+And then in other examples like MS build,
+24:02
+MSHTA, some of those,
+24:03
+sometimes they're used to potentially compile stuff,
+24:07
+but often we've seen MS build used for just masquerading,
+24:11
+really just where adversaries will inject into it
+24:14
+and just use its process name as a,
+24:18
+as a result, where someone will Google MS build,
+24:22
+they see, oh, it's a legitimate Windows tool,
+24:24
+let's not stop that process and then, you know,
+24:26
+whatever's injected into it still gets to run.
+24:29
+So like the motivations kind of run that got with.
+24:33
+Mm-hmm, you're right, that's a good call out.
+24:34
+This is not a model with.
+24:36
+Absolutely, these have different permissions levels
+24:38
+that are used for different things
+24:39
+in the execution chain,
+24:40
+they're used in different ways by different adversaries,
+24:43
+which is one of the reasons why it is,
+24:45
+it can be tricky to create behavioral detections,
+24:48
+but it's very possible,
+24:50
+it's very possible to detect a little bit of a little boss abuse.
+24:53
+We have a lot of behavioral detectors
+24:55
+that make an area that do.
+24:57
+And like we mentioned here,
+24:59
+there are several different options
+25:02
+and different approaches that you can take
+25:03
+to detecting and defending against this kind of abuse.
+25:09
+Absolutely.
+25:11
+The Windows Defender Application Control stuff,
+25:13
+like using app allow listing,
+25:16
+it's very easy upfront to say like,
+25:20
+oh, we just want to allow listed,
+25:22
+but I have to emphasize,
+25:24
+you will have a month's worth of work going after doing this.
+25:29
+And I don't mean to say that in a bad way.
+25:31
+And that's definitely not like a fear of mongering sort of thing.
+25:33
+Like once you dive into the world of law bins
+25:36
+and trying to figure out which ones do my organization use,
+25:39
+what should we block,
+25:41
+what all of this different stuff?
+25:43
+It is a pretty deep rabbit hole.
+25:45
+It's quite amazing that a lot of these utilities
+25:49
+are still included in Windows
+25:51
+because they may have been a relic from the 2003 server era
+25:56
+and it's just included for backwards compatibility,
+26:00
+things like those.
+26:00
+And maybe you don't use that in your organization
+26:03
+and that's a really easy thing to block.
+26:05
+But then as you start going through
+26:06
+the rest of the low boss project,
+26:08
+there's you end up finding,
+26:10
+oh, there's like 100 plus things in here
+26:12
+that we can try to figure out.
+26:15
+It's tricky.
+26:16
+But I guess the good bad thing is,
+26:19
+and one of the things that I want to point out
+26:20
+is we're sharing a lot of blogs and resources
+26:22
+that have been shared over the years.
+26:25
+This isn't necessarily new to 2025,
+26:29
+which means these techniques, these processes,
+26:32
+leveraging these different kinds of execution options,
+26:36
+they're not gonna go away.
+26:37
+So this is something that you can do,
+26:41
+if you have the time,
+26:42
+it's gonna pay dividends not just for historical activity,
+26:45
+there's no reason to think that they're gonna quit
+26:47
+using no JS anytime soon.
+26:50
+There's no reason to think that they're gonna quit
+26:51
+side loading anytime soon.
+26:52
+There's no reason to think that they're gonna quit
+26:54
+using a little bins and little boss.
+26:56
+So any work that you can do
+26:58
+from a defender's perspective is gonna pay off.
+27:02
+This is gonna keep happening
+27:04
+just because these are things that are already present
+27:06
+in a lot of organizations.
+27:10
+And it is the kind of thing for adversaries, like we said,
+27:13
+they get to have a lot of options to fly under the radar
+27:18
+for as long as possible and to do as much as possible
+27:20
+before they get detected.
+27:23
+A lot of like,
+27:25
+mentioning that everything here is kind of evergreen,
+27:28
+is I end up talking through a lot of that
+27:31
+with organizations where just because this is a big thing now,
+27:34
+like all of this kind of comes and goes and cycles,
+27:37
+the tabs and flows.
+27:38
+Like, Lull bins was a big thing to talk about a few years ago
+27:41
+and it's still a big thing to talk about,
+27:44
+but it's just presented in different ways.
+27:46
+Something I would even point out of like, yeah, no JS here
+27:50
+is something that we're talking about here,
+27:52
+but there's nothing that adversaries are doing
+27:54
+that in no JS that they couldn't also do in Python,
+27:58
+but there's nothing they're doing there
+27:59
+that couldn't be replicated at other languages.
+28:01
+And we're already kind of seeing that to some extent
+28:03
+where some adversaries will use Python
+28:06
+for a certain thing on Windows.
+28:08
+Some will use Dino,
+28:10
+which is a TypeScript runtime,
+28:12
+similar to no JS, but just a little bit different.
+28:15
+We have some.
+28:16
+So like, it's the concepts and like the techniques
+28:22
+are evergreen, just their representation
+28:24
+looks a little different.
+28:26
+Mm-hmm.
+28:27
+It does, absolutely.
+28:28
+And there are other things that we would love
+28:30
+to be able to talk about.
+28:31
+These are the three we decided to pull from this past year
+28:34
+because we only had a half hour with which
+28:36
+to take over security opt weekly.
+28:39
+So let's see, we've got one more question
+28:42
+or another question from a shock.
+28:45
+The problem with typical EDR tooling
+28:47
+and exclusions of exceptions is to avoid signed MS builds
+28:50
+binaries, the colon visibility.
+28:53
+App control is very casually used when we say
+28:55
+it's least privilege, access space.
+28:58
+We are asked to provide wild cards as an option.
+29:01
+Oh, hot take, I feel like we're lying to ourselves
+29:03
+by claiming that this is good protection
+29:05
+while maintaining a good balance with operations.
+29:07
+Tony, what do you think?
+29:11
+It's.
+29:15
+There's, so the fun thing about some of this is that
+29:20
+there is a balance.
+29:21
+There is a balance where there are,
+29:25
+if I'm looking at this as a practitioner,
+29:27
+like I used to work at a community college.
+29:29
+If I'm looking at this as like,
+29:30
+since I'm at a community college,
+29:32
+there's definitely a lot of stuff to be desired
+29:35
+about some of it, but at the same time looking at it now
+29:37
+as a vendor, as someone that has to try to do detection rules
+29:42
+across many, many customers.
+29:45
+I see why certain trade-offs are made
+29:48
+and the trade-offs are largely imperfect
+29:50
+and the trade-offs do suck.
+29:52
+I'm not going to lie, like the actual,
+29:57
+like the actual trade-offs can help,
+30:00
+the actual trade-offs can hurt some organizations at times.
+30:03
+Where the trade-offs happen,
+30:05
+that gives individual organizations,
+30:09
+while it does give them a little bit extra work at times,
+30:11
+it also gives them a little bit of an opportunity to shine
+30:14
+because there's where a, yes, maybe we have to keep,
+30:20
+like not block some of the Microsoft things,
+30:23
+but that gives us a time to shine of,
+30:25
+well, we can do additional detection rules somehow
+30:29
+in our SIM or whatever other controls
+30:30
+that maybe we can find additional things.
+30:32
+It may not get blocked right up front,
+30:34
+but we're 30 seconds behind it,
+30:35
+or we're an hour behind it, something like that,
+30:38
+which is always better than not finding it at all.
+30:41
+That's true.
+30:42
+That sort of stuff.
+30:43
+So I can see a little bit of both sides of it,
+30:46
+and I see a little bit of, you know, trying to,
+30:50
+I try to look at it as a seeking opportunity,
+30:53
+sort of perspective,
+30:54
+because if I look at it the other way,
+30:55
+it's going to be a bad day.
+30:57
+That's right, very true.
+30:58
+We want to be optimistic as we can be.
+31:04
+I wanted to throw this up here
+31:05
+since we're getting near time.
+31:07
+We do have some more options.
+31:10
+We have all the links that Chris has shared.
+31:12
+We have the third detection report.
+31:13
+We have a bunch of videos on our YouTube.
+31:16
+We also have one more last minute question
+31:18
+that I want to take a look at.
+31:19
+We have a question from Curtis.
+31:20
+What would be your top three or four universal compensating
+31:23
+controls for this?
+31:25
+Assuming you were approving a vulnerability exception.
+31:29
+I think we've got another yellow one today.
+31:31
+We have a couple, I think we have a couple extra minutes
+31:33
+if you want to get around.
+31:35
+All right.
+31:36
+If I could recommend anything today,
+31:39
+two or three things today.
+31:40
+We have a blog post somewhere on,
+31:46
+changing the default file handler for JavaScript
+31:49
+to notepad instead of WScript.
+31:51
+Or any script.
+31:53
+Or any script,
+31:53
+or some power shell too.
+31:54
+I want to throw that out there.
+31:55
+It's a yes.
+31:57
+Precisely so.
+31:58
+So like for if so if that is something your organization has
+32:02
+an appetite for,
+32:03
+you could do this with script files,
+32:06
+with HTA files,
+32:07
+any sort of files that you think
+32:10
+that your organization shouldn't be able to just double click
+32:13
+and run.
+32:14
+That's something that you could potentially look into.
+32:15
+And I know for a fact,
+32:17
+this has helped a lot of organizations
+32:19
+with Scarlet Goldfinch,
+32:20
+Sot Goldish,
+32:21
+a lot of threats like that.
+32:22
+That would be the number one.
+32:25
+Number two,
+32:27
+making sure EDR sensors are deployed
+32:29
+because that is the,
+32:30
+hope that is the hardest part
+32:31
+when we're helping organizations with incidents
+32:35
+is just making sure everything is covered
+32:37
+because there are anything that is not covered
+32:39
+is something that an adversary can hang out on
+32:42
+and potentially give us a bad day.
+32:46
+Daylight a lot of groundwork.
+32:48
+When you can't see what they're doing,
+32:50
+they get in there and it lets them do recon
+32:52
+and it lets them get ready to pivot
+32:53
+it lets them get ready to do all kinds of shenanigans.
+32:55
+So.
+32:56
+So what would be,
+32:57
+what would be one of your favorite ones?
+33:00
+Oh gosh, I mean, that was the script loading,
+33:04
+kind of off at the knees is one of my favorites.
+33:06
+I do like, I do like base lining.
+33:08
+I know that that's kind of a,
+33:11
+a what, not a cop out,
+33:13
+but we've talked about it already.
+33:14
+I really like creating those detections
+33:18
+based on where things are
+33:19
+and are not supposed to execute out from.
+33:21
+I've seen a lot of that
+33:22
+since I do, you know, the intel insights every month.
+33:25
+That's been really helpful,
+33:27
+especially for some of these threats
+33:29
+that are using interesting different low bans
+33:32
+and low boss not just mishap,
+33:34
+but are using some of these more interesting unique
+33:38
+kinds of low bans and low boss executions.
+33:41
+Well, the cool thing about like baselines
+33:43
+and application inventory stuff is like,
+33:44
+it's potentially applicable
+33:46
+most cross multiple controls.
+33:47
+You don't just have to use it with, you know,
+33:49
+Windows Defender Application Control,
+33:51
+with a loud list and you can use it with your EDR stuff.
+33:53
+You can apply it in your SIM.
+33:54
+You can apply it in a bunch of different places put together.
+33:57
+It's a, it's a multifactor thing or multifaceted.
+34:01
+All right, for those of you who hung in
+34:02
+for the last couple of minutes,
+34:05
+delighted.
+34:05
+I'm so glad that you all could join us today.
+34:07
+It's been a blast,
+34:08
+Cody, I love getting to do this with you every year.
+34:11
+We will come back to you next year
+34:13
+with more, more themes, more tips and tricks.
+34:16
+And then I will be back next week.
+34:18
+We're going to get back up to security operations.
+34:21
+We'll be back weekly kind of back to our regularly
+34:23
+scheduled content.
+34:24
+So I will see you at same bad time, same bad channel
+34:28
+to discuss this past month's intelligence insights
+34:30
+next Tuesday.
+34:33
+Awesome.
+34:33
+Thanks, everybody for joining in.
+34:35
+Yeah.
+34:36
+I'll keep that in mind.
+34:37
+We'll see if we can pull Tony on again
+34:38
+before next year.
+34:39
+Tony, it's absolutely.
+34:40
+I'm always, always happy to help.
+34:42
+I join always always.
+34:43
+Thank you so much, everybody.

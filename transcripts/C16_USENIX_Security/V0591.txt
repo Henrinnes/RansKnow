@@ -1,1 +1,338 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Good morning everyone. I'm Yuan Chao Shu from Georgetown University and I'll be presenting
+0:26
+our paper entitled Ava Towards Agenda Video Analytics with Vision Language Models. It's nice to be back in Seattle. It's nice to again be presenting some work in front of Lakeview. I remember last time it was I think 2019 at Hot Mobile which was held in St. Cruz in California where we have similar kinds of setup in a hotel in front of
+0:56
+the ocean which is very similar to today's setup. So very nice view and hope you are enjoying the program so far. So this is actually a joint work with my student at Georgetown University and also collaborators with Microsoft Research and TeamHard University.
+1:19
+So let's start with what video analytics actually is. At a very high level it's about using algorithms to automatically understand what's happening in videos and turn that into useful insights. So the field has gone through a few big stages over the past decades. Early work focused on raw pixels, things like edge detection, motion detection and tracking.
+1:46
+Then we moved into engineered representations or features with machine learning techniques where system could detect faces or pedestrians or objects like cars.
+2:00
+So in a sense those system use handcrafted representations and features to do this job. And today we are in the AI era where deep learning models like CNNs and transformer based multi-moder systems learn directly from data and perform much better across a wide range of tasks.
+2:23
+So over all the trends has been moving from low level pixels to smarter, more general AI based system that can withstand videos more like what we humans do.
+2:38
+So in this work we categorize the intelligence levels of video analytics systems from the past to the future into five tiers in what we call L1 to L5.
+2:52
+So L1 is the most basic level of video understanding. Here the systems look at individual frames and identifies what's in them things like cars and people and objects.
+3:06
+And it outputs structured data like bunny boxes and labels. So this is very useful and forms the foundation of most systems today. But there's a big limitation. It only helps us what's visible in pixels.
+3:21
+It doesn't explain what's happening and why. And so you can detect a car and a person but you don't know if the car is beating or something unusual is happening.
+3:33
+So L2 takes a step further by looking at multiple frames and temporal patterns in videos. So instead of just detecting static objects the system can now detect events like speeding a four or crowd anomaly.
+3:50
+So in practice this is commonly done by manually building a video analytics pipeline that construct various of computer vision modules. So for example a motion detection module is followed by an object detection model and a re-ID or tracking module to count cars pulling into a parking lot.
+4:13
+So there is still a limitation. These events usually have to be predefined. The system can only detect what has been trained to recognize all you need human expertise to put together such a pipeline and also configure various knobs to do the job.
+4:33
+So while it's more powerful than L1 the L2 intelligence still is still not very flexible. Now let's move on to L3 which introduces natural language interaction.
+4:46
+So now instead of relying on predefined events users can ask questions directly like what animals appears what animals appear in the video.
+4:57
+So the system combines video understanding with language models to search and answer those queries. This makes video analytics much more user friendly and flexible.
+5:08
+But still has limits. These systems are good at retrieving and describing information but they don't really reason about it. In other words they can tell you what happened what has happened but not always explain why and they're not able to connect events or objects together.
+5:29
+So now we move on to L4 where things get really interesting. So at this level systems can answer open-ended questions that require reasoning. So for example figuring out which car caused that accident or why something happened.
+5:46
+So this requires understanding relationships across both time and objects not just individual events. And the Ava paper that I'm presenting today focuses on this level.
+5:59
+It uses techniques like event knowledge graphs and agent based retrieval to reason over long videos.
+6:07
+While this is still an emerging area we believe it's a big step forward making video analytics more flexible and more intelligent and practical.
+6:18
+So beyond L4 we define L5 intelligence which goes even further by combining video understanding with external knowledge and tools.
+6:28
+So instead of just answering questions the system can actually provide reports and make actions.
+6:36
+So for example you could analyze the traffic accident and generate a full liability report including legal reasoning and recommendations.
+6:45
+So this level integrates video data with real world knowledge and real-time deep search to deliver deeper insights.
+6:52
+So this is still an early stage research but it shows where the field is heading towards more fully automated and to end an analytic system.
+7:05
+Okay so to wrap up this slide shows the overall progression.
+7:08
+Right? L1 to L3 represents what we have already achieved more or less basic perception, event detection and language based interaction.
+7:20
+And L4 which includes systems like Ava is where we are now moving into reasoning over long videos.
+7:28
+And L5 is a future combining reasoning with knowledge and automation to deliver a complete solution.
+7:39
+However to make L4 video analytics work we were running to at least two big challenges.
+7:47
+So the first one is open-ended tasks.
+7:50
+So not all questions look the same and more importantly the evidence needed to answer them is distributed very differently across the video.
+8:01
+So for example some questions are very direct like when did the accident happen.
+8:07
+You only need a small segment to answer that question.
+8:11
+Before complex questions like summaries you need information spread across the entire video.
+8:18
+And for reasoning questions like what caused this chain of events you need to connect multiple events or objects together.
+8:28
+So this diversity actually makes the problem much harder. Traditional systems are usually designed for fixed tasks.
+8:37
+So when you move to open any questions especially reasoning heavy ones they start to break down.
+8:46
+So here comes our first observation that motivates the design of Ava to tackle that challenge.
+8:53
+So traditional video analytics system rely on pretty fun pipelines as I described before.
+8:59
+They run once, follow fixed sequence and produce an answer.
+9:04
+But that's now how we humans solve problems.
+9:09
+We actually iterate, right? We search, we refine and we go back and we rethink.
+9:15
+So an agent works in the same way. So it plants, retrieve information, reasons about it and then decides whether to continue search or stop.
+9:25
+So this iterative loop allows agents to handle uncertainty and incomplete information much better than once that pipelines.
+9:35
+One shot pipelines. So instead of treating video analytics as a fixed pipeline we start thinking of it as an agent based or agent driven process.
+9:47
+So the second challenge is the cost of handling ultra long videos as video lens increases everything blows up.
+9:55
+So first token explodes, right? So even one hour video at one FPS already produces around 600,000 tokens in systems like a Gemini which is far beyond typical model limits.
+10:10
+And second, the computation, the compute overhead explodes, right?
+10:14
+Especially with this attention based models, the complexity of self attention mechanism actually grows is quadratic, right?
+10:25
+To the sequence of the sequence lens or the number of tokens.
+10:31
+And third, contacts window are limited, right? So we are forced to drop most of the frames.
+10:37
+So even though modern transformer based models are powerful, they simply cannot process long videos efficiently.
+10:46
+So this makes real world video analytics extremely challenging, right?
+10:51
+But here is our second key observation. Even though videos are long, the useful information is actually sparse.
+10:58
+So we measured this on a data set called video MME using Chen Wen VL, the state one of the state of the art, large language models, and found that for most queries, right?
+11:12
+Actually, the answer resides in less than 1% of the frames.
+11:20
+So the problem is not processing everything, it's finding the right pieces, right?
+11:25
+This insights completely changes how we design the system, basically instead of doing a brute force processing, we focus on efficient indexing and retrieval.
+11:40
+So this two observation map directly to the two parts of our system.
+11:44
+So first, to handle our Shalom video, we build an index structure that captures key events and the relationships.
+11:52
+And second, to handle open-ended questions, we build an agentic retrieval and reasoning mechanism on top of that index.
+12:02
+So the idea of Ava is simple, so we organized video first and then let an agent explore it intelligently.
+12:10
+Now let me walk you through these two parts.
+12:14
+So the first question is, how do we build such an index, right? So essentially, it needs to do two things at the same time.
+12:21
+So first, it has to represent what actually happens in the video, right?
+12:26
+Timing object entities and events. And second, it has to capture relationships.
+12:31
+In other words, how events are connected and how entities appears across time.
+12:39
+So this is not something simple, frame sequences of flat representations can handle.
+12:44
+So we need a new structure that captures both content and relationships.
+12:49
+And that leads us to the event knowledge graph or EKG.
+12:55
+So here's a key idea. Videos are not just frame sequences, they are graphs of events.
+13:01
+A simple knowledge graph not only connects entities like squirrel or feeder, but it doesn't tell us when things happen and why.
+13:11
+So we extend this idea by making events first class citizen.
+13:16
+So for example, 9.59, the deer approaches and at 10.30, the squirrel reacts and at 11.21, the squirrel flees.
+13:25
+Given those video frames, we can connect these events through both temporal edges and shared entity edges and recover casual chains.
+13:36
+This allows us to answer not just what, but also why and what costs, what.
+13:43
+This is exactly the motivation behind EKG event knowledge graph, which handles visual content questions, casual questions and multi-hop questions.
+13:53
+Always this single one structure.
+13:58
+So now let's look at how we actually build this graph. It happens in three steps.
+14:03
+So step number one, so fix the window captioning.
+14:07
+So we split the video into short windows and use a small BLM to generate descriptions.
+14:13
+For example, we cut a long video into pieces of a few seconds, each and wrong models like Chen Wen BL, 7 billion parameters on each window with batch inference.
+14:28
+And step number two is semantic merging.
+14:32
+So adjacent windows are merged if their descriptions are similar using metrics like bird scored.
+14:39
+For example, if similarity is above a threshold like window one, window two is score of 0.83, we merge them into one event.
+14:50
+This gives us a claim meaningful events instead of arbitrary trunks.
+14:54
+And in step number three, we build relationships.
+14:59
+We connect events temporally and link entities across events.
+15:05
+So in specific, we add two kinds of edges, which are temporal edges that connects adjacent events on the timeline and entity based edges.
+15:16
+So this result is the structure called this event knowledge graph or UKG.
+15:24
+Now moving into the second half, agentic retrieval and reasoning.
+15:29
+So to answer this question reliably, we need also need two things.
+15:32
+First, we need complementary evidence, different types of information as different questions need different kinds of clues.
+15:39
+So a single retrieval channel is not sufficient.
+15:44
+And second, we need a way to verify answers.
+15:46
+Since VRMs can hallucinate, especially on long videos, so retrieval is not just about finding something, it's about gathering enough evidence and checking it.
+15:59
+So retrieval is actually the most important component of our system.
+16:02
+To get complementary evidence, we retrieve from three views in parallel.
+16:09
+So first, the events knowledge base, which gives textual summaries of each event.
+16:15
+And second, the entities knowledge base, which gives objects like people, places, and what they link.
+16:23
+And third, the frame knowledge base, which gives the raw visual content.
+16:29
+So each view captures something different, as you can see.
+16:34
+And the textual modality emphasizes fine-grained information like names, numbers, exact phrases.
+16:41
+And the visual modality provides comprehensive global information, such as what the scene looks like, the layout, the atmosphere, and each view returns candidates with similarity scores.
+16:52
+And we then re-rank across all three views to pick the top events.
+16:58
+But one short retrieval is still not enough, right?
+17:01
+So we let an LOM act as an agent and do a tree search over the EKG.
+17:07
+So in specific, we define four actions, forward, backward, re-query, and summarize.
+17:14
+So this actually mirrors how we humans watch videos, right?
+17:19
+We skip ahead, we rewind to chat details, we summarize after watching.
+17:25
+And search again if some things are still unclear.
+17:29
+So we turn these four behaviors into the agent's action space for atomic operations at every node, right?
+17:38
+So specifically, we call it SAFB and RQ like re-query.
+17:43
+So by exploring multiple passes, the agent is able to get the richer and more complete evidence.
+17:52
+So next, we need to summarize the information on this tree to obtain the final answer.
+17:59
+The question is how do we pick the right one from many candidate answers?
+18:04
+So we find that a simple majority vote doesn't really work, right?
+18:10
+Because nodes that contain sufficient information while introducing little noises are really rare, right?
+18:17
+And we cannot determine where they are in advance, right?
+18:21
+So instead, we use a term called sought consistency and measure how consistent the reasoning and answers are across different passes.
+18:31
+So in our design, for each candidate, we measure two things, right?
+18:35
+As caught, how similar the candidates' chain of sorts are to each other, compute with birth score.
+18:42
+And SA how often the same final choice gets picked.
+18:48
+So we combine them with a weight lambda and intuition behind that is simple.
+18:54
+When the evidence is genuinely sufficient, the model produces consistent reasoning and consistent answers.
+19:03
+Okay, now let's move on to the evaluation part.
+19:07
+So we evaluate AVA on three benchmarks.
+19:10
+Video MME long, LV bench and our own AVA 100.
+19:15
+So video MME long has 300 videos, 40 minutes each, and 900 Q&A pairs.
+19:22
+LV bench has about 100 hour long videos and 1500 QA pairs.
+19:31
+And our own AVA 100. which contains 8, 10 hour long videos and 120 QA pairs.
+19:42
+So we compare against 11 strong baselines, including top VMs and recent video rack systems.
+19:51
+So this gives us a comprehensive view of performance across different scenarios.
+19:57
+So a few more words about the newly built AVA 100 data set.
+20:01
+So we build it because there's no existing data set had truly hours long real world videos,
+20:08
+which is carefully designed questions and answers.
+20:11
+So we create this AVA 100 data set which has 8 videos, 120 QAs around 10 hours each.
+20:19
+So covering four different scenarios.
+20:22
+So including like a human daily activity is a wildlife surveillance, city walk, and traffic monitoring.
+20:30
+Each question is multiple choice with one correct answer.
+20:34
+And AVA 100 is the first benchmark we believe that pushes open analytics into hour long and a much more realistic setting.
+20:44
+So here's the main result. AVA outperforms our baselines across our benchmarks.
+20:49
+And more importantly, the advantage grows with video lens.
+20:54
+So the longer the video, the bigger the gap.
+20:57
+Or the bigger the gain.
+20:59
+On the 40 minute benchmark AVA is ahead by a healthy margin.
+21:03
+And on the hour long data set, the improvement is about 70%. 17%.
+21:09
+And our AVA 100, the gain of QA accuracy is as large as 20%.
+21:16
+So across three long video benchmarks, AVA sets a new state of the art.
+21:21
+And this shows that the system is especially strong when traditional methods jacos the most.
+21:29
+So breaking it down by task type, AVA improves across all six categories in AVA bench.
+21:38
+The most striking number is in reasoning, right?
+21:41
+Over 40 points improvement.
+21:43
+And this is exactly what we aim for for L4 intelligence.
+21:50
+So finally, let's talk about efficiency.
+21:52
+Across all GPU configuration, we tested index construction runs at above two FPS.
+22:01
+So for inference, it is dominated by the agent search loop, which takes about 80% of the time.
+22:08
+So the bottleneck is not index construction nor answer generation, but exploring part.
+22:17
+So this points directly to our future optimization opportunity.
+22:23
+So to wrap up, AVA is one of the first systems targeting L4 video analytics,
+22:29
+which aims to handle open and any questions over long videos using a genetic reasoning.
+22:36
+And the system achieves strong performance gains, and we also introduced a new benchmark data set.
+22:42
+And moving forward, we want to scale the data set, reduce overhead, and also improve, of course, the visual reasoning performance.
+22:53
+And the long-term goal is to find systems that not just answer questions, but also reason with knowledge is external tools, and also make take actions.
+23:05
+OK, with that, I'm happy to take any questions.
+23:10
+Thank you very much.

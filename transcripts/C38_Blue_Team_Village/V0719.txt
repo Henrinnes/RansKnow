@@ -1,1 +1,1018 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hello, Blue Team Village at Defcom 3010Ds. My name is Matt Sheer. You may follow me on Twitter
+0:13
+at C3RKAH. My talk is called Lennie or IRs. A slide deck is available by going to slides.dfirmat.com,
+0:24
+which will take you to my GitHub repository.
+0:27
+What I do is I work for a big well-known organization as an Assistant Vice President of Computer
+0:33
+Security and Incident Response. However, I have many years of hands-on technical experience,
+0:38
+including digital forensics and incident response. I am also a podcast host for threat reel.
+0:46
+Where I volunteer is I am an official hacking is not a crime advocate. I am also a WAMSA,
+0:52
+which is the Women's Security Alliance Technical Mentor. Please check out their websites for additional
+0:58
+details on those organizations. A quick disclaimer is that yes, I have a day job. However, opinions
+1:04
+expressed are based solely on my own independent security research and did not express or reflect
+1:10
+the views or opinions of my employer. My objectives are to show demo reenactments of real
+1:16
+attacks, how these real world attacks worked, how in a way they defeated security solutions,
+1:23
+and then show incident responses to these attacks, demo investigation tools and techniques,
+1:29
+and discuss lessons learned in key takeaways. Just so we are all starting on the same page,
+1:34
+some acronyms that will be used are IOC or IOC, which is an indicator of compromised IR,
+1:41
+which is incident response and DFIR, which is digital forensics and incident response.
+1:48
+Other disclaimers, demos are based on 100% true stories. These demos do defy recreate
+1:55
+actual attacks. However, some details were altered. Also, investigation demos are sped up
+2:02
+considerably in the interest of a lot of presentation time, and I will be doing demos on a live system.
+2:09
+However, please pretend that's a sandbox because one should only perform these techniques in a
+2:15
+dedicated and securely isolated and volatile sandbox. My first scenario is called the mystery attachment.
+2:24
+Let me preface this scenario by saying there was a news headline from August 17th of 2018,
+2:30
+and the headline was mousebam campaign targets banks using Microsoft publisher. This was very
+2:36
+unusual. Not that mousebam campaigns or targeting banks is unusual, but it was the fact that the
+2:42
+threat actors were using Microsoft publisher to deliver their payload. You expect to find those
+2:49
+type of payloads in Microsoft Word or Microsoft Excel. Things that can have macros. You might
+2:56
+even expect to see them within Adobe PDF files, but to see this distributed through Microsoft
+3:02
+publisher was very unusual. The headline was the Faud Amy Rat was part of the Nicarra's botnet is
+3:09
+reported by researchers at Trustwave, and there's a link in the slide deck to that article. After that
+3:15
+was released, it was picked up by a number of other news agencies. The following week, as I'm sitting
+3:22
+at my desk, dutifully multitasking on a lot of things, I had somebody run up to my desk, and they
+3:29
+are very anxious. In a frantic manner, they're saying, Matt, help. One of our VIPs with access to
+3:36
+lots of very sensitive information just got hit in that recent mousebam campaign targeting banks.
+3:42
+It matches the IOCs from reports of that new Faud Amy Rat, which is part of the Nicarra's botnet.
+3:48
+The recipient attempted to open the Microsoft publisher attachment on their smartphone. I need you
+3:53
+to drop whatever you are doing and investigate this. We'll get you the attachment ASAP.
+3:59
+In this instance, I'm not particularly the best mobile forensics person or the best mobile
+4:06
+incident responder, but there really wasn't anybody else qualified to look at it. So I agreed that
+4:13
+I would be happy to do it. When I first came up to my desk, I'm really focused on thinking
+4:21
+through what I'm going to do with the investigation, because they stood there and continued talking.
+4:26
+Really, they sort of got me amped up and worked up because of their anxiety.
+4:33
+So to talk through the investigation of this scenario, we're going to open up the file in the sandbox.
+4:38
+Now, in my case, I'm doing this on a live Linux system. I do not have Microsoft publisher
+4:44
+available to me. So I'm going to open the file inside of Libra Office Draw. And for our purposes,
+4:50
+we'll just have to pretend that is the professional sandbox that has Microsoft publisher in it.
+4:56
+I'm going to do a strings demo. And then I'm going to hash the file and show everyone what the search
+5:04
+look like. Now, that's a very small snippet. I actually spent a lot of time investigating,
+5:10
+researching, reading about, flotting me, reading about an occurs, looking for indicators to compromise,
+5:18
+looking for any details that would help explain what this does and how it works.
+5:23
+And then finally, I will take a look at the exit data and demo that as I ponder my next steps.
+5:31
+So let's go ahead and take a look at the file. Again, this is inside of Libra Office Draw.
+5:37
+In Microsoft publisher, I couldn't actually find where the macros were at. And I myself never
+5:43
+used Microsoft publisher. So I was a little lost. What was interesting though is the publisher file
+5:49
+itself sort of looked like this. It came up and stated that macros had to be enabled to display
+5:54
+the contents of the document and then I had an instruction to clip quick on the enable content button.
+6:01
+In my situation, I could never get the enable content button to essentially pop up. I couldn't
+6:08
+find the macros in the file. And when the analysis was complete in the sandbox, it actually gave the
+6:16
+file a relatively clean bill of health. It did not detect anything malicious about it, which I
+6:21
+thought was highly unusual, especially given what I was looking at. So I wanted to do a little bit
+6:28
+more research on it. One thing I like to do as well is just to see if there's anything hidden
+6:35
+in the file that I don't know about. So what the strings command will do is the strings command
+6:40
+will essentially pull human readable text out of any particular file. Now what I like to do
+6:45
+personally is like to pipe out the strings command into the less command. That way when I run it,
+6:52
+I can essentially arrow up and down and navigate through the file without everything scrolling by
+6:57
+past my ability to read it. And at the top, there's some interesting things here. As I did research,
+7:04
+I found out these looked very much in place for what you would expect for a genuine Microsoft
+7:10
+publisher file. I did arrow down and read through a whole lot of stuff. I didn't find anything
+7:16
+particularly interesting about the file I was analyzing. So what I wanted to do next was essentially
+7:23
+hash the file. In my case, all of our tools used Shaw 256, which is something I was comfortable
+7:31
+with gathering and then looking within our security toolkits. When you're looking for malware and
+7:38
+looking for known samples, MD5 is probably sufficient. If you have MD5 in your environment and that's
+7:47
+the preferred hashing algorithm, that's probably what you want to use. In our case, it was Shaw 256.
+7:53
+But you can essentially do that either way. So I run that command. I'm able to get a hash value
+7:58
+for the particular file and essentially search on that. If I did want to run the MD5 some,
+8:06
+I can do that as well and get the results for that. So what I did when I had the hash is I started
+8:15
+searching for it. And of course, one of the first go to places for me personally was virus total.
+8:21
+And it may be difficult to read, but in the address field of the browser, you can actually see
+8:27
+the hash value in there. In this case, no matches found on virus total, which I thought was unusual
+8:34
+because virus total gets an awful lot of samples. Jody Mauer scan does have as many scan engines as
+8:43
+virus total, but it's a similar type of solution. And when I looked out there again, I found nothing
+8:50
+of interest or value. You can see the hash file there and you can see the hash was not found.
+8:56
+So I went into hybrid analysis. And again, no results for the engine while querying the hash value.
+9:05
+And finally, I just actually did a Google search just to see if anything at all would come back.
+9:10
+And it really came back that no documents, nothing was matched. So I wasn't quite sure exactly
+9:17
+what I wanted to do next at that point. Again, I spent a lot of time researching things and so forth.
+9:26
+And then I'm thinking, well, this mobile device, it's sort of at risk. Is this something that we want
+9:34
+to get from the end user? And essentially, what do we do with it? Is it sufficient to do a security
+9:42
+wipe on the device and give it back to the user? Do we confiscate this thing?
+9:50
+What exactly is a good course of action? I didn't feel that essentially saying, well, the chances
+9:58
+Microsoft publisher, infecting an iPhone are small. That just wasn't acceptable level of risk.
+10:05
+I also wasn't sure I was even comfortable with the risk of wiping the device and letting the
+10:12
+user have it back. In fact, I can tell you that I wasn't comfortable with that at all.
+10:17
+And so another thought I had was, let me look into it. This particular user was not due for a
+10:25
+device refresh yet. But they were very close to it. So I was almost thinking, well, perhaps we can
+10:33
+confiscate the device, shut it down, and then put it in our forensics lab, and then get this
+10:40
+individual a new device issued. They were close enough to the date where we definitely could
+10:45
+have justified that. As I'm thinking through these and other thoughts and spending time research,
+10:50
+I thought, well, this is sort of silly, but I actually have not looked at the ex of data for the
+10:55
+file. Now, Windows, that's simply right clicking in the file, going into the properties and
+11:00
+drawing into the details to see what you can learn about it. You always have to take exit data with
+11:04
+a green assault, though, because exit data can be spoofed. And so it's not perfectly reliable,
+11:13
+but I thought, well, maybe there's another artifact I can find in exit data that will tell me
+11:19
+something interesting about the file. So let me go back to my command prompt. Let me go ahead and
+11:24
+clear the screen. In my case, and someone Linux, I'm going to run the PURL Exit tool on this particular
+11:32
+publisher file. You want to do that. Subminarasing information, I have the file name at the top. I can see
+11:41
+the date timestamps and so forth. This was interesting, the file type and file extension.
+11:48
+Fpx, not something I've really seen before, but then again, I never really looked at publisher files
+11:53
+before. My research told me that those were legitimate things that you expect to find
+12:00
+within a publisher file, the MIME type image, vnd.fpx, and then the
+12:09
+later on, you see that it is Microsoft publisher. I get to the author and it didn't exactly say test
+12:15
+fish. It wasn't quite that blatant, but let's go ahead and talk about what it was.
+12:20
+Really for me personally, it was a face-pull moment, just simply realizing that the email
+12:25
+attached to my spent all this time analyzing actually came from our test fishing vendor.
+12:30
+Now I said the exit data can be spoofed and that is true, so I didn't just accept that as definitive.
+12:38
+What I did do though is I went through and I looked at our email system and I double-checked
+12:44
+the message headers and they were what I expected. It came from the IP address associated with our
+12:52
+test fishing vendor, mail servers. Of course, when I'm looking at it, I'm reading, yes, Matt,
+12:58
+this really is your test fishing vendor's IP address. You dold. It's okay if you want to laugh
+13:03
+at my pain. This was a definite painful lesson learned in this particular case, but what went
+13:12
+wrong in my case is I got caught up in the moment by subconsciously letting somebody else influence
+13:17
+my investigation. Their anxiety and bad assumptions were off on me. One should always start with the
+13:24
+message headers when they're conducting an investigation of a fishing email and the contents.
+13:31
+Ironically, I've given talks on fishing forensics and I've always, always, always stated to start with
+13:37
+the message headers, but this one time I got tunnel visioned on the attachment and so I've
+13:43
+banded my own standards this one time by focusing on the attachment first and it really came back to
+13:49
+bite me. In this case, there really were no remediation steps as it was what you might consider a
+13:56
+false alarm. The road to redemption in this case were painful lessons learned for my reminders to
+14:02
+stick to my standard investigative processes and procedures. If I had started my investigation by
+14:07
+inspecting the message headers first, I could have closed out the investigation in minutes instead
+14:12
+of hours and then in this particular instance, no further technical actions were required.
+14:20
+My second scenario is called security scanner evasion. I'd like to prep this scenario by stating
+14:27
+that there were identical fishing emails and they started hitting inboxes. We were actually getting
+14:32
+wide-scale reports of fishing and the link, what was interesting about the link is when I looked at
+14:39
+it in a security scanner tool is it appeared that the page was already offline. If that were truly
+14:46
+the case, then it might be a situation where it was nothing to worry about. It wasn't quite ready
+14:51
+to accept that at face value, so let's go ahead and investigate this and find out. What we're going to
+14:57
+do for our investigation is we're going to take a look at the email message and the source code.
+15:02
+We're going to note any hyperlinks and then we're going to check out the landing page with our
+15:07
+security scanner and that's something I'm just sort of simulating here. Then we're going to take a
+15:14
+look at the landing page source code and then finally we're going to open up the fishing page
+15:19
+in a sandbox. Again, I'm on my local machine here doing demos, so this is going to be a simulated
+15:27
+pretend sandbox, if you will. Let's go ahead and take a look at the email message itself.
+15:32
+Here's a sample email message. The from field, in this particular one, I've called it from
+15:40
+evildatskamer at promisewearelegit.com. The subject in this email message is this link is
+15:47
+totally safe and in this case it's going to fishing target, which is unwitting.victim at randomtarget.org.
+15:57
+Email message simply reads hello fishing target. We have a really important message for you.
+16:02
+To retrieve your message, click here and that's not real subtle. It stands out about as much as
+16:08
+it could possibly stand out. Regardless, spoof sender. Not had a lot of people ask me, Matt, have you
+16:14
+actually used this as a test fishing template to do fishing testing for user educational purposes?
+16:23
+And the answer is no. And part of that is I'm not sure I really want to know because my deepest
+16:29
+fear is there's still going to be that one person in the organization that's still going to be
+16:33
+gullible enough to actually click on this hyperlink. And so even though there's more red flags in
+16:39
+this particular email than Vladimir Putin has in his garage as souvenirs from his old KGB days,
+16:46
+my fear is somebody would still actually click on it. In this case, a lot of people will tell you to
+16:52
+hover over to get the hyperlink in an email message. I don't like to do that for a couple of reasons.
+16:59
+One is you might accidentally click on the link and two, I'm just sort of leery back in the
+17:05
+distant past. There used to be some issues with certain mail clients and web mail where JavaScript
+17:11
+might run on a mouse over or an on hover, that kind of thing. So I tend to go the extra cautious
+17:19
+route. And I'm going to go ahead and come in here into the view menu and pull up the message source.
+17:27
+I want to make this a little bit bigger so it's not such an iTry to try and read. And what I like to do
+17:33
+in an email message is if I just do a search, a text search for HTTP, I'm generally going to find
+17:40
+what I'm looking for. And in this case, I have one result and it found my hyperlink. And so I'm
+17:47
+going to go ahead and copy this particular link and see what we have. And we go back to my command
+17:56
+and there's a couple of things that we can do to obtain the source code for this.
+18:02
+Before I do that, let me go ahead and show what it actually looks like inside of my
+18:08
+test sandbox. So if I open up the page, I get what appears to be a normal looking for a four page
+18:15
+saying that the file or the directory is not found. If this were truly the case, it could be a
+18:19
+situation where this has already been cleaned up and there's nothing to worry about because it
+18:24
+would appear that the malicious site is offline. Not only take that at face value, there's a couple
+18:30
+of ways we can look at the source code for that. One of them is we can use the curl command and we can
+18:38
+paste in the address and I can output the results to a file of my choosing. So for output,
+18:46
+we go ahead and call this something like first page. I'm sorry, let me go ahead and call this
+18:50
+unknown.html and it retrieves the file. There's other ways to do this. If you don't have curl available
+19:01
+in the system, you could always try WGet and see if WGet is installed. And with that, I'm going to
+19:06
+go ahead and repaste the address in here. It's going to retrieve the file for me. This case, let me
+19:12
+clear off this stuff. And so I've retrieved the file a couple of different ways.
+19:18
+Forensically, it doesn't going to make a big difference which way I use. To prove that, let me go ahead
+19:27
+and take a look at the HTML files in here. Now we've got different names based on how I
+19:32
+am output those results. But what we can tell is that roughly we have the same file bite size on
+19:41
+these. Now one thing that's an artifact of demoing this on a local system that's running a local
+19:47
+web server is that the WGet actually retains the original date that that was created. That's really
+19:55
+just an artifact of the fact that it's on a local system. Typically, when you run WGet on line,
+20:03
+you're going to get the current time when it was retrieved just like my curl output here.
+20:08
+But you can see that we definitely have the same file sizes. And again, just to prove that these
+20:14
+really are the same file. I'm going to go ahead and run a SHOW-256 sum on all of the HTML files in
+20:23
+here. And what we can see is it doesn't matter if we use curl or if we use WGet. These results
+20:31
+really are identical. And so what we want to do is actually take a look at these, one of these
+20:39
+files. So let me just go ahead and pop up one of these inside of a text editor here.
+20:49
+And it doesn't really matter which text editor you use. I'm just using something that's simple
+20:54
+that I can make bigger that hopefully isn't too difficult to read on screen. Now whether you can
+21:01
+actually read the JavaScript or not, I'm going to explain how this works. So here at the top,
+21:08
+we have our standard HTML file. It's declaring script. And in this case, it's going to be JavaScript.
+21:15
+And what we start seeing is we see an if else loop. And so what it's looking for is user agents.
+21:26
+So navigator.user agent. And so we see things that should be recognizable here. And so this one
+21:33
+in particular is Chrome. And what we see is it's doing an if if it's Chrome, then replace the
+21:42
+window location or in other words, redirect the traffic to another page. And we have near
+21:48
+identical code except down here, we're looking at Microsoft Edge. We're looking at Firefox. We're
+21:54
+looking at Microsoft Internet Explorer, the Opera web browser and the Safari web browser.
+22:00
+And so we have all these different if statements. And then down here, we have our final else. So if
+22:10
+none of these things matched, then it should replace the window location with a four or four page.
+22:17
+Now that's interesting because these are really all of the common web browsers that most systems
+22:25
+would tend to have. So in other words, if a visitor is going to a website using a popular web browser,
+22:32
+it's going to send the traffic one place. And if it doesn't match any of that, it's sending it to
+22:38
+this four or four page. And if you remember from our security scanner demo that what we had was in
+22:45
+fact a four or four page. And so it's interesting because the result doesn't necessarily match what has
+22:53
+been hidden underneath the scenes down here. So this tells us an awful lot and to give everybody
+23:01
+an idea of what this actually looks like. If we open up the web page and a browser, Google actually
+23:08
+tells us, hey, this looks sort of much sketchy. And when I pull it up here, what I get is what very
+23:16
+much appears to be a typical Microsoft Office 365 type of login. So we can actually see what's
+23:24
+happening when the site is visited by a common web browser. So let's go ahead and talk about this
+23:30
+a little bit. We looked at the browser user agent string, redirection, sort of explaining how that
+23:38
+works. Taking this a step further, in this case, I got lucky because the thread actors had used
+23:45
+JavaScript. So I could tell there were direct directs happening and I could tell exactly how they
+23:51
+were happening. If the thread actors had used a server side language and there's certainly a number
+23:57
+of them here, including PHP Python and several others I have listed by no means is that an all inclusive
+24:03
+list. But those are very common to find as server side languages. What's interesting is you can't
+24:12
+view source code on server side languages and is standard properly secured web server configuration.
+24:20
+What is also interesting is that if let's say for example, the thread actors had a payload that
+24:29
+only worked within the Firefox web browser, for example, they could actually target the payload
+24:35
+based on a specific web browser so that it would only round rob and execute a malicious
+24:42
+download. For example, when people using the Firefox web browser might visit a particular page,
+24:50
+those same code snippets I showed could be further targeting specific browser versions within
+25:00
+those brands. So for example, if we had a version of an exploit that worked only on certain browsers
+25:09
+below a certain version number, those checks could be baked into the code and they would be very hard
+25:16
+to sort of analyze them. But also typically that round rob and could redirect a user so fast that
+25:25
+they wouldn't even notice that the page took time to load but it would also make it very tricky
+25:31
+to analyze. So those are sort of things that thread actors could do to make this worse. And honestly,
+25:38
+I think I've sort of seen some of these type of things in the wild. It's just very hard if you don't
+25:44
+have direct control or access to a web server to know for certain. In this case, our remediation steps
+25:52
+were we determined the actual phishing landing page and we blocked it through web content filtering.
+25:57
+We also worked with our secure email gateway vendor to block the active phishing campaign.
+26:03
+My second scenario is called security scanner evasion. I'd like to prep this scenario by stating
+26:10
+that there were identical phishing emails and they started hitting inboxes. We were actually
+26:15
+getting wide-scale reports of phishing and the link, but what was interesting about the link is when
+26:22
+I looked at it in a security scanner tool is it appeared that the page was already offline. If that
+26:29
+were truly the case, then it might be a situation where it was nothing to worry about. It wasn't quite
+26:34
+ready to accept that at face value. So let's go ahead and investigate this and find out what we're
+26:40
+going to do for our investigation is we're going to take a look at the email message and the source
+26:45
+code. We're going to note any hyperlinks and then we're going to check out the landing page with our
+26:51
+security scanner and that's something I'm just sort of simulating here. Then we're going to take a
+26:57
+look at the landing page source code and then finally we're going to open up the phishing page in a
+27:03
+sandbox. And again, I'm on my local machine here doing demos. So this is going to be a simulated
+27:10
+pretend sandbox, if you will. Let's go ahead and take a look at the email message itself.
+27:15
+Here's a sample email message. The from field, in this particular one, I've called it from
+27:23
+evil.scamer at promisewearlegit.com. The subject in this email message is this link is
+27:30
+totally safe. In this case, it's coming to phishing target, which is unwitting.victim at randomtarget.org.
+27:39
+Email message simply reads hello phishing target. We have a really important message for you. To retrieve
+27:46
+your message, click here and that's not real subtle. It stands out about as much as it could possibly
+27:53
+stand out. Regardless, spoof sender. Not had a lot of people ask me, Matt, have you actually use this
+27:59
+as a test phishing template to do phishing testing for user educational purposes? And the answer is no.
+28:08
+And part of that is I'm not sure I really want to know because my deepest fear is there's still
+28:13
+going to be that one person in the organization that's still going to be gullible enough to actually
+28:18
+click on this hyperlink. And so even though there's more red flags in this particular email, then
+28:24
+Vladimir Putin has in his garage as souvenirs from his old KGB days, my fear is somebody would still
+28:31
+actually click on it. In this case, a lot of people will tell you to hover over to get the hyperlink
+28:38
+in an email message. I don't like to do that for a couple of reasons. One is you might accidentally
+28:43
+click on the link and two, I'm just sort of leery back in the distant past. There used to be some
+28:50
+issues with certain mail clients and web mail where JavaScript might run on a mouse over or
+28:58
+an on hover, that kind of thing. So I tend to go the extra cautious route and I'm going to go ahead and
+29:06
+come in here into the view menu and pull up the message source. I want to make this a little bit
+29:11
+bigger so it's not such an iTart to try and read. And what I like to do in an email message is if I
+29:19
+just do a search, a text search for HTTP, I'm generally going to find what I'm looking for.
+29:25
+And in this case, I have one result and it found my hyperlink. And so I'm going to go ahead and
+29:31
+copy this particular link and see what we have. And we go back to my command line. And there's
+29:40
+a couple of things that we can do to obtain the source code for this. Before I do that, let me go
+29:47
+ahead and show what it actually looks like inside of my test sandbox. So if I open up the page,
+29:55
+I get what appears to be a normal looking for a four page saying that the file or the directory is
+30:00
+not found. If this were truly the case, it could be a situation where this has already been cleaned up
+30:06
+and there's nothing to worry about because it would appear that the malicious site is offline.
+30:12
+Not only to take that at face value, there's a couple of ways we can look at the source code for that.
+30:17
+One of them is we can use the curl command and we can paste in the address
+30:23
+and I can output the results to a file of my choosing. So for output, let me go ahead and call
+30:30
+this something like first page. I'm sorry, let me go ahead and call this unknown.html.
+30:37
+And it retries the file. There's other ways to do this. If you don't have curl available in
+30:44
+a system, you could always try WGet and see if WGet is installed. And with that, I'm going to go
+30:50
+ahead and repaste the address in here. It's going to retrieve the file for me.
+30:55
+This case, let me clear off this stuff. And so I've retrieved the file a couple different ways.
+31:02
+Forensically, it doesn't going to make a big difference which way I use to prove that. Let me go
+31:10
+ahead and take a look at the HTML files in here. Now we've got different names based on how I
+31:17
+output those results. But what we can tell is that roughly we have the same file bite size on these.
+31:25
+Now one thing that's an artifact of demoing this on a local system that's running a local
+31:30
+web server is that the WGet actually retains the original date that that was created. That's really
+31:39
+just an artifact of the fact that it's on a local system. Typically when you run WGet on line,
+31:46
+you're going to get the current time when it was retrieved just like my curl output here.
+31:52
+But you can see that we definitely have the same file sizes. And again, just to prove that these
+31:58
+really are the same file, I'm going to go ahead and run a shop 256 sum on all of the HTML files in
+32:07
+here. And what we can see is it doesn't matter if we use curl or if we use WGet. These results
+32:14
+really are identical. And so what we want to do is actually take a look at these, one of these
+32:22
+files. So let me just go ahead and pop up one of these inside of a text editor here.
+32:28
+And it doesn't really matter which text editor you use. I'm just using something that's simple
+32:38
+that I can make bigger that hopefully isn't too difficult to read on screen. Now whether you can
+32:45
+actually read the JavaScript or not, I'm going to explain how this works. So here at the top,
+32:51
+we have our standard HTML file. It's declaring script. And in this case, it's going to be
+32:57
+JavaScript. And what we start seeing is we see an if else loop. And so what is looking for is
+33:08
+user agents. So navigator.user agent. And so we see things that should be recognizable here.
+33:16
+And so this one in particular is Chrome. And what we see is it's doing an if if it's Chrome,
+33:24
+then replace the window location or in other words, redirect the traffic to another page.
+33:30
+And we have near identical code, except down here, we're looking at Microsoft Edge. We're looking at
+33:36
+Firefox. We're looking at Microsoft Internet Explorer. The Opera web browser and this Farry web browser.
+33:45
+And so we have all these different if statements. And then down here, we have our final else. So
+33:53
+if none of these things matched, then it should replace the window location with a 404 page.
+34:00
+Now that's interesting because these are really all of the common web browsers that most systems
+34:08
+would tend to have. So in other words, if a visitor is going to a website using a popular web browser,
+34:16
+it's going to send the traffic one place. And if it doesn't match any of that, it's sending it to
+34:22
+this 404 page. And if you remember from our security scanner demo that what we had was in fact a 404 page.
+34:31
+And so it's interesting because the result doesn't necessarily match what has been hidden underneath
+34:37
+the scenes down here. So this tells us an awful lot and to give everybody an idea of what this
+34:46
+actually looks like. If we open up the web page in a browser, Google actually tells us,
+34:52
+hey, this looks sort of much sketchy. And when I pull it up here, what I get is what very much
+35:00
+appears to be a typical Microsoft Office 365 type of login. So we can actually see what's happening
+35:08
+when the site is visited by a common web browser. So let's go ahead and talk about this a little bit.
+35:14
+We looked at the browser user agent string redirection, sort of explain how that works.
+35:23
+Taking this a step further, in this case, I got lucky because the thread actors had used JavaScript.
+35:30
+So I could tell there were direct directs happening. And I could tell exactly how they were happening.
+35:35
+If the thread actors had used a server side language, and there's certainly a number of them here,
+35:41
+including PHP, Python, and several others I have listed by, no means is that an all-inclusive list.
+35:48
+But those are very common to find as server side languages. What's interesting is you can't
+35:55
+view source code on server side languages and is standard properly secured web server configuration.
+36:03
+What is also interesting is that if, let's say for example, the thread actors had a payload that
+36:12
+only worked within the Firefox web browser, for example, they could actually target the payload
+36:18
+based on a specific web browser so that it would only round rob and execute a malicious download,
+36:26
+for example, when people using the Firefox web browser might visit a particular page.
+36:33
+Those same code snippets I showed could be further targeting specific browser versions within
+36:44
+those brands. So for example, if we had a version of an exploit that worked only on certain browsers
+36:53
+below a certain version number, those checks could be baked into the code, and they would be very
+36:59
+hard to sort of analyze them. But also typically that round robin could redirect a user so fast that
+37:08
+they wouldn't even notice that the page took time to load, but it would also make it very tricky
+37:15
+to analyze. So those are sort of things that thread actors could do to make this worse. And honestly,
+37:22
+I think I've sort of seen some of these type of things in the wild. It's just very hard if you
+37:27
+don't have direct control or access to a web server to know for certain. In this case, our
+37:34
+remediation steps were we determined the actual phishing landing page and we blocked it through
+37:39
+web content filtering. We also worked with our secure email gateway vendor to block the active
+37:45
+phishing campaign. My third scenario is called the rabbit hole.
+37:53
+I want to preface this scenario by saying that I received a request from a user to investigate
+37:59
+email message. They received a determined if it was legitimate or not. Email appeared fishy at
+38:05
+first glance, but I had to ask is it just suspicious or is it malicious? For the investigation,
+38:12
+I can tell from the message headers that the source IP address was a mismatch from the center's
+38:17
+domain. However, the message source was particularly interesting because the link text did not
+38:23
+match the hyperlink destination. We're going to do a quick demo of that. And then the malicious
+38:30
+thread actors objective appeared to be credential harvesting for the purposes of account takeover.
+38:36
+So let's go ahead and take a look at the email message and then also take a look at the
+38:42
+hyperlink. So here's our email message. And so it comes from PayPal support, but the address is
+38:52
+ppsupport at pwn-server.org. The subject is PayPal bank account change confirmation.
+39:01
+And it's to phishing target, which is again, is our unwitting.victim at randomtarget.org.
+39:07
+The email simply reads, Dear PayPal customer, we received a request update your bank account on file.
+39:14
+This process will complete in the next four hours. If you did not request these changes to your
+39:19
+PayPal account, please log in to reject the pending activity. And here is a link that would actually
+39:27
+take you to PayPal's actual login page if that is where you were being sent. And then in this case,
+39:35
+sincerely PayPal support. And I mentioned in there that the link text reads one thing, but the
+39:42
+actual hyperlink can go somewhere quite a bit different. So let's go ahead and take a look at the
+39:48
+message source code here. So I'm going to go into the view menu, pull up the message source,
+39:53
+and make this a little more readable for everyone. And so if I search on HTTP, it will find HTTP,
+39:59
+HTTPS traffic. And so here we have the PayPal sign in address that we just looked at moment ago
+40:10
+in the live email message. But what gets interesting is when we see the actual hyperlink in the
+40:16
+source code, it's actually going somewhere completely different. So I'm going to go ahead and
+40:21
+copy that address and have that here so we can do some analysis on this. Let's go ahead and
+40:30
+see what this looks like on a live website. And so again, this would be something you would typically
+40:36
+do in your sandbox environment to see what's going on here. And it certainly has the look and feel
+40:43
+for a PayPal login page when we go there. But what we want to do is understand what is actually
+40:49
+happening behind the scenes when we investigate this. So we've taken a look at the link text. We see
+40:55
+that the hyperlink is going somewhere else. We know the thread actors are trying to harvest
+41:00
+user names and passwords for PayPal so that they can log in as the user and deplete the account
+41:07
+of funds, maybe make fake purchases, essentially committing financial fraud. So what we're going to do
+41:16
+is we're taking a look at the first destination. And we took a look at the source code just a moment
+41:22
+ago and we know it's going to a web host in a foreign country. But we're going to go ahead and take a
+41:29
+look at that. So let's do that now. I'm going to go ahead and run curl and I'm going to paste in the
+41:35
+address I copied moment of tarot ago. And I'm going to output this and I'm going to call it something
+41:43
+like first page.html. Retrieve that. And so I want to take a look at this file and see what it
+41:52
+actually looks like. So I can understand the source code of the page and what's happening. And
+41:59
+again, what we see in the address here is a dot be top level domain, which we know is the country
+42:06
+of Belgium. Certainly for an American customer on PayPal, we shouldn't be going to a Belgium
+42:13
+domain. And everything in that fishing email essentially tells the user, hey, you have four hours to
+42:20
+essentially save your account information. So people will unfortunately maybe fall for that
+42:26
+lure and think that they're acting in good faith to protect their account when the reality is
+42:30
+they're actually handing over all of their credentials to the threat actors. So let's go ahead and
+42:35
+take a look at this source code and see what it looks like.
+42:42
+Now I'll make this just a little bit bigger here. For an active web page, this doesn't look like it
+42:49
+has a whole lot of information in here. We see it is a conventional HTML file and we see,
+42:55
+you know, title, please log in. What's interesting down here is we have this HTTP
+43:01
+eqiv equals refresh inside of this meta tag. This is a meta redirect and content equals zero means
+43:10
+it's going to happen instantaneously. In other words, it's not going to be a five-second delay.
+43:15
+It's going to do it immediately. And what we see here, based on the source code, is it's not going
+43:23
+to PayPal. Certainly, it's not even staying in the Belgium domain. Here we have a dot de
+43:29
+domain, which we know is in Germany. And this is certainly highly unusual because now we have
+43:36
+something where the link text did not match the hyperlink, which went to Belgium. Now we have a
+43:44
+web page being served up. We believe in Germany. And these are all very likely compromised web servers
+43:53
+in these foreign countries. So now that we have copied the second destination address, the landing
+44:01
+page appears to be a compromised web host in a foreign country. But we're going to take a look at
+44:06
+this, get the source code and figure out how this looks behind the scenes. So similar to what we
+44:13
+did before, I'm going to run curl. I'm going to go ahead and paste in the address for our second
+44:18
+destination. And this time I'm going to output it to something called second page, that HTML.
+44:27
+And this again will retrieve the source code from the second web page. And we want to take a look
+44:34
+at this and understand what's happening. So let's go ahead and run G at it again. And in this case,
+44:42
+I'm going to go ahead and pull up second page. And you can certainly use whatever preferred editor.
+44:47
+Again, I'm just doing demos here and trying to make this somewhat easy. The ampersie and should
+44:52
+just open in a disassociated process and return the terminal back to normal. We go ahead and make
+44:58
+this bigger. Now this is not the same thing that we had for our redirect before. This looks just
+45:06
+a little bit different. One, you can tell it's obviously a little bit bigger HTML file. We have
+45:13
+HTTP meta information, but not a refresh here. What's interesting is there is a declared title
+45:20
+on the page of log into your PayPal account, which will be something that would pop up and appear
+45:26
+within the web browser. What's different this time though is we have an iFrame. And the iFrame has
+45:33
+a another web address in it. So this is actually not serving up the web page we saw. This is actually
+45:41
+serving up in an iFrame. And what we can tell here with absolute positioning and 100% width and
+45:48
+height and no border that it's a seamless iFrame. So in other words, when somebody visits this particular
+45:56
+page, it won't look any different that they went to. But the reality is it's actually serving up
+46:04
+content from this different address. So this is definitely getting very interesting very quickly.
+46:10
+Let's go ahead and take a look at the third destination address. And so, you know, again, we have,
+46:18
+if we look at the where this is going, we can tell that very soon that we have .nl as our top level
+46:31
+domain. So that is something in the Netherlands. So we're going to head into this page. We're going
+46:39
+to go ahead and output this and we'll call it third page.html. And we'll get that. And so before
+46:47
+we've looked at these different kinds of files and we've retrieved them, we'll go ahead and do
+46:54
+the same here. And so I'm going to do my editor. We'll start typing in third page, do an ampersand.
+47:04
+And what we get this time isn't the nice source code that we've looked at recently. We have
+47:11
+really what is not human readable govety-yook. And if we scroll through here, there's really very little
+47:20
+other than the script tag down here that tells us much of anything. We know, based on the top,
+47:28
+that it is JavaScript. And what's interesting here is we have something called an unescape.
+47:37
+And I'm going to explain this a little bit. So this is an unescape sequence. And then what we have
+47:43
+down here, we have something that's DF. And this, believe it or not, I actually made this a little
+47:50
+more human readable. And you might be thinking, Matt, this is not readable at all. And that's true,
+47:56
+but bear in mind when you see this stuff in real life, there may be no white spacing at all to
+48:01
+separate out what this is. Now, if I come here at the very end of the first lines, we can see
+48:12
+here at the end our unescape sequence based on what's happening here. I'm going to go ahead and
+48:20
+guess that this might be some sort of a function. It's certainly not human readable. And back in the
+48:27
+old days to understand what was happening here, we would actually have to get the unescape sequence.
+48:34
+And then we would have to feed the function back into our unescape sequence to translate this
+48:40
+into something that we might be able to read. Let's go back to our slide deck real quick. We've got
+48:46
+our source code. We've perused it. And so what we can tell again is that the thread actors use
+48:53
+JavaScript and coding to avoid analysis and detection while also hiding the page source. So we're
+49:00
+going to take a look at decoding the page source using the built-in browser developer tools.
+49:05
+The important thing to remember here is that anything that can be rendered in a web browser has to
+49:11
+be something that can be decoded in order to serve up the page. So in other words, it somewhere
+49:19
+has to be readable. Here we actually have the destination from the iFrame itself. Let's go ahead and
+49:27
+pull up the browser developer tools. And we can actually leverage those as a faster method to
+49:34
+actually understand what the source of the page is doing. We come back in here and do a quick
+49:40
+refresh. And what we have when we look at this is on the network tab inside of our browser developer
+49:49
+tools. Right now we're looking at everything and we're going to see headers. And so here we have our
+49:57
+webpage. And we can see what the headers look like and that sort of thing and a little bit of
+50:03
+the source code. But we don't really see a whole heck of a lot here. If I come back into the
+50:08
+Elements tab, I've got some code here, but it doesn't really break down a whole lot of detail.
+50:16
+In other words, what I'm seeing on the screen, I'm not really seeing a whole lot of code for
+50:21
+and what I've mentioned before, the good thing is that this stuff has to be decodable or else the
+50:28
+webpage itself would never render and the thread actors would not be able to do account takeovers.
+50:35
+So if I do it at it is HTML, this starts to look very similar to what we had before.
+50:44
+And we have again our unskate sequence here. It's same stuff we were just looking at.
+50:51
+But what gets really nice is once we get past this blob of JavaScript and coded stuff that
+50:58
+isn't human readable in our browser developer tools, we actually do get to a point where we get to
+51:04
+actual source code. And here we can actually see the unskate sequence in here. It's already done
+51:11
+the heavy lifting for us. And again, I was just guessing based on how the code looked that that
+51:17
+might be a function. And sure enough here, we see that it is trying to do some sort of a function
+51:25
+call based on the unskate sequence. And what we notice here is that this is readable code for the
+51:33
+most part. We see the title, login to your PayPal account. What gets really weird though is that
+51:39
+we have more stuff that isn't exactly human readable when we get around to this section.
+51:45
+And what it tells us here is shortcut icon. And we look at the mind type. It's data image x icon
+51:54
+base64. So I'm going to go ahead and guess that this is likely some sort of base64 and coded
+52:02
+content. And we'll go ahead and kind of scroll past that stuff a little bit. Based on what we see
+52:09
+here might even be an icon file of some sort. We'll go ahead and go back down. And here again,
+52:15
+we actually start seeing our HTML coding that we can actually now read. What gets interesting is
+52:22
+that we get down here. We've got a table item. And this would appear to likely be an image source.
+52:31
+And here again, potentially base64 and coded, probably base64 and coded based on the mind type.
+52:38
+And now that's defined in here, we have data image. So I'm going to guess that this is an image file.
+52:46
+And if we scroll through quite a ways, it takes us a little while before we get back to the actual
+52:52
+content. Now this is something that's actually relatively simple to analyze here within the
+53:00
+developer tools. We go back to our network tab. And we look at some of what's in here. Let me
+53:07
+make that just a little bit smaller. Here we see what was retrieved. We have an image file that
+53:14
+is a JPEG. And we have base64 and coding. And if we were to go back and look, it's going to be
+53:21
+the same code that we looked at in that second file that was base64 and coded. And what is really
+53:27
+nice is they have a preview tab here that actually shows us what the file looks like. We bounced back
+53:35
+to our web page where we loaded this again in our pretend sandbox. Here's the logo file itself
+53:41
+for PayPal in this particular location. So we've done this with the browser developer tools.
+53:47
+And we've seen that this is indeed all part of this single file that we've looked at the source code
+53:54
+for. But what you might recall is that there were two base64 and coded things in here. And so
+54:04
+again, I'll have to go ahead and click edit as HTML. And if I scroll past the encoded parts,
+54:10
+it'll actually give me the decoded version of the web page. And here again, I'm guessing that it's
+54:16
+an icon file in all likelihood. What I want to do to manually do this and what I want to show is how
+54:23
+you manually decode basic 64 items. And so I'm going to go ahead and copy this whole blob of stuff.
+54:31
+I'm going to open up a new tab here and I want to go ahead and paste this in here. And what we have
+54:41
+is this big base64 encoded data. And I want to go ahead and save this particular data. And I'm
+54:52
+going to go ahead and call it unknown.txt. That's essentially what we have. We have text. We can see
+55:02
+what's here, but it's not necessarily human readable. And what we want to do with this is show how
+55:11
+we would manually decode basic 64 content. So let me go ahead and list out my text file here.
+55:22
+And here I have it unknown.txt. Let me go ahead and clear this as again. And so what we want to try
+55:29
+and do here is basic 64 for the command. We'll do a dash i just to sort of ignore any warnings or
+55:37
+errors or that kind of thing. We'll do a dash d for decode. And let me go ahead and
+55:43
+call unknown.txt. And what I want to do is redirect the output. And what I'm going to
+55:49
+redirect the output to is faveicon.icio. And hit enter. And now if I do an LST shell start.icio,
+56:00
+I should see that I have a faveicon.icio file. So this is great. It appears like we may have
+56:08
+decoded this thing successfully. And here's my faveicon.icio file. If I double click on this,
+56:14
+open it up in an image editor viewer. And I make this much bigger than the default. Here we can see
+56:22
+what would appear to be a faveicon within PayPal. Now this is going to be somewhat tricky to see
+56:29
+here. But in the browser at the top, we see our faveicon file up here.
+56:36
+This is all interesting stuff. What we've observed through this is that we've seen encoded elements.
+56:45
+And I'm not sure whether the thread actor used encoded elements to avoid analysis and detection.
+56:50
+Or they simply want to keep the entire site as a single page file. But they use base64 encoded
+56:57
+elements inside of their JavaScript encoded page. And we've looked at demos for that.
+57:03
+We've also seen how to decode the base64 using the built-in browser developer tools.
+57:08
+And we've also walked through how to decode those elements by hand.
+57:14
+In this case, the remediation steps were that we determined the final fishing landing page.
+57:18
+And we blocked through web content filtering. We also went ahead and blocked intermediary
+57:24
+compromise web servers through content filtering. Since we had identified numerous
+57:30
+compromised web hosts in foreign countries. And then we reported the compromise websites to
+57:36
+domain owners and hosting companies through their who is contact records. That's a little bit of
+57:42
+a leap of faith now because everything is privatized. So hopefully the privacy email address is
+57:50
+forwarding somewhere that's being actively monitored. We can only control so much on our end.
+57:56
+But those are the remediation steps we took in this case. That's all I have for this presentation.
+58:01
+I'd like to thank everyone for tuning in. As you see me hanging out on Discord or a DEFCon,
+58:07
+please share your own DFI R stories. Friends, Romans, DEFCon attendees, let me your IRs.
+58:16
+And with that, I will be hanging out on the Discord to answer any questions.
+58:22
+Please feel free to reach out to me there. And I want to thank everybody for tuning in and hope
+58:27
+everybody enjoys the rest of their conference.

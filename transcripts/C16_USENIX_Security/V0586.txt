@@ -1,1 +1,524 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Okay, afternoon.
+0:11
+I'm Jimmy Haslum, security engineer at Microsoft.
+0:14
+And with me is Bush, Laura Lourianny, a security researcher at Microsoft.
+0:18
+We're part of a detection engine team that posts a poll, a request time security and privacy
+0:23
+notifications across large established production repos.
+0:27
+Really, really, really big ones.
+0:29
+So today we're going to be focusing on a particularly stubborn access control bug called default
+0:34
+grant access.
+0:36
+And we're going to go look at the performance of two different LLM configurations across
+0:39
+more than 183,000 modified methods in nine repos.
+0:44
+That we took a look at.
+0:45
+So from an engineering standpoint, that's where I come in.
+0:49
+The takeaway for ourselves is a bit of a bitter pill.
+0:52
+We want to share the bad as well as the good in this house.
+0:55
+And Bush will get to that towards the end of the presentation.
+0:57
+However, some of the things we learned along the way will likely be useful for you folks
+1:01
+in the audience doing your own detection work.
+1:05
+So a few words on context and how we got to be in front of you folks here.
+1:10
+Much of our work catches mundane privacy mistakes before merging to Maine.
+1:14
+The developer who logs an unredicted exception object containing privacy information.
+1:18
+The customer email that lands in a log pipeline that wasn't supposed to receive it.
+1:22
+The day bugs, real incidents, the bad ones are pageable by the detection team.
+1:27
+They can get pulled in at times.
+1:30
+The detectors we ship post comments directly into the pull request, which means false positive
+1:35
+costs real developer trust for our team.
+1:39
+Developers do not like false positives, of course.
+1:42
+They'll hate you for it.
+1:44
+For years, our toolbox was static analysis.
+1:48
+Every why precision recall for detecting these issues was pretty disappointing.
+1:52
+Ease 24 published a true positive detection ceiling at approximately 11 to 27%.
+1:58
+Production code with known volumes in it.
+2:00
+Combined tools reach 38.8 additional custom semi-grap rules tacked on top of that.
+2:06
+Pushed at the 44.7.
+2:07
+For our team, the most difficult contextual cases during this era went pretty much undetected
+2:13
+at least automatically.
+2:16
+So once LLMs became widespread, we started decomposing the privacy issue detection problem.
+2:21
+Dismant, static prompt, per bug category that included descriptions, positive examples,
+2:27
+and counter examples too.
+2:28
+And we called such bundled an anti-pattern.
+2:33
+Some of these anti-patterns shipped clean.
+2:35
+Others were noisy.
+2:36
+So the hope was to further improve static prompt detection rates with RAG.
+2:40
+And we picked DGA as a candidate improvement for three reasons.
+2:44
+Then it kept showing up as the root cause of real incident reviews during our post-morms,
+2:50
+during team post-morms.
+2:51
+Two, it was the noisiest of all the stuff that we attempted to roll out.
+2:55
+So any improvement we could tease out would be most evident there in theory.
+3:02
+And three, OASF is ranked, broken access control.
+3:04
+Number one, a web risk every year since 21.
+3:09
+So a bit more about this off-fault grant access.
+3:13
+We're going to spend two slides on this one.
+3:15
+What is it?
+3:16
+Broadly, it's an access control decision where default behavior is to permit with restrictions
+3:21
+applied only conditionally.
+3:24
+You see it with permissive initializations.
+3:27
+An authorization variable starts at a permissive value like true or admin and only downstream
+3:33
+branch sort of flips it.
+3:35
+You see it with permissive return values.
+3:37
+Return handler checks when unexpected check is absent.
+3:41
+Returns success when unexpected check is absent.
+3:45
+You see with broad default entitlements, especially with working with middleware.
+3:49
+A wide roll is granted at entry and only narrowed in some branches.
+3:53
+Overall, the issue is about fragility.
+3:55
+If there's an error in logic or a later refactor comes along that breaks things, you want it
+3:59
+to be broken in the safe way that denies everyone access to rather permitting your private
+4:04
+data access to people that aren't allowed.
+4:07
+You rather break and give bad access.
+4:11
+Here's a very, very, very simplified example.
+4:15
+In the unsafe pattern at the top, the only thing standing between the collar and access is
+4:19
+the ease guess checks.
+4:21
+Super easy here.
+4:22
+Delete that check by accident during a vibraphactor.
+4:25
+Fail to add a check for a new rule that gets introduced or a mishandling exception line
+4:30
+and implicit off for access falls right through.
+4:36
+The deny first rewrite on the bottom here sets authorization to fall up front.
+4:41
+Grants access only when the user has an explicit rule.
+4:43
+The failure mode is restrictive instead of permissive.
+4:46
+Default grant is easiest bought in this example, but throwing context about middleware, default
+4:50
+behavior, context, but whether the code handles privacy data at all and precision recall
+4:55
+begins to suffer.
+5:00
+We initially explored simple, tuned static prompts packaged with few shot examples and
+5:06
+called these anti-patterns for default grant access.
+5:10
+Our initial trials revealed that false positive performance for this detection method was
+5:16
+not yet sufficient.
+5:18
+False positive would have resulted in an excessive amount of developer toil down in our team
+5:23
+would have lost developer trust.
+5:25
+Portant developer trust for us.
+5:27
+People don't want their Polar Equest spammed.
+5:29
+It appears that one static example set couldn't simultaneously cover Java, C-SAR, C++,
+5:35
+and TypeScript.
+5:36
+So, we tried something new.
+5:37
+We tried looking into Rags.
+5:39
+Instead of one fixed set of examples, we would retrieve a bespoke few shot set during
+5:45
+an embedding search against a curated knowledge base of real world incident to steal examples.
+5:51
+Ideally, each piece of code under our review would receive examples that would be most appropriate
+5:56
+for coming to a bug, no bug determination.
+6:02
+So it was language matched as well.
+6:05
+We'll talk about that.
+6:07
+We could have shipped this after a smoke test, but we didn't.
+6:12
+In this house, we make data driven decisions.
+6:15
+Rags here is real operational cost, knowledge base security, unembedding model maintained,
+6:20
+drift damage before paying that cost in production.
+6:23
+We wanted to know whether Rags actually earned its keep at scale.
+6:27
+Default grant access was the track on which we conducted that boot race between static and
+6:34
+Rags.
+6:35
+We want to share some of the results of this engineering decision with you.
+6:38
+It was really, you know, this is a really sort of get your hands dirty engineering decision.
+6:45
+And we wanted to answer two questions.
+6:46
+Does retrieval augmented generation improve detection quality, precision relative recall
+6:50
+F1 compared to a standalone prompts?
+6:53
+Or how does the answer change across programming languages?
+6:56
+We chose Java, Cser, C++, and TypeScript because they are the most common, the most
+7:02
+four common languages that our particular organization generates.
+7:08
+I would see an AI in Microsoft.
+7:11
+Holding the base model and task instructions constant, that's as isolate retrieval as
+7:16
+the only variable, same prompt, same scaffold, same output format, same adjudication.
+7:21
+The question is whether the source of examples alone changes real world detection behavior
+7:25
+when we examine it at scale.
+7:28
+So the comparison, both configurations used GPT-4 up this, so this would have been last
+7:32
+year we made a decision.
+7:34
+The same task instructions, the same evaluation corpus, the only difference is where the
+7:38
+examples came from.
+7:40
+The example LLM gets five static examples, three positive DGA instances, and two counter
+7:46
+examples all written in C sharp, regardless of the target language coming in, the rag configuration
+7:51
+on the other hand, five positive and three counter examples from the knowledge base matched
+7:55
+by cosine similarity plus language matched to the query.
+7:58
+So incoming code to analyze was in TypeScript, so the examples and counter examples are
+8:04
+also TypeScript, unlike the static stuff.
+8:10
+But overall, same model, same scaffold, and we varied the examples.
+8:15
+The knowledge base holds 84 curated examples for DGA indexed in Azure AI search using
+8:21
+OpenAI's text embedding and three model.
+8:23
+Each example was taken from real world incident and rewritten each of the four categories
+8:27
+by engineers fluent in that language, so not a mechanical translation, so we use human
+8:32
+misery.
+8:34
+Yeah, there's a lot more of the human misery.
+8:38
+An important caveat up front, Java and C sharp drew on the richest pull of incident data,
+8:43
+TypeScript and C++ examples were translated by hand at times from real world examples.
+8:49
+So using rag to review the code, of course, it's not a particularly new idea.
+8:54
+Three things separate this particular implementation that we're looking into from a generic code
+8:58
+review pipeline that we would like to call out at the time first.
+9:02
+Our knowledge base is built from post-bordoms that we've encountered in practice going
+9:06
+back years, now 50 years, I'm going to say this point.
+9:09
+Those examples carry context about our own code that retrieval, general retrieval from
+9:14
+the internet does not.
+9:16
+Second, we don't ask the model, is this similar to known bad code?
+9:20
+We provided the prompts, the same criteria that ground truth human reviewers would use
+9:25
+when we did the manual misery validation of this study more.
+9:29
+We validated all this stuff by hand, so a lot of human misery to come to these numbers.
+9:34
+This includes instructions on how to make judgments on contextual issues, not just similar
+9:38
+code.
+9:39
+Third, counter examples are first class.
+9:42
+Three out of every eight retrieved items are negative examples, and without them we would
+9:46
+get a much higher false positive race when encountered.
+9:49
+So to talk about the numbers here, I'm going to hand it off to Bushra and she'll talk
+9:53
+about what we encountered here.
+9:56
+Thanks, Jimmy.
+9:58
+So next question, does it actually help in practice?
+10:02
+In order to find out, actually, we run our analysis on a repo, production repo across
+10:10
+C++, C's sharp, Java and typescripts.
+10:14
+So what we did, actually, we analyzed the reposts for 30 days, and we actually looked at each
+10:19
+power request, and we looked at each modified method within that power request.
+10:24
+We ended up actually analyzing 183,000 method, totally.
+10:29
+And in total, we have 145 findings by both RAG and LLM.
+10:36
+RAG actually produced 100 detection while standalone LLM produced 45 detection.
+10:43
+All the 145 went through manual review with two actually subject matter experts.
+10:50
+If there is disagreement between the two, of course, we have a tie breaker.
+10:54
+One thing I would love to actually mention is that we had the limitation.
+10:58
+We don't really know the true recall.
+11:00
+We don't know how many de-photograms acts is actually in our corpus.
+11:04
+And also, we didn't sample negative examples, meaning we didn't actually look at method
+11:10
+that was deemed to be saved by LLM and RAG, but they aren't.
+11:14
+For that reason, actually, we actually use something different relative recall.
+11:19
+So we took all true positive from all detectors and actually used them as a proxy of coverage.
+11:26
+So did actually retrieve our help?
+11:31
+Well, actually, RAG produced twice as many modified de-photograms acts as compared to LLM.
+11:37
+If you look at the relative recall, you can see the relative recall actually improved from
+11:42
+38.8% to 77.6%.
+11:47
+When you look at the findings by both systems, we expected that RAG actually produced just
+11:53
+more bugs and more, but in fact, it was different.
+11:58
+So RAG and LLM produced distinct bugs that is very limited overlap.
+12:05
+There is only 16% overlap between the two detectors.
+12:10
+Now look at the position.
+12:12
+The position went very down.
+12:14
+It was very unexpected.
+12:16
+Actually, the reason we implemented RAG is that we wanted to improve precision.
+12:20
+But in fact, our result shows actually it was the opposite for some languages.
+12:26
+In order to understand why, we looked at these numbers, language power language.
+12:30
+Here is the table.
+12:31
+It shows language.
+12:32
+So it shows the system.
+12:34
+We have also the position, relative recall and relative effluent score.
+12:39
+relative effluent score actually measured the harmonic mean between a position and the
+12:43
+relative recall.
+12:45
+Look at recall column.
+12:46
+You can see that recall goes up every single time, every single language.
+12:52
+Precision, there is split.
+12:53
+Some languages, precision, improve and other actually precision decreases.
+12:58
+For Java and C sharp, precision improved.
+13:02
+C sharp actually had 90% precision.
+13:07
+If you look at a phone score, 0.79, 0.78, these are kind of good numbers.
+13:13
+They are not reaching our quality power.
+13:15
+But we can go there by improving the detection.
+13:20
+Type is script.
+13:21
+It's always terrible.
+13:22
+Whether it's LLM or RAG.
+13:25
+So it doesn't really matter what language, what kind of method we use.
+13:29
+For C++, it was kind of surprising.
+13:32
+The position actually went down from 50% to 28%.
+13:38
+So why is that?
+13:40
+We believe that it has something to do with the how ecosystem actually suppress authorization.
+13:46
+Looking at the true positive detections, we can see that in Java and C sharp, there is
+13:52
+a clear authorization marker such as attribute and annotations authorized.
+14:00
+That can really have a relationship.
+14:02
+For TypeScript, when you look at the detections, majority of the method actually resemble default
+14:07
+to grant access.
+14:08
+But they are not impact.
+14:09
+For C++, we saw multiple methods actually handle low level operation.
+14:15
+They really used some vocabulary of authorization, but actually they just accessed the resources.
+14:20
+One thing we would love to actually also highlight is that because our knowledge base was really
+14:26
+inspired by C sharp, mostly, and Java, that's how it actually reflected in the position.
+14:32
+That's why we see precision in terms of C sharp and Java were the best.
+14:39
+So now that's about recall position, now let's talk about cost.
+14:43
+And I would love to actually talk about cost and compare LLM RAG, compared to traditional
+14:49
+static analysis.
+14:50
+We usually think about cost in three actually terms.
+14:54
+The runtime cost, of course, LLM, very expensive, RAG actually even more expensive, and static
+15:01
+analysis is really cheap and very fast to run.
+15:04
+So static analysis wouldn't actually factor.
+15:08
+The other factor is the coverage.
+15:10
+Now static analysis is really struggle.
+15:13
+Stregal with contextual anti-pattern such as default grant access.
+15:21
+So here in that case, LLM win.
+15:24
+And if you actually miss an opportunity to detect a bug, it will be actually end up into
+15:30
+production.
+15:31
+It will be incident, privacy incidents, and it will cost us a lot.
+15:35
+The third thing is precision.
+15:36
+So the cost per usable findings.
+15:38
+If you have very low precision and you actually waste human times, especially if it's developer
+15:45
+or human reviewer, by the end of the day you will lose trust and they will ignore everything.
+15:51
+Even though it had a huge recall and the coverage.
+15:55
+So it doesn't matter.
+15:56
+So the question here is that, is it more findings worth it without precision or better precision?
+16:03
+So do we surface the system?
+16:08
+In our case, we did actually not.
+16:13
+And that's because our persona are engineers.
+16:16
+And precision is very critical.
+16:19
+However, if we have security researcher, they would really appreciate the call over precision.
+16:26
+They have their own tool for filtering and actually improving the detection.
+16:30
+So it really depends on your actual end user.
+16:35
+And I would love to actually end up with the lessons we learned.
+16:40
+So Ragh is not actually something can be helpful all the time.
+16:45
+Sometimes it can help.
+16:46
+Sometimes it hurts.
+16:48
+So that depends on the detection and the framework we are using.
+16:52
+If your framework have vocabulary or labels or conventions, then it will improve your
+16:58
+detections.
+16:59
+Also, knowledge base actually really matters.
+17:02
+In our case, we saw precision was very nice and see sharp and Java.
+17:07
+And that's because actually knowledge base was inspired by C sharp and Java incidents.
+17:13
+Finally, the researcher is a tool and not any of us will upgrade.
+17:16
+Thank you so much.
+17:17
+We were happy to take your question now.

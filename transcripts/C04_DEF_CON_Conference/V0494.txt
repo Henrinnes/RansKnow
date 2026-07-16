@@ -1,1 +1,922 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hey everybody can you hear me?
+0:04
+Listen to that. Wow, and modulated my voice. That sounds so good and
+0:09
+so true. Hey everybody, my name is Eric Sivar. Today we're going to be talking about
+0:13
+Mesh Tastic, my favorite thing in the world to talk about, and specifically
+0:18
+commanding and drill server that we have for it, so that you can debug things
+0:22
+remotely without stilltowers internet or any of that stuff. Raise your hand if
+0:26
+you have a Mesh Tastic radio with you right now. Well look at that. Raise your
+0:31
+hand if you have wall or if you don't have one but you want one. Wait I saw some
+0:37
+of the same hands go up. If you want them the Rockland booth is selling them so I
+0:43
+would recommend running over there because they may or may not be out by the time
+0:46
+this talk is over. So all right without further ado, let me spit out my gum. So I
+0:54
+am the wireless technical lead at SOFOs previously secure. We just got bought out.
+0:58
+And my day job is a wireless penetration tester and adversarial doing all the
+1:05
+fun things, hacking in, breaking into all the same things. So you'll see a bit of
+1:08
+the reason, a bit of the necessity of why we built the tools that we built. And
+1:11
+now can also talk about them. Can I just hold this out? That would be awesome. I can't
+1:16
+be a fool. So basics, who does not know what Mesh Tastic is? Excellent. I'm glad
+1:23
+that I put some slides in here for all of you then. So Mesh Tastic, you can think of
+1:27
+it like text messaging, walkie talkies. So the idea of it is that you can send a
+1:32
+text message not using your phone but over the Mesh Tastic app or a Mesh Tastic
+1:36
+device. And it's very low data rate, but very power efficient and can go very
+1:43
+very long distances. And so it runs off of Lora radios. Lora is the type of
+1:49
+wireless communication protocol that it uses. So it's not Wi-Fi, not your cell
+1:53
+networks. Typically runs on 900 megahertz. We'll talk about all that fanciest
+1:56
+stuff in a little bit. But really it's ideal for long-range communication where
+2:01
+you do not need a lot of bandwidth. You are not going to be speaking audio over
+2:05
+this. You're not going to be sending pictures of it this. This is strictly text
+2:08
+emoji. That's sort of the thing. It's also really great for nerds. It's one of
+2:13
+those things that when I talk to my friends that are normies that don't do
+2:16
+computers, they see this and they're like, oh my gosh, do other people care about
+2:20
+this? And I'm like, yeah, I'm actually talking to Defcon. They're like, wait, so
+2:23
+you're talking at a conference about this? Like no one in my circle cares about
+2:27
+this whatsoever. So it's really nice to be in a room full of people and seeing, you
+2:31
+know, at least I think this morning I counted 1,500 on the Defcon Mesh running
+2:36
+Defcon firmware. So it feels really good that there's at least 1,500 other
+2:40
+nerds out there that like the same thing that I like. So a little bit more
+2:46
+about Mesh Tastic. So the actual devices that they are. So I have a smattering of
+2:51
+them up here. And I have all you'll see dozens of pictures of the different devices
+2:56
+that I have. If you want to talk about specific devices after the talk, come see me. I
+3:01
+will be hanging out behind the tables at the wireless village. And we can talk about
+3:06
+all the different pros and cons and what's a flash would not to flash channels, frequencies,
+3:10
+all that kind of good stuff. These are some of the like rough like outline devices
+3:15
+that there are. So you can see this little one. It's the little green one. It's called
+3:18
+a hell tech. Hell tech is really good because it's really cheap. You can buy that for like
+3:22
+$25 on Amazon. And it just gets you going. But it doesn't have a battery. Plug it in.
+3:27
+The USB, then the next kind of step up is the pocket mesh that's made by Rack Wireless.
+3:33
+This is a very nice board. It's kind of like the Cadillac. And it has you know GPS on board,
+3:38
+sensors on board, a little screen on board. A lot of really good stuff. It's very power
+3:43
+efficient. So you can run it. You can run it for multiple days on a single charge. The
+3:48
+price, that is probably like $150. And then if you're looking to build out a mesh because
+3:53
+there is no one else to talk to in your neighborhood. You're surrounding your city or maybe
+3:57
+you're just way out in the Boondocks where there's nobody. That's where you see the ones
+4:01
+who you're right. And that is a solar powered. It's meant to like set it and forget it.
+4:05
+You leave it and it will then repeat your message. So we'll talk about why that's important
+4:09
+a little bit. Does anybody have any questions with anything that I've said so far?
+4:13
+Because it's critical to the rest of the talk and you don't understand something. Just raise
+4:16
+your hand and shout. Going once. Going twice. Excellent. Alright. Somebody to raise their
+4:22
+hand. Let's talk to somebody else. So when you talk about other nerds that also like
+4:28
+this, I was recently going to Ligoland and I decided to put a mesh-tastic device on top
+4:33
+of my car and just see what other nodes that I picked up. And so this is me driving through
+4:38
+the kind of Carpentrea LA Basin and San Diego Carls Bad Area. So there are a lot of
+4:44
+nodes in Southern California, which is which is really interesting because up in Fresno
+4:49
+California where I'm from, there are not a ton of nodes. But it's interesting to see
+4:54
+when there are so many nodes like this. You get congestion. You get different hop counts
+4:59
+that can happen. So we'll talk a little bit more about why that's important and why when
+5:03
+you get in kind of these dense situations, why you might want to switch to a different
+5:07
+firmware, different type of channel slot. One of the things that DEF CON has their own
+5:13
+mesh-tastic firmware for just DEF CON. So when you go home, you do not run the DEF CON
+5:19
+mesh-tastic firmware because you probably will not be able to communicate with anybody.
+5:24
+But for DEF CON specifically, what they change is they make it so that your messages are
+5:28
+shorter and faster because you don't need to go very far. Typically when I'm at home,
+5:33
+I need to go 20 miles before I can talk to the next mesh-tastic node. When you're at DEF CON,
+5:38
+you need to go maybe the next 20 feet before you talk to a mesh-tastic node. So you do
+5:41
+not need the power. You do not need the range when you are out here, which is why they can
+5:45
+make it in the short turbo as far as messaging speed goes.
+5:53
+So Laura stands for Long Range Radio. He uses chirpsp red spectrum. This is a lot of the
+5:57
+reasons why it can get out of the noise floor. So basically without getting way too much
+6:03
+and deep into the RF characteristics of it, this RF, the chirpsp red spectrum allows you
+6:08
+to basically send your communication, send your signals in such a way that even if you
+6:14
+have really low power, even if things are, even if you only have low power and even if
+6:20
+noise floor is pretty high, like DEF CON, your message can still be understood based upon
+6:25
+the bandwidth that's out there. So that's really what makes it ideal for what mesh-tastic
+6:30
+uses it for, which is Long Range, Low Power, you know, type of communications. So when you're
+6:38
+looking at it and the question I get a lot is, well, what kind of license do I need in order
+6:43
+to use mesh-tastic, right? And for mesh-tastic, you don't need any license, but you can also
+6:48
+use it if you're a ham radio operator. So some of the differences of it is that Laura
+6:52
+transmits on something called the ISM band. This is kind of like a Wi-Fi and other, you know,
+6:57
+unlicensed frequencies can transmit on these ISM bands. You can transmit with limited amounts
+7:03
+of power on them without any type of a license and you could also use encryption. So that's what's
+7:08
+really also nice about mesh-tastic is that not only do not need a license, but you can also send
+7:14
+encrypted messages. Now, if you're a ham radio operator, you can also toggle this ham switch,
+7:19
+so you can see license operator down there. Now, when you toggle that switch on, a lot of people
+7:23
+immediately think in their mind, oh, I'm a licensed operator. If I turn this switch on, I get to
+7:28
+pump out more power and with more power, that means I go farther, do cooler things, all that kind of
+7:33
+stuff. With mesh-tastic, while that is true, you could go farther, you could pump out more power,
+7:38
+you could use 433 for your communications. You are then still restricted to the, what your ham
+7:44
+license allows you to transmit, which means you cannot transmit anything encrypted over that. So,
+7:50
+if you were to switch on that option, you will now not be able to communicate with anybody else
+7:55
+that's using mesh-tastic unless they are also licensed operators. So you might get to a point where
+8:00
+you're like, hey, all me and my buddies, we're all licensed operators, we want more power, all
+8:05
+those sorts of things. In which case, turn it on. But by default, if you're ham radio operator,
+8:10
+you might want to put it on there, but I would strongly say, do not just keep it checked off,
+8:15
+you already have the long range that you need, it's simply enough power to do whatever you want.
+8:20
+But yeah, so if you're a ham radio operator, don't immediately toggle that on, because you don't
+8:25
+need to, typically to get involved with the rest of the community. This is, it's kind of like a gateway
+8:29
+drug radio. So if you are a ham radio operator, this is one of those things that you could buy for all
+8:33
+of your friends and be like, yeah, there's cooler things that you can do, you can transmit thousands
+8:37
+of miles if you just get your ham license. So this is great for somebody, maybe younger in your
+8:42
+life who doesn't care as much about radios, but you think, hey, they're a little nerdy and maybe
+8:46
+they could get involved in it, pick up one of these devices for them. So about the different
+8:51
+modes that there are. So if you're looking in your setup, your configuration for different modes,
+8:57
+basically you can set things like long slow, long fast, short medium, or medium fast,
+9:02
+all the way through that list. You can go look at it. Basically, what that changes is, the changes
+9:06
+the speed with which your message is sent out. And so the slower that your message is sent out,
+9:12
+the longer range that it'll go, you cut and it'll go, your message will go slower and it'll go
+9:19
+way farther. Now what you can do, like what DeFiCAN does is they do short turbo, which means you can get
+9:24
+way more data through there in the shorter message time. And that's meant to keep congestion down.
+9:29
+So by default, all the mesh tastic devices that are running the stock mesh tastic firmware,
+9:34
+they're all long fast. And it's kind of the happy, the happy spot of long distance, but you can still,
+9:41
+your message still gets out in a reasonable amount of time. And with that, you can basically go,
+9:46
+I'd say, like every message might take a couple of seconds to get from one node to another node,
+9:51
+depending on how many hops that you have in between. And really what these things are made for,
+9:56
+they're not made for streaming data, they're not made for streaming video audio, anything like that.
+10:00
+They're made for getting things like telemetry data, sensor data, message data, that sort of thing
+10:05
+across. And so if you're looking at this, this is just kind of one of the examples of what we've used
+10:09
+it for, where you can use an app, you can see telemetry from other devices. So I have a temperature
+10:16
+sensor, I have a barometric pressure sensor, a humidity sensor. And so you have these sensors attached
+10:22
+to the board. And so you can go look at these in the app, stock default. And if that sensor is on board,
+10:27
+you can then go read that historical data that your device has seen. So this is really nice.
+10:32
+If you are way out in the middle of nowhere and you want to place a remote node, stay on the
+10:36
+mountaintop, you want to remove weather station, and a lot of farmer use cases where they're looking
+10:40
+out there for like, hey, I want to, I want to put tons of, tons of inexpensive sensors out in the
+10:46
+fields to see different varieties of conditions. You can do any of that with the stock sensors.
+10:50
+And then if you want to go crazier into it, there's also GPIO boards typically on board where you can
+10:55
+tons of other sensor data. If you want to collect things like, you know, sunlight intensity, if you
+11:00
+want to collect, you know, let's say like the water, the water percentage in like the soil.
+11:07
+Like all those things, if there's a sensor that you can hook up to or you know, you can hook it up
+11:11
+to mesh tasks. And so that's kind of the perfect use case. And you're trying to collect telemetry
+11:15
+from something that these are very low data. But because of that, they can run off of very low
+11:20
+power for a long time. For example, I have this device right here. It's a solar power node.
+11:27
+If you were to cover this solar panel, it would run this rack mesh task device for a week on just
+11:32
+one single 18650. So it's very, very, very power efficient as far as what it's doing.
+11:42
+So then when you're kind of getting into this, you want to know how well is my antenna working,
+11:46
+how well is my placement's working. So there's a ton of different features when you kind of dig
+11:50
+into the settings of the app itself. The things that actually matter most, I've done lots of testing
+11:55
+on this and we'll see lots of pictures in a little bit here. But line of sight is what matters
+11:59
+the most. So line of sight elevation, getting up and over the tree line, getting up and over the
+12:03
+city line. That is what is going to get you as far as possible, right? So yes, antenna's matter,
+12:09
+yes, the length of cable of coax going into your antenna matters. But the thing that matters more
+12:15
+than anything is you could have a dumb little, you know, like little antenna sticking out,
+12:20
+little SMA antenna, and it will go hundreds of miles if you get it placed high enough. So just
+12:25
+keep that in mind when you're building out your use cases, you're building out your nodes that
+12:28
+the higher the better line of sight matters, absolutely the most. But what Messiasis has built into
+12:33
+it is as a range test mode. So you can basically set your device, put it in this range test mode,
+12:39
+where every 15 seconds it'll basically send a ping out and you can see the signal quality of it.
+12:44
+So you're not having to wait for messages over and over and you're not playing the game of,
+12:48
+did I receive it or not receive it? You're playing the game of what's RSSI on there to really
+12:52
+kind of fine tune your mesh. You may not need that when you're starting out, but this really helps
+12:56
+to kind of tune a device before you get to the point where you're going to go one time,
+13:01
+hike a mountain and place it and leave it there for 18 months. Ask me how I know.
+13:07
+So how messages are routed? So this is not like your typical walkie talkie where it is from point,
+13:12
+you know, from one device to another device, right? So well, if I had a mesh-tastic device and one of
+13:17
+you had a mesh-tastic device, ours would typically go point to point and you would see it. But what
+13:22
+this does is by default your mesh-tastic device will hop three times to three different devices
+13:28
+to kind of get its signal out. So the message is basically what happens is every time a device
+13:33
+receives a message, before it repeats that message out, what it will do is it will do basically
+13:39
+minus one on the hop count. So it will hop three times and it's done in kind of the headers of the
+13:43
+message. So it's kind of similar to APRS and how far it will go out if you're a hand radio operator.
+13:48
+And each message only will not retransmit a message that it's seen. So there's not going to be like
+13:53
+a packet storm, there's not going to be like an incident loop that's created and you can see. So I'm
+13:58
+located in central California, but if you look at this map kind of how many hops I can get out,
+14:03
+I can get to northern Bay Area, which you're talking hundreds of miles away by hopping through
+14:08
+multiple devices. And it being a mesh, if some devices aren't there, you have kind of your
+14:14
+more stationary devices that are up on top of hills or water towers, that sort of thing.
+14:19
+Those are typically what are the backbone of the network. And we'll talk about that here
+14:22
+a little bit. Does anybody have any questions so far that they have before I keep going?
+14:28
+Great, I'll keep going. You guys can save them at the end or just feel free to raise your hand if
+14:31
+you want to talk about something right away. I am not shy. You will not interrupt me.
+14:35
+So this is, so kind of my setup, all fast forward to slide. So my setup is I have this 80 foot tree
+14:43
+in my backyard. And so I have a handheld device. So when I send a message, the message goes from
+14:49
+a handheld device into the tree to a mountain and that mountain down to the rest of the city. So it
+14:54
+takes, it makes best use case out of those three hops to be able to send messages all around my
+14:59
+city in the central valley of California. One of the things that I did do to kind of help this
+15:05
+along is in the firmware, I modified the firmware of the one that's in the tree. So it doesn't
+15:10
+actually decrement a hop. So it's basically what that means is that when I'm sending a message from
+15:15
+my handheld, the message from my handheld is not subtracting one hop count when it's going out into
+15:20
+the tree. We're just kind of nice because that way I'm not having to just, you know, go outside
+15:25
+quite often. I can just have one of these tiny little devices just in my pocket or, you know,
+15:30
+strap to my phone to be able to rely on my messages out. And then what it comes down to is you have
+15:38
+the kind of the back hole of the network, the back one of the network, which is the routers. So devices
+15:42
+have different device modes. And we'll talk about the modes going forward, but really what you need
+15:46
+to know right now is that the routers are the big devices on the network. And what these routers do is
+15:51
+they take messages, they have priority in the network. And they're typically devices, or at least
+15:56
+they should be devices that are placed in very high, you know, high terrain, line of sight places,
+16:03
+because they're what are going to relay the bulk of the messages they come through. So as you can
+16:07
+see, like a mesh-tastic device could be this tiny little thing that I could fit in my pocket,
+16:11
+or it could be a device like this, which is on top of a mountain, that I haven't seen this device
+16:16
+in probably 15 months since I placed it. So that's why range testing is important because before you go
+16:23
+hike amounts in, go place the device, you want to make sure that the range test your antennas,
+16:26
+everything's tuned, and everything is going to survive. Because if this were to break, if it
+16:30
+something were to happen to it, I would not want to go climb this mountain again to go place it.
+16:34
+And a little bit more of the kind of specialty build is that if you are somebody who just like,
+16:39
+hey, I want to get involved in this, I want to buy something off the shelf, you can just go buy
+16:43
+the Rockland booth in the vendor area and buy something like this. If you're a DIYer and you have
+16:48
+really specific use cases where you want to do, you can do something like what I've done right here.
+16:52
+So this device right here, I live in Fresno, California, it is very, very hot in the summertime,
+16:57
+very much like Vegas, it can get 115 degrees, and you can even see that it's in a fire prone zone.
+17:03
+If you look carefully at this picture, there's a black scorch mark behind where this radio is. So
+17:08
+none of these batteries can go kinetic because if they do, it's going to cause a huge fire.
+17:13
+So kind of one of the design principles that I had on this is under no circumstance can this
+17:18
+cause a fire if those batteries get hot. And so what's going to make a battery hot? 115 degrees
+17:24
+in a metal box. So this device is in a metal box so that if it were to go kinetic, it's something
+17:31
+bad where it happened to it, the fire would be contained to that box. Again, asking me how I know,
+17:36
+I tested it, I should have actually probably added that video into here because it's kind of fun.
+17:40
+But the fire will not escape that box, but it being in a metal box, I tested it. Again,
+17:45
+you test things over and over and over. And without the sun shield that you see to the left right
+17:50
+there, it will get over 160 degrees Fahrenheit in that box, which is way too hot for your typical
+17:57
+batteries. So what I did is I threw you printed a sun shade to go on top of it. And so now,
+18:01
+now inside that box is one degree above ambient temperature on a 100 degree day, which I think
+18:06
+is pretty good and pretty reasonable because those batteries have a safe operating temperature,
+18:10
+I believe 130 degrees. So well, well within the threshold of safety there. So these rotters,
+18:17
+I place them everywhere because they are, they allow other mistastic people that might be sequester
+18:21
+to the tiny little valley to not be able to communicate outbound. So this was one that I put
+18:26
+on the central coast of California and under really specific conditions, you can see that I can
+18:32
+reach from this one node all the way up into basically South Bay and then into like northern
+18:38
+thousand oaks area of Los Angeles. So you can see on here that that that device is pretty darn high
+18:45
+up and the distance that I was able to see from was 170 miles, which is a pretty good range when
+18:50
+you consider that that can run for a week on a single 18650. This is not high power. This is, you
+18:55
+know, in the in the middle of what's not in the watt range or anything like that. So for a
+19:00
+ham radio operator, they might be able to say like, oh yeah, well I can hit, you know, New Zealand
+19:04
+from here on my QRP rig. This is like QQRP if you're a ham radio operator. This is the lowest
+19:10
+of the low power thing that you're going to be able to transmit with. So there's different roles
+19:15
+that your device can have. So you can set these roles in your in the settings of your device.
+19:20
+By default, all devices are clients. What clients do is they will receive messages and they will
+19:25
+repeat messages. That's pretty simple. That's what their whole point is. Then there's client
+19:29
+mute. Client mute is one that I think a lot more people should use, but they don't. Client mute is
+19:33
+basically, hey, this is a device that's going to be in my pocket. I don't necessarily care for it to
+19:38
+repeat all the other mistastic devices that I have. You can create a lot of noise congestion if
+19:42
+you have a lot of clients because they're all going to be chatty and talking. When in reality,
+19:47
+client mute, what that does is it's just not going to be feet. So if you're here deaf on,
+19:51
+you can realistically turn on client mute and go about your day and you're still going to receive
+19:55
+all the messages. You'll still be able to send messages, but you're not necessarily going to act
+19:59
+as like a repeater in the mesh creating congestion. Now where you might not want to do that is if you
+20:04
+have say say you're a high up in one of the skyscrapers in Las Vegas, that would be a good spot to
+20:08
+maybe have a router or a client note because you do care then about adding to the range of the network
+20:14
+from there. Then there's repeater and router. They're very similar. We're not going to go into the
+20:17
+nuances of them, but the router, the router mode is basically something that you're going to put very
+20:22
+high up there. It gets priority in the network. It's what's going to receive those messages and
+20:27
+send them out. So when a client device sees that there's a router device, it's going to say, hey,
+20:32
+I want to get my message favorably to that router device because that's realistically going to have
+20:37
+the greater chances of extending the range on the network. Then there's all the sorts of fun
+20:43
+fun different roles that there are. There's tracker. So tracker is kind of like, you know,
+20:48
+would be like an air tag, right? So it uses a lot more battery, but it's focused on sending out
+20:52
+telemetry packets of GPS, right? Which is interesting. Then there's lost and found. So lost and found
+20:57
+is a really interesting kind of role because what it does is say you have a tiny little mesh
+21:02
+plastic device like this. I dropped it. It's broken. A tiny little mesh plastic device like this
+21:09
+that weighs nine grams. You could have this on your pet's collar and it's going to be absolutely
+21:14
+silent and not do anything until it receives a packet to turn on. When it receives a packet to turn
+21:19
+on, then it's going to start becaueing data out like crazy so that you can find it. So it's nice
+21:24
+because it's a little tracking token that you can put in a box. You can leave somewhere. You can do
+21:28
+something and only when it's activated, only when it receives the right packet can then
+21:33
+will start sending out those telemetry packets. And you know, I'm going to try this. Let's see if I can
+21:37
+do the downward camera. So this is the tiny little seed device that is based on ESP32 platform.
+21:49
+But you can see how tiny that is compared to my hand. So again, nine grams and if you add a battery
+21:53
+to it's 20 grams. Nice. Look at that. I'll work well. Awesome. Oh great. Thank you guys. Thank you,
+22:00
+A.V. team. And so then there are some there's a lot of other node roles that I did not mention in here
+22:08
+and what those are. So if any of you are in the military, you either use ATAC, I know that some
+22:13
+people have a love hate relationship with ATAC. You know what it is? Don't worry about it, but it's
+22:16
+also ATAC compatible as well if you set it up in the settings. We do not need to talk about that
+22:20
+anymore because I don't use it. So talking about all the different types of mesh testing devices,
+22:26
+I own probably one of every if not multiples of all of these, which I've brought to DEF CON. So if
+22:32
+you want to look at one, play with one, I have tested absolutely every single one of them out since
+22:37
+the very inception of all of them being made. And yeah, I don't think there's a single one that I
+22:43
+don't own. But basically there's things like the TV, TV and have the GPS they have they can run
+22:48
+off of 18650. They're pretty popular. That was kind of one of the first things that came out as far
+22:52
+as the device. And that's this one right here, kind of up to the top. The thing I did not like about
+22:58
+the TV, though, is that the antenna was in the middle of the board. So it was kind of funky when you're
+23:03
+trying to carry an apocalyptic something like that. There is the TV and Supreme, which rotates that
+23:07
+90 degrees. So that's more like a walkie-talkie kind of style. Not a huge fan of it because it's not
+23:12
+super power efficient. Then there's the T Echo. The T Echo, it looks like it would be really cool
+23:19
+because it has this paperweight display. But the buttons are not recessed on it. So when it's in
+23:24
+your pocket, you can put it in a DFU mode or just mess it up. So I didn't really like it from that
+23:30
+perspective. I would start a 3D printing other cases that I didn't touch the buttons. But it wasn't a
+23:34
+huge fan of it just because that how that button setup was there. But then came along was the rack
+23:40
+was block and it's specifically this pocket mesh. It's let me see if I can do this whole deal again.
+23:48
+It's this guy, oh black on black does not seem to work out well, but good thing I have it on the
+23:53
+laptop. It's this white one here to the left. Now the things that I like about this GPS onboard,
+23:59
+which is which is great if you're trying to do, say you're backpacking, say you're hunting, say
+24:03
+you're out in the in the sticks, to be able to have that GPS information that then you can share
+24:08
+with other mesh-tastic devices. That's really nice. It's very rugged. Buttons are recessed. It has
+24:14
+nice little points where you can zip-tie things. There's plenty of open source STL files. If you have
+24:19
+a 3D printer, you can print all of your own cases, all your own stuff for it, which is very awesome.
+24:25
+And it's based on the rack was block. I have it over there if you want to go look at it.
+24:33
+The board, the rack was block board is probably the best IoT board that I've played with to an
+24:39
+extent because it has the ability to do battery charging on board so you can take solar input.
+24:44
+It can charge that battery for you and so it does all the smart talking to overcharges, not going
+24:48
+to over discharge. So it has all those smarts all built into it. Then the other part that you get
+24:53
+with it is it's very very very power efficient, which is great when you're designing IoT off-grid
+24:59
+type of things. That's something that you really want. Then it has tons of ability to have GPIO,
+25:05
+other type of, you know, extensible ports that you can put on there. Little snap-on sensors
+25:10
+of every variety that you can imagine as well as it also has a like a POE
+25:17
+ethernet interface. So if you want to throw this on your roof and just power it over P-E,
+25:20
+you can do all that as well. So that's the one that I would recommend if you're looking at one.
+25:24
+It is a little bit more expensive. It's like $150, but it does absolutely everything that you could
+25:28
+ever imagine. Now if you want, they have cell, the Heltex. The Heltex are these tiny little
+25:34
+boards. Where are they? Is right here. You can see how small it is in my hand, right? Very small,
+25:40
+or it comes in that little green case. These are very inexpensive. They're not the most power
+25:43
+efficient boards, but they're very inexpensive and you can connect them to Wi-Fi, which is also
+25:47
+really nice. So I really like the Heltex that is plugged in and if you're going to do development
+25:52
+work, if you want to just connect it over serial and batteries in that big of an issue, I would
+25:56
+recommend just getting a handful of these for the price because of what they are and what they can do.
+26:01
+And that's what I built the MeshC2 system on.
+26:09
+So now that we have an understanding of what MeshCastic is, decentralized,
+26:14
+off-grid, encrypted communications, all that fun stuff, what are the use cases, right?
+26:18
+And so by day, I'm a red teamer adversarial. Pick the cool word that you're going to put in that box.
+26:25
+We break into places, we leave Dropboxes. And oftentimes when you connect the Dropbox to a network,
+26:30
+it works initially and then you got to sneak your way out of the building. When you sneak your way
+26:34
+out of the building, you might lose your internet connection for whatever reason and you just need
+26:39
+to send it a couple of commands or you just want to know that it is still alive. So that's where if
+26:44
+you look at this box right here, this is one of our Dropboxes. It's actually in case you can't see
+26:50
+it from the top, but it's actually a rat trap that we got from Ace Hardware. So we just put this inside
+26:54
+of a building on the outside of a building. No one ever wants to open up a rat trap. So it makes
+26:59
+it a perfect Dropbox because with that battery, you can last, you know, Raspberry Pi can last on there for
+27:05
+upwards of probably five days or so. So it's enough time to do anything we need to do. But if we lose
+27:11
+connection to it, we do not want to be fiddling with this on the outside of a building. So that's where we
+27:16
+came up with MeshC2. So MeshC2, basically all that it is, they convert your existing MeshTastic
+27:22
+serial interface into a command and control server. So you install the script, you plug in your Mesh
+27:29
+Tastic device, and now when you install it, it generates its encrypted channel. So an encrypted key,
+27:34
+unique key for only you and anybody else to be able to, that you share the key with, to be able to
+27:41
+issue commands to the device. The nice thing is that it's an AES 256 key. So pretty strong encryption,
+27:48
+and it's symmetric. And kind of the beauty of this is that you can send and receive your shell
+27:54
+communications to do debug. Now you're not going to be running Metasploit over this. You're not going
+27:58
+to be running net exec over this. You're not going to be running responder and any of the other
+28:03
+tools that you would use in a penetration test with them in all of those lines. But you can use this
+28:08
+to get your main connection back up and out. So whether that be LTE, whether that be connecting
+28:16
+to guest Wi-Fi, you can send simple commands over there to be able to do this.
+28:22
+So this is just an example of it. So I just issued LS. Issue in LS, what it does is it first sends
+28:29
+you a message back saying, hey, this is the command that I received, and then it will then
+28:33
+issue the output of the command. Pretty simple. And basically this tool is not crazy sophisticated,
+28:39
+but there's a bunch of things and nuance to it that if you don't get right, can kind of suck for
+28:44
+using this command and control server. So if this LS were maybe a thousand files in the directory,
+28:49
+it will chunk that up into appropriately sized mesh task messages, and it will buffer them so
+28:54
+that if you want to see more of a command or less of a command, you can basically go through there
+28:59
+and say I want to see more of command, whatever. And so it'll keep that in the buffer for five minutes
+29:04
+if you want to see what your interfaces look like. If you want to get a heartbeat from it,
+29:09
+the other thing that I like to have on this too is that it's just a digmin that's running on
+29:13
+or whatever your Linux house of choice is. And so you can just echo whatever you want. You could just,
+29:18
+you know, send messages in a bash script. So any script that you have, whether that's catching
+29:24
+hashes, whether that's the internet is down, whether that is, hey, your hunting cabin now no longer
+29:29
+has solar power because the battery died. If you can configure it as a script to run, you can have
+29:35
+it sent out now over the mesh securely. One of the things that's nice about this is that mesh
+29:41
+plastic, what it does is that you can go into a city and you cannot have to have any infrastructure
+29:48
+there. So if say you were to come into Fresno and you and your buddies had your own channel setup,
+29:54
+so in this case you can see slot number two there is mesh task, mesh C2. And so if you all had this
+30:00
+on your device, you could relay off my routers that are sitting up in the hills. The router
+30:05
+devices, the devices that repeat, they do not need to have your encryption key in order to transmit
+30:10
+that message. All they have are the message headers. They do not have the message contents,
+30:15
+nor do they need the message contents. So the cool part about that is that if you're using it as
+30:19
+commanding and control infrastructure, you are using an existing citywide infrastructure of a city
+30:24
+that you may not have been in previously. And you can send secure communications, secure commands,
+30:30
+receive commands from that without having to raise any real more awareness that there's more
+30:35
+R.F. in a building that we should be. And I do know people where they would notice that there's
+30:39
+this tiny little bit of RF in there, but they are way outside the norm. 9,000% of the time is going
+30:46
+to be that no one is going to ever recognize this. And could you use this for data expression?
+30:51
+Sure. It's going to be really slow. You could get hashes out. You could get passwords out.
+30:54
+Really, this is meant for debugging so that you can make sure that your device is back online,
+30:58
+doing the thing that it's going to do. Because the worst thing that you could possibly do is break
+31:02
+into a facility, go through all the hoops to clone badges, get in middle of the night, place your
+31:08
+drop box behind your printer, bypass, you know, whatever port security they have, all for that
+31:13
+device to reboot and now your keys not on board, right? So that's what this was designed for us to be
+31:18
+able to issue the simple commands, receive the simple commands, buffer those commands so that you
+31:22
+can then access it later on. And then the other thing that's nice about it too is that you could
+31:27
+also use the daemon. So even if you don't want to do any of the secrets coral, you know,
+31:31
+communicate control stuff, you could still have it. So you just plug one of these little devices
+31:35
+in to a USB port and now any bash script that you write or any script that you write can now just
+31:41
+be broadcasted over the mesh. And I said it so by default it only does send it on your secure
+31:47
+mesh to instance. But if you want to, you can just add a flag to it that says, hey,
+31:52
+broadcast this on the default public long pass or the public defcon network. So you can
+31:57
+configure this just with a flag in the script to be able to send over any channel that you want.
+32:03
+Or even it accaded. So if you just wanted it to say, hey, I'm still alive. Here's a heartbeat.
+32:08
+You could do that as well. And the beauty of it is that this is all end to end encryption, which is
+32:14
+very nice because it would be really dumb to make a C2 server that anybody could issue commands to.
+32:20
+There's one time I powered it up before and when I was doing my development work, I powered up the
+32:26
+mesh C2 at my local network and it wasn't selecting the appropriate channel. And so broadcasted on
+32:34
+boot said, hey, the C2 server is up. Feel free to issue commands out to the entire public mesh.
+32:39
+And then I had a luckily I have a prayer in small mesh. I know pretty much everybody in it. And so
+32:44
+I just got a bunch of text messages that they're like, hey, dummy. Maybe don't have your C2 network
+32:49
+broadcasts on the open network. But again, it was all during development. It wasn't really worried about
+32:53
+it. It's just kind of one of those funny things where I made sure that there was a flag that you
+32:58
+had. It gives you a warning that says, hey, don't be dumb. Be sure you want to do this. So you don't
+33:02
+have to worry about it becoming an accidental commanding a full server. Let's see. So some of the other
+33:09
+things that are nice about the script about the day that runs is that it breaks that mesh C2 out
+33:14
+into multiple packets. So if you have say, say you're catting a file that's going to be, I don't
+33:19
+know, a thousand characters, it will break that up into into a logical amount of packets and then
+33:25
+buffer. So it will send out 10 messages by default all broken up, you know, like paginated basically.
+33:32
+But then what it will do as well is that if you want more of that output, you can then type more
+33:36
+and continue to receive that buffer output for about five minutes while that output stays in there.
+33:42
+And it'll buffer it. And then you can also issue other commands on top of it. You don't have to
+33:46
+worry about it. It does all the nice signal handling of sending or receiving messages so they don't
+33:50
+get, you know, tromp on top of each other. And the other thing too is it queues them all up. So it
+33:56
+creates a nice little buffer to send out the messages. So if you have multiple alerts going out,
+34:00
+multiple commands coming back with data, it will then queue that out, buffer it out. So you don't
+34:03
+have to worry about it. You could also add, you could also, there's also a flag in there that will
+34:07
+append timestamps. So if you want to know, hey, when did this command actually come back, you can
+34:12
+also append timestamps. The reason I don't do timestamps quite default is because it just adds
+34:16
+un-eated data that you could use for a, for actual packets and data coming back. So I don't want to
+34:21
+take up a significant chunk of the message that you're going to get just in the stupid timestamp.
+34:26
+The other thing that it does do is that it will try, it will retry by default three times to
+34:30
+send that message out. So oftentimes if you have one of the small little devices, one of the ESP32
+34:36
+devices with like a little flimsy antenna on it, it may not get out that well. So it will then
+34:41
+retry three times until it gets an acknowledgement from the other version of that command and control
+34:45
+server. Again, these are all things that are not crazy complicated, but they're really nice to have,
+34:51
+especially when you need that data to get out the most. So here's an example of some of the
+34:57
+different things that you could do with it. So you could add this into whatever your bash,
+35:02
+the ESH, once you install it, the message to is just the, you know, executable program. So you
+35:07
+could just say, hey, this is the message timestamp. You can have it sent on specific channels.
+35:12
+You know, again, I used it for a C2, but I could recognize that there are other times where you
+35:16
+might want to use, use it for other things. I have a friend who had like a chicken door, right? You
+35:22
+could have this chicken door. So that when the door is up, door is down and it's a remote part of
+35:25
+your property, that you get the message that says, hey, I'm going to send the message door is closed.
+35:30
+Chickens are locked up with a night on a specific channel that maybe isn't your encrypted message
+35:34
+to your channel, but maybe it's just the public channel, right? So lots of different use cases
+35:38
+that I was like, hey, this is going to take me an extra couple of minutes to add these features in,
+35:42
+and I don't know what you might do with it, but it's in there so that you can easily and programmatically
+35:48
+kind of send messages out over the mesh, whatever channel you want from pretty much whatever device
+35:53
+you do want it from. We don't need to really go into the architecture system. It's a system
+35:59
+D service that just runs everything in by default is AS-366. All the commands and the
+36:06
+all the commands command output, they are all logged into the device by default. You can turn off
+36:12
+that if you don't want them to, if you're using a Dropbox and it's in maybe you don't want to
+36:15
+fill your device up, which is bringing them mesh logs, but it is nice because if you are concerned
+36:20
+that somebody issue commands or you like for whatever reason you just want to audit the commands
+36:24
+that were sent over this device, they are all fully logged all the commands, all the responses
+36:29
+to this commands are logged to the device itself in the log directory, which is again, not in a
+36:34
+sound bean feature. It's a very nice feature that when you need it. So some of the features on it,
+36:40
+so you can do it in not, so if you don't do the dash dash real device mode on there, then it will,
+36:45
+you can just kind of simulate as if a mesh device were there. You can create different channels.
+36:50
+You can basically just use this to create list channels. In fact, you can use it as like a
+36:54
+easy way to backup and restore different channels and different configurations if you didn't want
+36:59
+to do it through the app. And quite a fault when you do install this, it does generate its own
+37:04
+AS-366 key for the channel, so you don't have to worry about key reuse or something along those lines.
+37:10
+And honestly, it's just cool to be able to send messages from your terminal out to the mesh.
+37:15
+There are some of other use cases. I actually use this as one of the challenges in the wireless
+37:19
+CTF to transmit flags and do that kind of thing, too. So if you're playing the wireless capture
+37:24
+the flag, then hinting, this is what I'm using to send out different flags for some of the mesh
+37:30
+tacit challenges that are out there. Yeah, you want to know more? Check out meshtasticdoward.org. That
+37:34
+has basically all the libraries, all the information you could ever want. You want to know more about
+37:38
+our local mesh. It's presnomesh.com. I have links to pretty much everything that I've talked about in
+37:44
+here. And then if you want to get close on this project, you can make fun of how terrible my
+37:50
+agentic coding is, or should say, Chetzikdoward.org.org. I check it out mesht2. Again, this is really a
+37:58
+tool that I built for myself. And then after I talked to some friends, they're like, okay, you should
+38:02
+tell other people about it, too. It's kind of cool and really nerdy. And thank you for sitting through
+38:07
+my talk for the next 45 minutes. Does anybody have any question? Anybody? I know. You can also just come
+38:14
+and see me. I see question right there. Could you use it as a back in connection to an umg cable? Yeah,
+38:30
+yeah, actually good. So if you had a, like, basically a middleware device, so kind of like a dropbox,
+38:36
+so when we're doing, it gets out of the mesh tacit realm. We're planting devices in networks that we
+38:42
+have permission to, you know, network some physical spaces where we have permission to put things like
+38:46
+omg cables, things like keyloggers and all that kind of stuff. If you have a dropbox that is able
+38:52
+to receive information from that omg cable, you could absolutely then use this C2 infrastructure to
+38:58
+get that data out as well. As long as it's not a lot of data, and it's just some text data, like
+39:03
+but keyloggers would be perfect for it. Provided that your user does not type, you know, like
+39:09
+professionally to how it was per minute.

@@ -1,1 +1,696 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Hello, welcome to the fragile log, the novel by passes of some authentication.
+0:08
+Summall became standard 20 years ago, and since then, quietly powers the authentication
+0:13
+across the web.
+0:15
+But more than single page log in flow creates the illusion that some will have gone.
+0:20
+This illusion breaks the moment you type enterprise email address into the input field.
+0:25
+This invisibility creates the false sense of security, while some will fail, it allows
+0:30
+the complete authentication bypass.
+0:34
+This story starts when we read you have forsen ideal apologize if I pronounce the name
+0:40
+of all researchers on today talks incorrectly.
+0:44
+Research on secure and XML implementation across the web, which highlights the inconsistency
+0:49
+between the XML serialization and the serialization inside the sum of security libraries.
+0:56
+And we thought there is definitely something missing.
+0:58
+We can do more.
+1:00
+We start our research on September 2024 and quickly identify the complete authentication
+1:07
+bypass on the latest GitLab enterprise edition at that moment.
+1:11
+Unfortunately for us, there are two more different teams did the same research, and they published
+1:17
+their research without any technical details.
+1:20
+That's why we expose all our exploits on March 2025.
+1:27
+But then I thought we can do more.
+1:31
+And today we're going to learn how the original tag works.
+1:36
+But before we start with the methodology, what we use to achieve the full authentication
+1:40
+bypass, because previously signature weapon attacks were known only for the privileged
+1:45
+collations, we will break this illusion and achieve the full compromise of the target
+1:50
+system.
+1:52
+Then we will take a look on the part introduced on the March, and again we'll break it again.
+1:57
+And then we will take a look on the live demo on GitLab enterprise edition.
+2:02
+This is going to be a super fun demo.
+2:04
+I will try to do it on live, so please bear with me.
+2:07
+And then we will take a look on the live takeaways from a big software as a company services,
+2:12
+which provides the setup of the summel.
+2:16
+And finish up with the fence and takeaways.
+2:19
+So let's start.
+2:21
+We will start with the methodology, because signature weapon attack has been known for
+2:26
+20 years since the summel was introduced.
+2:29
+But the whole research focused on the signature weapon attacks highlights the privileged
+2:34
+escalations attacks without the full chain of exploits.
+2:39
+So to better understand how it works, let's take a look on the browser single sign-on.
+2:45
+It all starts with the user trying to get access to the service provider.
+2:49
+I'm sorry for these really awkward names, but this is how the standard used to be.
+2:54
+For simplicity we'll call it just a GitLab.
+2:57
+Then GitLab issue a special authentication request, which will become pressed basically
+3:02
+for encoded or encoded into the browser browser for what it is an identity provider.
+3:06
+And again, this pre-ogre terminology.
+3:09
+For simplicity I will just call it Octa.
+3:11
+And then Octa verifies that the user has access to the service provider GitLab and issue
+3:16
+another XML document, which will be signed using the identity provider private key.
+3:21
+The whole security of these flow is built on this private key.
+3:24
+So please remember this point.
+3:27
+Then it will again be basically for encoded forwarded to the browser which will forward to
+3:31
+the GitLab.
+3:32
+GitLab will verify the envelope signature signed by this private key.
+3:37
+Validates the assertion, the key information about the sum of documents, where the all-user
+3:42
+email, first name, last name of the roles stored, and grant access to the application.
+3:49
+As I said, the whole security is built on all these private public key cryptography.
+3:55
+The original signature of rapid attack, Yuri Samarowski presented again 20 years ago,
+4:01
+used the real signed assertion and rapid with a variety of different elements inside
+4:08
+the XML.
+4:09
+You can place it in different places called the extensibility points to break the authentication
+4:15
+library to make it think that the real assertion is signed, whereas only the evil one.
+4:22
+So to explore this signature of rapid attack, there are three common ways to do so.
+4:29
+You can register under the identity provider, try to exploit the men in the middle attack,
+4:35
+or use the Google to find the real signed assertion.
+4:38
+But in reality, this is really big requirements.
+4:42
+For a random website on the web, it's really hard to find this real signed assertion.
+4:47
+And if you will do this, there are another security checks that I will highlight later
+4:52
+in the presentation that will stop you from this attack.
+4:57
+So we introduce another methodology.
+5:00
+Instead of relying on this real signed assertion, we will reuse another signed XML.
+5:06
+Hopefully for us, they exist.
+5:09
+And then we will rub with clever place exploits to fool the authentication library to think
+5:16
+that the evil assertion is signed, whereas they are going to be only a fragment of the
+5:22
+signature, not the real one.
+5:26
+To do that, let's deep dive inside the GitLab enterprise edition to learn how this
+5:31
+attack works.
+5:34
+GitLab enterprise edition is built on a RubySamal library.
+5:38
+It's again has two big modules, the business logic and the signature validation logic.
+5:44
+The business logic is built on the real XML XML parser.
+5:47
+It really will want to be honest.
+5:50
+It's built using the regular expressions to parse the XML.
+5:55
+And the signature validation library, again using the two different XML parsers.
+6:00
+A rexml and Nakagiri, which is just a wrapper around the C library called LibixML2.
+6:07
+This is a bug bone of all signature validation libraries.
+6:11
+And today we will learn a lot of quirks of LibixML2 and learn how to exploit them.
+6:19
+On September, Gareth Hayes, for Sviggir Research, has found the round trip vulnerability inside
+6:24
+this RubySamal library, which exploits the discrepancies between how the single quotes
+6:30
+and double quotes handle inside the document type declarations.
+6:34
+We were able to carefully put these single quotes and double quotes into the doc type and
+6:39
+make it to think that the real assertion exists where us is not.
+6:46
+So we build this discrepancy between the business logic and signature validation logic.
+6:51
+Now there is another security checks, they call the XML schema, that restricts us to use
+6:56
+our methodology, because our known sign XMLs, not always the valid Sviggir.
+7:04
+That's why this attack didn't work, so we have to find another exploit to make it work.
+7:10
+To do so, we have to take a careful look on the envelope signatures that use to protect
+7:15
+this reference element.
+7:18
+This being element reference is stored inside the reference URI, which might or might not
+7:26
+be the top level element of the whole XML.
+7:30
+Then this reference element would be cannibalized, then hashed, and this hash value is stored
+7:36
+basically for the coded inside the digest value.
+7:40
+And only these signed in for itself will be signed using the private key of the identity
+7:45
+provider and stored again by 64 and coded under the signature value.
+7:51
+This two step process is a perfect source for discrepancies.
+7:56
+I end up with another exploit, with another document type declaration, attribute lease,
+8:02
+which declares the default attribute for the element if it doesn't exist.
+8:08
+I exploit the array XML behavior when there are two identical attributes, which normally
+8:14
+restricted by the XML standard.
+8:17
+But the array XML simply didn't follow this recommendation.
+8:21
+That's why I was able to hide the real signature from the array XML and make the whole logic
+8:29
+works for the Nekagiri and reveal the evil one for the signature audition library.
+8:36
+We change together these two exploits to complete a vacation by pass on GitLab.
+8:41
+So that's why GitLab introduced the patch, 1.18.0, which entirely changed the flow how
+8:48
+these two libraries was together.
+8:50
+But there is another branch, which is really popular too, 1.12.4, which implements only
+8:59
+the hot fix, which you might guess we will exploit today.
+9:07
+Although today I will show you the novel techniques that previously unknown vulnerabilities
+9:15
+inside the signature validation libraries.
+9:21
+Our exploit can be split into four simple steps.
+9:24
+We should achieve again the signature validation by pass without any document type declarations.
+9:30
+Then we should beat the digest value protection.
+9:35
+And finish up with two simple steps.
+9:37
+Find the real sign envelope signature and find the place where to place our exploit.
+9:48
+The small diagrams show here.
+9:52
+First, it's important to understand a fundamental feature of XML.
+9:58
+XML namespaces.
+10:00
+XML namespaces provide a mechanism for qualifying elements or attributes with URLs.
+10:08
+In the first example, we highlight the sum of response namespace, which is used at the
+10:16
+default resolved attribute XML namespace.
+10:19
+And then we will use the prefix XML namespace, which being the element value to create the
+10:26
+qualified name.
+10:32
+To exploit this behavior, we should take a careful look into the documentation of the
+10:36
+LinuxML2.
+10:38
+XML get property function explicitly says that it will return the attribute value without
+10:45
+any namespace taken care of.
+10:52
+To exploit this, take a look on these identical XML elements.
+10:57
+The first one, the ID value without any prefix is on the first place.
+11:03
+And on the second example, it's prefix with the sum.
+11:09
+Under the hood, LinuxML will only query the first attribute value.
+11:14
+That means that when NAKAGiri element dot attribute dot ID will query the results, it
+11:20
+will result well in one.
+11:22
+On the second example, it will result well in two.
+11:27
+And this is the broader issue.
+11:29
+The PHP inherent the same behavior and the same vulnerability.
+11:35
+To trigger this logic, you have to use entirely different methods.
+11:40
+Attributes get name.
+11:41
+Daddy get not well, not well.
+11:45
+But as you already know, a real XML is not a LinuxML2 wrapper.
+11:49
+It's just built by the regular expressions.
+11:52
+If we will try to use the first example, the area XML simply fails with the exception.
+11:59
+It's really an awkward exception to be honest.
+12:01
+To deal with it, we have to reuse the same prefix, sum, for the element, or the attributes
+12:07
+where we would like to extract this.
+12:09
+This is not a standard behavior at all, but it allows us to force it to query another ID
+12:16
+value.
+12:17
+Where the LinuxML we see the value one.
+12:20
+A real XML we see the value, too.
+12:23
+How the classic signature of Rappnetac works in this case scenario.
+12:27
+We place our envelope signature into the summel response and change the ID value to the
+12:35
+any malicious one and place the fake real signed ID under the summel prefix ID.
+12:43
+The signature validation logic under the hood will use these vulnerable methods to check
+12:49
+the ID value that is equal to the reference URID and pass the validation.
+12:57
+When in reality the real signed element is hidden deep inside the XML.
+13:04
+But this is only one way to exploit this vulnerability.
+13:07
+There is another resort attribute called the XML.
+13:12
+It declares the global namespaces.
+13:15
+Both XML and XML namespace shouldn't be bound to any different value.
+13:21
+But as you might expect, a real XML didn't follow these recommendations at all.
+13:27
+So we can change these two prefixes together and put the XML prefix for the XML namespace
+13:33
+and declare it.
+13:36
+And according to the standard, our parent element here declares the default namespace
+13:42
+digital signature.
+13:44
+We should be inherited with all its children.
+13:47
+But our first child element, we declared using this trick for the area XML, which makes
+13:53
+it think that this signature value is not the digital signature at all.
+13:59
+Whereas the Nakagiri will do.
+14:03
+We again achieved our signature validation by path logic, but end up with the impossible
+14:09
+digest value.
+14:11
+This happens because the Nakagiri is also responsible for the removal of this signature node.
+14:18
+This is done because of the standard again.
+14:21
+The envelope signature should be stored inside the reference value.
+14:25
+But our evil signature already embedded inside of it.
+14:30
+So we have a recursive dependency here.
+14:34
+Our digest value should include its own value.
+14:38
+We have to find the perfect hash collisions.
+14:41
+To make this task even harder, the hash function used to sign the envelope signature is
+14:49
+out of control because this is the identity provider to declare which to use.
+14:54
+And in case of SHA 256, it will take all energy on Earth to find this hash collision.
+15:02
+Until we embrace the void.
+15:16
+According to the standard, there is another XML parser that will process our reference
+15:21
+element.
+15:22
+This name, Kaniqalization.
+15:25
+The Kaniqalization is responsible for the attribute order.
+15:30
+Should or should not, commands will be included inside the Kaniqalization results.
+15:35
+It's been known for a while for the signature verapin attacks where we place the digest value
+15:40
+hidden from the business logic and reveal for the signature verapin attacks.
+15:46
+But instead of these known exploits, the reason limitations that are widely unseen before.
+15:54
+And if we will take a careful look into the standard, we will see them because the Kaniqalization
+15:59
+limitations already declass them under the relative URIs section.
+16:06
+It literally says like you should never use the reference URI for the reference elements.
+16:14
+And the LibixML function responsible for the Kaniqalization knows about these limitations.
+16:20
+And will return false value error in case of any found relative URIs.
+16:28
+But none of Ruby libraries is aware about this behavior.
+16:32
+As you already know, Nakagiri is just a wrapper around the LibixML too.
+16:36
+And it just simply ignores the return value.
+16:39
+It also reads on the funny C language so they just stream the buffer from the LibixML to
+16:45
+the Ruby, which makes us to control entirely what the results will be under the Kaniqalization
+16:52
+by placing the carefully relative URIs declaration.
+16:56
+And again, this is a broader issue.
+16:58
+PHP and her the same logic on the first glance.
+17:02
+But node function is aware about this vulnerability.
+17:07
+So it will return the false.
+17:08
+But Rob Richardson, XML signature library which is used across the whole GitHub by copy-pacing
+17:15
+the logic simply ignores the return value, which results cast false to the string which
+17:21
+results the empty string.
+17:24
+So from now we can bypass the signature validation by a simple one valid sign string, empty
+17:31
+string.
+17:32
+We will place this empty string value into the signature value, calculates the hash
+17:38
+under the empty string hash, and the result in XML going to be the golden XML.
+17:44
+That means it will always pass the validation.
+17:46
+You can change any assertion, place any service provider whenever you want, and it will always
+17:52
+pass the validation.
+17:58
+As I said, all Ruby and PHP libraries are vulnerable to this void concordation exploit.
+18:04
+In contrast, the simple limitation is aware about this concordation problem and will fail.
+18:10
+The Java doesn't use the LinuxML at all, but also aware about this logic.
+18:18
+From now we can calculate the hash value of empty string and put our exploits in the
+18:24
+top level of the response to break this impossible digest collision.
+18:30
+There are two small steps left to craft the final exploit.
+18:34
+First, we have to find the valid envelope signature.
+18:39
+We will reference again to the standard which explicitly says that the identity provider
+18:45
+might return the signed, summed response message.
+18:50
+You can trigger this behavior by placing the invalid value under the three reserved attributes
+18:56
+under authentication request.
+18:59
+ID, issue, instant, and version.
+19:02
+And ID is outstanding one.
+19:05
+During our research on RubySummel, we have identified that the high-askey value, like
+19:12
+for example, 80, will trigger another void concordation exploit against the Nekigiri.
+19:19
+So if the library reflect the ID according to the standard into the response to value,
+19:28
+our Nekigiri library will sign the empty string.
+19:31
+And this is the broader issue.
+19:33
+PHP, Rob, Linux, and XML signature library will also allow you to sign the empty string.
+19:44
+There is always another way to find the invalid envelope signature, Federation metadata,
+19:50
+which is responsible for another single sign-owned trust protocol, which has nothing common
+19:55
+with that summel.
+19:57
+But we can exploit for our attacks because it contains the same envelope signature signed
+20:03
+with the same identity provider private key.
+20:06
+All we have to do is extract this envelope signature.
+20:10
+And tune our evil assertion with the same ID to pass the old signature validation logic.
+20:19
+And final step, we have to find the accessibility point where to place our exploit.
+20:25
+Hopefully for us, RubySummel has 12 XML schema files.
+20:31
+These schema files describe the syntax is how the summel response should look like.
+20:36
+And where you can put any XML notes or any other XML notes.
+20:41
+For the demo, I will use the extensions note.
+20:46
+But the SAS status details is the same one.
+20:51
+So let's put it all together.
+20:53
+We break our conicalization logic by the relative URI declaration at the top level.
+21:01
+We create the new accessibility point, wrap our envelope signature with the XML attribute
+21:08
+trick and hide it inside the XML.
+21:12
+And place the fake evil tag as well under the evil signature.
+21:20
+It's time for the live demo.
+21:22
+It's going to be super fun.
+21:26
+For the demo, I will use the GitLab enterprise edition 17.8.4, which is vulnerable to all
+21:49
+today's attack.
+21:53
+I'm using the Octa as identity provider for this setup.
+22:00
+Then we should forward the request to the repeater and drop the original attack to pass
+22:05
+all of the CISRF protection.
+22:11
+As I said, it uses the Octa which reveals the scientific data by default for any service
+22:17
+provider.
+22:19
+To make things funny, the Octa has deleted all developer accounts.
+22:24
+But Federation metadata still works.
+22:26
+Even your account was deleted.
+22:32
+I craft the extension, we'll call the simply signature wrapping.
+22:38
+All you need is the email address of the Wixim.
+22:45
+It will prop multiple signature wrapping attacks.
+22:48
+When it's fine, the real, some will respond, it will show you in the browser.
+23:13
+I should not intercept this request.
+23:18
+And voila, we're able to successfully log in to any other user.
+23:23
+To make funny, the GitLab allows you to create the new users under these setups.
+23:28
+So even if you don't know the Wixim email address, you can just always create your new one.
+23:35
+Thank you.
+23:42
+Luckily, we didn't have to use the recorded demo.
+23:53
+Honestly, I'm really surprised.
+23:59
+Today I want to share with you two case studies.
+24:02
+Because when you try to exploit the signature wrapping attacks on the real targets, it's
+24:07
+not as simple as it sounds.
+24:10
+This first setup, the big software as a service company, is using their own custom implementation
+24:18
+of the RubySummel, which creates the special cache function that will store the signed assertions
+24:27
+ID value into the cache.
+24:29
+They did it for the protects all the Google Docker attacks, where you can just reply the signed
+24:36
+assertion.
+24:38
+So that exploits won't work, but we can query any federation metadata and the signature
+24:46
+by using the Microsoft Enter, by knowing the same application ID, and place it into our
+24:52
+exploits and bypass the authentication.
+24:56
+For the next case study, which uses the RubySummel library, they were using the Octa as a
+25:03
+identity provider.
+25:04
+The logic will be the same as show you on today GitLab Enterprise Edition demo.
+25:10
+I was able to find the employee email address on LinkedIn, but unfortunately, he was using
+25:16
+the to-affay to protect his account.
+25:20
+But there is a nice trick.
+25:22
+As I said, you can create a new user under the organization.
+25:27
+And the service provider allows us to do so.
+25:30
+And luckily, GitLabHase, Perseverer Researcher, has shown on the previous black hat how to
+25:36
+do this.
+25:37
+We will use the QuattitString to hide our collaborating point inside this on the first look the valid
+25:44
+email address.
+25:46
+And the email server will send the two email address for the real email and for the fake
+25:53
+one.
+25:55
+But we will be able to create the new user under the service provider.
+26:02
+To reduce the exposure of all today's vulnerabilities, the maintainers has released a majority of
+26:08
+CVEs on Monday.
+26:11
+They all address the void concluzation problem inside the Ruby and PHP environment.
+26:18
+The raw preachers introduced his patch on version 3.1.4.
+26:24
+But RubySummel did not.
+26:27
+They simply said like, we are not going to support version 1.12.4.
+26:32
+So you have to update to the 1.18.
+26:39
+Summel complexity is also its weakness.
+26:42
+They will learn how to exploit the expats discrepancies and XML parts of discrepancies and
+26:49
+detect the conicalization.
+26:50
+But above these two transformers, there are more of them.
+26:55
+For example, expats transformer and XSLT.
+27:00
+All of them are unfamously known for the vulnerabilities like DOS and remote code execution.
+27:07
+So you will always be able to find another exploit for the vulnerable library.
+27:14
+The whole security of this Summel is built on the poorly maintained LibixML2, which has
+27:21
+the explicit statement on the readme file saying like, this project maintained by only single
+27:29
+person and has a lot of security vulnerabilities, it is fully to trust on untrusted XML
+27:35
+parts in this library.
+27:38
+Maybe it is time to go.
+27:42
+My thanks goes to the Geras case who helped me a lot during this research.
+27:48
+Thank you so much for your attention.
+28:00
+I believe we have time for the questions.
+28:08
+I suppose we should have the microphone and isle.
+28:18
+So long story short, it is a tricky question because the Ruby Summel not going to fix 1.12.4.
+28:28
+The CV is already assigned for the Ruby Summel, but the recommendation just to move to
+28:33
+the 1.18.
+28:35
+So yes, there is a CV for this library, but the recommendation just do not use it.
+28:42
+Regarding the PHP, the raw preachers has released the fix and the simple Summel PHP already
+28:48
+released the new version that addressed this vulnerability.
+28:52
+But there is a problem.
+28:54
+Inside the GitHub, you will find a lot of the same limitations distributed across the
+28:59
+whole of the Summel Proiders.
+29:01
+It is really hard to pursue all of them and to get to know about the vulnerability.
+29:06
+We will release our research to force them to update to the raw preachers latest version.
+29:11
+But unfortunately, they just copy paste the code.
+29:14
+They do not import it through the composer.
+29:18
+So this, again, a pretty complicated question because when you try to test it, as I did for
+29:33
+the simple Summel, for example, there are a lot of versions of it.
+29:38
+Each of them uses their own implementation of signature library.
+29:42
+So when you pursue the really popular one, you know for sure because you contact.
+29:47
+But it might be a lot of work to pursue.
+29:54
+Thank you very much.
+29:55
+Thank you.

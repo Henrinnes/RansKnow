@@ -1,1 +1,1042 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Okay, thank you everyone. So let's start the talk.
+0:03
+Hi, I'm Suhao from Taiwan.
+0:07
+I list my first time to present at DEFKANG and also my first time at DEFKANG.
+0:12
+And also my first time at LADYGAS.
+0:14
+And not my first time in US.
+0:17
+Okay, so thank you all for joining my session.
+0:22
+So I'm Skype-seed.
+0:24
+It's Skype-seed to share some vertical,
+0:28
+red-tin networking techniques with you today.
+0:31
+So I guess we can get started.
+0:37
+Okay.
+0:39
+So now let me take you into a typical day in my IT life,
+0:45
+seeing my intranet LDAP server logs.
+0:48
+And there's a login from Frank.
+0:52
+And there's a login from Bob.
+0:56
+And then, well, there's an invalid login from a public IP, 9.9999.
+1:05
+And how and why this can happen?
+1:09
+This is an intranet server without no destination on AT.
+1:14
+So okay, as an IT, I'll bend it. Let's bad IP.
+1:21
+But a second later, there's another IP
+1:25
+attacking my server again.
+1:26
+So how is that possible?
+1:28
+That someone can use a public IP address
+1:31
+to attack our intranet server.
+1:35
+This is the key point that we are going to discuss in this talk.
+1:39
+This presentation will explore ways of lower level network
+1:43
+penetration through virus of internal protocol.
+1:47
+This technique can be used for advanced red-tin exercise
+1:51
+or can be blocked before they are abused by malicious attackers
+1:56
+in your cooperative networks before we dive into the details.
+2:01
+Let me briefly introduce myself.
+2:04
+Hi, I'm Su Hao-Tong from Taiwan.
+2:07
+And I'm now in the red-tin Merit Trade Research
+2:10
+at Tremico. And I graduated from Qinghua University in Taiwan
+2:15
+and a former HECK president.
+2:18
+I love to play something with networks and network protocols.
+2:24
+I started this research for fun and it turned out that it is great
+2:29
+importance to general network security.
+2:33
+So I'm sharing my GitHub account here where you can find all the tools
+2:37
+in material of this research.
+2:42
+So this is today agenda.
+2:45
+First, I will share some new red-tin techniques
+2:48
+using IP spoofing and how we can use that for initial access.
+2:54
+Then I will reveal the nightmare of VX-LAN
+2:56
+including internal head tracking and how buggy routing protocols
+3:00
+can lead to IP head tracking and even domain compromise.
+3:05
+And finally, I will wrap up with some key takeaways
+3:08
+before we move on to the Q&A.
+3:12
+So first, I want to talk about some spoofing source
+3:15
+IP in the public network.
+3:18
+Also, no as when.
+3:21
+We all know that even in recent years, package spoofing
+3:24
+is still possible on public networks.
+3:27
+Please know that all the IP address are example IP address,
+3:32
+not any common nor probably IPs.
+3:35
+And attacker with the IP address 2.2.2.2 can send a DNS
+3:40
+request with a source IP of 3.3.3.3.
+3:44
+Let that not belong to itself.
+3:49
+And 1.1.1 will receive the package.
+3:54
+And it had no way to verify whether the package is a spoofed
+3:58
+package or a valid one.
+4:00
+And it will send a DNS response to the 3.3.3.3.
+4:07
+So the 3.3.3.3 will receive the DNS
+4:10
+response with our making a request.
+4:13
+This is a typical DDOS DNS amplification attack
+4:17
+and it still works nowadays.
+4:20
+Next, I want to dive into the company
+4:23
+network infrastructure.
+4:25
+How IT will do block a computer
+4:28
+from assessing the public network for security purpose.
+4:32
+So for the best practice, when a package
+4:36
+sends from a crucial server to a public IP,
+4:41
+it will arrive to the firewall and the firewall will drop the
+4:45
+package.
+4:46
+However, we see some IT just disabled the NAT mechanism on
+4:51
+the router.
+4:53
+So the package will still fall out to the Y-Area network.
+4:59
+And the remote server will see and receive that package and
+5:04
+see that source IP is not valid.
+5:08
+So it will whether drop that package or respond to
+5:11
+unknown address and the client will not receive the message.
+5:16
+So when your code is completed, a mess
+5:19
+by still work because the client still knows
+5:21
+received any response.
+5:23
+So the client is not connected to the internet.
+5:27
+So if we consider both situations together, what would happen if
+5:32
+we spoofed the source IP address on the internet?
+5:38
+Imagine a rating scenario.
+5:41
+The red attacker hacked a company's device,
+5:45
+like the 1.3.
+5:48
+It can create a tunnel between the C2 server and the
+5:52
+compromised device.
+5:54
+After that, it can create a DNS request through the
+5:57
+tunnel.
+5:58
+Which source IP is the attacker public IP, which is
+6:01
+9.9.9.9.9.
+6:05
+When the package arrives the compromised device, it will
+6:08
+forward the package to the company in
+6:10
+Tronnet router.
+6:14
+After the router will receive the package, it will look up
+6:18
+its routing table and forward the package to the
+6:21
+second victim.
+6:26
+As we know, if there is no firewall for the second victim,
+6:30
+that 1.2, the respond package will send back to the attacker
+6:36
+through the public internet.
+6:40
+Then the attacker will receive the package.
+6:42
+With there is no evidence that the package is come from
+6:46
+that 1.3.
+6:47
+The entire TCP or UDP string only shows the IP source IP is 9.9.9
+6:52
+and IP source 1.2.168.1.2.
+6:58
+So why IR is hard?
+7:00
+In typical lecture movement attacks, the attacker used the
+7:04
+IP address for previous compromised machine to target to the
+7:08
+next system.
+7:10
+This means when the alarm being triggered, an IR team could
+7:15
+simply use network log to trace the attacker path from one
+7:19
+compromised machine to the previous one.
+7:23
+The IR team could find a relevant log on the previous
+7:28
+compromised machine and identify the initial access point.
+7:33
+And then the IR team will shut down the entire attack
+7:37
+change step-by-step.
+7:40
+However, when spoofing techniques are involved, the source IP
+7:44
+in the log will not be the previous compromised machine.
+7:48
+So the IR team will not be able to find the attacker path.
+7:52
+They could only see a public IP is attacking their domain
+7:56
+controller.
+7:59
+Thus, the previous compromised machine will not be caught,
+8:03
+even if the alarm has triggered.
+8:06
+And it can change to another public source IP to continue
+8:10
+the attack change if the source IP is banded.
+8:15
+Overlooking the attack path, the malicious package
+8:19
+source and destination IP only shows 9.9.9.9
+8:23
+and private IP.1.2.
+8:26
+No one will know the previous compromised machine
+8:29
+is the 1.3.
+8:33
+On the other hand, the turn of the IP is the HTTP traffic
+8:37
+with the source IP of 7.7.7.7.
+8:41
+So if the 9.9.9 is banded, the attacker can simply
+8:46
+switch another public IP and attack the same target
+8:51
+or different target.
+8:53
+The IR team would need to check every router
+8:56
+for later to port logs in order to identify the compromised
+9:00
+machine.
+9:02
+Also, the source MAC address can also
+9:05
+be forged at the first hop.
+9:11
+So what if the ISP filter package with a private source IP
+9:17
+address?
+9:18
+We can use h.323 and h.3 to enable
+9:22
+temporary destination on AT.
+9:26
+The attacker can send a special package to 9.9.9.9,
+9:30
+which is its C2 server.
+9:33
+The NAT router will then create a temporary destination
+9:37
+on AT rule for a private IP 1.3, port 4.5,
+9:43
+and open to its public IP, port 4.5.
+9:47
+It leads a local attacker to assess private IP 1.3 on port 4.5,
+9:53
+vr9.9.9.9.
+9:56
+So here's a quick demo.
+9:59
+We can see that does 241 has a web server at AT.80.
+10:04
+Initially, the attacker does 142 cannot
+10:07
+assess the internet with server via the public IP.
+10:12
+After we send, create a server and send
+10:16
+h.323 package from the compromised machine.
+10:19
+We receive a package from the victim routers,
+10:23
+and we receive, and we know that the router
+10:26
+gives me a DNA-T port to connect to the intranet
+10:31
+with server.
+10:32
+Also, we can see that the weblog source IP is from a public IP
+10:37
+rather than a private IP.
+10:39
+So let's create a breakpoint for the attack chain.
+10:45
+Another method discovered by Jimmy Tai
+10:48
+involves spoofing a fake TCP sync package
+10:52
+from the compromised device.
+10:56
+Using the next target IP as the source IP address,
+11:01
+which is the 1.3 for now,
+11:04
+and sending it to the attacker server,
+11:07
+the SN80 mechanism can be built as a destination
+11:11
+in the internet service.
+11:16
+So this is a second quick demo.
+11:21
+We can see that the device does 35 has a web server
+11:25
+running at AT.80.
+11:27
+Initially, the attacker at .131
+11:31
+cannot assess the internet with server via the public IP.
+11:35
+After we spoofed a sync package from the compromised device,
+11:41
+using the next target IP and the port as source,
+11:45
+and sending it to the attacker server,
+11:48
+the router will create a source destination in AT,
+11:54
+but we can build this route as a destination in AT.
+11:59
+So we can do SN80 mechanism
+12:03
+allows us to connect to the internet with server.
+12:07
+Additionally, we can see that the web server log
+12:11
+shows the source IP as a public IP
+12:13
+rather than the private one.
+12:15
+So let's also create a breakpoint in the attack chain.
+12:20
+So next, can we replace the
+12:29
+tunnel with official VPN?
+12:33
+The answer is yes, in some cases.
+12:35
+There are many commercial SSL VPN solutions
+12:39
+that can spoof the source IP from the client.
+12:43
+As shown in the diagram, commercial SSL VPN
+12:45
+likes those discussed as Cybersack 2025
+12:49
+made a low list behavior.
+12:51
+On the other hand,
+12:53
+whether open source VPN solution like
+12:57
+wildcard or open VPN are affected,
+12:59
+depends on their configuration.
+13:03
+So where's the initial SS?
+13:05
+Do we have a chance to do this without
+13:09
+an initial foothold in intranet?
+13:11
+Can we use any existing tunnel?
+13:15
+The answer is yes.
+13:17
+On the internet exchange,
+13:19
+everyone is on the sender to network.
+13:21
+Attacker can set a private network range
+13:25
+at the next hub to the router of the company
+13:29
+you want to attack.
+13:31
+Also, the second method,
+13:33
+we can build a 16-turnal
+13:35
+such as GRIE, IPIP or SIT-turnal.
+13:37
+But again, a good firewall configuration could cause this fail.
+13:41
+So in the internet exchange,
+13:45
+if we compromise a router at an internet exchange
+13:49
+or we can just run a
+13:51
+IXP VM to assess the internet exchange.
+13:57
+We can force a private subnet
+14:01
+as the next hub to the victim company router.
+14:05
+And then we can create a connection
+14:07
+using our own network,
+14:09
+and then we can create a public IP
+14:11
+as the source IP
+14:13
+and a private subnet as a destination.
+14:17
+The victim router will forward the package to its intranet.
+14:21
+Yeah, it's routing table.
+14:23
+And the intranet target will respond to the attacker
+14:29
+to its public IP because the package source IP is a public one.
+14:35
+On the other hand, we can build
+14:37
+existing internal like GRIE.
+14:41
+So first, what is a GRIE?
+14:45
+GRIE is a status layer three-turnal.
+14:49
+This is widely used because it is easy to setup
+14:51
+by only setting its protocol,
+14:53
+GRIE, public IP,
+14:55
+and GRIE interface IP,
+14:57
+and its routing table,
+14:59
+which is next hub.
+15:01
+Nowadays, there are still a lot of companies
+15:03
+that use GRIE,
+15:05
+like CloudFair,
+15:07
+Magic Translate, and its customer.
+15:09
+They can choose between IPsake or GRIE,
+15:11
+and IPsake is safer.
+15:13
+And AWS Translate gateway also supports GRIE turnal.
+15:19
+But sadly, it's used for internal networking only.
+15:23
+Also,
+15:25
+Security Week reports that
+15:27
+APT groups like
+15:29
+SOT-type phone create GRIE turnals
+15:31
+to collect traffic from compromised device.
+15:35
+Less. A lot of companies also use GRIE turnal, but we don't know.
+15:41
+So how that GRIE works.
+15:43
+When a package wants to go through a GRIE turnal,
+15:47
+the kernel will pack the packet with a GRIE header
+15:49
+and send it over the package internet.
+15:53
+At the receiver side,
+15:55
+the GRIE packet is unpacked,
+15:57
+and the internet packet is forward according to its routing table.
+16:01
+GRIE is status,
+16:03
+and doesn't provide any encryption,
+16:05
+which means it's possible for everyone can spoof a GRI packet via public network.
+16:13
+For example, a private IP does one does two.
+16:17
+One does two send a packet to another side,
+16:21
+does two does two.
+16:23
+The packet will send to its default gateway.
+16:29
+And because of the, it is a GRIE turnal,
+16:33
+the gateway router will add a GRIE header to the packet,
+16:37
+and then send it through the public internet.
+16:41
+After the GRIE packet arrives at two.2.2,
+16:45
+it will remove the GRIE header
+16:47
+and forward the inner package
+16:49
+according its routing table.
+16:53
+And then the two does two does two receive the packet,
+16:59
+and if you want to respond to the packet,
+17:03
+the vice versa.
+17:05
+The packet will send back to its default gateway,
+17:09
+and add the GRIE header,
+17:11
+and send back to the 1.1.1 louder,
+17:15
+and remove the GRIE header,
+17:19
+and send it back to the 1.2.
+17:23
+So,
+17:27
+how do we find a GRIE turnal?
+17:29
+We can use all sync techniques.
+17:31
+For example, we can search for a network floor,
+17:35
+dashboard like a quadrangle on Google,
+17:39
+and filter for GRIE traffic.
+17:41
+This way, we can obtain the IP address on both ends of the turnal.
+17:47
+Other sync techniques can also help too.
+17:53
+Also, we can use GRIE spoofing techniques
+17:57
+to scan for its 16 GRIE turnal.
+18:01
+First, we can create a GRIE turnal using the command and provide a bar.
+18:07
+Then we can craft a GRIE packet with a spoofit source IP address,
+18:13
+once one not belong to us.
+18:15
+Then we can send it over the public network to the victim.
+18:19
+If the victim has a GRIE peer config,
+18:23
+with the GRIE packet source IP, for example, 1.1.1.
+18:27
+It will encapsulate the inner packet and process it,
+18:31
+according to its routing table,
+18:33
+and forward to the inner packet.
+18:37
+So,
+18:39
+we can create a and send many packets with different source IP address
+18:43
+to prove all the correct victim peer.
+18:49
+If the victim does not recognize the source IP as a non-nolan peer,
+18:55
+it will drop the packet.
+18:57
+On the other hand, if the source IP matches one of the victim's nolan peers,
+19:05
+the victim will accept the GRIE packet and forward the inner packet,
+19:09
+according to its routing table.
+19:13
+For scanning purpose, we set the destination of the inner packet to the victim itself.
+19:19
+So, the victim will immediately reply the inner packet with an ICNP response,
+19:29
+and send it back to the attacker.
+19:33
+Then we can identify the victim GRIE turnal peer IP address by its ID file,
+19:41
+by its ID finder and sequence.
+19:45
+We can encode the information into ICNP ID finder and sequence fill,
+19:49
+which together can send 0255 to the power of 4 possible IPv4 address.
+20:03
+We also create a scanner script on GitHub,
+20:07
+as you can see, when the GRIE source address matches the remote GRIE peer address,
+20:13
+we can get an ICNP reply.
+20:25
+Then we can put everything together to get an initial access.
+20:29
+Let's imagine a scenario, the victim.
+20:33
+1.1.1 has a GRIE turnal with 2.2.
+20:37
+An attacker can forge a GRIE packet that appears to be sent from 2.2.2.
+20:45
+The inner packet is a DNS request sent from the provider IP3.3 to an internal network IP.
+20:55
+When the packet arrives, the victim will trust and use the GRIE packet,
+21:03
+because it can claim to come from 2.2.2.2.
+21:09
+The victim will unpack the GRIE packet and discover that DNS request,
+21:17
+which destination is in private network IP.
+21:19
+The victim will land forward the packet to its company intranet,
+21:25
+based on its routing data.
+21:33
+Then, when the internal DNS server received the DNS packet,
+21:39
+it will respond and send the reply through the public internet to the attacker server.
+21:45
+The attacker can interact with service on the victim intranet,
+21:51
+including those using the TCP protocol.
+21:55
+We have created a demo lab.
+21:59
+The architecture is illustrated in the diagram.
+22:03
+We have a target router, which drive IP is 1.1.1.
+22:09
+There is an intranet with server, which probably network is 1.2.
+22:15
+The server is host on 1.2, and the server can access the public network via SNAT.
+22:30
+On the other hand, the router has a GRIE terminal, and it can directly access the intranet with server.
+22:38
+Also, it has a public IP.
+22:44
+We can see that there is a GRIE terminal.
+22:47
+The peer is 1.1.1.1.
+22:51
+Initially, the attacker IP address,
+22:56
+the 1.4.2, can access the private network 1.2.168.1.2.
+23:06
+Then, the attacker can create a spoofed GRIE terminal via the command shown above to the victim router,
+23:16
+and directly send traffic to the private address 1.2 through the fake terminal.
+23:25
+Then, the attacker can direct access and interact with the internal server.
+23:33
+Similarly, if the layer 2 terminal like GRIE tab,
+23:38
+also, if we can link the victim MAC address, we can also exploit this in the same way.
+23:45
+It is common to use the SNMP protocol to obtain this.
+23:53
+For short LTLD summary,
+23:56
+when a company does not config its firewall and uses daily on an encrypted terminal,
+24:01
+even it is a legacy configuration.
+24:04
+The attacker can exploit this terminal for initial access to the intranet.
+24:11
+So, then, we will reveal a nightmare of default configuration of VXLAN.
+24:18
+So, what is a VXLAN?
+24:21
+The XLAN is the status and unincributed layer 2 terminal.
+24:27
+It packs layer 2 Ethernet frame into a layer 4 UDP packet.
+24:33
+Each summer is uniquely identified by a name called VNI.
+24:42
+We can configure VXLAN terminal similar to the GRIE by giving the remote IP address,
+24:49
+the remote IP, local IP, and destination port and VNI.
+24:54
+However, this configuration is vulnerable.
+24:59
+Based on the previous configuration,
+25:02
+say about a standard VXLAN period is easy as usual.
+25:08
+How about hijacking a VXLAN terminal?
+25:13
+Yes, here's the only difference.
+25:16
+The only thing you have to change is your local IP argument.
+25:22
+So, why does this happen?
+25:24
+Does the Linux kernel, doesn't check the source IP for VXLAN packets?
+25:32
+How does it accept VXLAN packets with a valid VNI and port,
+25:36
+even if the source IP is not configured?
+25:42
+After looking at the Linux memo,
+25:45
+you will see that this is a feature, but not a bug.
+25:49
+But this feature is insecure and it turns on by default.
+25:54
+Before reporting, router always couldn't turn this feature down.
+25:59
+Now, you can change the setting to off, but it's still on by default.
+26:06
+So, what's happened when learning is enabled in VXLAN?
+26:13
+Normally, when a configured peer sends a VXLAN packet,
+26:18
+the kernel will add its MAC address to the FDB,
+26:23
+also known as forwarding database table.
+26:27
+Sure, one at the bottom on the slide.
+26:30
+The next time, a packet needed to be sent to the destination MAC address
+26:36
+let us list in the FDB table.
+26:39
+The kernel pack and send a packet to the remote location
+26:43
+using the information from the FDB table.
+26:53
+Similarly, when learning more is enabled,
+26:57
+any VXLAN packet with a valid VNI and port will be added to the FDB table.
+27:04
+Also, the remote IP could be any IP on the internet.
+27:12
+Thus, an attacker, 9.9.9.9 can create a VXLAN packet with a MAC address,
+27:20
+which is broadcast address, FFFFFFF.
+27:24
+And the Linux kernel will add a list MAC address to the list.
+27:31
+Then, when the kernel wants to send a broadcast package on the VXLAN interface,
+27:36
+it will look up the FDB table and then send it to the attacker server,
+27:43
+which is 9.9.9.9.
+27:50
+So, we know how VXLAN works.
+27:56
+How do we get the information like we can head jack a VXLAN?
+28:02
+We know our own IP, but we don't know the victim's IP,
+28:07
+or VNI, or VNVXLAN in the subnet.
+28:13
+However, all this information can be obtained by a simple scan.
+28:19
+An attacker can discover the victim IP, port, and VNVX by sending numerous packets.
+28:26
+So, let's focus on how to determine the VXLAN inner subnet range.
+28:34
+We can gather information by sending a single VXLAN packet,
+28:39
+where both the source and destination MAC address are set to the broadcast address.
+28:46
+When the ARP requests send from the VXLAN interface,
+28:50
+they will also send a copy to the attacker.
+28:57
+Another method involves sending a network neighbor discovered a protocol packet.
+29:03
+When a router always receives a broadcast neighbor discovered protocol and DP message,
+29:10
+it will respond to the broadcasting MAC address with its own IP and MAC address.
+29:19
+Thus, we can send numerous VXLAN packets with different VNIM port configuration.
+29:26
+Each contains an inner undepic packet, where both the source and destination MAC address are set to the broadcast address.
+29:40
+When the VNIM port matches the victim configuration,
+29:45
+the victim device will add attackers IP to its FDB table.
+29:53
+Land. The victim unpacked the VXLAN package and see that it is an undepic request.
+29:59
+The victim router replied to the undepic packet and tried to send the respond to the Borkam MAC address.
+30:07
+It checks the FDB table and finally the destination is 9.9.9.9, which is the attacker IP.
+30:19
+So, the router will send the packet to the attacker.
+30:27
+Land. The attacker has everything to hijack the terminal.
+30:30
+Land. The victim has a scan number of the VXLAN packets.
+30:37
+We create a scanner. We can discover the victim IP port and VNIM by sending numerous packets.
+30:44
+VXLAN has default 4789 and A472 and VNIM is usually smaller than 100.
+30:51
+Here is the scanner link.
+30:54
+We have also created a left for VXLAN scanner demonstration, which includes a router always router and a web server.
+31:05
+So, for demo, we can see that the scanner M2 scan the target at that 200.
+31:12
+The scanner sent numerous packets with different default and different VNIs.
+31:17
+Later, we can receive an undepic reply with VNIM 42 and port A472.
+31:24
+The inner star met is 10.0.0.1. Land.
+31:28
+By simply, we can simply create a VXLAN with the information above.
+31:35
+We can direct access the VXLAN intranet server.
+31:42
+We also scan for Instagram VXLAN configuration worldwide.
+31:48
+Usually, VNI using VNI equals 1 and default ports.
+31:54
+We found like more than 900 VXLAN endpoint respond to the scanner.
+31:59
+Additionally, there are 4000 IP inside the VXLAN subnet.
+32:05
+Some of these are public IP, which means we can hijack public IPs.
+32:12
+Additionally, some endpoint replied numerous bulkhead packets.
+32:17
+Combined with the IPs moving, this can lead to DDOS to attack.
+32:24
+Lastly, we see some VXLAN packets have source IP led to private address.
+32:32
+This raises a question. Why are the private address being used as a source IP on the VXLAN packet?
+32:40
+So, if I use VXLAN in an intranet server, I am safe.
+32:47
+The answer is no.
+32:50
+VXLAN still has a separate traffic and different interface.
+32:56
+So, if you have a public IP interface and also you create a VXLAN interface,
+33:02
+it can be scanned and hijacked.
+33:08
+For LTLDR, we can hijack a VXLAN terminal using only three pieces of concept.
+33:17
+The VXLAN port and the VNI.
+33:23
+There is no need to know the peer IP and internal IP address.
+33:29
+Furthermore, if your network setup including a public IP address and VXLAN on any interface is highly vulnerable.
+33:39
+So, what can hijack a VXLAN terminal do?
+33:47
+It can only attack or get initial access to the company intranet.
+33:52
+But also, they can hijack IP communication or perform many middle attacks between the two sides.
+34:00
+Additionally, attacker can target their network service such as its following RADVD2 RCE vulnerabilities.
+34:11
+Incidentally, it is challenging because the source IP cannot be trust.
+34:16
+Moreover, there are these terminals often run routing protocols like BGP or OSPF.
+34:25
+Attackers can hijack IP slot or even not transmission through that terminal, such as those of a domain control or a EXXI server.
+34:38
+So, what is a routing protocol?
+34:41
+It is a protocol like routing router can exchange routes and network information with other routers.
+34:50
+Routing protocols help router to dynamically learn about the networks around them and to determine the best path for forwarding the packet.
+35:02
+For example, router A has a subnet 12192.168.1.0 slash 24 and the router C who learned the routes from router B by routing protocols.
+35:17
+We obviously come in and use VXLAN terminal to connect two sides with routing protocols.
+35:26
+But when we combine this with the running feature, we can hijack routers A, IP LAN.
+35:37
+We can connect to the routing protocols and announce domain control IP in the routing protocols with slash 32.
+35:50
+Other routers will receive and trust the routing prefix and redirect the domain control traffic to the attacker because the route is most specific, smaller than the LAN subnet.
+36:08
+We have summarized the potential impact of hijack in different service IP.
+36:17
+Even attacker hijack the IP up domain control and until any is possible, meaning SMB signing is disabled or ADCS ESC-ED is present.
+36:31
+They can take over the entire document.
+36:34
+If the attacker hijacks the IP up via procsmods or any HTTPS service and original SSL certified kit, certificate is unsigned or not valid.
+36:48
+User may not be noticed.
+36:50
+And the attacker can then take over the account or the full server.
+36:55
+In short, hijacking this service IP can lead to account takeover, deny our service, DNS hijack or even full domain control compromised or server compromised.
+37:09
+And here's a bonus.
+37:11
+A bad configuration in the company's OSPF lead to IP hijacking.
+37:16
+This text pattern has been published for years and we actually observed it during our rating scenario.
+37:25
+Yet very few people discuss it.
+37:30
+Do you check and use a PCB dump after you get into our intranet?
+37:36
+If you see this on the vector intranet, it might be vulnerable.
+37:44
+Just like the exportation method described in the previous slide, if you see a hollow package, there is a highly possible light.
+37:54
+You can direct its tab list and OSPF connection with the router and hijack the routes.
+38:01
+So in short, if we connect to the OSPF, we can hijack the domain control again and get previous acceleration.
+38:15
+Let's let us on key takeaways.
+38:19
+Here's the key takeaways for blue team.
+38:22
+First, check all our encrypted turn-off in your company's network.
+38:27
+If you find any, don't use them.
+38:30
+Let's include protocol like JIE, IPIP, SIT, JIE tab, and the X-LAN.
+38:35
+This turn-off RNA secure and can be abused by attackers.
+38:39
+Next, make sure you have secure firewall in place.
+38:43
+Your firewall should filter out the intranet traffic, especially as YN-ACK packet, with a response from server.
+38:56
+Also, check for IP-speaving in your intranet.
+39:01
+Ideally, all ISP should not fill out spoofed IP address by in real-ality.
+39:09
+This is readily possible.
+39:12
+Check if OSPF is not enabled on ports between routers.
+39:17
+It's only in mobile ports between routers. OSPF should not open on unnecessary ports.
+39:25
+Monitor your routing prefix for any anomalies.
+39:30
+Unix-Sept-Change in routed protocol can indicate an ongoing attack.
+39:37
+Finally, set bottom minimum a step prefix size in your routing protocol, for example, stash 24.
+39:45
+In summary, avoid encrypted turn-off, secure your firewall, filtered for IP-speaving.
+39:53
+This trick always pf monitoring routing, and enforce minimum prefix size.
+40:01
+And here's the takeaway for routing.
+40:05
+First, scan or use osin techniques to find victims on encrypted turn-offs.
+40:12
+This can be entry point into the network.
+40:16
+Once you are inside the intranet, check the victim's network setup for spoofing.
+40:22
+Use source IP spoofing techniques during high riskending to avoid detection.
+40:28
+Look for OSPF have low message to identify active routing protocols and potential attack path.
+40:36
+Scan for misconfiguration vx-dent turn-off.
+40:40
+If you find a vulnerable turn-off, head-track is to get initial access.
+40:47
+Abuse routing protocols and head-track IP for lateral movement and privilege escalation.
+40:53
+Rating can continue looking for more vulnerable protocol in future.
+40:58
+Remember, scan find hacked.
+41:05
+And here's some detail way for tool makers.
+41:09
+First, implement an intranet IP spoofing command control tools.
+41:16
+Develop the automated tools to test possible of IP spoofing within a target intranet, automation safe times.
+41:26
+Create automation automated correction mechanism for mismatch between IP destination and source address wing in the same TCP station.
+41:38
+Some routers still perform SNAT, even the packet is a separate response.
+41:47
+Automate the process of sending h-dot-3-2-3 packets or new TCP packet to trigger a routing and IT mechanism, especially for IST left filter private IPs source IP address.
+42:03
+Develop tools for automation, OSPF IP hydrating attacks.
+42:07
+Finally, implement a more efficient GRI scanner for global scanning, similar to what MaxGand does for TCP.
+42:19
+So thank you everyone.

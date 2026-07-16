@@ -1,1 +1,3476 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Bob Dix
+3:30
+Hey folks, we're live.
+3:55
+So I'm just waiting on a few more people to jump on the stream.
+3:59
+It's exactly 1205.
+4:01
+So we'll just give people a minute to remember that there's a live stream and join in.
+4:06
+And then we're going to be talking a little bit about black matter ransomware.
+4:10
+As you guys can see up on the screen here, we have a nice marked up IDB.
+4:18
+And we're going to be talking about that process as well as something that's interesting to
+4:23
+me, how I used to make a living, which is how this sample was attributed to dark side,
+4:32
+which is a previous ransomware that kind of went dark, no pun intended, and then came back
+4:40
+as black matter.
+4:42
+And I want to talk a little bit about how, versus engineering and binary comparisons led
+4:48
+to the attribution of that.
+4:51
+So we'll give it a few minutes.
+4:53
+Looks like you guys are still joining in here.
+4:56
+And maybe while we wait, let me know in the chat if the font in Ida here is okay, if
+5:02
+the voice is okay, audio is good.
+5:06
+Just let me know in the chat.
+5:07
+I'm fine blind, no ears.
+5:09
+So I'm not really sure what the levels are like.
+5:12
+So just let me know.
+5:13
+And we'll wait another minute to see if anyone else wants to join here before we start.
+5:21
+Hello, got K-I-G-F.
+5:25
+Welcome, welcome to the stream.
+5:29
+I guess as we're waiting, all good?
+5:31
+Excellent.
+5:32
+Good.
+5:33
+I like to hear it.
+5:34
+While we're waiting, I will plug our Discord.
+5:37
+If you go to the comments or the video description below, we have a link to our Discord where
+5:45
+you can chat with us.
+5:47
+And that's actually where we got this idea from was somebody on the Discord telling us
+5:51
+to take a look at this or asking for us to take a look at it.
+5:55
+So yeah, so jump on Discord.
+5:57
+We'll be talking about this afterwards.
+6:00
+And also, obviously you can see the little Patreon thingy in the corner.
+6:04
+This is all sponsored by Patreon.
+6:08
+Go, drop us a few bucks for beer if you like these and we'll keep doing them.
+6:15
+That's all the plugging I will do for today.
+6:18
+You guys can wash your ears with bleach and then we'll start talking about actual reverse
+6:22
+engineering.
+6:23
+Sound is good.
+6:25
+Contrast down on the webcam view.
+6:26
+Yeah, it's not that.
+6:28
+It's not contrast.
+6:29
+I have a giant bright light because it's very dark here in Gluingme Montreal.
+6:33
+So I have one of those like a tick-tocker beauty lights to make me look beautiful.
+6:40
+That's why the contrast looks crazy.
+6:42
+I'm not really sure how to fix that.
+6:44
+I don't want to try that on stream.
+6:50
+Let's see what else.
+6:52
+Anything else?
+6:54
+Know this one as far from OK?
+6:56
+All right, tell me what's wrong with it.
+6:58
+Everyone else seems to think it's good.
+7:02
+New glasses.
+7:03
+No old glasses.
+7:05
+Oh my god.
+7:08
+Somebody signed up for...
+7:10
+OK, yeah.
+7:11
+So I can see in the chat, we set up this members thing for YouTube.
+7:17
+Please sign up on Patreon.
+7:19
+Don't use the YouTube thing.
+7:20
+We just set it up as a joke.
+7:22
+The emotes are ridiculous.
+7:24
+So I mean, if you want to be a member and use those emotes, go ahead.
+7:31
+But go to Patreon.
+7:32
+That's where we're trying to corral everyone.
+7:36
+And also if you join a Patreon, you get access to some extra stuff.
+7:39
+You get some extra channels and discord and stuff like that.
+7:44
+Yeah, why am I looking so sunny?
+7:45
+It's that light, exactly.
+7:46
+Yeah, nobody knows how to reverse engine your malware in 2021.
+7:54
+I think it feels like, at least from when I started reverse engineering.
+8:00
+It feels like everybody knows how to reverse engine your now.
+8:05
+And also I should mention that hello from the French Canada.
+8:10
+Yeah, I think Michael from the discord.
+8:13
+I've had some chats about how many period, period chicken joints there are in my town here
+8:21
+in Montreal.
+8:22
+OK, all right.
+8:23
+Let's get on with this stream here.
+8:26
+So what I wanted to do is I'm going to talk a little bit about Black Matter ransomware.
+8:32
+This is an older version.
+8:33
+It's older for a reason.
+8:35
+I'll mention that in a second.
+8:38
+And I'm sorry, distracted by the chat.
+8:43
+Yeah, I'll talk about some of the markup here as well, which is kind of interesting.
+8:52
+But anyway, it's an older sample.
+8:53
+I think it's version 1.2.
+8:55
+There is a version 2.0, which is a little bit different.
+8:58
+And then yesterday you guys might have seen on Twitter.
+9:01
+There is a version 3 of Black Matter that was just released.
+9:05
+I didn't have time to do any markup on the IDP between last night and today.
+9:11
+So I can't really show you version 3, unfortunately.
+9:14
+But today we really want to talk about the attribution aspect of this.
+9:17
+So it's probably OK.
+9:19
+It's better to use an older sample because it's a little bit easier to talk about attribution
+9:23
+because things haven't changed as much.
+9:26
+And also because I can, and because I spent so long doing these, I'm going to see if we
+9:34
+can play some of these little clips that I put in.
+9:40
+So I was actually working on this Black Matter IDP yesterday for you guys trying to finish
+9:46
+annotating a few things.
+9:47
+So I wouldn't have to do it on stream, which takes forever.
+9:51
+And then so many message VM was like, hey, bro, there's like Black Matter version 3
+9:56
+out.
+9:57
+Are you going to be looking at that on stream?
+9:59
+And I was like, so anyway, I put together a few of these little clips.
+10:06
+You guys let me know.
+10:07
+Does it is a better for the stream or is it worse for the stream?
+10:11
+All right.
+10:12
+So what we're looking at here is the entry point for Black Matter.
+10:16
+As you can tell, we have already marked up the IDP quite a bit.
+10:23
+And the reason why I didn't want to dedicate the stream to marking up the IDB is because
+10:29
+it takes forever when it's just a clean IDB.
+10:32
+Like it takes a couple of hours.
+10:34
+Those of you who saw I was doing an example or a test stream on Twitch the other weekend.
+10:41
+And like, you know, it's like four hours just to get like some basic functionality documented.
+10:46
+So yeah.
+10:48
+So anyway, I didn't want to do that on the stream.
+10:50
+What I want to do today is I want to actually silence in the chat.
+10:56
+Oh, no.
+10:58
+You guys going under with the meat of Jesus.
+11:00
+Oh, no.
+11:01
+All right.
+11:02
+Let's focus Black Matter.
+11:04
+So anyway, so what I've done is I've marked up the IDB, but I'm going to go through a
+11:09
+few tips that might help you guys if you're trying to mark this up yourselves that I kind
+11:15
+of ran into that might help you on your own.
+11:17
+And also we'll be dropping a Patreon only video just talking about a few of the trick
+11:21
+your aspects of the imports.
+11:23
+I'm going to make everything look really nice in the once you've imported your imports,
+11:31
+imported the hashes, how to do some mark up so that the imports are cast with the right
+11:38
+calling conventions and stuff like that.
+11:40
+Oh, man.
+11:41
+You guys really wrote some in the chat over like those Samita and Vien Protect.
+11:46
+I'm never going to live that down.
+11:50
+Okay.
+11:51
+So the first function we have here is to resolve the imported dress table.
+11:55
+And if you guys watched our hash DB YouTube video, you will have seen us actually go through
+11:59
+this pretty quickly.
+12:01
+And I'm not going to rehash that for you here, pun intended.
+12:06
+But basically what they do is they have a list of here.
+12:09
+I'll just show you guys.
+12:11
+They have a list of hashes which they have and they have a hashing algorithm which they
+12:16
+use to compare against the exports from DLLs in the process space.
+12:24
+And once the hash matches, then they know that that's the function, the export of the DLL,
+12:29
+the function that they want to call.
+12:31
+And then they add that to a memory block here, which I also have marked up as a struct.
+12:36
+And so then they have they so they're basically creating this like dynamic imported dress table
+12:41
+in memory.
+12:42
+So these are all the memory addresses where the functions will be stored, the pointers
+12:49
+to the functions.
+12:50
+And these are the list of the hashes that are stored in the binary rehash.
+12:57
+Yeah, I love in the puns.
+12:59
+Puns today.
+13:00
+I was up very late last night trying to get this marked up for you guys.
+13:02
+So my brain is stuck on pun in pun town here.
+13:07
+Yeah.
+13:08
+Shout out to hash DB.
+13:10
+It basically makes the stuff child's play.
+13:13
+The only tricky part is once you've resolved the hashes and you build them into you basically
+13:19
+build a struct that has all of the functions in it, which I can actually show you in the
+13:23
+local types here.
+13:24
+So the way we do this here, I'll show you this guy right here.
+13:30
+So the way we do this is we build a we build a structure and the structure has a we
+13:39
+type all of the elements of the structure as if they are the function calls themselves.
+13:48
+And there's a tool from Flair called struct type that I use.
+13:53
+And I'll link that after the stream.
+13:54
+I'll link that in the description, a little bit of clip in there.
+13:58
+I'll link that in the description of the video below so you guys can go check it out.
+14:02
+But basically you use hash DB to import, to resolve the hashes and build the struct.
+14:08
+And then you use struct type to apply the function types to the struct.
+14:14
+And then anywhere in your code where you have, let me go back here and I'll show you guys
+14:23
+back here.
+14:25
+So anywhere in the code where you call one of these resolved APIs, then you can see I have
+14:33
+over here.
+14:34
+It has all the type information and it's automatically cast these arguments with the right
+14:39
+types.
+14:40
+So it's like, it's basically doing tons of work for you stuff that you would have had
+14:44
+to do all right, like manually in a debugger.
+14:47
+Usually you would like step through this in a debugger and then you would copy the memory
+14:51
+addresses out into your IDB.
+14:53
+I think there's a tool that allows you to do that.
+14:56
+But no more, you don't have to do that anymore.
+14:58
+You can just use hash DB and struct type and you basically have nice resolved imports.
+15:05
+And you'll note that the import name is not camel case.
+15:10
+So we fixed that recently.
+15:13
+There's lots of complaints about that.
+15:15
+That was just the silly oversight on my part.
+15:17
+So now when you pull down the API names from hash DB, they should be camel case correctly,
+15:24
+just like they are in the MSDN documentation.
+15:28
+Oh my god, VM protect, stop it guys.
+15:32
+All right, you know what?
+15:36
+Just for you guys, just for the 80 something of you who have tuned in live, I'll cut this
+15:40
+out of the recorded video.
+15:42
+We are going to be doing a video series on some tricks with Femita in the future.
+15:49
+I'll leave it at that.
+15:50
+You guys probably, anyone who's looked at Femita probably knows what I'm talking about.
+15:53
+We won't be virtualizing it, but we'll be doing some fun, hacky stuff with that.
+15:59
+But you're going to have to join our discord to find out what that is.
+16:03
+Anyway, just for you guys, I'll edit that out of the video.
+16:07
+Okay, so now that we have our imports resolved, what we want to do is we want to look at
+16:14
+this, basically these two functions here.
+16:18
+So this one is kind of interesting.
+16:20
+I'll move it over again so you guys can see.
+16:24
+Oh no.
+16:25
+Oh, I just go in crazy.
+16:33
+I might have to, I've had this happen before.
+16:36
+It's like a, oh my god, we might have to just wait it out or I can kill it and restart
+16:49
+it.
+16:51
+I think what it is is it's like if you click in the, because I have my pseudo code and
+16:56
+my disassembly synced and if you move the disassembly too far as it moves through each
+17:03
+function, the pseudo code like re analyzes.
+17:08
+So it takes forever to scroll this like disassembly.
+17:11
+See, see what I mean?
+17:12
+If you scroll the disassembly through a function, the pseudo code basically has to reanalyze.
+17:18
+Anyway, it looks like we solved that.
+17:21
+So I'll go back here and we'll jump into that function that I wanted to jump into.
+17:27
+So elevate, pros and load config.
+17:29
+So actually before we, yeah, pull to guys for Halloween, no, it's just Ida Vincily.
+17:36
+So before we jump into talking about this function, I want to talk just for a second about
+17:44
+these insane naming conventions and why they're all different and why some of these functions
+17:49
+are marked as decompiled.
+17:51
+That's because there are a few functions that I wanted to mark up myself for this stream
+17:57
+so that I could go through them and I knew that everything would be correctly typed.
+18:01
+And then there are other functions that I just didn't have time to or I didn't really
+18:04
+care about, but I wanted the functions to at least be labeled here so that we could talk
+18:09
+about the structure of this ransomware.
+18:12
+And so for that, I used the Lumina or Lumina plugin and somebody healthfully pushed all
+18:19
+of their Lumina function definitions to hex rays.
+18:23
+And so I was able to pull down these labels for the functions.
+18:28
+So that's why you'll notice like the naming convention is insane.
+18:32
+If I reverse engineer the whole the whole binary, I would just use my bizarre Python naming
+18:38
+convention.
+18:39
+But you can see there's other people who have pushed their own naming convention to Lumina
+18:44
+and I've pulled it down.
+18:46
+Fun fact, if you guys pull down the function definitions for this, the person who pushed
+18:53
+their IDB to Lumina, who did the import address table resolving, clearly did not have hash
+18:59
+dv and they labeled this function like insane way to do import hashing or like most annoying
+19:06
+import hashing ever, which I thought was really funny.
+19:09
+It was kind of like a glimpse into, you know, the mind of another reverse engineer who's
+19:14
+having to go through this.
+19:16
+So anyway, I thought that was kind of funny.
+19:19
+So if you see different naming conventions for the functions, it's just because some
+19:25
+of these are pulled down and some of them were analyzed by me.
+19:30
+So dark side also has really funny function names, somebody pushed an IDB that has really
+19:41
+funny function names.
+19:43
+Anyway, so let's take a look at the general structure here of the first, this is the first
+19:49
+function in black matter that's actually doing any work other than resolving the imports
+19:55
+and one anti debug check, which I think we covered in a Patreon video.
+19:59
+So this is the first function that's actually doing anything.
+20:02
+So in here, this is going to become important in a minute when we talk about attribution
+20:07
+or in a few minutes.
+20:08
+The first thing they're doing is they're checking to see if the process is running as
+20:13
+admin and if the OS version is at least Windows 7 and if the user has privileges to run
+20:19
+a process as admin.
+20:20
+So if the process is not admin and the user has privileges to run as admin, they enable
+20:27
+this interesting UAC bypass.
+20:30
+So they try to elevate the process and think if we hop back here, they kill, yeah, so they
+20:37
+try to elevate it and then they kill the process.
+20:39
+Kill yourself.
+20:40
+I wrote that.
+20:41
+I think it was late last night.
+20:45
+Anyway, so they try to do this UAC bypass and I think the, I like the chat.
+20:54
+You Googled black matter rains over and now you're on the stream watching this on your
+20:58
+phone.
+20:59
+I'm sure the font is unreadable on your phone unless you have one of those like flip,
+21:04
+you know, those book phones, maybe you have one of those.
+21:07
+But otherwise like on an iPhone, I can't imagine how you can see this one.
+21:12
+Yeah, so yeah, let's talk about this UAC bypass.
+21:16
+So those you who are tuning into the Twitch stream got to see me doing this live.
+21:21
+This is actually kind of funny because the, because this UAC bypass is definitely copied
+21:28
+like directly out of a GitHub proof of concept because as I was marking it up, some of the
+21:34
+structures like the V table for this for this common object, it wasn't obviously in Ida.
+21:42
+So I had to add the V table, but I copied the V table struct definition out of the proof
+21:48
+of concept code and applied it to Ida.
+21:51
+So that's when you know like this is, this is definitely a copy paste job.
+21:55
+Was a UAC, so UAC me, I see in the chat, UAC me is a GitHub repo that has a whole bunch
+22:01
+of different UAC bypasses.
+22:03
+I'm not sure if this one was in UAC me or not.
+22:07
+I think I found it just by looking for the calm object here and looking for the, where
+22:14
+do they find the deal all host?
+22:17
+Yeah, here we go.
+22:19
+They basically, there's two components to the UAC bypass.
+22:23
+I'm not going to go to in depth into this, but basically what they're doing is they're
+22:27
+using this calm object, which has permissions to launch an elevated process without popping
+22:32
+a UAC prompt.
+22:34
+And they're using one of the internal functions in the calm object right here called shell
+22:40
+execute to launch the black matter ransomware payload.
+22:46
+As you can see, this is like they grab the command line args from the actual process that
+22:52
+was like from this process.
+22:54
+And then they use those again in shell execute to launch a second version of black matter
+23:00
+with elevated privileges without the UAC prompt.
+23:03
+So these like UAC bypasses, I think someone in chats of UAC's joke, like yes, these UAC
+23:09
+bypasses go unpatched for a really long time.
+23:12
+And basically if you find one of these and you put it up on GitHub, it'll probably
+23:16
+work for many years.
+23:18
+So a lot of these are old.
+23:19
+This is not a new one.
+23:20
+And this is like I said, this is copy pasted.
+23:22
+But what's interesting about it, and we'll talk about this when we talk about the attribution
+23:27
+here, is that this structure is like identical to like its copy paste from dark side, which
+23:36
+is another ransomware.
+23:37
+So it's interesting to sort of mark this up and go a little bit further than just saying,
+23:43
+oh, yeah, it's a UAC bypass to actually go in and mark up the structure so that we can
+23:46
+see, you know, is it a one to one match with this other binary?
+23:52
+They also do this machine good hash thing where they do a hash of the machine good, and
+23:57
+then they use that through the ransomware for when they need a constant value for something.
+24:02
+I think they use it in the ransom note or the file extensions or something.
+24:08
+As you can tell, this stream isn't going to be like very in depth on what black matter
+24:13
+is, like how the ransomware is working.
+24:15
+What we want to talk about is like a few components which are used to, which were used
+24:20
+to attribute this.
+24:21
+So I think that's a little bit more interesting.
+24:23
+We could also talk a little more generically about what it's doing.
+24:26
+I mean, I think the encryption method with the IO completion ports, I'm going to go through
+24:31
+that.
+24:32
+I think that's interesting, and it may be new to some of you.
+24:34
+So I'll talk about that as well.
+24:37
+So here's where they do the readme file.
+24:43
+Where do they do the config?
+24:50
+Let's go through here a little bit.
+24:52
+Oh, yeah, there we go.
+24:53
+Okay, config.
+24:54
+Okay, so I want to talk about this as well.
+24:58
+This is like another gotcha.
+25:01
+So here they have, so in black matter, there is an encrypted configuration, and it has
+25:09
+a bunch of different components.
+25:10
+It has an RSA, it has like key material for RSA, which is used to encrypt the encryption
+25:18
+keys for files.
+25:20
+And that's the public part of the RSA key that has a private counterpart that the ransomware
+25:27
+developers will sell you.
+25:29
+So they sell you the private key so you can decrypt your files.
+25:32
+So the public key material is stored in the config.
+25:36
+There's also a set of binary flags, which are used to enable or disable features.
+25:40
+Don't worry, I'll show you all this.
+25:41
+I'm just going over the quick overview here first, so you know what's in the config.
+25:46
+And then also in the config are a bunch of different values that are used in the ransomware,
+25:51
+things like the ransom note, C2 URLs, blacklist, like a blacklist of processes that they
+25:59
+want to kill a bunch of stuff like that.
+26:02
+So the config can be swapped out with different builds of the ransomware without having to
+26:08
+change the actual binary itself.
+26:11
+And this allows them to use this ransomware with their affiliate model, right?
+26:16
+So they have to keep building new ransomware binaries for each affiliate.
+26:20
+They can just swap out the config and it's good to go for a new affiliate.
+26:24
+Also I should mention in the config is a, I think I've seen it referred to as a victim
+26:34
+ID and victim key, but I think it also is linked to the affiliates in some way.
+26:41
+So it's not a one-to-one match to affiliates, but basically there's a unique identifier
+26:45
+and a AS key or material for an AS key in the config that's used for the C2 communication.
+26:52
+So all that's in the config.
+26:53
+So we want to know how do we get this out of the config.
+26:56
+And now is a good time to give a big shout out to Chong Dong.
+27:00
+I don't know if he's in the chat or not.
+27:05
+But basically he has an amazing blog post on this, which I've linked in our lab notes.
+27:11
+And maybe I'll just like throw it up.
+27:14
+No, I won't throw it up right now.
+27:16
+But anyway, maybe I'll throw it up at the end of the stream.
+27:19
+So he's done an awesome job stepping through how this config is, yeah, I'll talk about
+27:26
+AP Live in a minute.
+27:28
+He's done this nice blog post stepping through all different aspects of BlackMatter, including
+27:33
+the config.
+27:34
+But when you load up BlackMatter in your IDA, you're going to see some weird stuff.
+27:44
+I don't know if you mentioned this in his blog post.
+27:46
+Oh yeah, you are in the chat.
+27:48
+Yeah, big shout out to Chong Dong.
+27:51
+I hope I'm saying your name right.
+27:54
+I really do hope I'm saying it right.
+27:57
+Anyway, so if you load up this code in IDA, you're going to see this weird thing right here.
+28:05
+So I've labeled this to crib buffer.
+28:07
+But what the heck is this?
+28:09
+This isn't make any sense at all, right?
+28:12
+Yeah, actually Chong, if you want to link your blog in the chat, that probably would
+28:17
+be awesome.
+28:20
+Let's see, to have a link for it.
+28:25
+I think it's just in my lab notes here.
+28:27
+Just give me a sec.
+28:28
+Oh, actually, I'll pop the lab notes up here.
+28:32
+Copy link.
+28:40
+And of course, this, if you guys aren't familiar with how the lab notes work, these are
+28:45
+Jupyter notebooks and we upload them to our GitHub, OILabs on GitHub.
+28:51
+And so they'll be available after the stream here.
+28:53
+Let me link this.
+28:55
+So that's Chong's blog post if you guys want to check it out.
+28:59
+Anyway, so back to this tricky thing here.
+29:03
+So in IDA, they don't have, like, if we look at the sections here, they don't have the
+29:11
+resources section loaded.
+29:14
+Because I don't, I'm not actually sure what I was going to say because IDA isn't good.
+29:19
+It's not, it's not helpful when things are in the resources.
+29:23
+But I don't know.
+29:24
+I mean, maybe someone in the chat can tell me why they don't load the resource section
+29:29
+as like at least a data block.
+29:31
+But basically, what's happening here is blackmailer stores, they're config in the resources.
+29:38
+And because IDA doesn't load that section, it does this insane thing where in the actual
+29:44
+code here, it points to some unknown address.
+29:48
+I'm not sure where they even get this from.
+29:50
+Hopefully somebody in the chat can explain why it looks like this.
+29:54
+But basically, you have to load this up in like a debugger or you have to, or you have
+30:01
+to look at the address of the, like, if we look here in the, like the address here, if
+30:10
+you were to load the file up in a pView or something, you could see, okay, well, this
+30:14
+is actually the resources section.
+30:16
+So it's, you can load the resources.
+30:19
+Frank Parker, tell me how to do that.
+30:20
+That would be interesting.
+30:22
+Oh, the manual load method.
+30:24
+Oh, I see.
+30:25
+So is it just an option?
+30:26
+It just doesn't load the resources?
+30:28
+That would be interesting.
+30:29
+I never do the manual load in IDA.
+30:31
+I just, I just do the automatic load.
+30:33
+So maybe there, there you go.
+30:34
+It's user error as per usual.
+30:37
+Any time I blame something on IDA, it's always like user error.
+30:39
+So there we go.
+30:40
+I'll know for next time, manually load the binary and then choose to load the resources.
+30:48
+Again, I don't know why, but if you don't load the resource section, you end up with
+30:52
+this stuff that doesn't make any sense.
+30:54
+But we could just, you know, rename this as resource.
+31:01
+Right?
+31:04
+So just for conceptually, this is what it's doing.
+31:08
+And it's basically, it's just a data block in the resources section.
+31:15
+It has two D words at the beginning of it.
+31:22
+So let's go into the decrypt buffer here and we'll see it's going to, you know, this
+31:27
+will make a little bit more sense.
+31:30
+Go into decrypt.
+31:32
+And we have this little small decryption algorithm, which is basically just an X-word
+31:37
+decryption, but with the X-word encryption, we get this interesting LCG.
+31:44
+It's really hard for me to say the word congruent.
+31:47
+So it's a linear congruent generator, but basically an LCG, which is just a random number generator
+31:53
+that takes in a seed and a length.
+31:56
+So they're basically creating a key stream with an LCG on the fly.
+32:03
+And then they're using my key stream to X-word with the encrypted config.
+32:08
+So that's all this is.
+32:10
+And I googled the constant, if you want to know how to actually reverse engineer this,
+32:14
+I just googled this constant and I can see that it shows up in an LCG in the zip crypto
+32:19
+library.
+32:20
+So like if you just grab it and you go to Google, like the simplest, the simplest possible
+32:26
+way to get anything done here, you'll be like, what is this constant?
+32:31
+Let's see here.
+32:34
+Can you guys see that?
+32:35
+So you're like, what is this constant?
+32:36
+Well, okay, let's probably in like a zip crypto here.
+32:40
+Yeah, a PRNG.
+32:41
+So like a pseudo random number generator.
+32:44
+If you guys, yeah, sorry, I should say, so a linear congruent generator.
+32:49
+Oh my goodness, it's hard for me to say that.
+32:52
+Is basically a pseudo random number generator.
+32:55
+It's basically what it is.
+32:57
+So anyway, this is how you reverse engineer, if you're me, which is you Google things and
+33:04
+hopefully figure out what they are.
+33:07
+So yeah, basically, I just Google that constant, but it doesn't really, it doesn't really matter
+33:13
+too much because we have the code here.
+33:16
+So even if we didn't know where the LCG came from, you could just re-implement this and
+33:21
+Python and then implement the XOR.
+33:25
+So it's very simple.
+33:27
+The only thing that's kind of tricky about it is the seed for the LCG.
+33:36
+Use Google, you don't get the job.
+33:39
+Yeah, I'll take the bait.
+33:43
+When I've interviewed for two different types of resendering jobs in my life, the whiteboard
+33:51
+engineering, reverse engineering jobs and the real world reverse engineering jobs.
+33:57
+The whiteboard ones are almost always a disaster because the higher bad people in my experience.
+34:02
+So if they're telling you to like implement this XOR algorithm on the whiteboard, you
+34:08
+should probably tell them to implement it, implement themselves and go get a job at a cool
+34:15
+place.
+34:16
+The best way I've, the way that we hire and the way, the best way that I've been hired
+34:22
+is when somebody gives you a take home binary to a res engineer, they give you like a
+34:27
+week, do it, whatever you want.
+34:30
+Google it, ask for friends, do a real world reverse engineering of the binary and come
+34:35
+back and answer a couple of questions about it.
+34:37
+Because the reason why I think that works so well is because it's the most real world
+34:42
+you're going to get.
+34:43
+You're going to hire people who are good at using all their resources to reverse engineer.
+34:47
+Versendering, I can guarantee you, is not a memorized these algorithms and you know, a
+34:54
+state in a, in an internet disconnected VM.
+34:57
+This is, that's like a very bad way of thinking about this.
+35:00
+What you want to do is do as many resources as possible as fast as possible, especially
+35:05
+in the security space.
+35:06
+Yeah, it's all the matters to get in the job done.
+35:09
+And the best way to hire people who can get the job done is to give them a take home exam
+35:13
+which is basically like a random binary, something very hard, something they probably can't
+35:18
+complete in a week and ask them a couple of questions just to see how far they go out
+35:22
+on it, you know, see how much they were able to reverse engineer.
+35:25
+If you think that like, people are going to cheat on it, that's fine.
+35:28
+I mean, you, what's cheating, right?
+35:30
+It's cheating in the real world if you're asking for help on Twitter and they're helping
+35:33
+you.
+35:34
+That's, that's the way it is, right?
+35:35
+That's just the way, the way things go.
+35:37
+So anyway, that's my aside.
+35:39
+I see this kind of stuff.
+35:40
+I had to take the bait.
+35:41
+Sorry guys.
+35:42
+I see this kind of stuff all the time.
+35:45
+Just get good at reverse engineering with using Google, using your friends, you know, using
+35:49
+Discord.
+35:50
+You'll be fine.
+35:51
+Don't go for the jobs where they're trying to make you sweat it out in a, in a whiteboard
+35:55
+session.
+35:56
+Guarantee that work environment is going to be toxic and shitty.
+35:59
+I mean, I've never, I've never experienced one where the whiteboard exam didn't lead to
+36:05
+a shitty toxic environment.
+36:06
+So anyway, just in a side.
+36:09
+Okay.
+36:10
+So let's get back to this.
+36:11
+Now there are LCG and it's basically creating a key stream and then we're using the key stream
+36:17
+to do crypto config.
+36:18
+The only interesting part about this or the only tricky part is to pay attention to what
+36:23
+is going to be passed to the LCG.
+36:25
+So they're passing a D word, which is at the beginning of the resource section.
+36:30
+So that means just one sec.
+36:32
+I'm just going to kill the, close the window here because the heat pump is kind of loud.
+36:37
+One sec.
+36:38
+Okay.
+36:39
+Do you guys miss me?
+36:45
+Sorry.
+36:46
+It was just kind of loud with the, the heat pump outside.
+36:58
+Anyway, okay.
+36:59
+So the, the D word that's passed to the LCG is the first D word in the resource section.
+37:09
+So when we write our decryptor, we know that we need to take the first four bytes of
+37:14
+first D word of the resource section and use that as a seed for our LCG.
+37:19
+We also know if we come back here a little bit.
+37:26
+We also know that the second, the second D word here, sorry, in the intense beer I
+37:34
+pack.
+37:35
+Yeah, sorry.
+37:37
+Anyway, so we know that the second D word in the resources is going to be a length because
+37:45
+they're doing an awak of this length.
+37:47
+And then they're using that for the, the APLib unpacking.
+37:52
+So oh yeah, missing the doggo.
+37:55
+So sorry, another aside here.
+37:58
+I did set up a little doggo cam for you guys.
+38:03
+So that's, that's where my, my guy usually sleeps.
+38:06
+But right now he's downstairs.
+38:08
+He's still recovering from his, from his snippening.
+38:13
+So he's a little grumpy right now.
+38:15
+He's not hanging out with me.
+38:16
+But I promise you I'll put on the doggo cam if he comes back so you guys can, can see
+38:21
+him.
+38:22
+All right.
+38:23
+So anyway, the second D word in the resources is the size of the config and then the config
+38:28
+starts two D words in.
+38:30
+So that's the only tricky thing about this.
+38:32
+The rest of this is very straightforward.
+38:34
+And if we take a look at our lab notes here that we've prepared, we come down here and
+38:39
+look at the, um, decryption routine.
+38:43
+Or actually, let's look at how we parse out the resources.
+38:46
+So I've done this in advance, um, to try and save some time.
+38:50
+It's already, uh, like 40 minutes after the hour.
+38:54
+So I'm glad that I did a lot of this in advance because there's a lot to cover.
+38:57
+But basically, um, all we do here to get the config is we find the resource section in
+39:04
+the PE file.
+39:05
+So we iterate through the PE file until we find the resource section.
+39:09
+We grab that data.
+39:11
+Then we unpack the first four bytes as a D word.
+39:14
+And that's the seed for the LCG.
+39:16
+The next four bytes are the, uh, data size and then everything after that is the encrypted
+39:22
+data.
+39:23
+And then the decryption routine, um, there's a very nice blog here, uh, where somebody
+39:29
+mentioned the decryption routine.
+39:31
+Uh, so it's, it's pretty straightforward.
+39:34
+Uh, I think they have a screenshot of it.
+39:36
+I don't know why they include screenshots of code.
+39:38
+It's madness.
+39:39
+But anyway, they have a screenshot of it.
+39:41
+But they, in this case, it looks like they copied it directly from the code, uh, where
+39:46
+the LCG is, uh, intertwined in the decryption loop, uh, what we've done here is we've just
+39:51
+broken it out.
+39:52
+So we have the key stream generation with the LCG here and then we have the decryption
+39:56
+loop, which is just a simple XOR, uh, and then we decrypt the config.
+40:01
+So here's the encrypted config, uh, actually one more, one more step here.
+40:05
+I'll pop back to IDAM again ahead of myself.
+40:08
+So we have our, uh, decrypt the config here, uh, and we do an APlib unpack.
+40:14
+Now, uh, this is, uh, major cheating on my part.
+40:19
+I saw somebody asking, how did you know that this is APlib?
+40:25
+So the, the, the, the real answer here, I wish I could say like, I am some math genius,
+40:30
+like Rattle and the discord and I can just see this, this is APlib.
+40:35
+But, um, I, I didn't know that what I saw was a bunch of compressed data or data that
+40:42
+didn't make sense.
+40:43
+And then I started to use different compression algorithms.
+40:47
+I have a Python library of different compression algorithms and I just started testing them
+40:52
+because I could see that if we go back here, I could see that this function, like before
+40:58
+this was labeled APlib, uh, unpack, I could see that this function, um, was being passed
+41:04
+basically just the data, um, and the, this allocated buffer.
+41:09
+And so I was pretty sure that, um, it was some sort of decryption.
+41:13
+And you could test this in debugger when I was resengineering it.
+41:16
+Uh, I didn't, I didn't use the debugger for this.
+41:18
+I was basically just like, okay, this is probably APlib.
+41:21
+Let me test it in Python and it was, um, you could probably look at some of these, like,
+41:26
+constants here and get an idea of it.
+41:28
+Uh, but the real, um, uh, the real big brand approach here is that I had already done the
+41:36
+work to figure out that, uh, dark side ransomware had APlib, um, decompression in it when
+41:44
+I was versing this.
+41:45
+So a little bit of historical context here, um, when I was looking at, uh, dark side ransomware,
+41:52
+it had just come out and I was doing it for work.
+41:55
+I, uh, when I was arranging that, there was no blogs on or anything.
+41:59
+It was like, I think we had one of the first samples that came out.
+42:02
+It was completely unknown.
+42:04
+And in that one, it took me a while to figure out what was going on here.
+42:08
+But as I was resengineering this, I could see the structure was like almost identical
+42:14
+to the, uh, to, to, um, uh, dark, to dark side.
+42:21
+So I was like, I bet the config is the same.
+42:23
+So I just, I just used the same APlib and tried it.
+42:27
+So that's the real big brand approach here is I saw there was kind of, uh, similar and
+42:31
+I just, I just gave it a try.
+42:33
+Um, I, I like to be honest about this.
+42:36
+Um, I think that there's like always some, um, mystique, uh, where it looks like, you
+42:42
+know, sometimes people look at stuff and you'll be like, oh, that's, that person's a genius.
+42:46
+Like, can they just like watch those shifts in their mind and figure out what algorithm
+42:49
+it is?
+42:50
+Like, no, usually, at least in my case, it's because I have some other information that
+42:54
+helps me figure out what it, what it's doing.
+42:57
+And if I don't, then I just have a library that I used to brute force, uh, different compression
+43:01
+algorithms.
+43:02
+Um, that's all there is to it.
+43:04
+Sometimes you can Google constants, but I think in this case, I, I didn't even try that.
+43:08
+Okay.
+43:09
+So once they do the APlib, do you compress?
+43:11
+Um, you have, let me show, uh, let me show this here.
+43:17
+So hopefully the font is good for you guys.
+43:21
+So, um, so we basically have what looks like a bunch of, uh, binary here.
+43:27
+And then we have a bunch of base 64 separated by null bytes, right?
+43:33
+So this is looking a lot more, um, yeah, I, I see in the chat, recognizing patterns is
+43:40
+important for risk engineering.
+43:42
+I'd say like, you know, 80%, 70% of the time when you're trying to do something quickly,
+43:48
+uh, if you've looked at enough malware and you know the tricks that people likely use,
+43:52
+um, you can usually just try them and see if they work because it costs you nothing, especially
+43:56
+if you have some nice, um, uh, libraries and Python where you can just test things quickly,
+44:02
+uh, which, you know, it's faster than trying to re-implement the algorithm and figure out
+44:06
+what it is.
+44:07
+Uh, that's basically, uh, yeah, it's a good tip.
+44:11
+And, uh, what I've known blindly that it was compression, uh, yeah, yeah.
+44:19
+So basically the way to do this, um, there's two ways to do it.
+44:24
+Uh, you, uh, there's shifting for compression.
+44:28
+You see that a lot, but, um, but you see that and everything.
+44:31
+That's not a good tell.
+44:32
+Um, the best way to do it is if you have this set up in a debugger, you can look at the
+44:38
+input and output and compare them.
+44:40
+That's the best way to do it, right?
+44:41
+Your output is like a much larger, um, a bunch of data that makes sense, like this has a
+44:47
+nice pattern to it.
+44:48
+I can see some basic 64 strings.
+44:50
+So I know that it's going to be some sort of compression.
+44:52
+Um, you know, when you get stuck, if you have something like this going through in debugger,
+44:56
+definitely helps having the input and output that definitely helps, um, you know, you can
+45:00
+compare that with your input and output in your libraries that you're testing.
+45:05
+So what I've blindly known is compression, uh, probably not.
+45:08
+I don't, it's hard for me to think back, um, with dark side when I was looking at dark
+45:12
+side.
+45:13
+I probably used a debugger, um, to just check out the output.
+45:18
+Anyway, that's a good question.
+45:21
+So we have our, uh, we have our extracted, uh, config here, but it looks like it's not
+45:26
+quite ready to be read as a config yet.
+45:30
+Um, a pointer being accessed at a negative offset.
+45:37
+Yeah, that's, that's an interesting, uh, take on it as well.
+45:41
+Frank Parker, check them out in the chat.
+45:42
+Some interesting ideas for, for how to recognize this sort of stuff.
+45:47
+Oh yeah, uh, yeah, that's a good, I see another good point in check here about how to
+45:50
+deal with, uh, custom, do you compression algorithms?
+45:53
+Um, so, uh, you guys who caught this on the, uh, Twitch stream, I'll do some more Twitch
+45:59
+streams, which are like actually just hours long of me were sentryering stuff.
+46:03
+Um, but if you, uh, basically the way I approach this is I will try stuff that's quick,
+46:10
+that's quick to fail.
+46:11
+So like I'll try a bunch of different compression algorithms that I have libraries for.
+46:15
+Uh, I'll try an indie bugger.
+46:17
+If I can't figure out what it is within a couple minutes of testing it, I'll just
+46:22
+re-implement it.
+46:23
+That's, that's basically all the race to it.
+46:25
+So it's like you try, you try the stuff that you know, and if you don't know what that
+46:30
+is, uh, you just re-implement the algorithm and Python.
+46:33
+I've done that before.
+46:34
+I know it sucks.
+46:35
+I know people don't like to see that.
+46:37
+Um, but sometimes you just got to do it.
+46:40
+And, uh, I think in not this one, but in, uh, the dark side ransomware, I
+46:48
+implement, they have a custom salsa 20 algorithm, uh, that they use for filing
+46:52
+encryption.
+46:53
+Uh, this is a fun, fun insight into how it actually works, how the sausage is made.
+46:58
+Um, I implemented that in Python because I'm used to looking for the, uh,
+47:05
+the setup vector for salsa that has like the little string in it.
+47:09
+And I didn't see that.
+47:10
+So, um, so basically I thought it was like a custom encryption algorithm.
+47:16
+And I re-implemented in Python and rattle, rattle pop and up everywhere who is, uh,
+47:24
+very good algorithm algorithm identification was like, bro, that's also, so it
+47:31
+happens, right?
+47:31
+Sometimes you, sometimes you implement something, um, because it's changed a little
+47:36
+bit. And so you're not able to match it to an algorithm you know, um, so you re-implement
+47:40
+it in Python.
+47:41
+You find out later on, oh, it's actually a well-known algorithm, but there's just a
+47:44
+different, you know, there's some little change in it.
+47:47
+So that's all there is to it.
+47:48
+I mean, there's no, there's no magic here.
+47:50
+If you can identify it, use the, uh, use the standard algorithms that you've
+47:55
+identified.
+47:56
+If you can't identify it, you need to re-implement in Python.
+47:58
+You know, that's all there.
+47:59
+That's all there is to it.
+48:01
+Okay.
+48:01
+So back to the config here.
+48:03
+Um, let's take a look at what they're doing.
+48:06
+They grab the, uh, first 128 bytes, uh, put that into what I've labeled as RSA key
+48:13
+material.
+48:14
+Um, they grab the next 32 bytes.
+48:16
+Um, that goes into what I've called the affiliate ID, which I will, yeah, he knew
+48:21
+it was salsa 20.
+48:22
+Yeah.
+48:23
+Yeah.
+48:24
+Um, yeah, Rattle is a really good algorithm identification.
+48:31
+Uh, I don't want to put any more pressure on him in the discord chat, but he's
+48:34
+really good at it.
+48:35
+I know he has a math background.
+48:37
+Uh, he's just good at it and finding algorithms or like weird, um, there's a power
+48:43
+loading or fast loading way of loading a lot of memory quickly, which looks like
+48:47
+an algorithm.
+48:47
+I remember this is another time I got really stuck.
+48:50
+Um, and I was re-implementing that in Python and then he was like, bro, that's
+48:53
+just loading like a bunch of memory.
+48:55
+I was like, oh, Jesus.
+48:57
+Like I just implemented like a Python memory loader.
+49:00
+Anyway, long silly stories, but yes, you get tripped up sometimes and you, you
+49:05
+spend more time on it than you should, but it is what it is.
+49:09
+Um, yeah, they changed this salsa constants.
+49:13
+Um, there are the nationalization.
+49:15
+Um, so anyway, so the next 32 bytes are this affiliate ID, which is basically
+49:21
+the, it's like a unique identifier for the victim.
+49:24
+Uh, I called it affiliate ID, but it's, I think it's
+49:26
+per victim, uh, and the AS encryption key.
+49:29
+And then they have, uh, eight bytes of flags.
+49:33
+And then the next, um, right after that, they start doing, uh, basics, the
+49:38
+4D coding of each, uh, of each value, uh, separated by null bytes.
+49:44
+So, uh, what program in life would you need to learn to understand what's
+49:52
+happening here?
+49:53
+Well, I think, um, this looks messy, uh, to people who aren't really used to
+50:00
+seeing marked up, like, there's a lot of stuff that you could clean up here.
+50:03
+Like this could just be replaced with like mem copy.
+50:07
+Uh, you can remove these casts and apply the typing to mem copy to make this
+50:12
+look like C code.
+50:14
+So it doesn't look 100% like C code here.
+50:17
+Um, but basically, uh, you can get it pretty close to looking like C code.
+50:21
+So I would say you need to know at least some C code in order to understand
+50:26
+what the heck is going on here.
+50:29
+Um, okay.
+50:30
+So, yeah, very ugly C exactly.
+50:35
+That's, that's, that's the best way to describe, uh, resengetarian stuff.
+50:40
+Very ugly C.
+50:42
+Okay.
+50:42
+So, um, so now after they, uh, grab the flags, they grab, um, each value that
+50:50
+they need for the config and they basically 40 code it.
+50:53
+Um, I want to show you where is our, uh, alphabet here.
+51:01
+Uh, oops.
+51:07
+Don't remember where the alphabet is, but, or did they actually build the alphabet?
+51:12
+I think they might build the alphabet.
+51:14
+Um, uh, so I can't show you.
+51:17
+But anyway, you see, when you see stuff like this, uh, I just want to show you how
+51:21
+to recognize basic 6040 coding.
+51:23
+So basically basic 64 strings, like, first of all, you could just recognize it.
+51:27
+If you decrypted the config or if you looked at the debugger at the decrypting
+51:30
+config and you saw stuff that looks like, like this, I mean, that's, these,
+51:36
+these look like basic 64 strings.
+51:37
+It's kind of like pattern recognition.
+51:39
+But if you wanted to identify pattern, like basic 64 decryption in the, uh, in C code,
+51:48
+you can look for these checks for equal science on the end of the strings,
+51:53
+which is like denoting some padding on the end of the string.
+51:56
+Uh, and you can also check for the, uh, base 64 alphabet, which is like, uh,
+52:01
+lowercase uppercase, uh, alphabet numbers, letters equal sign plus.
+52:07
+Um, but I don't think they have the alphabet hard coded here.
+52:11
+Excuse me.
+52:11
+I'm not sure.
+52:12
+Um, I think they generate it.
+52:14
+But you can at least look for the, the equal sign here, which, uh, which makes sense.
+52:20
+Uh, any dropped into the string after watching the Python vid?
+52:24
+Well, don't worry.
+52:25
+We're going to talk a lot about Python, uh, in a second.
+52:28
+So don't worry too much about it.
+52:30
+Um, this is like, I guess we write all of our tools in Python.
+52:37
+That's what?
+52:38
+Yeah, there we go.
+52:38
+We write all of our tools in Python and we aliens.
+52:43
+We write all of our tools in Python and we reverse engineer everything and see.
+52:47
+So really, if you want to, you know, the, the two, but the best way to do yourself a favor
+52:51
+if you're reverse engineering is learn, see and learn Python, basically.
+52:55
+Um, but yeah, well, I'll show you some more Python when we get to actually decrypting this config
+53:00
+or parsing out the values.
+53:02
+So, uh, they base 64, uh, decode each value.
+53:05
+And so let's take a look, actually, at the Python right now, and we'll see what the values are.
+53:10
+So this is our, um, this started to cryptic config, the compressed config.
+53:16
+Um, then we use this sort of iterator to pull out the RSA data, the affiliate ID data, the config flags.
+53:23
+And then, uh, we do a, uh, we split the rest of the data on, uh, on null bytes.
+53:32
+And then we, uh, basics, the forward decode each, uh, each section, um, to give us this nice, um,
+53:40
+list of config values here.
+53:42
+Now there's two tricks that I want to show you guys.
+53:44
+Um, the first one is the finding that, uh, basics 64, uh, yeah, here we go.
+53:57
+I think.
+53:59
+Yeah, there we go.
+54:00
+So, um, they have right after the flags, they actually have a D word here.
+54:07
+Um, and the D word gives you the offset to, um, the offset to the, uh, basics, the forward encoded data.
+54:16
+So there's a little bit of junk data in the, um, bring this back up for you guys.
+54:23
+There's a little bit of junk data in here before the, uh, basics, the four, uh, data starts.
+54:31
+So you need to decode that D word to show you, uh, the offset to where the basics,
+54:37
+uh, data starts.
+54:39
+Now, um, what's interesting about this is a lot of blogs were published on, uh, dark side,
+54:45
+because it got a lot of attention after they, I guess we're like messing with critical
+54:50
+infrastructure in the US or whatever.
+54:52
+So there's a lot of attention and a lot of blogs written about them.
+54:55
+I think the developers took away some, uh, insight into how people were versus engineering their malware.
+55:03
+And they made things a little bit more difficult, um, in this sample.
+55:07
+So they do things like they have, uh, some randomization with the offset to the base 64 config.
+55:14
+They also, if you look down here, um, at these values, uh, that are actually, these are already decrypted, but the,
+55:23
+uh, the basics, the foreign coded values, they don't actually, uh, base 64 decode to the ransomware note or to these,
+55:33
+um, uh, hard coded, uh, passwords or to, uh, the, uh, snow they do, do the C2s, I think.
+55:44
+Um, yeah, I think it's just this and the, um, and the ransom note actually have a second, um,
+55:52
+encryption model.
+55:53
+So you have to decrypt them even after you've base 64 decoded them.
+55:57
+And the way the decryption works in the ransomware is the, actually, let me show you because it's, it's interesting.
+56:04
+Um, where's the note, ransom note?
+56:07
+So this is where they base 64 decode the ransom note and we'll just do x refs to write the ransom note.
+56:14
+So they actually, um,
+56:18
+they actually, uh, decode, so you see here's the, the, the LCG again, they actually decode the ransom note.
+56:29
+So after they base 64 encoded it, it's still encrypted.
+56:33
+And when they want to write the note to the, uh, desktop, they actually decrypt it by, by,
+56:39
+by and write it by, by, by into the file.
+56:44
+And I believe the reason why they're doing this is because they don't want that ransom note to exist in memory in its entirety
+56:50
+because, um, a, a v scan or could maybe identify the note in memory and, uh, stop the ransomware before it's completed.
+56:59
+I think that's why they do it.
+57:01
+I'm not entirely sure.
+57:02
+Like I'm not, I can't, I can't be 100% certain.
+57:06
+That's why they're doing it this way, but it looks like that's why they're doing it this way.
+57:10
+Um, and they're, and so basically if you're,
+57:13
+if you have an AV or an endpoint agent running, you would have to intercept each bite,
+57:18
+written to the file and then reconstruct those bytes in memory and then scan it for a signature on the ransom note,
+57:25
+um, the way that it's done here instead of, um, the old method that dark side used,
+57:30
+which was to just decrypt the ransom note in memory and then write the whole thing to the file at one go.
+57:35
+So it's, it's a bit of a change.
+57:37
+And again, I think that this is them trying to avoid detection prevention, uh, on the host.
+57:43
+Uh, I think this is one of their takeaways that they used, um, to, to basically make this ransomware a little bit tougher.
+57:50
+So, uh, once we've finished, uh, decrypting those basic 64 strings, uh, we have a full config here.
+57:57
+There's a bunch of junk values here that I think are not used.
+58:00
+So the flags are set to zero.
+58:02
+So the value, the corresponding value of the flag, uh, isn't used.
+58:06
+Um, and so I, I think that's what's going on here.
+58:09
+I, I did this very late last night.
+58:11
+So I'm not exactly sure.
+58:12
+Um, but at least we have some of the values here, the ones that are most important.
+58:17
+So we have now a static, um, config extractor for black matter in Python.
+58:23
+Uh, again, I pushed this up to, uh, our, our get hubs.
+58:27
+You guys can grab it, um, and use it as you want.
+58:30
+And I think, yeah, well, the live stream be available for, for replay.
+58:34
+Yeah, we're already at one o'clock.
+58:36
+I will save this to YouTube so that you guys can come back and, uh, watch it.
+58:41
+Uh, you can go through the piece by piece, uh, replay whatever you want.
+58:44
+It'll all be saved and recorded.
+58:46
+No problem.
+58:47
+But don't all leave because it's one o'clock because we're only, uh, touching on
+58:53
+what I wanted to touch on here.
+58:55
+We've only done the config.
+58:56
+Um, I also want to talk about the crypto and then I will, uh, and then we'll talk
+59:02
+about some comparisons with dark side.
+59:03
+So there's probably another a half hour at least in the stream.
+59:07
+I know those you who are joining over your lunch break, uh, you might have to drop.
+59:10
+So it will be recorded, but stick around because you can ask questions, uh, right?
+59:13
+You can't ask questions if it's just the recording.
+59:16
+So that's the value in doing it live.
+59:19
+Um, and also, obviously, uh, you know, if you do it live,
+59:27
+I get the dog who can't, but there's no dog though.
+59:29
+Still no doggo.
+59:32
+Um, I see Chong Dong saying, yeah, they try and hide stuff in memory.
+59:36
+In version three.
+59:37
+I know these RTL and crypt memory.
+59:39
+Yeah.
+59:39
+Okay.
+59:40
+So they definitely have some, some interesting stuff.
+59:43
+Um, is it salsa or cha cha?
+59:46
+Um, I think they are using cha cha.
+59:49
+Are they not in, uh, in black matter?
+59:52
+Wasn't that one of the changes that they did?
+59:54
+Was they switched to cha cha?
+59:55
+I might be wrong.
+59:57
+Um, salsa and cha cha are like almost identical algorithms.
+60:02
+Uh, so anyway, we're going to talk about the encryption.
+60:05
+Uh, let's see here another comment.
+60:08
+If there's encryption routine for hiding code, um,
+60:12
+yeah, there's always a decryption code.
+60:14
+Yeah, exactly.
+60:15
+So, uh,
+60:19
+yeah, so basically the encrypting stuff, uh, in memory and only,
+60:24
+uh, decrypting it on the fly isn't really to stop reverse engineers.
+60:28
+It's to stop memory scanning by AV engines.
+60:32
+Um, that's basically, uh, you have the,
+60:34
+yeah, my dog on tax vm protects when he's not, uh, Ryan co pilot.
+60:38
+That's what he does.
+60:39
+Um, it's cha cha.
+60:42
+Yeah, it is cha cha.
+60:42
+Yeah, yeah, yeah, I thought it was cha cha.
+60:45
+Um, it's confusing because, uh, dark side uses, um, salsa.
+60:50
+In fact, it's, uh, it's kind of cool.
+60:54
+Um, I use this, uh,
+61:00
+uh, nice.
+61:00
+We have, uh, some ransomware experts here.
+61:03
+Er, I recognize you.
+61:04
+Uh, yeah, so, um,
+61:08
+the, uh, last one I'm trying to thought here.
+61:11
+Oh, yeah, that's what I was going to say.
+61:12
+So, um, another aside here for those of you who haven't been following this, uh,
+61:17
+dark side black matter saga too closely, um, dark side also has a Linux, uh,
+61:24
+version, uh, an elf version of its ransomware that they use to encrypt like
+61:28
+hypervisors.
+61:30
+Uh, it's very interesting concept that they've, uh, they kind of stole from, uh,
+61:35
+they kind of stole from, uh, some other ransomware developers.
+61:39
+But basically, um, in their elf binary, they use cha cha.
+61:45
+Uh, this is, uh, dark side.
+61:46
+I'm pretty sure, uh, in dark side, um, when I was looking at it, I think, I think I
+61:52
+remember that correctly.
+61:53
+Uh, so they were using salsa in the, uh, Windows version and cha cha in the elf
+61:58
+version.
+61:58
+And now in black matter, I think they're using cha cha for both, uh, if I'm not mistaken.
+62:03
+But yeah, basically, uh, I think that's right.
+62:07
+So, uh, let's look before we go, actually, you guys let me know this,
+62:12
+Jat, do we want to do a config comparison between black matter and dark side
+62:17
+now?
+62:18
+Or do we want to talk about the, uh, Io completion port encryption first and the
+62:23
+new comparison of both the encryption and the config?
+62:27
+You guys let me know in the chat.
+62:28
+Uh, I'll wait for your, if you guys to chime in and while you're chiming in,
+62:32
+I will assume that you want to look at the crypto first, um, because I want to
+62:38
+look at it because I think it's interesting.
+62:41
+Uh, let's go back here.
+62:43
+Where did they do the crypto?
+62:46
+Uh, let's go back to our, um, our main here.
+62:56
+I think they go back again.
+62:59
+And I think this is where they start doing the encryption here.
+63:02
+Io completion port.
+63:03
+Yeah.
+63:03
+All right.
+63:04
+First, first wins.
+63:05
+Yeah.
+63:06
+Let's talk about the Io completion port stuff.
+63:08
+Um, it's, it's super interesting.
+63:11
+Um, oh, a hash that's not, uh, a hash that's not resolved.
+63:25
+I know the hash matched path.
+63:34
+Yeah.
+63:34
+You guys get to see, um, see hash to be an action.
+63:39
+I can see there is a bug here because it doesn't add the path, um, to the in
+63:44
+new because it starts with a dash.
+63:46
+That's an open bug on GitHub.
+63:48
+Oh, we can just say here.
+63:50
+Um, so they're basically checking the arguments that are past the command line.
+63:55
+Um, let's see in the chat here.
+63:58
+Uh, what else anything else is going on here?
+64:01
+Uh, tomato first comparison later.
+64:03
+Oh my God.
+64:03
+You guys, I shouldn't never mention, I shouldn't ever mention anything about those
+64:08
+protectors.
+64:09
+Okay.
+64:10
+Um, where do they actually start doing the encryption?
+64:17
+Uh, and then they, yeah, if they have the C2 enabled, where do they start the encryption
+64:29
+threads?
+64:31
+Uh, start encryption threads and then they do encrypt drives.
+64:36
+Okay.
+64:36
+Yeah.
+64:37
+So, uh, all of this is, um, all these, uh, functions are pushed up to lumina.
+64:44
+So if you guys are playing along at home, uh, like I said, I'll drop a patreon video,
+64:47
+just showing you how to get the imports and everything sorted out and all the string
+64:50
+sorted out for a black matter.
+64:53
+But if you want, uh, your IDB to look all nice with all these functions annotated,
+64:57
+you can just do like a lumina pull all metadata and it should annotate for you.
+65:02
+Um, so you can see the same thing that I'm looking at, which is why I'm going by a lot
+65:06
+of this stuff kind of quickly because, you know, you can look at it by yourself,
+65:09
+but it's not particularly interesting.
+65:12
+But I think the encryption here is, is very interesting.
+65:15
+So here they start some threads.
+65:18
+Um, they, uh, they enable an IO or start an IO complete, uh, completion port,
+65:24
+which is a way for, I'm going to butcher this.
+65:28
+Um, so you guys can definitely, uh, correct me in the chat.
+65:31
+Um, I believe it's for like asynchronous communication between multiple threads.
+65:39
+Um, and the way that it works is you create a, is it a shared slice in memory, I
+65:46
+believe, uh, that you can access the two threads can access with some marshaling.
+65:51
+Um, and you can send messages, basically queue up messages for threads and then
+65:56
+the threads can, um, pull those messages, uh, down as they, as they need to work on
+66:02
+them. So, uh, I think that's the best.
+66:05
+I'm not a, uh, a great Windows developer.
+66:09
+Um, I, I've, I've basically been reading the documentation on this because I think it's
+66:12
+interesting.
+66:13
+But I think I've done it justice by explaining it that way.
+66:16
+Uh, definitely correct me in the chat though if I miss something or if I miss
+66:19
+spoke. Um, but the, the general concept is you have these encryption threads,
+66:25
+which are running and waiting for, uh, for messages.
+66:30
+And then you have, uh, a scanning thread that is scanning for files to encrypt each
+66:38
+time it finds a file, it queues it to these encryption threads, which then encrypt the
+66:43
+file on the fly.
+66:45
+Excuse me. Um, yeah, it's going to be recorded and stored on YouTube.
+66:49
+No problem.
+66:50
+Yeah.
+66:50
+Yeah, you can ask again.
+66:51
+It's fine.
+66:52
+Uh, I'll keep saying it.
+66:53
+I know there's new people joining the chat all the time.
+66:56
+Um, yeah.
+66:58
+So, uh, anyway, so, so that's how that's how this works.
+67:03
+But we're going to talk a little bit about how they pass the data in between, uh,
+67:07
+the threads because if you're learning how to roast engineer stuff, if you need a
+67:11
+verse engineering, um, it can be like unbelievably confusing until you see, uh,
+67:16
+this trick that I'm going to show you with the strokes.
+67:19
+So basically you start a bunch or they start a bunch of threads.
+67:23
+You can see they check for the number of processors and then they start, uh,
+67:27
+it's like, uh, one or two threads per process, I think.
+67:32
+Yeah, two threads per process.
+67:34
+So they start, um, uh, two times the number of threads as you have processors on
+67:40
+your, uh, on your host or the host that they're trying to encrypt.
+67:44
+And each thread, uh, if we pop in a thread here has access to this global
+67:51
+variable called the IO, it's a handle to the IO completion port.
+67:55
+And that's how they're able to send messages between each other.
+67:58
+So they have this IO completion port handle, which, um, you can use one you,
+68:03
+you can use a bunch of different, um, API calls to get messages and send
+68:08
+messages through that IO completion port.
+68:10
+So you can see there's like, um, Q completion status.
+68:14
+I think there is what else do we have here?
+68:16
+Uh, pot.
+68:17
+Yeah, you so you can, uh, get the status, post the status and with each, uh,
+68:22
+man, you guys really talking about the media and the chat.
+68:28
+Okay.
+68:30
+Yeah.
+68:30
+So, uh, so you can basically pass messages between the threads.
+68:34
+The way the messages are passed are in, uh, this overlapped section.
+68:40
+So this is a, uh, a memory slice or data slice that can be passed between, uh,
+68:46
+between the threads basically.
+68:47
+So here, uh, in the encryption thread, they, you can see that I have already
+68:52
+created a structure called the encryption struct.
+68:55
+And I'll show you in our local types here.
+68:58
+Um,
+69:00
+edit.
+69:01
+So I've already created this struct.
+69:03
+And by doing this, uh, I now have access to both to the same data in both
+69:11
+this, um, encryption thread and also in, hang on the file encryption thread.
+69:21
+So here I have the same struct in both threads.
+69:25
+Um, and so I'm able to mark up the values that are being passed to that thread in
+69:31
+this thread.
+69:32
+And because it's the same structure that shared between the two threads, so the
+69:35
+same, uh, different functions, same structure, um, this is the trick to reverse
+69:41
+engineering these quickly and, and basically not having a complicated mess.
+69:45
+Because of course, values are set in one thread and read in another thread.
+69:51
+So if we're just trying to reverse engineer from the perspective of the
+69:56
+encryption thread, you'd be looking at the struct wondering, you know, what,
+70:01
+like read file, well, what the heck if I hadn't annotated that as file handle,
+70:05
+you'd be like, well, where does this come from?
+70:07
+This isn't making any sense, right?
+70:08
+It just looks like a bunch of pointer math.
+70:11
+But because we've created a struct here, we can then go to, um, let's go back.
+70:18
+Is that right?
+70:19
+No, that's all right.
+70:21
+Let's go this way, um, to our encryption, uh, files encrypt and then you can
+70:27
+see the file handle here, uh, is actually the handle from create file.
+70:32
+So you can see how those two threads are working in tandem, um, by having one
+70:38
+single structure or one single struct that's shared between the two threads.
+70:42
+And so when you're reverse engineering anything that has asynchronous
+70:45
+communication between new threads, um, especially like the IO completion port,
+70:49
+what you want to do, the first thing you want to do is, uh, cast all of your,
+70:54
+your overlap as a single structure, uh, and then that way you can mark up the
+70:58
+structure in one and read the structure in the other.
+71:01
+Um, so the way this works is like it's, it's dead simple.
+71:04
+Um, once you have the struct enabled, um,
+71:08
+where they, uh, yeah, they build the encryption struct here.
+71:10
+So they basically have, uh, this function here that sets up a bunch of
+71:16
+values in the encryption struct.
+71:17
+Um, they do a random number generator, which is the seed for their Chacha algorithm,
+71:22
+um, which I can show you in the, in the encryption, in the encryption thread,
+71:26
+because this is the file searching thread, right?
+71:28
+So in the file searching thread, they do their setup and then in the encryption
+71:32
+thread, they actually use the values from that struct.
+71:35
+Um, they set up the RSA, um, key material stuff.
+71:39
+I think they do, yeah, they do a checksum.
+71:41
+Um, you know, a bunch of, uh, a bunch of values are out of the struct.
+71:44
+You can see some of them, I still haven't annotated, um, but it doesn't matter
+71:48
+too much because I don't want to talk about the actual, um, uh, the encryption
+71:53
+too much.
+71:53
+I just want to talk about this process of using the IO completion ports and how
+71:57
+to reverse engineer it because if you haven't seen this before, this trick is
+72:01
+going to save you a lot of time.
+72:02
+So they basically set up the values for that struct in this, uh,
+72:06
+encrypt files, um, thread and they, uh, they're cycling through all the files.
+72:13
+They grab a handle to a file that they want to encrypt, uh, they add it to the
+72:17
+struct and then they, uh, post a message to the IO completion port.
+72:23
+Then of course, the encryption thread, let's do our x-refs here.
+72:27
+Uh, in the encryption thread, they, uh, receive, or do they receive, uh,
+72:35
+that post, but it is get.
+72:36
+Yeah.
+72:37
+So they receive a message from the, uh, IO completion port and then they begin
+72:42
+to make some, uh, you know, they have the switch statement, which has different
+72:47
+commands.
+72:47
+So this is, uh, commands.
+72:51
+Uh, so they have a bunch of different commands that can be passed.
+72:54
+Um, and there's, uh, there's a switch statement, which tells the, uh,
+72:58
+encryption thread how to encrypt the file and what to do with the encryption.
+73:04
+Um, yeah.
+73:05
+So I see in the chat, um, somebody, I, I knew someone was going to ask about this
+73:09
+as waiting for it.
+73:10
+So there was a blog post released like a day or two ago talking about a
+73:15
+decryption flaw in, uh, black matter that was used to recover files for users.
+73:21
+Um, I'm not going to talk about that here.
+73:24
+There is an encryption flaw.
+73:25
+I mean, they're not lying.
+73:27
+Uh, you know, there's not a giant PR thing or they're lying.
+73:31
+Um, and what I'm going to do is hopefully if, uh, our friend wants to, you
+73:38
+know, if the, if our friend wants to, uh, talk about this, I think we're going
+73:43
+to be able to talk to somebody who breaks ransomware for a living and we're
+73:47
+going to do a video on different tricks that they've used to break the
+73:51
+encryption in different ransomware variants.
+73:54
+So while we're uploading that as a video, maybe next week or the week after,
+73:58
+uh, stay tuned for that, but that'll be a separate thing.
+74:01
+So I'm not going to talk about the encryption flaws here on the stream.
+74:03
+I'm going to have an expert come on and talk about how they, um, how,
+74:08
+how they look at ransomware in general and how they look for these flaws.
+74:11
+So hopefully that all works out and we can book this guest and, and it works
+74:16
+that well, but stay tuned for that.
+74:19
+If we can't, if it doesn't work out, then I'll make another video just
+74:22
+talking about some ways that I've found myself, but I thought it would be much
+74:26
+more interesting for myself and for you guys to have a real expert.
+74:29
+Someone who's doing this, you know, for a living, come on and tell us what
+74:32
+they look for.
+74:33
+So stay tuned for that.
+74:35
+All right.
+74:35
+So, um, so this is basically how the, uh, how the, uh, the
+74:42
+decryption works with the different threads for encryption and, and file
+74:46
+scanning.
+74:47
+Um, the rest of the, uh, the rest of the stuff here is, uh, you know, it's,
+74:53
+it's pretty simple, uh, encryption decryption.
+74:57
+And when we have that guest on, we can maybe talk a little bit more about the
+75:01
+specifics of the, uh, the encrypt, the file encryption algorithm itself.
+75:06
+But I don't want to focus too much on that, uh, right now.
+75:10
+Uh, what I want to do now on the stream is what I promise, which is compare
+75:14
+black matter with, uh, dark side and show you guys how, um, the link was made
+75:20
+between these two ransomware's.
+75:23
+And, uh, before we, before we get into that, uh, for those of you who don't,
+75:29
+uh, for those of you who don't remember or, uh, aren't really in the
+75:33
+security space, you didn't, you didn't see this.
+75:35
+What happened is dark side, uh, was a ransomware.
+75:39
+They, they're a ransomware as a service.
+75:41
+So they're looking for affiliates to compromise victims, use their, uh, affiliate
+75:47
+ransomware and then both parties get cut.
+75:50
+So the dark side operators get a cut and the affiliate gets a cut of the
+75:53
+ransomware.
+75:54
+One of their affiliates attacked, uh, what was it?
+75:59
+Some sort of, I want to say, uh, was it a power station or something?
+76:02
+A camera would it was.
+76:04
+Anyway, they, they ransomed something that the US government considers
+76:09
+critical infrastructure and that like just made things go insane.
+76:13
+Like the heat was turned up to 11 for dark side.
+76:16
+They released like a press release on their, uh, on their like ransom portal,
+76:21
+saying like, we're sorry.
+76:22
+We didn't mean to do that.
+76:24
+And then they released like another press release saying like, we quit and, uh,
+76:29
+dark side vanished.
+76:31
+And it was no more.
+76:32
+There's too much heat for them, right?
+76:34
+Because the US government was like, what the heck is this?
+76:38
+We were kind of, you know, the, the I have soar on was a problem.
+76:41
+So that was probably a very, yeah, colonial pipeline.
+76:45
+Exactly.
+76:45
+So that was, yeah, it was a pipeline.
+76:47
+That's what it was.
+76:48
+Not a, not a power plant, a pipeline.
+76:50
+Yeah.
+76:50
+Thanks.
+76:51
+Thanks, Chad, um, for that.
+76:53
+Yeah.
+76:53
+So they, so like the US government was like, we're going to put some pressure on
+76:57
+these dudes.
+76:57
+I'm sure they were not happy.
+77:00
+I saw some like hot takes that like, um, Putin and Russia was like, uh,
+77:06
+happy that these guys were attacking US critical infrastructure.
+77:10
+I'm pretty sure he was like, what the fuck guys?
+77:13
+Excuse me.
+77:14
+I'm, I'm pretty sure he was like, we don't want criminals attacking like other
+77:20
+nation states, critical infrastructure.
+77:22
+So I'm pretty sure that he was turned up in their home country as well.
+77:26
+They're attributed to being Russian living in Russia.
+77:30
+So anyway, I think all around it was not a good time to be the dark side guys.
+77:36
+So they basically shut down their ransomware operation.
+77:39
+This is why attribution is so interesting and useful, um, in the e-crime space.
+77:46
+So we taught here a lot about attribution when people are trying to, um,
+77:50
+attribute nation states, but it's also very interesting and useful in the
+77:54
+e-crime space because what happened was later on,
+77:57
+once some of the heated dug down this new ransomware called black matter popped
+78:03
+up brand new ransomware.
+78:05
+Nobody's looking at this thing, right?
+78:07
+But once you looked at the binary, you realize that, oh, it's actually just a
+78:12
+rebranded dark side.
+78:14
+So you can take all that heat, the ISOR on from, uh,
+78:19
+the US government.
+78:20
+And now you can focus it on black matter because it's the same actors,
+78:24
+the same people, all that heat that we were putting on dark side,
+78:29
+you can now put on black matter.
+78:30
+And that's why it's so interesting, right?
+78:32
+That's why this is, this is useful.
+78:34
+We're not just reverse engineering for fun here.
+78:36
+We're reverse engineering for purpose.
+78:38
+And that is to bring a little pain to these ransomware operators.
+78:42
+And this certainly exposing these people to the same thing.
+78:46
+This certainly exposing these people,
+78:49
+the black matter operators as being the same people behind dark side,
+78:53
+the same people behind the colonial pipeline,
+78:55
+fiasco is, is an excellent thing to do because it means that,
+79:01
+you know, those government binoculars are going to be focused on black matter,
+79:05
+which is great.
+79:06
+We want them as uncomfortable as possible.
+79:08
+So let's talk about how that attribution was done.
+79:12
+And you guys are going to see, I'm going to pull up a dark side IDB.
+79:18
+And you're going to be like, really, this is,
+79:20
+this is the length they went to, to, to try and disguise that it was a new group.
+79:25
+I mean, these two, they're so lazy.
+79:28
+I think they just changed a couple of features.
+79:30
+And it was just the same ransomware basically.
+79:33
+The, even the config extractor like almost works on it,
+79:37
+which is, which is kind of funny.
+79:42
+Yeah.
+79:43
+Anyway, so I see a couple of people in the chat.
+79:47
+We don't want to make any, any claims against other AV founders.
+79:51
+Everybody's doing what they need to do to survive.
+79:53
+I don't want to shit on them on the channel.
+79:56
+Unless they're like snake oil or whatever.
+79:58
+But I don't think these guys just snake oil.
+80:02
+Todd Bell wants to cut from Oalaz.
+80:05
+I'll tell you what, Todd Bell.
+80:07
+If you DM me on Discord with your address,
+80:11
+I'll send you a mug.
+80:12
+How about that?
+80:13
+I'll send you some of our merch.
+80:16
+Don't worry, I won't like swap you anything insane like that.
+80:19
+You know, I'm, I mean, well, you'll just get a mug.
+80:24
+Okay, so let's pull up our dark side ransomware
+80:29
+and we'll take a look at the structure here.
+80:32
+And I'll show you some, some cool stuff.
+80:34
+Actually, you know what might be interesting is,
+80:36
+let's try a bin diff first before I pull it up.
+80:39
+A bin diff doesn't like the IDB, the diffing IDB
+80:42
+to be open at the same time.
+80:44
+So before we do that, let's try a bin diff here.
+80:46
+And I'll show you right away where we're working
+80:50
+with something, access is denied.
+80:53
+Whereas access denied.
+80:55
+I don't like that.
+80:59
+Or as documents.
+81:03
+Doesn't like hyperlinks, say.
+81:06
+Dark side.
+81:10
+Yeah, we have, we have merch.
+81:14
+I don't plug it because I don't want to be like a Paul Brothers.
+81:17
+But yeah, we have mugs, we have all kinds of mugs.
+81:20
+Once I'm waiting on samples to make sure that the printed okay,
+81:26
+but if they printed okay, I'll promote them a little bit more.
+81:31
+Actually, hang on one sec.
+81:33
+I'll be right back, you guys can watch this be right back.
+81:36
+Yeah.
+82:00
+Buy that merch.
+82:01
+Oh, it's actually green screened.
+82:03
+Oh my God, it's so funny.
+82:05
+The color of the mug is as green as is the same green
+82:11
+as my green screen.
+82:14
+Oh, that's amazing.
+82:18
+Anyway, buy that merch.
+82:23
+Okay, so we've done a bin diff here.
+82:25
+And let's take a look at primary match to our match functions.
+82:30
+Yeah, there we go.
+82:31
+So you can see it's not actually,
+82:34
+where's the stats here?
+82:37
+Statistics.
+82:39
+So the similarity is only 38%.
+82:42
+But yeah, sorry, I have so such acts.
+82:44
+Sorry, sorry guys, I'm back on them.
+82:46
+Hey, it's a live stream, whatever.
+82:47
+It doesn't have to be as cut and dried as a regular YouTube video.
+82:55
+Anyway, so the similarity is like 38% based on what,
+83:01
+based on what bin diff does.
+83:04
+Bin diff uses a bunch of different,
+83:05
+well, actually you can see them all here.
+83:07
+He uses a bunch of different comparison algorithms.
+83:10
+So they use like basic block hashing,
+83:13
+but they also use more loose comparisons,
+83:17
+where merch is in the description of the video below.
+83:20
+Like right below the video,
+83:21
+there should be like a thing that says like by these mugs.
+83:24
+If there isn't, it's oillabs.tsprim.com.
+83:29
+It's on Tsprim.
+83:30
+Um, yeah, this is so ridiculous.
+83:35
+Like you can, it's a green screen, right?
+83:37
+So you can, you can see what's behind it.
+83:41
+Hey, sorry.
+83:43
+So, so anyway, bin diff is like a super useful tool
+83:47
+because it also has these loose comparisons.
+83:49
+So it'll do things like comparison comparison,
+83:53
+comparing graph edges and stuff like that between two different IDBs,
+83:59
+or two different binaries.
+84:00
+So it's a, so it basically can do a little bit better
+84:05
+than just hashed basic block comparisons.
+84:08
+But even still, we only get 38%.
+84:10
+Now here's the thing.
+84:11
+When you do a bin diff with a piece of malware
+84:14
+and like I say a new piece of malware,
+84:16
+let's say I was just analyzing black matter.
+84:18
+I had no idea what it was.
+84:19
+I hadn't seen any blog post by Chonggong.
+84:21
+I, you know, I wasn't sure what was going on.
+84:23
+And I did a bin diff and it was 38% the same as dark side.
+84:28
+I would definitely start looking at dark side
+84:30
+and being like, what the, you know, what's going on here?
+84:35
+This is possibly the same, you know, the same malware.
+84:39
+But 30, but still, 38% is not very high.
+84:42
+It's not as high as we would expect.
+84:45
+And the reason for this is because they use a whole bunch
+84:48
+of different obfuscation techniques
+84:50
+that kind of make the code look different.
+84:54
+So they have a different API hashing algorithm
+84:57
+in black matter.
+84:59
+They use encrypted stack strings, which I actually didn't show you.
+85:03
+I'll show you that before we open up dark side.
+85:06
+And so those two things combined make the graph
+85:10
+and the basic blocks look different.
+85:12
+But it's enough, 30% is enough for me
+85:16
+to look at dark side and Ida and see side by side, you know,
+85:20
+does this look like it's the same binary.
+85:22
+So it's at least a hint, right?
+85:25
+Maybe it's not great overlap, but it's a hint
+85:28
+that there's something similar there.
+85:31
+Also, yeah, let me show you the stack strings here.
+85:35
+I think you guys are going to like this just before we open up
+85:38
+dark side.
+85:39
+No, if there are, where are the stack strings?
+85:48
+Not sure.
+85:49
+We'll go and then config somewhere maybe.
+85:56
+No, not here.
+85:59
+Where are these encrypted strings when you need them?
+86:12
+Oh, yeah, here we go.
+86:12
+Here's a stack string here.
+86:14
+So this is how they encrypt strings in the binary.
+86:20
+They basically push a bunch of values
+86:24
+into one of the stack here and then they do rolling
+86:29
+XOR encryption with it.
+86:32
+So when you see stuff like this, a lot of time,
+86:34
+what you'll do is you'll use a debugger.
+86:37
+Oh, no, I did it again.
+86:41
+It happens when you click in the assembly view
+86:44
+and it has to go through all these.
+86:52
+So we're back here.
+86:53
+I'll be very careful not to click in the assembly view.
+86:58
+OK, so when you see something like this
+87:01
+with stack strings that are being XOR decrypted,
+87:05
+a lot of the time what you might have to do
+87:07
+is open it in a debugger, step through this with the debugger
+87:12
+and figure out what the stack string is,
+87:14
+or you might write your own Ida Python script to do it.
+87:20
+Now I'm going to do a quick reveal here
+87:23
+of a project that Sean's working on called StackStack,
+87:27
+where basically you can just highlight,
+87:29
+it's like an emulator.
+87:31
+You just highlight the assembly code,
+87:34
+right click, StackStack, decode selected,
+87:37
+and it'll decode the encoded string.
+87:43
+Excuse me.
+87:44
+So I won't get too much into that.
+87:45
+We'll have a video on that once it's all nice and polished
+87:48
+for you guys.
+87:48
+But basically that speeds this process up a lot
+87:52
+and allows you to do a lot faster string decryption in Ida.
+87:59
+So I'll stay tuned for that coming up as well.
+88:01
+A bunch of projects actually releasing soon,
+88:03
+so you guys should definitely stay tuned.
+88:05
+OK, so let's open up DarkSide and see
+88:09
+if we can't compare these two malware's
+88:12
+and figure out how they were attributed to be
+88:15
+from the same developer.
+88:17
+Hello from the Philippines.
+88:20
+I see that in a chat.
+88:22
+All right.
+88:26
+New instance.
+88:29
+Open.
+88:31
+Now we're at was dark side of it.
+88:42
+So let's go to the beginning here.
+88:45
+So oh my goodness.
+88:47
+Oh.
+88:50
+Where is this here?
+88:54
+Oh, you can see a little bit of a Boris butt.
+89:00
+He's here for just a second.
+89:03
+And now he's gone.
+89:07
+OK, so now looking at the dark side ransomware,
+89:14
+how come I use LightMode or Nida?
+89:16
+Because I hate dark mode.
+89:18
+I like being old to see.
+89:19
+I like the glare, the 90s style glare of the LightMode.
+89:28
+Also, I think it's easier for you guys to see.
+89:30
+OK, it's Bortis's lunchtime, so I'm going to close the door.
+89:34
+Just once I'll be right back.
+89:45
+Sorry about that.
+89:49
+Just didn't want it to be too noisy for you guys.
+90:02
+He's like really noisy eater.
+90:05
+I don't know if you guys can hear it, but it's super loud.
+90:09
+Our kitchen is just around the corner here.
+90:13
+OK.
+90:14
+So here we have dark side opened up.
+90:16
+And at first glance, you might think, hey, this doesn't look
+90:20
+like Black Matter at all.
+90:23
+They have this interesting buffer generation algorithm,
+90:27
+which uses some bytes that are stored in the,
+90:33
+oops, that's not right.
+90:34
+Where is it?
+90:36
+I use some bytes that are stored in the end data section
+90:40
+to create a decryption keystream.
+90:42
+Sounds familiar.
+90:43
+It's not the same type of LCG as Black Matter,
+90:51
+but it is a keystream generator.
+90:54
+And if my dog is rabbit, it's not a rabbit.
+91:01
+And then the grabs some information from the pev,
+91:06
+store it in global variables, and then we get into our main function
+91:11
+here.
+91:11
+But once we get into our main function,
+91:14
+you can see some things start to look very similar.
+91:19
+So we have our resolved imports here, which looks a little bit
+91:24
+like the Black Matter resolve imports.
+91:27
+Now it's not the same.
+91:29
+It's not like it looks a little similar.
+91:31
+It's not exactly the same.
+91:33
+In the dark side, they actually use string values
+91:38
+and get proc address to resolve the imports.
+91:41
+But the idea of using these dynamic import address tables
+91:45
+blocked off by module or by DLL is very similar.
+91:50
+But it's not enough that we could say, OK, these
+91:54
+are the same ransomware.
+91:55
+It just kind of looks a little similar.
+91:58
+When we get to the config, though, things
+92:00
+start to look very similar.
+92:02
+So we have a decryption, and then we have an AP-lib
+92:06
+decompress.
+92:07
+Then we have a get key material, affiliate ID.
+92:11
+These are the flags.
+92:12
+This is one of the flags is encryption mode here.
+92:15
+But these are the flags.
+92:17
+And then we have a set of basics, the foreign coded strings.
+92:21
+So let's compare that to Black Matter.
+92:25
+Let's come in here.
+92:26
+Where's our config?
+92:32
+So now, right?
+92:35
+Start to see there's some real similarities here.
+92:39
+In fact, you'd almost be able to stop at this point
+92:43
+and be like, hey, something weird is happening.
+92:47
+Either the black matter developers reverse engineer
+92:54
+or direct side, and decided they were going to copy
+92:57
+everything about how their config works,
+92:59
+or it's the same developer.
+93:02
+We always have to use that analysis of competing hypotheses.
+93:06
+There's always a chance that this is a false flag
+93:09
+or this is done by the developer to throw us off course.
+93:13
+But this is a pretty high level of dedication
+93:18
+to reimplement this much of the config in your new ransomware.
+93:28
+Let's go a little bit further though.
+93:30
+So here's our config decryption.
+93:33
+Let's pull up our notes here.
+93:38
+And I have notes for dark side as well.
+93:41
+Open this up.
+93:43
+So let's take a look at the dark side configuration here.
+93:50
+Here's the decrypted dark side configuration.
+93:54
+Here's the decrypted Black Matter configuration.
+93:59
+Very, very similar.
+94:01
+If, hello, Freshee, if we saw something that was this similar
+94:07
+and it was not by the same developer,
+94:10
+it would be a very, very big coincidence.
+94:15
+Yeah, very sus, exactly Chong Dong, very sus.
+94:18
+So anyway, we think that we might have a smoking gun here,
+94:25
+but let's go a little bit further.
+94:26
+Let's go a little deeper.
+94:28
+Let's look at how they do their encryption.
+94:33
+Let's take a look at the encryption here.
+94:35
+Actually, before we do that, there's another really funny thing
+94:38
+I wanna show you guys.
+94:39
+We can look at the, this is something that can't really be done
+94:43
+well with something like Bindiff.
+94:44
+It can only really be done by a human, well, that's not true.
+94:48
+I think some of the Bindjigas, the binary ninja guys might say
+94:52
+like there's a way to do this automatically or programmatically.
+94:55
+But let's take a look at the structure of how they do
+95:01
+their UAC bypass because I thought this was also interesting.
+95:05
+So look at this, they check if the process is running as a Bind,
+95:09
+they do an OS check for at least Windows 7,
+95:11
+they check the user token to make sure they can be admin,
+95:15
+then they jump into a UAC bypass that is copied directly
+95:19
+from another UAC bypass.
+95:21
+Remember when we started the stream, take a look at this right here.
+95:30
+Doesn't that look very, very similar?
+95:36
+Right?
+95:37
+It's almost coffee paste code.
+95:39
+It's pretty much the same, right?
+95:41
+They've done, this is like a coffee paste of the structure
+95:45
+of Darkside.
+95:47
+Matt Bergen, do you mean like a rest and development?
+95:51
+Poorly.
+95:52
+Yeah.
+95:54
+Anyway, yeah.
+95:56
+How well did they disguise their actions?
+95:59
+They disguised them poorly.
+96:01
+So, uh, I think that's a good idea.
+96:04
+So, uh, so let's look at, um, so first of all,
+96:08
+we can see the structure here is, is very similar.
+96:12
+Um, the structure of the whole code is similar,
+96:14
+the way that they read in the config, or sorry,
+96:17
+command line arguments and use that to determine how they do the encryption.
+96:21
+See this, um, I think we had, I don't know where are,
+96:25
+it's a little bit different because the functions are set up slightly different.
+96:30
+But, um, see that they have, you see this?
+96:35
+It's like, it's basically the same code.
+96:39
+Just, they've moved it around a little bit to try and hide it.
+96:43
+Um, but the, I think one of the,
+96:46
+one of the, uh, most interesting things is the way they do,
+96:50
+well, it's not most interesting, I think the config is probably the most damning thing here.
+96:54
+But it's also interesting, I think, how they do the,
+96:57
+um, the actual encryption, because they also use an IO completion port,
+97:01
+and they use like a very similar structure, um,
+97:05
+which I thought was, which I thought was funny.
+97:07
+It's basically like, I think they,
+97:09
+they're, uh, idea behind, uh, making this ransomware not look like,
+97:16
+uh, you know, making black matter not look like dark side,
+97:20
+was the fact that they, uh,
+97:22
+was the fact that they added some string decryption,
+97:25
+just to import address, stable building like,
+97:28
+like, as if, as if nobody would open this an IDA and be like,
+97:31
+hey, this is literally the same code,
+97:33
+I'm literally looking at the same code.
+97:36
+Yeah, Shazad, or, yeah, Shazad, I think that's what you see in name.
+97:40
+Uh, yeah, it's recorded, and you can see it on YouTube.
+97:43
+Um, it'll be up after the stream.
+97:45
+So no worries if you missed the first part.
+97:48
+So, uh, let's take a look at the, uh, decryption here,
+97:51
+and we'll also even the flags.
+97:53
+It's funny, the flags are all the same.
+97:55
+But let's look at the encryption here,
+97:57
+and that will kind of close out the stream with that.
+97:59
+Uh, where do they actually do the encryption?
+98:02
+Um, let's see here.
+98:07
+Well, actually, I'll just look in here.
+98:11
+So here's the new encryption.
+98:19
+Uh, where do we start?
+98:21
+We start our...
+98:23
+reds here.
+98:29
+So here's where we start our encryption threads.
+98:33
+Um, we start.
+98:35
+Let's, I just want to show you black matter.
+98:37
+I know this might be a little over-done in, like by now,
+98:39
+you guys probably are, are pretty convinced that it's the same ransomware,
+98:43
+just rebranded.
+98:44
+But, uh, I'll just show you again,
+98:46
+because I, it really tickles my fancy,
+98:48
+how, how little effort they put into,
+98:50
+to hiding the fact that it's the same ransomware.
+98:54
+Um, uh, where's the encryption thread?
+99:00
+Yeah, so here, look at, so this is, uh, black matter starting the encryption threads.
+99:06
+Here's dark side starting the encryption threads.
+99:09
+Uh, what do they do while they check the number of processors?
+99:14
+Um, and...
+99:17
+then they start, uh, encryption threads for the number of processors.
+99:23
+I think they do, uh, twice as many in, uh, black matter, right?
+99:28
+So they do, uh, two times the processors.
+99:32
+Uh, in dark side, they only did, as many as processors.
+99:36
+So there's twice as many threads in black matter.
+99:40
+I guess they want to speed up the encryption.
+99:42
+They realize that they could overload the CPUs a little bit.
+99:45
+Um, and in dark side, they only use one thread for CPU.
+99:48
+But look at, like the code is almost identical, almost identical.
+99:53
+And if you look at the encryption thread itself, um,
+99:57
+with the IW completion ports, it's like,
+100:01
+it's, you know, it's a copy-faced job, basically.
+100:05
+So I think that that is, uh, there's a few more, like, very funny things,
+100:11
+um, in here that, that basically, uh, are just copy-faced jobs.
+100:16
+But at that point, I mean, I think with the, uh, the encryption,
+100:20
+the configuration, and the actual structure, the overall structure of the ransomware,
+100:24
+like the, the way they do the import address table, then the config,
+100:28
+then the check if it min and elevate with that UAC bypass.
+100:32
+The fact that all of that is identical,
+100:34
+means that either the, uh, black matter ransomware developers were amazing or worse engineers,
+100:40
+they, uh, reverse-engineered dark side, and they were like,
+100:44
+yeah, let's build a ransomware that's identical to that,
+100:47
+which would be like hard to do, I think, or it's the same ransomware developer, right?
+100:53
+There you go.
+100:54
+Put the ISO on, on these black matter dudes, and, uh, you know,
+100:59
+put a little pressure on them.
+101:00
+So hopefully you guys enjoyed that.
+101:02
+Um, I think that'll be the end of the technical part here.
+101:06
+I will, like, I always do stick around for a little bit,
+101:09
+if you guys want to ask questions in the chat,
+101:11
+um, whatever you want, whatever's on your mind, you can ask,
+101:14
+um, keep it, obviously,
+101:16
+within, within the realm of resengineering, but, um,
+101:19
+but yeah, I'll stick around for a bit, you guys can ask questions,
+101:22
+this will be recorded, um, so we can, uh,
+101:25
+throw it up on YouTube afterwards, so you guys can go, um,
+101:29
+go see it afterwards, uh, yeah, link the, uh, mug, sure, I'll link the mug.
+101:35
+Uh, let me see here.
+101:37
+Uh, oops.
+101:55
+Yeah, I'll link it.
+102:01
+Yeah, so some of this thing, it could be repurposed malware.
+102:05
+Um, so we do see that sometimes, uh, but basically,
+102:09
+you repurposed malware, you can't change these, uh,
+102:13
+small pieces of, uh, small pieces of code like this, um,
+102:18
+because you have to patch them, right?
+102:20
+You don't have the source code.
+102:21
+So, uh, yeah, so it's, it's not, uh,
+102:25
+uh, it's not repurposed.
+102:27
+It's, it's, it's, so whoever wrote this has the source code for dark side, basically.
+102:31
+Um, yeah, sorry, there's a lot of, uh,
+102:35
+a lot of stuff in the chat here. I'm going to, just before, uh,
+102:38
+I get to your questions in chat, I'm going to link the mugs,
+102:41
+and I'm going to link our Twitch.
+102:43
+Um, Twitch is, uh, nothing like these YouTube streams.
+102:47
+So I, uh, our Twitch channel can be taken down at any time.
+102:51
+I stream, uh, uh, copyright music.
+102:55
+There's, there's no, there's no structure to it.
+102:57
+I've just throw it on when I'm reversing so you can just can hang out and chat with me.
+103:01
+There's no, you know, it's not like, it's not like these tutorials.
+103:04
+There's no structure to it.
+103:05
+And I don't really care if they ban my channel for copyright music.
+103:08
+It doesn't matter. I mean, YouTube is what we're, you know,
+103:10
+it's where we, it's our home basically.
+103:12
+So, um, that's also why it says sub on Patreon.
+103:15
+Don't forget to sub on Patreon.
+103:17
+Uh, don't sub on YouTube or on Twitch.
+103:20
+Um, you know, those accounts can be deleted or whatever.
+103:22
+Patreon is where we're hanging our hat these days.
+103:25
+Uh, so let's see if we can't, uh, get our, where's our shop here?
+103:30
+To...
+103:32
+Yeah.
+103:40
+So if you're on...
+103:42
+Uh, oh, I see our merch isn't showing.
+103:47
+Oh, that's, that's very fun.
+103:49
+Thanks YouTube.
+103:50
+Love it.
+103:52
+Yeah, I wonder why our merch isn't showing.
+103:56
+Uh, let's give me a sec here.
+104:03
+Ooh.
+104:12
+There we go.
+104:20
+There's our merch link.
+104:44
+And, uh, our Twitch.
+104:52
+.tv.
+104:53
+Slash Roy Labs Live.
+105:07
+All right. So let me scroll up in those comments here and see what you guys are saying.
+105:12
+Uh, what am I recommend for long week of concentration?
+105:23
+Uh, if I went or a month and filled with coffee.
+105:27
+Actually, the truth is, um, I, I don't find it too hard to stay, uh, you know, focused on this stuff because it's really interesting to me.
+105:40
+Um, I've had a few jobs before where I was doing wrist engineering for, but for different reasons, uh, not looking at malware.
+105:47
+And it's, you know, if it's boring, it's hard to stay motivated, hard to, hard to stay interesting.
+105:52
+This stuff, I find super interesting.
+105:54
+So I, you know, it's not hard to stay, stay motivated.
+105:57
+Life hack.
+105:58
+I don't know.
+106:00
+That seems kind of should be to say, you know.
+106:02
+But basically, if you're interested, you know, probably be more motivated to stay, stay focused.
+106:07
+Um, is it common to find kilkeys in ransomware hell?
+106:12
+No, that's like a want to cry only type thing.
+106:15
+I mean, there's some ransomware, or not some ransomware, lots of ransomware that like won't encrypt certain geolocation.
+106:21
+So let's check the language.
+106:23
+Um, there's a language check in this, I think.
+106:25
+Um, let me see.
+106:27
+Yeah, there's a, there's a language check here.
+106:33
+Um, uh, no, that's actually for the, uh, that's for the C2.
+106:41
+Where did I see this?
+106:43
+Was it in here?
+106:45
+Yeah, host language ID.
+106:47
+Yeah.
+106:48
+So in, um, dark side, I think there's also, I think they also do it in black matter.
+106:53
+They check the language of the host.
+106:55
+And if it's like any, uh, like Russian speaking country, Cyrillic, anything like that, they don't encrypt it.
+107:01
+Because of course, um, there's no extradition to the US from Russia, but certainly if you encrypt Russian computers, the Russian government can, uh, put the thumb on yet.
+107:11
+So yeah, they definitely do these kind of checks.
+107:14
+So you could consider that like a kill key.
+107:16
+You know, I know I've seen some funny, uh, takes on Twitter or people are saying just change your, uh, keyboard to Cyrillic.
+107:22
+And you won't get a ransomware, but you know, no, there's not really any key kilkeys like, like, uh, want to cry.
+107:31
+Um, have I seen malware taking advantage of item vulnerabilities?
+107:35
+Not personally, I've heard tell of, uh, like, you know, proof of concepts and stuff like that for it, but I haven't seen anything like that.
+107:43
+Um, what else do we have?
+107:48
+Uh, people saying, yeah, talking about the vulnerabilities in encryption.
+107:56
+Yeah. So like I said, uh, for those of you who are joining late, uh, I think I'm like, uh, 99, 80 percent, 90 percent positive that we have another video coming up with an expert on breaking ransomware encryption routines.
+108:11
+And we'll go into some of the ways that you can look for flaws in their encryption to do a decryption. So I think, uh, that should be scheduled.
+108:19
+Uh, we just haven't confirmed it 100 percent, but, um, that should be an interesting, uh, interesting one for a lot of you, I think.
+108:27
+Uh, yeah, I can't listen to music on YouTube. I like to listen to copyright music. So only Twitch.
+108:36
+Uh, yeah. So, yeah, here's some people talking more. So I'm just catching, catching up on the chat. Yeah, talking about doing vaccines based on kill conditions.
+108:45
+So there is, I can't remember the name of the company. There is a company that puts all these little Easter eggs into your hosts, which are used to stop different versions of ransomware that they know about.
+108:55
+Um, I've never been 100 percent sold on these, um, you know, obviously it's easy for the ransomware developers to change things, um, if they want, uh, you know, and so I'm not, I'm not 100 percent sold on it.
+109:07
+But it's an interesting idea and something you can pursue, you know, it's kind of cool. It might protect you in some cases.
+109:13
+Oh my god. Okay, we just got a confirmation. 100 percent. We are going to do a video or stream with an expert in breaking encryption.
+109:22
+Just got a DM. Thanks for the DM. So it's 100.000 on. I think they're watching this stream. Yeah, it looks like they are watching this stream. Yeah. So, uh, we're going to do a stream or a video talking about breaking ransomware encryption.
+109:35
+Dedicated to that, which I think you guys might find interesting. Well, might find interesting. I think it'll be hell interesting.
+109:43
+So yeah, so we'll stay tuned for that. That'll be coming up next week or week after.
+109:49
+Let's see what else we have here.
+109:53
+Yeah.
+110:03
+Yeah. So I see some people talking about like installing a language packs. Yeah. Todd Bell. Jesus. Be ever checked.
+110:12
+Yeah.
+110:18
+Yeah. Yeah. Change the good. There's like a bunch of there's a bunch of these funny vaccine tricks. I think, okay, I could be wrong. Somebody in chat must know this.
+110:29
+Is it Lenny's Elter's company? The company he works for that does the vaccines. I the like anti ransomware vaccines. I think it's his company. If somebody knows, link it in the chat and I'll pick up it.
+110:43
+I mean, for all he's done, we can plug them.
+110:47
+Plug them in the chat here. There is a company that does do this where they try and find different.
+110:55
+Different like host checks that ransomware does that they won't encrypt the host if those checks fail. And then it tries to see your environment with those checks. I would call it like a vaccine basically.
+111:09
+Don't take me down YouTube not that vaccine. Oh my god. Hopefully they can't read lips. They don't demonetize us.
+111:18
+Not talking about that vaccine YouTube. I'm talking about cyber vaccines. Oh Jesus.
+111:25
+Okay. Anything else in the chat here? Teach you programming. Actually, if you want to learn programming, there's like a million free YouTube videos.
+111:34
+People are giving away for free. It's easy to get started. Anything else in the chat here?
+111:43
+I don't see more people talking about the installing the language packs. I think I have something that I might give a shout out to.
+111:58
+So I think I'm going to drop this link in the chat and it's also in our lab notes. So I'll put it in here.
+112:06
+Some of my old colleagues gave a talk at VV 2021. Excuse me, fire is Bolton.
+112:13
+And they talked about black matter and dark side and attributing them to an actor they call carbon spider, which is like the carbon act gang.
+112:23
+So for those of you who are interested in that type of attribution, I linked the clip in the chat here of their YouTube video where their talk starts.
+112:35
+I think it's probably one of the most interesting and thorough talks on e-crime attribution period ever. I think it's fascinating.
+112:47
+And if you guys are interested in the background and what went into attributing this group beyond just the binary similarities, I think it's well worth watching that.
+113:00
+So big shout out to Josh and Eric. Again, one of the most interesting, I think, attribution style videos for e-crime that I've seen.
+113:11
+Yeah, Michael saying skeptical about the vaccines. Yeah, I'm skeptical too. I mean, obviously it's easy for ransomware developers to change what they're, what they're keying on.
+113:21
+You know, that's, yeah, it's simple. Am I a hacker? No, I'm a hacker. I'm a developer.
+113:34
+Now I haven't heard of the VELs tool. VELs. Should I look it up here on stream? Make sure it's not porn.
+113:50
+VEL. Yes. What is this? I don't know what this is. Open source tool for binary analysis. Oh, that's cool. That's interesting.
+114:04
+Yeah, there's lots of these things. I'll give a free plug out to these the Binger guys, binary ninja cloud.
+114:16
+Yeah, look at this thing. I have to log in. Anyway, they put like a decompiler in the cloud. That's free.
+114:24
+Free plug out to the Binger guys. It's kind of cool. I was playing around with this thing. Can't do plugins or anything like that, but it's kind of interesting.
+114:33
+I haven't heard of this VELs thing, VELs thing or whatever. I mean, obviously I'm like, I did till I die. I mean, you know,
+114:44
+that's my platform. But I like these, these entrants into the market because a lot of them can be accessed. They're open source so they can access programmatically.
+114:55
+And of course, for my job, a lot of what I do is programmatic binary analysis, right? So automated binary analysis. So I'm always interested in these frameworks.
+115:04
+But for like a manual or a sentencing, it's always going to be I think or a geodra geodra.
+115:15
+Want to learn a language that's memory safe and learn good habits. I don't ask me. I don't have good habits. You guys saw my Python coding. I don't even respect the pep. I mixed Python 27 syntax and three.
+115:28
+Oh, geez.
+115:31
+Third party plugins running on servers. Yeah, actually the Binge a Cloud doesn't do plugins. It's just more like, you know, it's kind of interesting if you're just trying to point something out to someone live.
+115:42
+Like if you're doing like a tutorial or something, it's kind of interesting.
+115:45
+I think maybe at some point I might do a live stream where everybody can collaborate on the Binge a Cloud or something like that.
+115:53
+We'll see. We'll see if they're nice to me. If they like, they want to promote our channel. You might do something like that. Yeah, hail Hydra.
+116:01
+Yeah, I wish I had set up one of those. One of those.
+116:07
+There was no geodra. No. I'd had to only die.
+116:20
+Let's see. What else we have. Oh, yeah, so we'll do a Patreon.
+116:26
+Come slash. Good way to end our streams here. I can't even spell on name here. Yeah, there you go. There's our Patreon. Look at our funny, ita stickers.
+116:41
+You can tell we love it. Go sub if you want to see more of these. Let us know you like us and we'll do more streams.
+116:48
+One more second in the chat here. If you guys have any last minute questions, let me know. Otherwise, I'll be closing out the stream.
+116:59
+Close it out of the top of the hour. How about that?
+117:05
+A little bit of chat about Russ. Yeah, I haven't really done anything with Russ. Definitely done more stuff with going.
+117:16
+I've got low level stuff. I still write some low level stuff for the empakers that we do. But it's written C.
+117:26
+There's nothing good about my code except that it works. That's the only thing that's good about the code.
+117:35
+Yeah, fiend protect. So what browser is it? It's brave. I don't like ads. I know they had some scandals where they were doing affiliate links, but at least there's no ads.
+117:48
+One more minute. Get your questions in questions and we're going to end the stream. I think my dog goes back from his walk and I still not in his bed though.
+118:04
+Alright, two o'clock, top of the hour. We're going to end the stream. Thanks everyone for joining and we will see you in the Discord.
+118:11
+See you later, guys.
+119:04
+You
+119:34
+You
+120:04
+You

@@ -1,1 +1,2468 @@
-[NO TRANSCRIPT AVAILABLE]
+0:00
+Join us for three days in Orlando, Florida in March, 2026 for an event designed to equip
+0:08
+IT professionals like you with the tools, knowledge and strategies to navigate the ever-changing
+0:13
+cybersecurity landscape.
+0:17
+Secure your spot and register to join us for three days of immersive learning, collaboration
+0:22
+and skill building with hands-on hacking labs and much more.
+0:27
+Work with peers from around the globe.
+0:31
+Share experiences and learn from a real-world case study is all aimed at enhancing your
+0:36
+capabilities as an IT professional.
+0:39
+Elevate your experience at the after-party.
+0:47
+Registration is now open.
+0:49
+Register now for a zero-trust world 2026 and take the first step towards a more secure
+0:55
+tomorrow.
+3:55
+Yes, policies apply.
+4:05
+If you have multi-tenants, you have sub-organizations, if you have an organization that has subdivisions,
+4:11
+you have this global group and then you have your entire organization and you have your
+4:15
+computer policies and then you have your group policies.
+4:17
+They apply in that order from the top down.
+4:21
+If you go in there and your organization you say allow an RDP for the entire organization
+4:26
+which would be a bit crazy and then you have one underneath that says deny IDP.
+4:31
+You've already allowed it at the top.
+4:33
+They do apply in that order.
+4:35
+There is a change coming.
+4:36
+It's coming to application control first where policies can actually apply in any order
+4:40
+regardless of the group and you'll be able to override that order number.
+4:42
+They do apply from the top down.
+4:43
+It's just at the moment it hard codes the group's first.
+4:47
+It goes in global or computer group.
+4:51
+In the new version you'll essentially be able to say I'm going to have a group policy that
+4:53
+runs before the org policy and we're doing that across all of our products.
+4:57
+We've already done it for detect and config manager.
+5:00
+It will be coming for...
+5:01
+It's something that's been long asked for people want ways of overriding global policies
+5:07
+or if there's one exception for the global policy and the answer was all as well.
+5:10
+That's what global means.
+5:11
+It means everywhere but coming soon.
+5:14
+You'll be able to say, hey, I've got a computer policy that outranks the global.
+5:17
+The entire org.
+5:18
+Cool.
+5:19
+Okay.
+5:20
+My questions.
+5:21
+Enforce MFA.
+5:23
+You should have some kind of MFA for your logins on your server.
+5:25
+We did talk about a reminder that MFA is typically deal with interactive logins.
+5:28
+If you have something like duo on your server, it's only going to protect you connecting
+5:33
+through RDP or login at the time or logging in in some way.
+5:38
+It's not going to protect if someone connects to remote registry and redirects those
+5:41
+duo keys to someone else.
+5:42
+Or remote link group status.
+5:44
+Or remote link group status.
+5:45
+It's not foolproof but it does make it a little bit harder and our goal is whenever we
+5:49
+can make an attacker's job harder, it's a good thing.
+5:52
+It's a good thing.
+5:54
+And generally speaking, follow the principle of least privilege way possible.
+5:57
+Did I miss the first one?
+5:59
+Oh, we talked about being more restrictive of what applications are allowed to run compared
+6:03
+to workstations.
+6:06
+You can really pull those servers back a lot.
+6:08
+The nice thing about servers is if you end to not change that often.
+6:11
+Yeah.
+6:12
+Like if we're deploying a threat like a server internally, we actually don't even put
+6:15
+it in learning mode because we know we've got the threat like a iOS apps we've got SQL,
+6:21
+which is a built in app.
+6:22
+We've got Windows, which is a built in app.
+6:23
+We're going to block PowerShell, block all these other tools.
+6:25
+So it's not dynamic.
+6:26
+It's not going to change that often.
+6:28
+No.
+6:29
+And also if it does block something because you're on the server and you're trying to download
+6:32
+something, it's not like you're using yelling at you.
+6:34
+It's, oh, I want to download IP scanner.
+6:36
+It got blocked.
+6:37
+It's a pain.
+6:38
+Block in the browser says in the terrible idea either.
+6:40
+Again, always making the attackers life harder.
+6:42
+Yeah, absolutely.
+6:43
+Okay.
+6:45
+So let's start on week 10.
+6:47
+Talk about hardening active directory today on generally more servers, but active directory in general.
+6:53
+So what we're going to do is we're going to talk about policies and group policies.
+6:56
+And I'm going to start off with really auditing policies because inside active directory,
+7:01
+there are a lot of policies that you can turn on to audit additional information.
+7:05
+And that information can be used.
+7:06
+So when you're looking through the event log, if you do get attacked,
+7:08
+be able to find out exactly what happened, but it can also get used by EDRs and MDRs and
+7:13
+services like that.
+7:14
+We're going to read all of those event log sentries.
+7:15
+We're going to ingest them.
+7:16
+Most EDRs are going to do that.
+7:18
+So the more logging you have, the more data we can see, the better policies alerts we can
+7:23
+create.
+7:24
+So really, really important.
+7:25
+Now I'm going to address this in two different ways because we have our guinea pigs group.
+7:28
+Okay.
+7:29
+And I suspect a lot of the people attending this webinar today do not have a guinea pigs
+7:31
+group for every one of their active directory environments because if they're, they might
+7:35
+have a lot of the, there's a small, small environment.
+7:39
+So we're going to talk about the higher risk ones and the lower risk ones.
+7:43
+If you are a payment processing company that processes millions of payments, you want
+7:47
+to make sure this is properly tested because when you turn on more auditing and you've got
+7:51
+20,000, 30,000 log ins in an hour, you're going to start seeing a lot of event logs and
+7:55
+that might work extra work on the server.
+7:58
+But if you're a small business where the 100 users connecting to a server, you're not
+8:01
+likely to notice.
+8:02
+Yeah, it's not going to beat your CPU.
+8:04
+So if you go into your server right now and your CPU is sitting at 60%, I'd be conscious
+8:08
+before adding more logging.
+8:09
+But if it's not, you can probably get away with just turning a lot of these policies
+8:13
+on by default.
+8:14
+And there's one particular that we monitor for and throughout like that isn't on by default,
+8:18
+which is the, what's the name of it now?
+8:21
+It's the additional auditing.
+8:22
+So essentially we can see what group policies are being created.
+8:26
+So I'm going to pull up my screen here.
+8:28
+While Danny's typing his password of anyone has any Q&A questions, they want to throw
+8:31
+at us in the meantime.
+8:33
+Big curious how you manage your devices internally or a M-entry ID managing Rob's Mac.
+8:39
+Yes, managing Rob's Mac.
+8:43
+Okay.
+8:44
+I don't want to go into too much detail, but yeah, we use technically all of those things
+8:50
+really.
+8:51
+Okay, and it depends on whether we're talking about servers or whether we're talking about
+8:53
+workstation.
+8:54
+So we tend to be it.
+8:57
+I'm typing this password wrong or just this is supposed officially.
+9:03
+My Mac isn't actually my Mac.
+9:05
+I don't use it all the time.
+9:06
+I unfortunately have to use a Windows machine because I need VMs and stuff that way there,
+9:11
+you have to use a Windows machine because you need not because Danny makes you need
+9:16
+VMs.
+9:17
+It used to be because Danny made me and then we had a Linux or a Mac agent which was great,
+9:21
+but then I realized I had to run all sorts of different operating systems that yes.
+9:30
+Switch the camera to Rob so you don't see Danny melting the password.
+9:35
+Somehow I don't know who that was.
+9:37
+It was Zach.
+9:38
+Yeah, thanks for that Zach.
+9:39
+So, yeah, so this isn't actually my daily driver.
+9:42
+I just use this to an old Danny on my own.
+9:44
+I was basically so.
+9:45
+Yeah.
+9:46
+So, okay.
+9:47
+I have now connected to the machine and we're going to go through this quicker so it doesn't
+9:50
+lock on me again.
+9:52
+Just don't talk so much.
+9:54
+You know, this is a demo machine.
+9:57
+There's a place for a 64 length random password and it's not for your demo machine.
+10:03
+It's not for your demo machine.
+10:04
+It's not for the demo machine.
+10:05
+So, okay, so we're going to go through a couple of things.
+10:07
+The first one I wanted to talk about was turning on, actually I'm going to go with getting
+10:13
+domain admins that aren't being used first because that's a little bit nicer.
+10:15
+I've got a script here.
+10:16
+We're going to share this in the email afterwards.
+10:17
+You don't have to take screenshots or anything.
+10:19
+There's lots of different ways you can do this, but the first thing we want to do is a password
+10:23
+might have been on the screen and so I can go.
+10:25
+It was not on the screen.
+10:26
+It's on the other screen.
+10:27
+So, it doesn't matter.
+10:28
+It's fine.
+10:29
+It's fine.
+10:30
+She is on the VM and locked in the dungeon down here.
+10:32
+How do I zoom this in?
+10:34
+There you go.
+10:35
+So, I'm going to walk through what it does.
+10:37
+Essentially, this is a quick script we created.
+10:39
+Basically gives you the last login of every domain admin on your system.
+10:43
+The amount of cyberattacks we see where there's the domain admin who left the company three
+10:47
+years ago.
+10:48
+Nobody deleted their account in their passwords week.
+10:50
+Someone was dedocing it for a long time.
+10:53
+It's unbelievable.
+10:54
+So, it's a good idea to just time to time run the script, check if you've got unused
+10:58
+domain admins on your account.
+10:59
+It will tell you their last login and delete them.
+11:02
+Simple as that.
+11:03
+If you want, you can even do it for all users.
+11:05
+If users aren't logging in, they probably don't even account anymore.
+11:09
+That's fair.
+11:10
+Presumably, we're going to be sharing these scripts.
+11:13
+Yes, I don't know.
+11:14
+So, you don't have to read them.
+11:16
+But very, very simple.
+11:17
+I mean, I can actually just try and run it now.
+11:20
+I didn't test this beforehand, so we'll figure out if...
+11:29
+No, I guess I have to put into a PS1 file.
+11:31
+Because it's copying the line breaks.
+11:37
+Oh, it did run.
+11:38
+OK.
+11:39
+OK, so we can see here I've got three domain admins.
+11:42
+The last login was in 1600.
+11:44
+That's impressive.
+11:46
+So, probably Jane, John Doe doesn't need to work here anymore.
+11:52
+But Jane and the administrator are very, very active.
+11:55
+So...
+11:56
+Does that mean we got...
+11:57
+I'll have to say 1600.
+11:58
+I mean, you can see the screen.
+12:01
+Let me zoom in a little bit.
+12:02
+That's really small.
+12:03
+Can I zoom in on this?
+12:04
+I don't look...
+12:05
+Wow.
+12:06
+1600.
+12:07
+December 31st, that was one hell of a New Year's party.
+12:10
+That was...
+12:11
+Oh, sorry, Zach.
+12:13
+OK, Zach has actually been helpful rather than smarter a change.
+12:16
+So, saying the 1600 means the user had never locked in.
+12:18
+I kind of guessed that.
+12:19
+Yeah.
+12:20
+Maybe thanks for clarifying that, Zach.
+12:22
+OK, so...
+12:23
+And we've got domain admins, admins.
+12:25
+We want to remove John from the system
+12:27
+because he has no business being on here.
+12:28
+So that's script number one.
+12:31
+Very simple.
+12:31
+Clean them up.
+12:32
+Do this.
+12:33
+Put on your calendar once a month.
+12:34
+Just go in, look at what shouldn't be there,
+12:37
+and remove the accounts.
+12:39
+And that's actually one of the nice things.
+12:41
+I'm not a big fan of compliance,
+12:43
+but we go through a SOC 2 audit and a FedRAMP audit.
+12:45
+And in this audit, it's in various different audits every year.
+12:47
+But one of the nice things about the SOC 2 audit
+12:49
+is they make us keep screenshots when we do these things
+12:52
+to prove that we actually did them on a regular interval.
+12:55
+So it's a nice thing about that audit
+12:56
+because it makes me feel comfortable that the guys are doing it
+12:59
+because they have to have a screenshot when it comes to the audit
+13:01
+of here's the screenshot.
+13:02
+It has to show the clock it has to show the time.
+13:04
+I actually did this task.
+13:05
+I made sure this exists if it's in the controls.
+13:08
+I got to ask something.
+13:09
+Should we put these into the community?
+13:11
+Can we put these scripts into the community?
+13:13
+I don't think we can put the power shell scripts into the community.
+13:15
+It's a shame.
+13:16
+But we can email them out.
+13:17
+OK, fair enough.
+13:18
+I feel like, oh, we can.
+13:20
+Yes.
+13:21
+We can do a immediate script.
+13:22
+Yes.
+13:23
+I forget immediate exists.
+13:24
+So immediate is a tool on Fatlaka that lets you run power shell commands
+13:27
+directly from Fatlaka.
+13:29
+And we can actually add those scripts into the community.
+13:32
+So I think that will be an excellent tool.
+13:33
+There's a task for somebody afterwards.
+13:35
+So Adam, best practice.
+13:36
+Remove or deactivate stale accounts.
+13:39
+Oh, good question.
+13:39
+Hmm.
+13:40
+Um, I think at some point you have to remove them.
+13:44
+Generally, what we do is deactivate for a period of time.
+13:48
+And then we remove after a longer period.
+13:51
+You can't just keep adding and adding and adding and never
+13:54
+removing them.
+13:55
+Yeah, it's really messy.
+13:56
+A policy of maybe a year after they leave, you'll completely remove them.
+13:59
+But deactivate to begin with isn't terrible, because we have employees that leave and
+14:05
+come back sometimes.
+14:08
+Very few.
+14:09
+Who's your rock star on your team?
+14:10
+Yeah, that's the only example I can think of.
+14:13
+So yeah.
+14:14
+So, um, George is asked, domain admins, enterprise admins, or sorry, he said, domain
+14:19
+admins, enterprise admins, and administrators.
+14:21
+These are the groups that we all just.
+14:23
+OK.
+14:23
+That's exactly the exact.
+14:24
+And this one is recursive as well, which is nice.
+14:27
+The other one, this one just does all users, I believe.
+14:30
+So we're going to here.
+14:31
+I'll just pace this and it will tell me all users.
+14:34
+So I've got a few more users.
+14:35
+I've got a guest user account that's never logged in as well.
+14:38
+Hmm.
+14:39
+I've got this one here.
+14:41
+Denied.
+14:42
+I guess that's a replication account of something.
+14:44
+I've never heard of that before.
+14:45
+But I wouldn't delete that if we don't order this.
+14:48
+No.
+14:49
+So it's not.
+14:50
+It gives you a list, export it.
+14:52
+Decide why you're keeping accounts.
+14:54
+It's a 10 minute task every month.
+14:57
+It will really help.
+14:58
+Now, you're going to like this one.
+15:00
+So Darrell has just said, wait, I can run PowerShell scripts on a protected machine from
+15:04
+the portal.
+15:06
+Yes.
+15:06
+There's a short answer.
+15:07
+Only if you've got a mediator.
+15:08
+Yes.
+15:08
+Exactly.
+15:09
+No, no, no.
+15:10
+Be clear.
+15:11
+You can't run the script unless it's in the white list.
+15:13
+Yes.
+15:14
+So we don't override the PowerShell commands through the mediator.
+15:17
+Yeah, for the mediator.
+15:18
+You have to be in the white list, still.
+15:20
+Yes.
+15:21
+I'm going to be able to run the script that would be white listed, but equally.
+15:24
+It doesn't bypass our controls.
+15:27
+But if you have the mediator agent installed, you can do that.
+15:30
+Yes.
+15:31
+And basically what you get is a tab in the detector response where you can go in.
+15:35
+You can say, hey, delete this account.
+15:37
+Do this.
+15:38
+Do this.
+15:39
+It's made of a point which is deactivated or disabled.
+15:41
+Do not delete this for incident response purposes where or when if someone is compromised.
+15:47
+Like you said, delete after say three to six months.
+15:49
+Best practice.
+15:50
+Okay.
+15:51
+Let's go back to here.
+15:54
+And this one here is basically showing you everyone because one of the things we want
+15:58
+to do is make sure that there are no accounts without passwords.
+16:03
+And apparently, John Doe, who hasn't logged in since 1600, has no password either.
+16:08
+Blank password.
+16:09
+I'm in treat you know what this account is here.
+16:14
+I'm assuming Kirby.
+16:16
+Oh, Jody has already answered that question, which is Kirby us ticket granting.
+16:20
+Ticket account.
+16:21
+Okay.
+16:22
+I will say I've never heard of this before, but I did my active directory before read only
+16:26
+domain control has existed.
+16:28
+So I'm a little bit out of date on that.
+16:29
+Claire has said that is required for Kirby us and had us have said, but don't deactivate
+16:33
+it.
+16:34
+It will break your AD.
+16:35
+The one thing I will say though is be very, very careful about assuming something that's
+16:39
+got a nice description is a good account because attackers are really, really good at putting
+16:45
+things in like backup account or this account is used for XYZ.
+16:50
+That makes you feel like, oh, this is important.
+16:52
+It needs to be here.
+16:53
+So go and research it before you don't delete something too.
+16:57
+Just because it has a nice description saying this is really important.
+17:01
+It's already a disabled account.
+17:03
+It also needs regular password rotations.
+17:05
+Pencestors call me out on this regularly.
+17:07
+So I actually just misspoke.
+17:09
+This is not blank passwords.
+17:10
+This is actually no password policy applied to them.
+17:13
+And there's a reason I asked for this one to be included as well.
+17:17
+So I remember working on a ransomware case once and essentially someone got it through
+17:24
+a scanner account.
+17:25
+And the scanner account was set 20 years ago, or maybe not 20 years ago.
+17:30
+And it was actually seen that happen as well.
+17:32
+And it was just something like scanner one, two, three.
+17:35
+And the problem is when we think about passwords today, we think about relatively strong passwords,
+17:39
+not maybe as extreme as the one on screen here, but relatively secure passwords.
+17:45
+When we go back to 2008, it was okay to say max one, two, three, or whatever the dog's
+17:52
+name is as your password.
+17:54
+So making sure that the password policy applies to all the accounts, if not, at least go and
+17:59
+rotate those passwords manually.
+18:01
+Scanners are a big big problem.
+18:03
+So this actually shows you the ones that doesn't have a password.
+18:05
+And what that means if I go into Active Directory here.
+18:08
+And we're going to go into our users.
+18:13
+We'll go into John, who was John Doe didn't have a password yet.
+18:16
+That seems to know an awful lot about this care be.
+18:20
+Error, yes, account.
+18:22
+It needs to be reset at least once every six months to process itself to reset it twice
+18:26
+within 10 hours between the resets.
+18:30
+I'm running out.
+18:32
+Okay, here we go.
+18:34
+Password never expires.
+18:35
+This is basically telling you the password set to never expire.
+18:37
+So reset it.
+18:38
+Make sure the scanner gets you updated as well if it is a scanner account.
+18:43
+So, okay, they're the first three scripts.
+18:46
+Do some reading on that thing before you do anything with it.
+18:49
+You can break everything if you don't know what you're doing with it.
+18:51
+Everyone seems to say, yes, don't do this or disable it.
+18:55
+You will break everything.
+18:56
+There is a there is an in password on that part.
+18:58
+Think Ryan said, don't reset the password back to back or you'll break all tickets.
+19:03
+This is done if your golden ticket gets breached though.
+19:06
+Okay, be very careful.
+19:07
+We sit in that password.
+19:08
+Yeah.
+19:09
+Okay, let's go down to here.
+19:10
+There is an admin password.
+19:11
+It's one but it's no one's logging into this anyway.
+19:13
+It's a VM on this isolated zero trustable machine, which will probably still be on there during
+19:17
+zero trustable.
+19:18
+Okay, so let's talk about other things.
+19:21
+Auditing.
+19:22
+This is the one that's really important.
+19:23
+This is going to give you a whole bunch more information on your Windows event logs.
+19:26
+Of course, it's very, very hard to read information from the Windows event log and go,
+19:29
+oh, we've been breached.
+19:30
+But if you've got a good EDR, it's going to read it.
+19:32
+It's going to ingest it.
+19:33
+It's going to tell you which of the things you need to worry about.
+19:35
+It's going to relevant combined scores together.
+19:37
+And this one is important because it will tell you things like, um, has someone created
+19:43
+a group policy.
+19:44
+One of the biggest ransomware attacks I saw was group policy being pushed out by GPO.
+19:50
+So I'm guessing to your group policy, they push out GPO ransomware on every machine.
+19:55
+Of course, if you don't have white listing, you don't have control suddenly.
+19:57
+Every machine in the organization is encrypted.
+19:59
+I remember working on one company.
+20:00
+It was a nine month recovery to get that back up and running.
+20:03
+So that's, that's not a good thing to have.
+20:06
+So we want to know if someone creates a group policy and you want your circle, your
+20:09
+MDR to respond to that and say, hey, someone just created a group policy.
+20:13
+Are you aware of this group policy?
+20:14
+And if they're not, then go and look at it.
+20:18
+Something's going on.
+20:19
+Something's going on.
+20:20
+And if you didn't do it, it's probably an indicator compromise.
+20:23
+I would rather be woken up in the middle of the night by someone saying, hey, I've got
+20:29
+to alert this group policy in your domain.
+20:32
+We don't know what it is.
+20:33
+Then being woken up or going into a little bit later in the night or early in the morning,
+20:39
+saying, hey, you've been here by ransomware.
+20:40
+Yeah.
+20:40
+So it's, it gives you a few more audits.
+20:42
+There are.
+20:42
+If you're changing group policy, you should be putting a little, should be a ticket,
+20:46
+there should be some kind of relevance to know this is happening.
+20:49
+But so what we're going to do here, we're going to go to group policy editor for those
+20:52
+who don't know.
+20:53
+So I'll go right from the beginning, go into group policy management.
+20:56
+We can do that straight from the start menu.
+20:57
+If you're not a big act, actually, buff, we can see various group policies here.
+21:03
+This is the domain group policy.
+21:05
+And we have them all open in the right place.
+21:07
+But we can see here, I'm going to share these afterwards.
+21:09
+You don't have to take screenshots.
+21:10
+But essentially, we can go to the domain control of policy.
+21:13
+So if I go into policies here, what domains for some in the wrong place default domain
+21:22
+control.
+21:23
+No, I'm in the domain control of policy.
+21:24
+That's right.
+21:25
+So we're going to edit the domain control of policy.
+21:26
+And I'll go back to the original page.
+21:27
+So I can show you how to get to that group policy management.
+21:32
+No, probably one.
+21:33
+I've got too many windows open here.
+21:36
+I'm going to ask a answer question here.
+21:38
+So anonymous attendee has asked, if you missed a webinar because of vacation, do we still
+21:42
+get a t-shirt after completing the 100 days?
+21:44
+No, you didn't ask.
+21:45
+Vacations are socialism.
+21:46
+Only joking.
+21:47
+Yes, I'm turning into a flag waving American now.
+21:54
+I'm sure we can make an exception for your vacation.
+21:58
+Anonymous attendee is also also, so I'm presuming a different anonymous attendee.
+22:01
+How many of these settings can we set in configuration manager and not everyone has
+22:05
+GPO's?
+22:06
+OK, and I'm going to talk about those that can be set in there.
+22:08
+So if you've got domain control, you have GPO's.
+22:10
+So this is the default domain policy.
+22:13
+And I've got so many tabs open here.
+22:15
+I'm going to, hey, group policy management.
+22:16
+There we are.
+22:17
+This is the default domain control as policy versus the default domain control policy.
+22:21
+So if I edit the domain control as policy, which I did, I've now got that open in one
+22:25
+of these many tabs.
+22:26
+I need to default domain policy.
+22:30
+How many tabs do I have open here?
+22:32
+Domain control as policy.
+22:34
+And then if I go into no power plus plus, because I'll show you exactly where that is,
+22:39
+and again, we're going to send these out.
+22:40
+So you don't have to take details, but you can go into computer configuration policies,
+22:45
+window settings, security.
+22:47
+So I go computer configuration policies, window settings, security settings, and switch
+22:56
+back to my no power plus plus.
+23:00
+And we're going to go to advanced audit policy configuration, DX access.
+23:05
+So it's not easy.
+23:10
+And then audit policies and then DS access.
+23:15
+And what we want to set on here is all of these to enable audit events on both.
+23:23
+This means all of these changes are going to be logged.
+23:25
+Just create more logs in your event log.
+23:27
+So if you've got 20,000 users logging on, don't do this without some kind of testing
+23:31
+and risk analysis, if you've got a smaller company, you can probably turn it on.
+23:36
+And it's not going to blow up your service.
+23:38
+How does this ask people get t-shirts, question mark, question mark, question mark?
+23:42
+Yes, they do.
+23:43
+At the end of the webinar series.
+23:45
+The end of the webinar series.
+23:46
+And Christopher said, dining needs to learn to use all the tabs to switch between apps.
+23:50
+I know.
+23:51
+Sick burn.
+23:52
+Now, here's a really interesting one.
+23:55
+Can we block creation of GPO's in storage control and not break the domain in the process?
+24:03
+You can't block creation of GPO's, but you can block access to, well, there may be an
+24:09
+innovative way of doing it.
+24:10
+What do you do?
+24:11
+I reckon you might be able to.
+24:12
+Because where does it say, if Saiso's files in the SIS file?
+24:14
+Yes.
+24:15
+You may be able to block the right.
+24:16
+That's a research project we're going to go with.
+24:18
+I feel that's for the special projects team too.
+24:20
+Danny's not sure.
+24:21
+I think probably yes.
+24:23
+We'll get the big brains to go and check that out, but I suspect that we probably could.
+24:30
+And that would actually be more, well, I don't think it's bad.
+24:33
+This isn't blocking.
+24:34
+This is auditing them.
+24:35
+First of all, we should audit regardless of whether they block.
+24:37
+Because if someone's trying to create it and it's failing because it can't write to
+24:40
+disk, then that's good because it means you've started your winning because it's failing.
+24:45
+But you still want to know someone who tried to create it.
+24:46
+So your EDR and your MDR can start calling and yelling at you.
+24:50
+Jody's made a valid point, which is you shouldn't be editing the default domain or domain
+24:55
+default domain controllers policy.
+24:56
+They function as baseline policies.
+24:57
+You should create a new policy and apply them on a higher priority.
+25:00
+That's not untrue.
+25:01
+That is not untrue.
+25:02
+Jody, thank you for that.
+25:03
+Okay.
+25:04
+The LDAP and I'm going to do the same with the default domain controller policy.
+25:09
+Computer configuration policies, window settings, computer settings, security options.
+25:12
+Let's go into this one and into the domain policy.
+25:14
+Again, we can create a new policy and apply it.
+25:17
+However, no, now maybe I'm wrong about this and maybe it's changed because it's been
+25:22
+a while.
+25:23
+You cannot set a password policy outside of the default domain policy.
+25:27
+Oh, somebody's going to Google that setting in front of us here and.
+25:30
+Fingert, I'm correct.
+25:31
+I'm correct.
+25:32
+I think the only way you can make a password policy work is in the default domain policy.
+25:37
+I taught my MCSC in 2000 and active directory has changed very, very little sense.
+25:42
+So it's possible it's changed.
+25:44
+Craig said there are certain settings.
+25:45
+You can only set in the default policies like password policies.
+25:49
+Craig, it's in my memory is not terrible.
+25:51
+You remember you in 2003 or 2002.
+25:55
+So next one is we're going to go into the default domain policy and we'll fix this one.
+26:01
+Okay.
+26:02
+So we're going to go into computer configuration policies, window settings, security settings,
+26:09
+local policies.
+26:11
+So computer, oh, this one's already selected for me very kindly.
+26:16
+And the one we're going to put on here is it LDAP, enable LDAP signing requirements.
+26:21
+This is really, really important.
+26:23
+It might break things by the way.
+26:25
+So this one you should be a little bit more careful of the audit one.
+26:28
+If you've got old computers, if you've got on patch machines, they may not be able to
+26:31
+log in on this.
+26:33
+Microsoft has very kindly put an article here that tells you all of the considerations.
+26:37
+It's not what Microsoft tell you that worries me.
+26:39
+It's all of the stuff that's authenticating that you don't know about.
+26:42
+Mostly if you're running anything above Windows 7 patched, you're not going to worry too
+26:46
+much.
+26:47
+But this essentially prevents on listening on your network, grabbing the packets and replaying
+26:50
+those LDAP authentication.
+26:53
+So going to that, turn this on.
+26:55
+But again, smaller business, tell people you're about to do it.
+26:59
+Anyone's got any problems?
+27:00
+Call me.
+27:01
+Obviously, if you're providing healthcare services that people who are on life support,
+27:05
+be more careful.
+27:06
+Surely.
+27:07
+If you're dealing with an insurance broker or something like that and that the users are
+27:11
+okay with, there's a very small risk here.
+27:13
+It's going to improve our security.
+27:14
+You might just want to put this on and say, hey, this is going to happen if anyone's got
+27:17
+a problem.
+27:18
+Let me know.
+27:19
+We'll test on a few machines.
+27:20
+Do it in the evening.
+27:21
+Make sure everyone can log in at least before the end of the day.
+27:23
+But this is quite an important one as well because it does allow someone on your attacker
+27:26
+to capture those logins and potentially replay them.
+27:30
+Okay.
+27:31
+Event log settings.
+27:32
+This is really setting the retention policy on your event log.
+27:36
+So again, go into Windows, the main policy and go into.
+27:42
+Zach has said, if people are on life support and the machine keeping them alive is running
+27:46
+them into seven-year-old or other problems, you know, we have a lot of hospitals and a
+27:52
+lot of those medical devices.
+27:55
+When does XP?
+27:56
+Windows XP.
+27:57
+So just in case anyone feels like getting sick recently.
+28:01
+Yeah.
+28:02
+Yeah.
+28:03
+There are a lot of medical devices still running Windows XP and rollercoasters.
+28:10
+Okay.
+28:11
+So we're computer conversion Windows policies event log source.
+28:15
+I'll go into this one as quick as I can.
+28:17
+Windows settings.
+28:18
+I don't know.
+28:19
+This is administrative templates.
+28:21
+I wish you could copy and paste into the header bar like you can in the registry now.
+28:26
+Windows components and event log source.
+28:31
+Well, let me even, oh, it does let me do that.
+28:34
+We can go into here and we can actually set settings.
+28:38
+The ones you want to pay attention to is maximum log file size.
+28:44
+I would put it as big as possible as your disk and handle.
+28:49
+I didn't know about this setting until now actually back up when full.
+28:55
+That's a really good one.
+28:56
+We're useful.
+28:57
+Config a log access.
+28:59
+This one prevents.
+29:02
+One of them prevents the guest account from being able to access it.
+29:04
+If you enable a setting, only uses matching the security script to can access it.
+29:09
+So giving restricting access is always good because if someone gets on the machine with
+29:12
+a lower privilege, you don't want them to be able to do it.
+29:15
+And maybe this is the one for the guest account.
+29:21
+You must set.
+29:22
+Okay.
+29:23
+Maybe that's not.
+29:25
+Policy setting controls event log behavior in the machine reaches its maximum size.
+29:30
+If the policy is enabled, new events are not written.
+29:34
+We definitely want to, if it's disabled, new events are written.
+29:37
+So definitely want to enable new events.
+29:39
+Remember, there's lots of different logs here and not just one and apply the setting to
+29:42
+all of them.
+29:44
+Okay.
+29:45
+The Sable SMB, we went through this last week.
+29:48
+Here's a command.
+29:49
+We may have already shared this.
+29:52
+The Sable Multicast DNS.
+29:54
+I'm told by Kiran, he's going to create a video and a blog post on this, showing how
+29:58
+you can actually capture data on the network if you have multicast DNS and potentially steel
+30:03
+credentials or at least hashes thereof.
+30:05
+I'm yet to see it.
+30:07
+I, to be honest, I believe Kiran.
+30:09
+I think we should make him do it live at zero trust one next year.
+30:12
+Woo.
+30:13
+So, I'm sure.
+30:15
+So, but I'm not going to go drill down, but essentially we can turn off multicast DNS.
+30:20
+It really has not a massive amount of value and it helps.
+30:25
+Time sync.
+30:26
+You should have your clock sync.
+30:29
+It's actually a big problem because we see quite often attackers trying to change the
+30:35
+time to change the policy.
+30:37
+So we actually had a problem with Rocker in the early days where you'd have a maintenance
+30:40
+period and then set the clock back to the maintenance period to be, can't do that anymore
+30:43
+by the way.
+30:44
+But we'll often see clocks in the future.
+30:47
+So we also had another problem where we'd see events coming from two days in the future
+30:50
+so now we have to stagman that we do a lot of stuff trying to sync our logs with the
+30:54
+real time.
+30:55
+Yeah.
+30:56
+But make sure you have time sync on your servers.
+30:58
+So the logs are accurate when you're debugging something.
+31:01
+It's hard easy to find because if you, somebody sets the clock back three days and then you're
+31:05
+looking at this span of windows for diagnostics.
+31:07
+Something has happened.
+31:08
+Something's happened.
+31:09
+So making sure time sync is enabled is really important.
+31:12
+So we deploy LSA, LSAS protection in Windows 2000 and so I Windows 10.
+31:20
+I think which server 2025 and Windows 11, 22 H2 and above.
+31:29
+I thought Windows 10 had it as well.
+31:31
+I don't think so.
+31:32
+OK.
+31:33
+If you have that like a agent, we enable it by default.
+31:37
+But it's not enabled by default in Windows 10.
+31:39
+This essentially prevents applications from accessing protected memory unless they're
+31:44
+digitally signed by Microsoft.
+31:45
+So as a vendor, as a security vendor, we have to send our code to Microsoft or at least
+31:49
+PVL.
+31:50
+They have to scan our code.
+31:52
+They check it and they say, this is good.
+31:54
+Here's the signed driver and you can now access protected memory.
+31:59
+Applications that can't if this is enabled won't be able to access that protected memory.
+32:03
+It's enabled by default on newer operating systems.
+32:05
+Throughout liquid enables it by default unless you've set an option to disable it.
+32:08
+It is recommend you do not set that option.
+32:12
+There are some old ATM machines that have to have it set and know of, but this should
+32:16
+be enabled by default.
+32:17
+We'll share the registry key to do this.
+32:18
+It is actually a config manager.
+32:19
+Well, actually it's not config manager policy because we enable it by default, but we'll
+32:23
+share the registry key as well to do that.
+32:24
+You can also Google it.
+32:25
+So Greg is obviously smart.
+32:26
+As he said, it's it's it's mistyped there as protein.
+32:30
+Pro T.
+32:31
+Oh, put T.
+32:32
+Pro T.
+32:33
+Yes.
+32:34
+Greg, Prudetion.
+32:35
+Thank you.
+32:36
+And password rotation, the the big topic that everyone's arguing about.
+32:45
+We should do a poll.
+32:46
+I don't know if we can do a poll of what people think.
+32:48
+The nests standard on this is you should not require password rotation.
+32:53
+And their argument is the password should be secured with your factor, which you should
+32:56
+have.
+32:57
+I agree that password notation is not necessary and it forces someone to use weak passwords
+33:02
+or to write down their passwords, which is not.
+33:05
+Not on true.
+33:07
+The Australian SMB 1001, 2001 actually has a completely different opinion where they
+33:14
+should they said you should rotate your passwords because at some point your passwords going
+33:19
+to be available on the internet because people do reuse passwords.
+33:23
+So if you go on to the dark web, you can buy password dictionaries.
+33:27
+And now you're doing a dictionary attack on a thousand or a hundred thousand passwords
+33:30
+to suppose to potential billions of combinations of text.
+33:36
+I would tend to agree with that.
+33:38
+You should have password rotation.
+33:41
+Even if it's not even if it's once a year, it means if something gets out there and it's
+33:46
+in a dictionary, it makes it a lot harder.
+33:47
+So I was going to change it.
+33:48
+Also, what was a secure password in 2005 is no longer a secure password in 2025.
+33:55
+So if you have no password rotation, they may be running really, really weak passwords.
+34:01
+But there's this is your thought.
+34:03
+No, no, I don't disagree with you.
+34:04
+I mean, look, there's a whole new approach coming along with things like past keys and I mean
+34:11
+Microsoft themselves even seem to be largely deprecating or depreciating passwords.
+34:16
+I mean, I can't actually remember the last time I had to put in a password on a live account
+34:22
+for example, because it's all pop up in your authenticator app rather than actually having
+34:27
+to type in a password.
+34:28
+So that's true.
+34:29
+But when we're thinking about Active Directory, that's not the case.
+34:32
+Well, you've got SMB shares that wrote and think if you get some of the passwords for
+34:36
+an SMB share, they can now encrypt files.
+34:38
+So no, I mean, I think something reasonable.
+34:42
+I mean, too often is probably unreasonable and when the courage people to write passwords
+34:46
+on pieces of paper, beside their computers, which is not a good thing, not often enough
+34:51
+will encourage things like scanner with scanner one, two, three is the password.
+34:55
+So somewhere between those two, there is probably a happy medium.
+34:59
+So a question then.
+35:00
+So what's more secure?
+35:04
+A strong password written on a piece of paper in a private office or a weak password that
+35:12
+isn't written down on the internet.
+35:16
+The former, not the latter.
+35:18
+The stronger password.
+35:19
+And obviously, if your coworker decides to do a password during trouble, then.
+35:22
+Yeah, true.
+35:23
+So the also there's been agrees with me paper.
+35:29
+Paper, yeah, I would and interestingly enough, now Jody, a weak password with MFA is more
+35:36
+secure than a secure password then.
+35:39
+That's true.
+35:40
+But MFA on Active Directory is really useless.
+35:43
+Unless using a third party component, you've got SMB access, remote registry access,
+35:48
+all of these things is very, very difficult to implement.
+35:51
+Proper MFA on Active Directory.
+35:54
+Zach, yes, paper, big, rock, but scissors, beets, paper.
+35:58
+Okay.
+35:59
+Fair.
+36:00
+Okay.
+36:01
+They are the template.
+36:03
+So questions?
+36:05
+Oh God.
+36:08
+Ryan, with things like Windows Hello and File Okse passwords aren't really ever entered
+36:12
+to get into a session.
+36:13
+And your SMB shares are using session tokens and not interactive logins.
+36:18
+True.
+36:19
+Okay.
+36:20
+So if you're using Windows Hello, but the problem is if your password is weak, someone
+36:24
+without Windows Hello can now connect to.
+36:27
+So the fact that you don't have to enter your password is not so that makes an argument
+36:31
+that should be rotated more and stronger.
+36:33
+It's not having to enter it.
+36:35
+But I also have doubts about Windows Hello.
+36:38
+I think it's too easy.
+36:40
+The whole face recognition thing.
+36:43
+So when I get a new phone, I have to do all this and I have to make face and I have to
+36:47
+turn it.
+36:48
+It's got like 3Dness.
+36:50
+Windows Hello just takes picture and you're so that's not true.
+36:53
+There's multi level camera in there.
+36:55
+It's way too fast.
+36:56
+It's because it's faster than my phone.
+36:58
+No, I disagree.
+36:59
+I disagree.
+37:00
+Now this is probably going to turn into World War 3 in the Q&A, but I feel better.
+37:06
+So what you're saying is if we use the Apple camera, it would be more secure.
+37:09
+Yes.
+37:10
+Okay.
+37:11
+So just don't.
+37:12
+So just roll your head around to get the initial image.
+37:14
+Yes.
+37:15
+But you don't have to roll your head around to authenticate your initial image.
+37:17
+So it's just taking a picture and a full authentication.
+37:18
+No, it's got all sorts of magic going on in the camera and a Mac.
+37:23
+It must be because it's made by Apple.
+37:25
+It's made by Apple.
+37:26
+Okay.
+37:27
+Yes, Dave Barnes, Rob, we need a special projects team to test Windows Hello facial recognition.
+37:32
+Don't.
+37:33
+That sounds like a project they should undertake to prove me.
+37:36
+Let's put that as a zero-trustable project where we try and bypass it with a 3D mask
+37:40
+of Rob.
+37:41
+Cool.
+37:42
+So we see if we can buy the good thing about a 3D mask of Rob is you don't need to have
+37:46
+any pair or any of that stuff to to complicate things.
+37:49
+So it should be pretty easy.
+37:51
+So that's going to be a zero-trustable project.
+37:53
+We're going to see if we can bypass Face ID and Windows Hello.
+37:59
+And Jody, fair point.
+38:00
+Make sure you don't use the same pin on everything.
+38:03
+Malcolm, I'm not going to read out your comment because it says Danny is right.
+38:07
+Craig, you need a special camera for Windows Hello.
+38:09
+Basic camera won't work.
+38:10
+We have tried.
+38:11
+Yeah, but there's degrees of specialness.
+38:15
+If I put an Apple logo on it, it would make you feel better.
+38:17
+Yes.
+38:18
+Definitely.
+38:19
+That's good.
+38:20
+Yeah.
+38:21
+Okay, so we've got...
+38:23
+Now the pin is a bigger issue because now what's concerning about that, am I wrong in
+38:29
+saying this?
+38:30
+If someone gets onto your machine and say they're using a screen connector or a team
+38:32
+viewer or some kind of remote access tool you've got on your machine, can they put your
+38:35
+Windows Hello pin in?
+38:37
+I think so.
+38:39
+I actually haven't tried that.
+38:41
+We need to test that as a very sure.
+38:43
+Yeah, because if we can't recognize your face, it says all the options, one of the other
+38:47
+options is a pin.
+38:49
+And I normally use the pin.
+38:52
+So, oh, Simon Davies with Windows Hello, you can enable multi-factor unlock so that it
+39:00
+needs face slash fingerprint plus pin to log in.
+39:05
+That's a good thing.
+39:06
+Okay, we're going to put that into the 100 days.
+39:08
+Yeah, that's great.
+39:09
+We can validate that we can turn that on.
+39:11
+Okay, any other questions?
+39:14
+Yeah, we've got other people that you can enter a pin when connecting remotely.
+39:19
+Pins can be entered through screen connect.
+39:23
+What about Windows running on Apple using that?
+39:25
+No, that's an abomination.
+39:29
+Pins can be entered with screen.
+39:30
+A lot of stuff about pens.
+39:33
+There was something interesting about, didn't NIS change their stance on password rotation
+39:41
+and remove it as a best practice.
+39:42
+I think.
+39:43
+Yeah, that's what, yep, that's the whole debate is.
+39:46
+Do we believe the federal government or not?
+39:49
+Well, Michael said earlier on NIS says indicator compromise is cost for a Tate and people
+39:53
+absolutely use the same password and business computer for personal use, so I enforce
+39:56
+rotation.
+39:59
+That's a valid point.
+40:00
+I mean, people shouldn't use the same password on business computers for personal, as personal
+40:06
+computers.
+40:07
+But that doesn't mean they don't.
+40:10
+Michael's assertation is that they do.
+40:13
+Jeremy, be careful when using biometrics to log in as you have to get the users permission
+40:18
+via H or policies or it turns into large lawsuits, especially in Europe.
+40:23
+Did you know in some countries in Europe, you have to, when we did in one very large
+40:32
+customer at the moment, and they have to get essentially the union to agree to enable
+40:38
+security software?
+40:40
+I don't think what surprised me.
+40:44
+So it's, now I don't know if that's the law or that's their company policy that the
+40:49
+union has to agree with.
+40:51
+It's, it's never pretty.
+40:53
+And that seems, it seems on wise, frankly, to not be able to make decisions about what's
+41:03
+best for the security of your organization.
+41:06
+I agree.
+41:07
+I, you could argue maybe consultation, hey, Lads, we're doing this might not be a bad
+41:11
+idea, but I mean, people should know them being able to say, no, you're not going to
+41:16
+secure yourself seems really unwise.
+41:18
+We don't want Adam Rob is about to mention socialism.
+41:23
+Yes, Adam, I was, but I didn't.
+41:29
+If they're good enough to hack into your sister, oh my god, and have a cup of your password,
+41:33
+then they don't even have to type it in.
+41:36
+There's built-in copy paste and screen connect, when I was piece, a copy and paste, lengthy
+41:40
+passwords.
+41:41
+That's fair.
+41:42
+I could have done with that today.
+41:43
+Yeah.
+41:44
+Oh, sorry, Michael.
+41:46
+I'd ask a question earlier about being out in vacation and missing a day and getting
+41:49
+a t-shirt after completing the 100 days.
+41:51
+I think we said we would make a, despite the fact that that socialism, we will give them
+41:54
+a t-shirt despite having missed.
+41:55
+I wasn't on vacation for two weeks.
+41:58
+You completely wear.
+41:59
+And by the way, I think technically I've been here in person, present for most of the more
+42:04
+of these than you have.
+42:05
+Okay, we'll go with that.
+42:06
+Yeah.
+42:07
+To to to to to to to to to to to to to the forcing password rotation is not as good as forcing
+42:12
+better, longer slash complex passwords, the larger the organization, the larger the friction
+42:18
+will become from frequent password changes, I help us support lockouts from forgetting
+42:21
+new password, et cetera.
+42:22
+So longer and more complex, better.
+42:26
+Okay.
+42:27
+That's one thing we didn't cover.
+42:28
+When you said the password rotation lock out, I think the challenge with lock out is when
+42:32
+you have publicly facing service, people can now essentially take your account offline.
+42:36
+But for most people, they don't have publicly facing services.
+42:38
+No, they're not talking about lockouts.
+42:40
+So talking about password complexity rather, but both of those are valid lockouts are really,
+42:45
+really good idea.
+42:47
+When you're server isn't facing the internet, when it's facing the internet, it's a really
+42:50
+bad idea because somebody can just lock your account out and then you can't log in,
+42:55
+which is a real pain.
+42:57
+I wish active directory was smart enough to say I'm going to lock out a source IP address
+43:02
+as opposed to a user account, but they don't they lock out user accounts, but lockouts
+43:05
+is a really good idea.
+43:07
+Complexity is really important as well.
+43:08
+The problem is with complexity is we can enforce in active directory and we'll share the
+43:13
+group policies for this at the end of this.
+43:15
+We can enforce length of password we can force does it require special characters, uppercase
+43:19
+level case numbers.
+43:21
+What we can't stop someone doing is typing password 123 exclamation point.
+43:28
+Now I know there's some filter drivers you can install that will allow you to blacklist
+43:33
+to certain list of passwords if you like, but it's very, very hard to stop someone putting
+43:39
+a really basic password like ring or 123 exclamation point.
+43:45
+It's difficult but not impossible.
+43:48
+I mean the complexity requirements and windows seems work reasonably well.
+43:54
+No, it just a lot of users will go back to the older.
+43:57
+Some of that comes down to user training too and dual factor where we can.
+43:59
+Something's facing the internet.
+44:00
+It's very hard to enforce dual factor on an internal act of directory, but it's not hard
+44:04
+to do it on internet facing.
+44:10
+Speaking of which, we did mention earlier, but we haven't gone back to a lot of the things
+44:14
+that we're talking about you can do with configuration manager.
+44:17
+Of course.
+44:18
+So in environments where you don't have access to active directory, you've got lots of
+44:22
+different active directories.
+44:25
+So we pretty much the if we don't, we're going to go and set these up as well.
+44:31
+So SMB version one is in configuration manager multi-cast DNS is in configuration manager.
+44:37
+Event log sources I don't know if is in configuration manager signing requirement.
+44:41
+Alda is in configuration manager.
+44:42
+Do we know?
+44:43
+No, I mean if they're not, we can add them.
+44:46
+We can add them.
+44:47
+So assume that they will be in configuration manager in a reasonably short amount of time.
+44:51
+So you can do it straight from there and you don't have to worry about going on to all
+44:54
+of your to make controllers in one place.
+44:56
+Or if you're an MSP, you don't need to log into a hundred different active directories
+45:00
+to make these settings.
+45:02
+But if you're an MSP, equally, don't put a hundred of them at that same time.
+45:06
+We did do some kind of slow.
+45:11
+We do everything we can.
+45:12
+There was a Windows update recently that's caused some problems.
+45:14
+So if you are using threat lock and you noticed on 10.1 or above, you've had some slow login
+45:18
+times.
+45:19
+So it's Microsoft botched update.
+45:22
+It's killing not actually.
+45:24
+They botched the update that was to fix a botched update.
+45:28
+So they basically double botched updates.
+45:30
+So we put a workaround.
+45:32
+By the way, somebody who mentioned this on the webinar last week who we got on a call
+45:36
+with subsequently did point us in the right direction as to which update it was.
+45:40
+So we have the update.
+45:41
+We also have a workaround or a fix.
+45:43
+And it's causing various software to hang up.
+45:47
+But worth noting, while most of these changes are very, very low risk, there's always a
+45:52
+risk.
+45:53
+So where you can test with on your guinea pigs, where you can't test on your guinea pigs,
+45:57
+take it slow, explain to the users.
+45:58
+This is important.
+45:59
+This is why we're doing it.
+46:00
+And TL-EV50.50 is 5.0X.
+46:06
+It's for auditing GPO for on community as well.
+46:10
+And then on a Mr. Tendi, you said word of the day, double botched.
+46:12
+And I was like, I replied with, I was going to go with botched squared, but it is more
+46:17
+double botched.
+46:18
+OK, so we have 10 minutes.
+46:19
+So we're going to finish up early today.
+46:21
+Just remind us, use that 10 minutes to go and do an audit.
+46:23
+And if you've got a question.
+46:24
+I do.
+46:25
+I've got more questions.
+46:26
+We've got lots of questions.
+46:27
+We all have questions.
+46:28
+Jody, does configuration manager have the ability to set default local administrator passwords
+46:31
+similar to how laps does it?
+46:33
+Yes.
+46:34
+How about Oka laps?
+46:35
+T laps?
+46:36
+T laps.
+46:37
+Jody, yes.
+46:38
+Yes, T laps.
+46:39
+And you can see them.
+46:40
+I'll show you that directly in the portal here.
+46:42
+So I'm just going to jump into.
+46:44
+Interesting, George.
+46:45
+The time sync has got me curious.
+46:47
+Can we do a detect to find when the time is set by the user?
+46:51
+I would say probably yes.
+46:54
+I think we already look for it.
+46:56
+We don't create an alert necessarily, but I think we actually already have a lot of
+46:59
+detect.
+47:00
+An information, but yes, one detect.
+47:01
+It's a Windows event.
+47:02
+A lot of detect.
+47:03
+Well, in detect, you can create a policy.
+47:09
+And if Andrew, is there any information on that Windows update issue available?
+47:15
+On Threat Lockers KB or website, or could I ask a cyber hero for more info?
+47:19
+It is on the KB.
+47:20
+It's on the KB.
+47:21
+It's on the KB on it.
+47:22
+It's under known issues.
+47:23
+And it's unfortunate.
+47:24
+It's not just Threat Lockers.
+47:25
+These are the big security tools having the same tools.
+47:28
+It's had similar issues.
+47:29
+Yes.
+47:30
+Glenn Baker, it would be cool if we could add our own registry keys and configuration manager.
+47:37
+That's an interesting one.
+47:39
+I mean, it would be easy to break stuff.
+47:41
+I think where we are a little bit nervous about that is it's becoming, we're trying to
+47:47
+avoid becoming an IT management tool that makes us security vulnerabilities.
+47:51
+So if you add a run once tool, I should be key, for example, because someone gets into
+47:54
+your Threat Locker account.
+47:55
+That is fair.
+47:56
+So I think that's where we're limiting it to, hey, these are security best practices.
+48:01
+But if there's also ones missing, you can comment, tell us, hey, there's ones missing.
+48:04
+I think we should have this and we're more than happy to add them for you.
+48:07
+What was I showing on this?
+48:09
+Configuration manager, maybe.
+48:11
+Oh, T-laps.
+48:12
+T-laps, oh, that's what it was.
+48:14
+Okay.
+48:15
+So in T-laps, there are a few areas on administrative passwords.
+48:18
+We have local administrators here, which will show you we have policies to remove local administrators
+48:22
+automatically.
+48:23
+Remember, be super, super, super careful about this policy.
+48:26
+We've had too many companies wipe out all of their admin accounts without realizing they
+48:30
+were doing that.
+48:31
+So if we go into policies on configuration manager, we can set a policy that says,
+48:39
+do I already have one?
+48:40
+Throughout Locker administrator password system, aka T-laps.
+48:46
+So and this basically says, how long do you want the password?
+48:48
+How long in days do you want it to be rotated?
+48:51
+And pretty much it does that.
+48:54
+And then once it's done, if it's reset password, you will have a cool little icon here that
+48:59
+will show you the last known password for that device.
+49:02
+That's quite cool.
+49:03
+And George, and George, I'm going to show my age here, but George has said T-laps is dope.
+49:08
+We use it to rename local administrator, then we rotate that password.
+49:12
+That is a really cool feature as well.
+49:13
+Just rename your local and now dope is in Ireland.
+49:17
+If you call somebody a dope, it means they're a really stupid person.
+49:20
+Is that so everything?
+49:22
+Everything is dope is now good, correct?
+49:24
+I think it's an age thing.
+49:26
+Everything that's bad is good.
+49:27
+So sick dope.
+49:28
+Oh, bad.
+49:29
+It's all basically means good.
+49:31
+That is an interesting way of looking at it.
+49:32
+Just reverse it.
+49:33
+Okay.
+49:34
+So in future, yeah.
+49:35
+So dope is good.
+49:36
+Yes.
+49:37
+So dope is an inacubance.
+49:38
+Tens to be dose.
+49:39
+No, dose is also used.
+49:43
+Dope is more widely accepted.
+49:46
+Okay.
+49:47
+Sorry, George.
+49:49
+Cinnamon's awesome slang.
+49:51
+Excellent.
+49:52
+Fantastic.
+49:53
+Red slang.
+49:54
+Radical slang.
+49:55
+Sick slang.
+49:56
+Primo.
+49:57
+I've never heard Primo.
+49:58
+We can't call you reading.
+50:00
+Yeah, probably should.
+50:01
+Well, actually, I don't know what we're going to do.
+50:04
+Okay.
+50:05
+I better Google it myself.
+50:06
+It's George.
+50:07
+I'm trusting you here.
+50:08
+I'm trusting you here.
+50:09
+Yeah.
+50:10
+Can the password, here's a question, Jason.
+50:12
+Can the password or presuming is referring to T-lapse?
+50:16
+Be synced to a password manager.
+50:19
+Um, not inside, like, natively, but you could always use the API.
+50:23
+So and you could pull it out and sink it into your API.
+50:25
+James has asked as well.
+50:27
+Is there an IT glue integration to store the rotator passwords?
+50:30
+Okay.
+50:31
+So it may sync automatically.
+50:32
+I just had no, but IT glue has an integration.
+50:34
+And I don't know is the answer if it syncs it.
+50:36
+Um, if it doesn't, that's definitely a feature we should request.
+50:39
+Hmm.
+50:40
+From the product team.
+50:41
+Um, I have them.
+50:44
+Oh, hang on.
+50:46
+Hint, hint.
+50:47
+Yeah, no, sorry.
+50:48
+So I thought it was a question, uh, but something else.
+50:51
+Rob is Ramburganty and we'll read whatever's on the prompt.
+50:55
+That came from Dennis.
+50:57
+Now, Dennis, I'm going to hold that against you.
+50:59
+But yes, Rob is Ramburganty and we'll read whatever's on the prompt.
+51:03
+Um, George, I don't think you guys do put the info into IT glue.
+51:08
+Presumably again, passwords.
+51:10
+Who's in the product department that can help with that?
+51:12
+I don't know.
+51:13
+I don't know.
+51:14
+Um, anyway, um, yeah, I think that's all, I mean, there are other many.
+51:20
+Very intelligent questions and comments, but I think that's pretty much all of the.
+51:27
+I don't know.
+51:28
+Uh, uh, uh, uh, uh, uh, uh, uh, George, uh, different George,
+51:32
+regarding storage control policies to restrict access to a server network file share.
+51:36
+UNC to specific user names.
+51:38
+Does the storage policy hit the client workstation or the file server hosting the network share?
+51:43
+In other words, the threat lockery need to be installed in every client or only on the server to restrict access to the share.
+51:48
+Okay, so, uh, okay.
+51:50
+So there's a couple of points that I will get into.
+51:52
+So first of all, if you create a storage policy on a client side.
+51:55
+I'm going to have questions and say I've got my server here.
+51:58
+And I want to say I want to permit access to server.
+52:04
+I can go into here and I can say I only want to allow Bob to access it.
+52:08
+Um, and I'm going to say I only want to allow, I want to allow Read and Write.
+52:12
+And I only want him to access, um, server one share one.
+52:19
+Start at the end of there, click add.
+52:21
+It's to be able to be accessed from explorer.
+52:24
+So click add there.
+52:26
+So this is running from the client side.
+52:28
+So this basically says I've got, I know the process that the client's calling from.
+52:32
+I know the share, um, name and it's in that format and only Bob can access it from the client side.
+52:37
+Now if someone goes to an unprotected device.
+52:40
+They would be able to connect to the server and see if from the server side to on the server side what we do.
+52:44
+It would say.
+52:45
+And we also want a network policy to stop in on protected device.
+52:48
+We can also set policy on the server side.
+52:50
+So on the server side, we're going to say restrict, uh, share one to only Bob.
+52:55
+Now bear in mind, I'm now looking at it from the service.
+52:58
+I'm not backslashbackslash share one.
+53:00
+I'm saying.
+53:03
+My local folder.
+53:06
+I can't do programs because I don't know the program the client choosing.
+53:09
+But what I can do is say my local folder is share one.
+53:12
+And it's going to restrict it.
+53:14
+So to answer your question, yes, you can set a policy on the server side.
+53:17
+And you can also restrict only Bob from accessing this policy.
+53:19
+However, a couple of things to note, you actually need a license for the client anyway.
+53:23
+We put in which to follow Microsoft's licensing model on that.
+53:26
+So you probably should have it.
+53:27
+You can't see the program that's running it from the server side.
+53:30
+And this isn't going to stop a piece of ransomware accessing it if it's running on the bar.
+53:34
+So you should have it on both.
+53:35
+But you can set policies on both sides.
+53:37
+It's a good idea to set policies on both sides as well.
+53:40
+There is a feature here.
+53:42
+I thought this had been hidden.
+53:43
+I don't like it.
+53:45
+But this from the server side will make sure that they're running throughout like a service study XE.
+53:49
+It's a Microsoft feature.
+53:51
+It's part of SMB.
+53:52
+It basically checks that throughout like a service study XE is running.
+53:55
+It doesn't check that it's not restrict.
+53:57
+It's a little bit of a thing.
+53:58
+It's also buggy.
+53:59
+And it's not throughout like a side that's buggy.
+54:01
+We're just requesting the information from Windows.
+54:03
+So I don't particularly care for this.
+54:05
+But what I will say.
+54:06
+What did I miss?
+54:11
+Please fill in all fields.
+54:14
+I filled them in.
+54:17
+Oh, you need to click on plus beside bar.
+54:20
+Oh, yeah.
+54:21
+Great.
+54:22
+Okay.
+54:23
+So definitely, you can do it from the server side.
+54:27
+Very useful when you're.
+54:30
+You're actually setting.
+54:32
+Like if you wanted to set a process on the server side,
+54:34
+I mean, the backup software.
+54:35
+That will work because it's only on the server.
+54:37
+The backup software is running.
+54:38
+And configuration manager.
+54:39
+Adam has asked a question.
+54:40
+Apologies if this was already answered.
+54:42
+But do the changes in config manager stick.
+54:45
+Even after the threat locker agent is removed.
+54:48
+Are they permanent or temporary?
+54:50
+Or are they just applied when the machine is communicating with the TL console?
+54:54
+No, they stick.
+54:55
+They're we're essentially making a change on your system.
+54:57
+And worth noting if you deleted this policy,
+54:59
+the change still sticks.
+55:00
+So when you go into a policy, if you wanted to change this back,
+55:03
+you'd actually set.
+55:04
+You have three options here.
+55:05
+Enable SMB version one.
+55:07
+Disable SMB version one.
+55:09
+Or set the policy is not configured.
+55:11
+When you set the policy is not configured,
+55:13
+basically leaves it as it is.
+55:15
+Same as deleting the policy.
+55:17
+If you said I want to enable it and then I wanted to disable it,
+55:19
+you actually set it back to disabled.
+55:21
+And they will stick after you remove threat locker.
+55:23
+So if you set a config manager policy and want to set it back,
+55:26
+set it back before you remove the agent.
+55:28
+When it is enforced though,
+55:33
+when threat locker is in play, it will check it every five minutes.
+55:36
+Every five minutes.
+55:37
+If someone turns it off, it'll check it.
+55:38
+And then log that they turned it off.
+55:40
+So you will actually get a trigger in the unified audit
+55:42
+that save for action type configuration.
+55:45
+Action type is configuration, yes.
+55:47
+So if I went in here, for example,
+55:49
+and said I'm going to configure a screen saver policy.
+55:55
+Did you do a whereas the screen saver?
+55:57
+Set password protected screen saver.
+55:59
+And I was to set it for 50 minutes.
+56:01
+It will come in here and check that this is 50 minutes.
+56:03
+If it's not, that's a lot of minutes.
+56:06
+It will change it to 50 minutes.
+56:07
+And then it will tell port to threat locker
+56:09
+that this was changed.
+56:10
+Sweet.
+56:11
+Well, thank you everybody.
+56:13
+And we look forward to seeing you next week.
+56:15
+We'll come up to an end.
+56:16
+Just a reminder, make sure you're going through the allow listing
+56:18
+at this point you should be blocking on trusted software.
+56:20
+We're going to start pulling back and looking at those policies
+56:23
+we want to remove from the allow listing soon as well.
+56:25
+That's coming up.
+56:26
+Do we have any homework for people this week?
+56:28
+We have this at home work to go and set these policies on their service.
+56:32
+At least on the guinea pig service,
+56:34
+if not some live service for those smaller accounts,
+56:37
+we want to set all of these configuration keys.
+56:39
+They will be coming out in an email so you don't have to remember them all.
+56:42
+Cool.
+56:43
+Okay. Well, thank you very much everybody and enjoy the rest of your week.
+56:46
+Thank you everyone.
