@@ -25,7 +25,9 @@ RansKnow/
 │   └── ... (C01–C50)
 │
 ├── outputs/                      # Knowledge Agent extraction results
-│   ├── Knowledge_Agent_Features_307.csv
+│   ├── Knowledge_Agent_Features_718.csv  # v2 — full 718-row feature CSV (current)
+│   ├── Knowledge_Agent_Features_718.xlsx
+│   ├── Knowledge_Agent_Features_307.csv  # v1 — original 307-row CSV (historical)
 │   ├── Knowledge_Agent_Features_307.xlsx
 │   ├── Knowledge_Agent_Output.csv
 │   └── Knowledge_Agent_Uncertainty_Distribution.png
@@ -34,6 +36,8 @@ RansKnow/
 │   └── Knowledge_Agent_Features_v1.csv   # v1 feature CSV (307 rows)
 │
 ├── Scripts/                      # Data pipeline notebooks and scripts
+│   ├── knowledge_agent.py                # v2 feature extraction pipeline (current)
+│   ├── fetch_transcripts.py              # Transcript fetcher with Whisper ASR fallback
 │   ├── 01_Transcript_Dataset_Construction.ipynb
 │   ├── fetch_transcripts_keywords.ipynb
 │   ├── Data_extraction_inclusion.ipynb
@@ -60,11 +64,12 @@ RansKnow/
 
 ## Knowledge Agent Feature Schema
 
-307 of the 440 videos have been fully processed through the Knowledge Agent pipeline, producing **33 structured feature columns**:
+All **718 videos** with real transcripts have been processed through the Knowledge Agent pipeline (`Scripts/knowledge_agent.py`), producing **37 structured feature columns**:
 
 | Category | Columns |
 |---|---|
 | **Identifiers** | `Video_ID`, `Channel_ID`, `Channel_Name`, `Video_Title`, `YouTube_URL`, `Transcript_Path` |
+| **Metadata** | `Year`, `DurationSeconds`, `Transcript_Provider` |
 | **Ransomware Families** | `Family_Count`, `Family_List` |
 | **MITRE ATT&CK Tactics** | `Tactic_Initial_Access`, `Tactic_Execution`, `Tactic_Persistence`, `Tactic_Privilege_Escalation`, `Tactic_Credential_Access`, `Tactic_Lateral_Movement`, `Tactic_Discovery`, `Tactic_Command_and_Control`, `Tactic_Exfiltration`, `Tactic_Impact`, `Tactic_Total_Mentions`, `Dominant_Tactic` |
 | **Tools** | `Tool_Cobalt_Strike`, `Tool_Mimikatz`, `Tool_PsExec`, `Tool_Rclone`, `Tool_MegaNZ`, `Tool_AnyDesk`, `Tool_TeamViewer`, `Tool_BloodHound`, `Tool_Total_Mentions`, `Tool_List` |
@@ -188,6 +193,7 @@ The full dataset (including transcript zips, scripts, and rubrics) is also avail
 | v1 | May 2026 | Initial release — Knowledge Agent CSV (307 rows) |
 | v2 | July 2026 | Automated fetch — 761 video records, 424 transcripts, all scripts, rubrics, figures, and documentation |
 | v3 | July 2026 | Whisper ASR fallback — 718 transcripts recovered (94% coverage) across all 761 video records |
+| v4 | July 2026 | Knowledge Agent v2 — 718-row feature CSV (`Knowledge_Agent_Features_718.csv`), fixed tool detection, added Year/DurationSeconds/Transcript_Provider columns |
 
 ---
 
