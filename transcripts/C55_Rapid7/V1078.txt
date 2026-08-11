@@ -1,0 +1,2834 @@
+0:03
+[music]
+0:20
+[music]
+0:21
+>> Welcome to episode 3 of Hacked and
+0:24
+Telemetry, a Rapid 7 produced [music]
+0:26
+podcast. I am one of your co-hosts,
+0:28
+Douglas McKee or @FullMetalPackets, and
+0:30
+I'm joined by the one and only Crypto
+0:32
+Cat. If you have not gotten a chance to
+0:34
+check out our previous episodes, you
+0:36
+should go to the Rapid 7 YouTube channel
+0:38
+and check them out. We talk about all
+0:39
+kinds of things, sometimes related to AI
+0:41
+and sometimes not related to AI. We like
+0:43
+to talk about things in cybersecurity
+0:45
+such as zero-day, bug bounty research
+0:47
+and uh new research that is emerging.
+0:50
+And we do this in three distinct
+0:52
+segments. We do this in what's called
+0:54
+the Situation Room, where we have a
+0:55
+treat for you in this episode, where we
+0:57
+actually have a special guest joining us
+0:59
+to go through some of the articles in
+1:01
+the Situation Room with us. And in the
+1:04
+Before we go into the Situation Room,
+1:05
+Doug, I've actually got a quick piece of
+1:07
+news here, which is of interest if
+1:09
+you're in security. And that's
+1:11
+>> I can't wait to the Situation Room. 2.0
+1:13
+is releasing a new physical dongle that
+1:15
+you need for all installations. This is
+1:16
+a new way to keep your WordPress
+1:17
+installations secure. Well, this is this
+1:19
+is a big deal, right? Because don't we
+1:21
+we constantly see, I know at least at
+1:23
+Rapid 7, we see WordPress after
+1:25
+WordPress after WordPress vulnerability.
+1:28
+So, what's this dongle going to do for
+1:29
+us?
+1:30
+Well, I think you can spend either £30
+1:32
+or up to £2,000 to get yourself 50
+1:35
+dongles on a keychain. And yeah, plug it
+1:37
+in. Um if you plug it in, your WordPress
+1:39
+is secure. If you take it out,
+1:41
+everything is Comic Sans.
+1:43
+That sounds super easy. Just spend a
+1:45
+little bit of money and bam, all your
+1:46
+WordPress problems go away. Of course, I
+1:48
+have a sneaky suspicion that you are
+1:50
+doing this to me around April 1st, isn't
+1:53
+it? So, there we go. There it is. That's
+1:54
+just an April Fools' joke. But hey, that
+1:56
+was that would be nice if instead of an
+1:58
+April Fools' joke, we could just get
+2:00
+more security around WordPress plugins.
+2:02
+But you know, there it is. But thank you
+2:03
+for that very useful interruption,
+2:05
+Jonah. Now we are going to I was
+2:07
+explaining to our viewers, we have two
+2:09
+other segments. We have the War Room,
+2:11
+which is usually our guest segment. And
+2:13
+we've got a special guest today talking
+2:15
+to us about recent research done with
+2:17
+cellular technology. So, stay tuned for
+2:19
+that. And of course, then we've got the
+2:21
+Mitigation Minute, where we want to
+2:23
+leave you with solutions, not problems.
+2:25
+So, we will talk about all the different
+2:27
+things at a very quick, high-level of
+2:29
+what we heard throughout the episode and
+2:30
+what our recommendations are to help you
+2:32
+prepare to be a more defensible
+2:34
+organization. We would greatly
+2:36
+appreciate it if you like the content
+2:38
+you hear on this podcast to like,
+2:40
+subscribe, and share the best you can.
+2:42
+It helps us get the uh
+5:27
+>> in the industry. We talk all the time
+5:29
+about oh, there's these simple
+5:30
+solutions, right? Why can't you just
+5:31
+like detect the the supply chain
+5:32
+attacker? Why why can't you just track
+5:34
+all your NPM packages, right? And I
+5:36
+think you're you're you're pointing on a
+5:37
+very important complexity, which is, you
+5:40
+know, this one of the things that makes
+5:42
+this so valuable to attackers is that we
+5:44
+know is very difficult for you to defend
+5:46
+against, right? I think that's that's a
+5:48
+really awesome point that you're putting
+5:49
+out there. But go ahead.
+5:51
+Oh, yeah. No, absolutely. 100%. And it's
+5:53
+the you know, the attackers, they want
+5:54
+to target Absolutely, they know this.
+5:56
+And it's easy, like you said, from the
+5:57
+outside. It's like adding a cookie flag.
+6:00
+You know, I one of the most difficult
+6:01
+vulnerabilities I ever had to remediate
+6:03
+was adding an HTTP-only flag to one of
+6:05
+our JSON web tokens, just because the
+6:07
+way the application works, you know? Um
+6:09
+so, yeah, it's kind of the same thing.
+6:10
+Like what you know, from an attacker's
+6:12
+perspective, when you're looking at it
+6:13
+and you can just get this uh malicious
+6:15
+package into it, it's you know, it's
+6:17
+easy to think, well why didn't you just
+6:19
+update it to the next patch or anything?
+6:20
+But there's so many downstream
+6:21
+consequences. There's so many different
+6:23
+dependencies. There's so many NTM NPM
+6:24
+packages that include other NPM packages
+6:27
+as part of it that you've got to audit.
+6:28
+The amount of complexity just makes it
+6:29
+incredibly difficult for an application
+6:31
+security team to And and one of the
+6:34
+things that you're alluding to there,
+6:36
+and so when I teach product security
+6:37
+testing for SANS, one of the things that
+6:39
+we we point out is that you can't defend
+6:42
+against things that you don't know
+6:43
+about. And sometimes the simple fact of
+6:46
+knowing what packages you have in your
+6:48
+supply chain is the hardest thing to
+6:50
+defend against these supply chain
+6:51
+attacks, right?
+6:52
+>> Abs- Absolutely. Do you know that you're
+6:55
+using this NPM package?
+6:57
+Yep. And and look at what they did. They
+6:59
+See, this is what good attackers do as
+7:02
+well, is they attack the psychology
+7:04
+behind it. You know, you notice they
+7:05
+didn't they didn't try to put a package
+7:07
+in there to where you had to pull it off
+7:08
+in a specific way or anything. They
+7:10
+already know that the majority of what
+7:12
+you're doing to make it easier to keep
+7:13
+these packages updated is you're going
+7:14
+to put that little carrot or what, you
+7:16
+know, code in your package.json to where
+7:18
+it's going to pull the latest version,
+7:20
+you know, that ver- You're not
+7:21
+hardcoding a lot of your versions,
+7:22
+because it's a lot more difficult to
+7:23
+maintain. So, they're attacking that
+7:25
+part of it. You've got this small amount
+7:27
+of convenience for the developers and
+7:28
+the security team. That's what they're
+7:30
+really targeting. And then you combine
+7:31
+that with the fact that when you look at
+7:33
+how they're actually executing the
+7:35
+attack, they're I mean, it's it's a
+7:36
+social engineering when it comes to
+7:38
+They're they're finding a way to get
+7:39
+access to accounts that, you know, get
+7:41
+access to a password or somebody else's
+7:43
+account that has the ability to upload
+7:44
+that. So, you have these two, you know,
+7:46
+you have a high amount of complexity.
+7:47
+You have these two attack vectors that
+7:49
+are very difficult to deal with, you
+7:50
+know, you have the person and then the
+7:51
+complexity of the supply chain. That all
+7:53
+comes together and makes it a really
+7:54
+great target for attackers. And then one
+7:56
+That's 100%. I agree with that 100%. And
+7:58
+then I think one of the things to add on
+8:00
+top of that is the when you're talking
+8:02
+about ROI, which is effectively what
+8:03
+you're saying, right? Return return on
+8:05
+investment for for attackers, not only
+8:07
+do you have that complexity for for
+8:09
+defenders, but you have what is the
+8:12
+value to an attacker if they can attack
+8:15
+a package that is used to cross
+8:17
+hundreds of thousands of organizations
+8:20
+versus going after a specific
+8:22
+organization or a product that's used in
+8:24
+a limited organization, they're clearly
+8:27
+going to get a better chance of
+8:29
+effectively getting that payday that
+8:30
+they're looking for, right? Cuz all all
+8:32
+attackers come down to two things being
+8:33
+motivated, right? We come down to either
+8:34
+financial motivation or destruction. And
+8:36
+it doesn't really matter which one
+8:37
+you're going after, you need you want to
+8:39
+hit a wide a wide range of targets to to
+8:42
+to increase that value. So, I think that
+8:44
+combined with the difficulty and the
+8:46
+complexity, we are going to continue to
+8:48
+see these of supply chain attacks. And
+8:49
+it's just interesting in the last couple
+8:50
+of weeks, you know, we basically saw two
+8:52
+back two back-to-back. And I I think
+8:54
+that's that's not going to be um
+8:57
+going to be rare moving moving forward.
+8:59
+Oh, yeah. I mean, look at the SolarWinds
+9:01
+hack that happened, I guess, a year ago,
+9:02
+a couple years ago. Again, you know,
+9:04
+time's going so fast now, I lose track
+9:06
+of it but um same type of thing, right?
+9:08
+It wasn't done through an NPM package,
+9:09
+but ultimately they targeted SolarWinds
+9:10
+because they knew that it was used in so
+9:14
+many different environments and so many
+9:15
+different ways. And it had elevated
+9:17
+access as well, you know? So, it's
+9:18
+absolutely it's uh it's the same thing
+9:20
+but a new day, you know? And as we we
+9:22
+continue to see
+9:24
+uh the the attackers and especially
+9:25
+these coordinated very motivated
+9:27
+attackers, we continue to see them
+9:29
+target the people, target the, you know,
+9:32
+try to reuse credentials. I mean, it's
+9:33
+all the same things that that we've, you
+9:35
+know, been talking about for for decades
+9:37
+now. It just manifests in a different
+9:39
+way. Absolutely.
+9:41
+So, another big piece of news that also
+9:43
+hit was Claude's source code leaks. Now,
+9:46
+that's very interesting code for people
+9:48
+who want to build their own AI systems
+9:50
+or their own AI companies. Do you guys
+9:52
+see this? What do you think about the
+9:54
+What do you think What do you think the
+9:54
+impact's going to be on the company and
+9:56
+on like general security like for
+9:59
+exploit development, for vulnerability
+10:01
+research, things like that. I think that
+10:03
+from what I've heard, they're talking
+10:05
+about an IPO.
+10:06
+I think this is going to have a big
+10:07
+impact on that.
+10:09
+Yeah, I mean it's you know, especially
+10:11
+getting to look at the code was was very
+10:12
+interesting to me.
+10:14
+I I read through some of it. I don't
+10:15
+know how to forget how it's like 500,000
+10:17
+lines or something. Maybe I'm inflating
+10:19
+that a little bit. It was quite large.
+10:20
+Yeah, yeah. Yeah, yeah, and it's all
+10:22
+five coded.
+10:23
+Well, that's the thing, right? Is it
+10:25
+they're saying that they kind of have
+10:26
+Claude go through and and you know,
+10:28
+identify certain things working itself.
+10:29
+I I saw a lot of tech debt, you know, in
+10:31
+there as well that I thought was
+10:32
+interesting cuz you know, I'm also
+10:34
+seeing that with with a lot of different
+10:36
+clients and people that are using stuff
+10:37
+you know, stuff to build it. So
+10:39
+yeah, I mean it's going to have huge I
+10:40
+think what you paused and just say it's
+10:41
+very interesting that Anthropic's Claude
+10:43
+has tech debt when they write the when
+10:45
+they're the ones writing the agent
+10:47
+that's doing the coding, but their code
+10:49
+has tech debt, which is likely being
+10:51
+created. I'm just hypothesizing here.
+10:52
+They created by their code agent, right?
+10:54
+I just think that's an interesting Well,
+10:56
+they don't
+10:57
+I was I made a joke I think a couple of
+10:59
+weeks ago at one of the podcasts about
+11:00
+this kind of happening where people were
+11:02
+basically paying for like code so they
+11:05
+can like hack stuff and then they're
+11:07
+also paying so they can secure it as
+11:08
+well and it's like do they actually have
+11:09
+an incentive for it to write secure code
+11:11
+to begin with? Yeah, I mean so yeah, so
+11:13
+you're using Anthropic's technology to
+11:15
+write code insecurely and then they're
+11:17
+selling you the next tool to go through
+11:19
+and pay them again to fix the code that
+11:21
+they wrote to begin with. That is
+11:23
+genius. Like I I really wish I would
+11:25
+have thought of that.
+11:26
+It's it's all
+11:28
+what do you call an ouroboros just
+11:30
+eating its own tail, right? Is is a lot
+11:31
+of what this feels like, but yeah, no,
+11:33
+it's I mean you're talking about people
+11:34
+obviously I'm big in the in the bug
+11:36
+bounty space and especially after one of
+11:38
+the most recent episodes of the Critical
+11:39
+Thinking podcast. I mean I don't know
+11:41
+anybody that's trying not getting up
+11:42
+their own you know, Claude code set up.
+11:44
+Mine I built one out just to kind of
+11:46
+learn from it and I got 22 different MCP
+11:48
+servers going. I built a couple MCP
+11:50
+servers myself. They're free on my
+11:51
+GitHub there. I want to I just want to I
+11:53
+just want to pause and say how about
+11:55
+this Harrison? Since you're big into the
+11:56
+bug bounty and using Claude, I got a
+11:58
+suggestion. How about next episode you
+11:59
+come on in our war room and you tell you
+12:02
+tell our viewers a little bit about bug
+12:04
+bounty. How's that sound? Oh, sure.
+12:05
+Yeah, yeah. Yeah, that'd be great.
+12:07
+>> Yeah, no, that'd
+12:08
+>> Yeah, I need some of that info as well.
+12:10
+Sure, yeah, no, I'd love to. Thank you.
+12:11
+That'd be fantastic. But yeah, I mean
+12:12
+it's so so you've got this interesting
+12:14
+situation where the the AI systems are
+12:16
+getting really good. I mean they are
+12:17
+getting good at hacking, right? Like
+12:19
+obviously you need somebody experienced
+12:20
+to guide it, but it's also getting good
+12:21
+at writing code. So it's like there's
+12:23
+this this parallel race that's that's
+12:25
+happening between these technologies and
+12:27
+you know, everybody's got their own
+12:29
+opinion about what they think's going to
+12:30
+happen in the next 5 years. I don't
+12:31
+think anybody ever really knows, but
+12:33
+it's
+12:34
+it's an interesting dichotomy seeing it
+12:36
+kind of play the the cat and mouse game
+12:37
+has been put on hyperdrive. I say that
+12:40
+all the time. I love that. The cat and
+12:42
+mouse game. I say that all the time. I
+12:45
+saw
+12:46
+a write-up recently or an article and
+12:48
+it's kind of talking about this cat and
+12:49
+mouse thing and you know, up until now
+12:51
+you have a lot of you being in the kind
+12:53
+of bug bounty space have seen this as
+12:55
+well. There's a lot of like particularly
+12:56
+open source products which are saying
+12:59
+we're closing down our bug bounty
+13:00
+programs cuz we're getting too much slop
+13:01
+through. We're getting all these
+13:02
+reports. None of them are valid. It's
+13:03
+taking us a long time to validate them
+13:05
+because they're just like AI written. It
+13:06
+looks legit, but it's not. But you know,
+13:08
+I saw an article basically saying that's
+13:10
+actually all these people complaining
+13:11
+about this, they're going to wish that
+13:12
+was the state of affairs soon because
+13:16
+they're going to keep getting the same
+13:17
+frequency of reports, but they're going
+13:19
+to be valid and they're going to be high
+13:21
+severity. And like you'd much rather
+13:23
+have a lot of like reports that aren't
+13:24
+valid that you've just got to like sift
+13:25
+through the spam than actually just
+13:27
+constantly have this like firehose of
+13:29
+security vulnerabilities you've got to
+13:30
+be putting out. Oh, that's exactly what
+13:32
+happened to curl. So curl the one of the
+13:35
+maintainers of curl that was originally
+13:36
+talking about that that they were
+13:37
+getting so many AI slop reports, just
+13:39
+came out and put a message on LinkedIn I
+13:41
+think yesterday or if not the day before
+13:43
+said, "Hey, we're not seeing those slop
+13:44
+reports anymore. The problem is we've
+13:46
+got so many good reports." And by the
+13:47
+way, this is happening much more often
+13:49
+with companies that put their source
+13:50
+code available, right? It's much more
+13:52
+difficult from a black box perspective
+13:53
+to do this, but if you have the code
+13:55
+Yeah, I mean these systems are very very
+13:56
+good at identifying real vulnerabilities
+13:58
+and so that's what the I mean and that
+13:59
+happened in what? 2 months? They went
+14:01
+from saying all this is slop we can't
+14:03
+use it. And part of that is the
+14:04
+platforms are adjusting and they're
+14:06
+being able to identify the slop and
+14:07
+filter it out. But yeah, 100% to to your
+14:10
+point,
+14:11
+it's getting good and a lot of companies
+14:13
+are about to start getting a lot of very
+14:15
+valid reports that they're going to have
+14:16
+to respond
+14:18
+or respond to and they're going to need
+14:20
+people to do it, you know?
+14:21
+>> Well, I think
+14:23
+to pivot this just a little bit because
+14:24
+I think it's relevant to our our
+14:26
+viewers, but talking about the Claude
+14:27
+code leak incident. What I think is
+14:29
+interesting from a security perspective
+14:30
+is we saw I think it was less than 40
+14:33
+hours after the leak, we saw attackers
+14:35
+creating fake repos of the leaked code
+14:38
+and and using that as lures to get
+14:40
+people to download it, right? To
+14:42
+therefore then compromise their boxes.
+14:44
+I'm trying to I'm trying to remember the
+14:46
+exact details. I don't know if anyone's
+14:47
+got it in front of them as far as I know
+14:49
+I think it was what? Seven seven zip
+14:51
+files and and and things like that that
+14:53
+were they were using, but my my point
+14:54
+was like that's a whole different attack
+14:56
+surface, right? So now we're saying, you
+14:58
+know, everyone's talking about the
+14:59
+intellectual property and you know,
+15:01
+uh ramifications of of the source code
+15:04
+being leaked, you know, IPO, all that
+15:06
+fun stuff, but like hey, attackers use
+15:08
+this to say, "Oh, here's a whole bunch
+15:10
+of fake repos as far as the code to get
+15:12
+you to download something and then
+15:13
+they're leveraging that for their
+15:14
+advantage." I think I think we'll see
+15:16
+more and more of things like that when
+15:18
+we start talking about
+15:20
+source code leaks in the future. 1000%.
+15:23
+That's always been a problem as well
+15:24
+with POCs, right? A new like zero-day
+15:26
+drops and most of the POCs that you find
+15:28
+is like people on GitHub just hoping
+15:30
+that people download and run it when
+15:32
+actually it's like some kind of malware.
+15:34
+Yeah. Yeah, but I think it's worse with
+15:35
+I mean let's let's face it. In in 2026
+15:38
+when everything's about AI and the big
+15:40
+players in AI, you've got Anthropic,
+15:41
+you've got OpenAI, you know, you've got
+15:43
+you know, you've got Google. If
+15:45
+something like that hits, you've got
+15:46
+more than just people that are normally
+15:48
+looking at POCs. People that are looking
+15:49
+at POCs are like you know, me, you and
+15:51
+you know, the industry the industry
+15:53
+that's dealing with that, but you've got
+15:54
+a much wider base of individuals and
+15:57
+developers that are going to download
+15:59
+and take a look at this and you know,
+16:00
+that's we start talking about trusted
+16:02
+platforms, right? And you know, code
+16:04
+running things like that. It's just
+16:06
+that's a huge scenario. Yeah, I with
+16:08
+anything. I think cuz now you've got so
+16:10
+many people that are getting set up that
+16:12
+don't really understand what the
+16:13
+technology what the AI is doing at a
+16:15
+deep level. They're giving it all these
+16:16
+additional permissions and allowing it
+16:17
+to run commands and stuff for
+16:18
+convenience. That's always been the
+16:19
+problem, right? Yeah, exactly. Exactly.
+16:21
+And watch episode one if you haven't. We
+16:23
+had a we had Greg Richardson talk about
+16:25
+Open Claw.
+16:26
+>> Nice. I love it. But yeah, they're
+16:28
+they've got these systems that have all
+16:29
+these additional and they're they're
+16:31
+testing a bunch of stuff out. No, I want
+16:32
+to get this to run and download this.
+16:33
+It's so much easier for for somebody to
+16:36
+put something up that's malicious that
+16:38
+appears to be legitimate and and have
+16:40
+people download it and it goes and runs
+16:42
+and and yeah, everything looks normal,
+16:43
+but obviously it's establishing
+16:44
+connections and doing things locally
+16:46
+that you never know. And yeah, so it's
+16:47
+you know,
+16:48
+one of the things that hopefully we do
+16:50
+as we continue as an industry moving
+16:51
+forward is is evangelizing like hey, if
+16:53
+you're going to be using this and giving
+16:54
+it permissions, you know, here's some
+16:56
+educational resources where you can
+16:57
+learn how to do it securely and and
+16:59
+things like that. Well, even just
+17:01
+talking about keeping it in Anthropic
+17:02
+for a minute, they released I think it
+17:05
+was the last couple weeks, maybe last 3
+17:07
+weeks, they released that new feature I
+17:08
+think it's called
+17:10
+oh shoot, what's it called in Anthropic?
+17:11
+I want to say like desktop or something,
+17:13
+but co-work. Yeah, I think that's what
+17:14
+it is. Co-work, right? Yeah, and and
+17:17
+you're basically saying here, Anthropic,
+17:19
+have permissions to make modifications,
+17:22
+very similar to Open Claw by the way, to
+17:25
+my desktop. Here's the you know, and
+17:27
+it's just yeah, and you've got as you
+17:29
+mentioned in you've got people that
+17:31
+don't understand the technology saying,
+17:32
+"Oh, this sounds useful. I'm just going
+17:33
+to turn all the things on, right?" And
+17:35
+we're we're in a whole new world of
+17:36
+attack surfaces when we start doing
+17:38
+that.
+17:38
+>> Yep.
+17:39
+Speaking about attack surfaces, there
+17:41
+was also the Chrome zero-day that was
+17:43
+recently patched I think with a wave of
+17:45
+20 other vulnerabilities that were
+17:47
+patched at the exact same time and I
+17:50
+think that in the wild exploitation
+17:51
+started shortly after the announcement
+17:54
+as well. Did anybody see that?
+17:56
+Yeah, absolutely. I think Chrome
+17:57
+Chrome's been getting slammed right
+17:59
+lately, which is which is interesting to
+18:00
+me, right? Cuz if we think about the the
+18:02
+history here, you go back to like 2011,
+18:05
+2012, 13 and then we got 14 when they
+18:07
+Microsoft released all their new
+18:09
+protections when it came to browser
+18:10
+security and you had all these sandboxes
+18:12
+and and all that fun stuff, isolated
+18:14
+heaps when it comes to browser. All of a
+18:16
+sudden browser exploitation kind of took
+18:18
+us a hard slow down, right? It's not
+18:20
+impossible, of course, and you see all
+18:21
+kinds of browser exploitation, but in
+18:23
+today's world it's significantly more
+18:25
+difficult, but we've seen a a surge all
+18:27
+of a sudden when it comes to
+18:28
+compromising Chromium Chromium, which if
+18:31
+I was a bad guy, that makes total sense
+18:33
+to me, right? I mean it cuz you don't
+18:35
+just have Google Chrome. Microsoft Edge
+18:37
+runs on Chromium. You've got the the all
+18:39
+these different browsers that base off
+18:40
+of Chromium. We talked about we were
+18:42
+talking about ROI when we're talking
+18:43
+about supply chain attacks. Like that's
+18:45
+that's a good platform to hit, but it's
+18:47
+it's it's pretty difficult. Harrison,
+18:49
+what what are your thoughts about
+18:50
+exploitation on browsers?
+18:52
+Yeah, well, I guess first of all, we're
+18:54
+you know, going back to where I said bug
+18:55
+bounty hunting or I guess the AI is
+18:57
+really good with when you have the code,
+18:58
+right? It
+19:00
+people can take that code of Chromium
+19:01
+and they can also take these AI models
+19:03
+and go through and and bad people can go
+19:05
+through and find things like that. And
+19:06
+go So I think we're going to see that a
+19:07
+lot more from a practitioner standpoint.
+19:10
+I know that over the past few years I've
+19:11
+seen a big increase in drive-by
+19:13
+downloads, you know, where you're you
+19:14
+know, they're trying to just get you to
+19:15
+automatically download. And a lot of
+19:16
+those are going to take advantage of a
+19:18
+browser exploitation. So I think
+19:20
+security teams are going to have a lot
+19:21
+more of that. I think that they're going
+19:23
+to have to be you know, really cautious
+19:24
+about you know, what they give access to
+19:26
+and and kind of lock that down as best
+19:28
+they can cuz there's just going to I
+19:29
+mean it's just going to keep happening.
+19:30
+There's going to be more they're going
+19:31
+to take the source code off of things
+19:33
+that they know are used widely. They're
+19:35
+going to use the AI systems to find
+19:36
+something that other people haven't
+19:37
+found and they're going to make a
+19:38
+decision. Do I report this and do I you
+19:40
+know, am I incentivized enough to report
+19:42
+this to the company or am I motivation
+19:44
+such that I'm going to take advantage of
+19:45
+this in a malicious way? So yeah, I
+19:47
+think it's something that if security
+19:48
+teams aren't already making adjustments
+19:50
+and considering that, I think they you
+19:52
+know, they they should be. I I think
+19:54
+they're honestly a little bit, you know,
+19:55
+you want to catch up a little bit there
+19:56
+and make sure you're cognizant of it.
+19:58
+And and when we talk about browser
+20:00
+security, not to spin this too far from
+20:01
+the Chrome zero day, but there's an
+20:04
+interesting middle layer there that
+20:06
+we're starting to see attackers take
+20:07
+advantage of and then that's extensions,
+20:09
+right? Like again, we talk about trust a
+20:11
+trusted platform in a browser, we we
+20:13
+install these extensions in Chrome and
+20:16
+other, you know, Firefox and and the
+20:17
+rest of them and we say, "Oh yeah, you
+20:19
+know, you can read any webpage that I go
+20:21
+on, right? You can, you know, interject
+20:23
+JavaScript code code on the on the fly
+20:26
+and make modifications and do things,
+20:28
+right?" that's a trusted thing within
+20:30
+the browser and you know, that's
+20:32
+provides another attack surface that
+20:34
+where the challenge for defenders, maybe
+20:36
+maybe you've seen this this too Harrison
+20:38
+is now if you have a browser that's
+20:40
+operating as a user and something
+20:42
+malicious to uses that, how do you
+20:44
+differentiate that from normal user
+20:45
+behavior? Because the browser extension
+20:47
+looks like normal user behavior. And
+20:49
+we've got AI systems now. By the way,
+20:50
+Jonah, didn't we say we were going to
+20:51
+stop talking about AI? What happened
+20:53
+here? It's one of these days. We we I
+20:55
+thought we were supposed to have an
+20:56
+episode with no AI. So
+20:58
+you know, when Anthropic stops leaking
+21:00
+their source code, I guess we'll stop
+21:01
+talking about AI, but what what what I
+21:04
+was getting at there is, you know, we
+21:06
+have these extensions in the browser
+21:07
+that we treat them like users and let
+21:09
+them do behaviors. We trust them, right?
+21:11
+And so now you get something like a
+21:12
+Chrome a Chrome exploit or some type of
+21:14
+access if if a malicious
+21:17
+I don't even want to say person anymore,
+21:19
+but a malicious bot or malicious
+21:20
+anything can take advantage of that
+21:21
+trusted layer, they're going to be able
+21:23
+to look like the normal the normal thing
+21:25
+happening in the browser.
+21:26
+All I wanted was dark mode and I got
+21:28
+system compromised instead.
+21:30
+>> Exactly. [laughter]
+21:31
+All I wanted was dark mode.
+21:33
+Ow.
+21:34
+Yeah, and just kind of bring it full
+21:35
+circle there when you look when you look
+21:37
+at the whole picture of everything that
+21:38
+we've talked about, you know, so they've
+21:39
+got their agents that are running
+21:41
+locally that they've already given
+21:42
+excessive permissions to. They've got
+21:44
+the browser that connects to that
+21:46
+agents. You got your co-work going,
+21:47
+right? Where co-work can connect to the
+21:49
+browser and browse for you and control
+21:51
+you know, I mean it's it's completely
+21:52
+blurred the lines between the the
+21:54
+trusted and non-trusted within the this,
+21:56
+you know, environment within their
+21:57
+laptop. So yeah, I mean it from an
+21:59
+attacker perspective, you know, things
+22:01
+are popping off my all different ideas
+22:03
+that I can come up with. You know, it's
+22:04
+it's a question of yeah, how do you lock
+22:06
+it down and still empower your
+22:08
+employees, your developers, everybody
+22:09
+that's using this technology to get the
+22:11
+value out of it because the reality is
+22:13
+all of these people that are trying to
+22:15
+use it in corporate environments,
+22:16
+everybody right now is being, you know,
+22:18
+getting they got a lot of pressure
+22:20
+coming down to get use of this, right?
+22:22
+Companies are expecting more out of
+22:23
+individuals when they're giving them
+22:25
+these tools to empower them and they're
+22:26
+going to they're expected to move very
+22:27
+fast. All this I think is going to come
+22:29
+to a head. You know, I think that
+22:31
+it's it's kind of all converging into an
+22:34
+interesting place for security. Abs-
+22:36
+absolutely. Well, hey, Harrison, I want
+22:38
+to say thank you so much for being a
+22:39
+special guest on our situation room and
+22:41
+looking at some of these stories with
+22:42
+us. We really appreciate it. We're going
+22:43
+to get back with you next episode and do
+22:45
+a deep dive into some of the cool stuff
+22:47
+that that you've been working on, but I
+22:49
+think that's a good wrap for what we've
+22:50
+seen in the last couple weeks as as far
+22:52
+as new stories here and we'll go ahead
+22:54
+and move on to the war room for episode
+22:57
+three where we will talk to one of the
+22:59
+researchers here on some cool stuff
+23:01
+they've been doing on their cell on
+23:03
+cellular technology. So thank you again
+23:04
+so much, Harrison, and that's a wrap for
+23:07
+situation room. Awesome. Thanks so much
+23:08
+for having me.
+23:15
+All right, welcome to the war room. This
+23:17
+is our segment where we bring on guests
+23:18
+from both inside and outside Rapid7 to
+23:20
+talk about the latest and greatest
+23:21
+research that's going on in the industry
+23:23
+and I am super excited to have with us
+23:25
+today Daryl Highland. He is a principal
+23:27
+security researcher focused on IoT here
+23:30
+at Rapid7 and he's done some really
+23:32
+awesome work lately around cellular
+23:34
+technology. So welcome, Daryl. You want
+23:36
+to tell us a little bit about what you
+23:37
+got going on? Yeah, yeah, great. Thanks
+23:39
+for having me.
+23:40
+So yeah, the research we we've been
+23:43
+focusing on probably over the last year
+23:46
+or so has been targeting the concept of
+23:49
+cellular embedded into embedded devices
+23:53
+and how those devices have a trust
+23:56
+relationship into a larger ecosystem.
+23:58
+And there's there's not a lot out there
+24:00
+on cellular stuff when I'm looking
+24:01
+around at vuln research. So I think this
+24:03
+is pretty unique in that category. Did
+24:04
+you find a lot of other research? No,
+24:06
+no. As we dug into other research, what
+24:08
+we ended up seeing was there's research
+24:11
+around SIM hijacking type attacks or the
+24:14
+concept of pulling the SIM module out of
+24:16
+a device, putting in a development board
+24:18
+and using that to possibly pivot into an
+24:21
+internal organization's network. Our
+24:23
+approach was, "Hey, someone's already
+24:25
+done that. What if added level
+24:27
+security's been put on there? Let's say
+24:29
+it's
+24:30
+uses the IMEI number as some form of
+24:32
+authentication which is tied to the
+24:34
+actual module itself versus the SIM.
+24:36
+What if the CPU also does some level of
+24:39
+authentication or validation into
+24:41
+back-end services? Our goal was, "Hey,
+24:43
+let's let the device set up all the
+24:46
+trusted connections, all of its
+24:48
+authentication and everything and then
+24:50
+let's go ahead and use the cellular
+24:52
+module as a side channel to gain access
+24:55
+to those trusted resources." Yeah, I
+24:57
+think that's that's like an overarching
+24:59
+theme across the entire threat landscape
+25:01
+right now. I think we've even talked
+25:02
+about this in the the threat landscape
+25:04
+report that we put out several weeks
+25:06
+ago, but this model of attackers are
+25:08
+grabbing toward gravitating towards
+25:10
+looking at what is a trusted layer and
+25:12
+how can I get into that trusted layer?
+25:14
+Because once you trust that layer, then
+25:16
+you trust me as an attacker if I'm
+25:17
+inside of it like natively. And that's
+25:19
+like a little bit of what you're talking
+25:20
+about here from but you're just focusing
+25:22
+on the cellular part of that technology,
+25:24
+right? Yeah, the goal the goal was to
+25:26
+understand how those communication
+25:28
+channels actually work in the world of
+25:31
+cellular on devices cuz we're we're all
+25:33
+familiar with we we've heard a lot of
+25:35
+stories about attacking cellular comms
+25:38
+and and things like that. But typically
+25:39
+as that technology has advanced to be
+25:42
+able to cause the cellular device to
+25:45
+step back to older version that doesn't
+25:47
+allow encryption and then you have FCC
+25:50
+rules regulations around capturing that
+25:53
+kind of data or manipulating it. We
+25:54
+found out that if we look between
+25:57
+interchip comms between the CPU and the
+25:59
+actual cellular device on the embedded
+26:02
+technology, it's rarely encrypted. So we
+26:05
+can literally at that point see all the
+26:07
+comms that would go over the wireless
+26:09
+network and that is keys, certificates,
+26:11
+passwords, authentication, the whole
+26:13
+nine yards. And then on top of that,
+26:15
+we're able to leverage the fact that all
+26:18
+cellular modules that we've looked at,
+26:20
+basically the NB-IoT and LTM series
+26:23
+devices actually have two communication
+26:26
+channels from the CPU. Only one of them
+26:28
+is going to be used. It's either USB or
+26:30
+it's UART. Both of them aren't used. So
+26:33
+whatever one's not used, we can actually
+26:35
+take over and we have side channel
+26:37
+access to an already authenticated into
+26:39
+a larger ecosystem device. I you know,
+26:42
+you said a whole bunch of keywords there
+26:43
+that get me excited. So you're an actual
+26:45
+hardware hacking expert. I like to
+26:47
+pretend I am every now and then when I
+26:48
+do a project here or there and usually
+26:49
+break something in the in the process.
+26:51
+But
+26:52
+what's really interesting when you start
+26:53
+talking about hardware hacking and I'd
+26:55
+love to get your perspective on this in
+26:57
+the context of this project is where is
+26:59
+the line from a practical attack
+27:01
+perspective? Because a lot of times
+27:03
+you're looking at physical access is
+27:04
+that required? So kind of walk us
+27:06
+through here like what are some of the
+27:07
+physical hardware things that you did
+27:09
+during this research and then how does
+27:11
+this translate over to what a threat
+27:12
+actor can do to make this a realistic
+27:14
+attack in in in the real world? Yeah, so
+27:17
+on the hardware hacking, there was two
+27:19
+areas we focused on. There is the in the
+27:22
+case of the test device that we used for
+27:24
+our demos, it is a
+27:26
+field camera. It's a camera device. So
+27:28
+it's using LTM device in it which is a
+27:32
+higher bandwidth full duplex
+27:34
+communication cellular type device and
+27:36
+it's typically going to be using USB. So
+27:39
+we have serial that's on the board not
+27:41
+being used and that's easy enough to
+27:43
+trace it out, cut the runs, hook an FTDI
+27:46
+device to it and now you can talk to the
+27:48
+cellular module while the device
+27:49
+continues to run. You can send commands
+27:51
+to it, AT commands. We've actually
+27:53
+written code to do port scanning through
+27:56
+the device, also scan cloud services to
+28:00
+harvest data out of
+28:02
+S3 buckets. We've actually written full
+28:04
+functioning socks five proxies that'll
+28:07
+go through serial. So so basically just
+28:10
+plug into the serial on the board and
+28:12
+nine out of 10 times it's easy to locate
+28:15
+and then from there you can route
+28:16
+straight through it. This is kind of
+28:17
+like a Trojan Trojan horse opportunity
+28:19
+then, right? With this this USB cellular
+28:21
+>> think so. I think so. The the the the
+28:23
+focus like I said, the focus of the
+28:25
+attack method isn't against the device
+28:27
+itself, it's against who trusts the
+28:29
+device. So as you get into more and more
+28:31
+advanced devices, an example, automobile
+28:35
+telemetry unit. So if you take a
+28:37
+telemetry unit which we know based
+28:39
+>> really quick that Daryl out of nowhere
+28:41
+just pulled up an automobile circuit
+28:43
+board just like sitting randomly on his
+28:44
+desk. You know, I don't know that for
+28:46
+those of our listening to this audio
+28:47
+only probably can't see that, but not
+28:49
+everybody that I talk to on a regular
+28:50
+basis just oh what whips out here's an
+28:52
+audio an auto component. So that's
+28:54
+that's pretty awesome, Daryl. Yeah,
+28:55
+yeah, I haven't done anything with this.
+28:57
+I just haven't had time to do it yet
+28:58
+with all the other research stuff we've
+29:00
+been doing. But historically we know a
+29:02
+lot of the telemetry type communications
+29:04
+will connect into back-end networks. So
+29:06
+if we can tap into this on the serial,
+29:08
+instantly we're into potentially a
+29:10
+back-end network. Now when you get into
+29:11
+the USB stuff, there's a added level
+29:13
+complexity. To start with, most of the
+29:16
+cellular modules LTM, if they're
+29:17
+actually using the USB, what we decided
+29:20
+to do was to go ahead and splice a USB
+29:24
+multiplexer into the actual circuit. So
+29:27
+what does that give us? The
+29:29
+cellular modules using LTM with removing
+29:32
+a lot of data, they'll actually use
+29:33
+what's known as Ethernet control mode.
+29:36
+Ethernet control mode is basically
+29:38
+Ethernet over USB. So the CPU connecting
+29:41
+to the cellular module over USB is
+29:43
+actually getting an IP address right to
+29:45
+the CPU. The the cellular module's
+29:47
+giving that to them. So, what we do is
+29:50
+is we hook up a USB
+29:52
+multiplexer in circuit as a two to one.
+29:55
+So, we are going to have two hosts, one
+29:57
+device. The device is going to be a
+29:58
+cellular module. We let the device go
+30:00
+through all of its authentication
+30:02
+functionality, connects out to the
+30:04
+cloud, connects out to the internal
+30:06
+networks, and then we have our laptop
+30:09
+connected to the multiplexer. We throw a
+30:11
+switch, switches the channel over to us.
+30:13
+It gives us an IP address to our Mac.
+30:16
+Now, we have basically ethernet port
+30:18
+through the cellular module out to
+30:20
+whatever this device is authenticated
+30:22
+to. We and that works really well. It's
+30:24
+kind of amazing.
+30:25
+It's kind of shocking when we first did
+30:27
+I'm like, I have this theory. Is this
+30:29
+going to work? Is this going to blow up
+30:30
+in my face? And my first attempt failed
+30:33
+cuz I wired it backwards.
+30:35
+But then I solved that problem, plugged
+30:37
+into it, fired it up, and unexpectedly
+30:39
+to me, I get a pop-up screen on my Mac
+30:41
+saying, you know, what virtual device do
+30:45
+you want to connect this ethernet to
+30:47
+basically? I'm like, well, let's connect
+30:49
+it to the Mac. Gives me an IP address.
+30:51
+In our demo videos, we actually fire up
+30:54
+Metasploit on on the laptop and actually
+30:57
+right through the device because that's
+30:58
+now it's ethernet for the most part. If
+31:02
+ECM mode's not available, you're going
+31:04
+to have what's known as ACM, which is
+31:07
+asynchronous
+31:08
+communication mode. And that's serial
+31:11
+over USB. Very similar, so it would
+31:13
+actually show up on your device as a TTY
+31:17
+for the most part if you were connecting
+31:18
+over USB and ACM was enabled on the
+31:21
+device. Daryl, I'm not a hardware guy.
+31:24
+You talked about splicing cables. Is
+31:27
+is there risk that you damage the
+31:29
+hardware here? Did you go through
+31:30
+multiple devices during this research?
+31:32
+Or So, so me and me and a good friend of
+31:35
+mine, Carletta Bidner, started this
+31:37
+research like two and a half years ago.
+31:39
+The goal was let's learn everything we
+31:41
+can all the way up to turn it into an
+31:43
+attack vector. So, yeah, I mean, I
+31:45
+probably destroyed a thousand dollars
+31:47
+worth of gear early on just trying to
+31:49
+splice into. We kind of focused on
+31:51
+NB-IoT early on because they were cheap
+31:53
+devices, the typically GPS trackers and
+31:56
+things like that. And we ran into a lot
+31:58
+of devices that were very uh
+32:01
+>> [snorts]
+32:01
+>> finicky to say the least. And you cut a
+32:04
+wire and hook something up to it, and
+32:06
+you know, out comes the smoke and
+32:07
+nothing works anymore, and throw that in
+32:09
+the trash and pull another one off the
+32:10
+>> Keep the magic smoke in the box. Rule
+32:12
+number one of hardware hacking. Yeah, so
+32:14
+we went through we went through a lot of
+32:15
+devices. I still probably have half
+32:18
+dozen GPS trackers laying around here.
+32:21
+They're still brand new in the box that
+32:23
+we never got around to. It was like,
+32:24
+hey, I'm tired of burning up these
+32:25
+devices. Let's look for something
+32:27
+cooler. So, then we started looking at
+32:28
+higher-end devices that use an LTE LTE-M
+32:32
+type communication devices for bigger
+32:34
+bandwidth and started playing with
+32:36
+those. Yeah, because there's always a
+32:37
+chance you're going to smoke something.
+32:39
+But we've got to the point of
+32:41
+understanding
+32:42
+how most of these devices work that
+32:44
+generally I can usually tear a device
+32:46
+down, gain access, and it's pretty rare
+32:48
+for me to destroy a device. Usually I
+32:50
+destroy a device very early in
+32:52
+experimental when I'm just trying to do
+32:54
+freaking crazy stuff to it.
+32:56
+>> the UART. This is the port, right? This
+32:58
+is like how you get data off these. I'm
+33:00
+just wondering what kind of data are you
+33:02
+looking to get off of it? And if you
+33:03
+can't access like a UART port, what what
+33:06
+would be the process for translate
+33:08
+reverse?
+33:09
+>> So, if when we're looking at cellular
+33:10
+modules, there's actually three
+33:12
+different ports connected to a cellular
+33:14
+module. There's going to be a USB,
+33:15
+there's and there's going to be what's
+33:17
+known as a main UART. Those two
+33:19
+components are used to send commands and
+33:21
+data through the cellular module and
+33:23
+typically connect to a CPU on the device
+33:26
+to be able to do that. There is a third
+33:28
+port that exists on most of the devices
+33:30
+we looked at. It's called a deep
+33:31
+basically a debug UART. So, if you hook
+33:33
+to a debug on the UART, you'll you'll
+33:36
+actually see the device boot up. You'll
+33:37
+see the cellular module boot up. Some of
+33:39
+the LTMs will actually give you a log on
+33:41
+prompt, so you can log on to them if you
+33:43
+actually know what the password is on
+33:45
+these devices there. So, that's the
+33:47
+general the interaction. So, if we're
+33:49
+looking at what kind of data we can get
+33:51
+off these things, we we published a
+33:54
+paper earlier that we had talked about
+33:56
+when we were just trying to learn how to
+33:58
+communicate with cellular modules and
+34:00
+how to to gather data off these things.
+34:02
+So, you can sniff interchip
+34:04
+communications between the CPU and the
+34:07
+cellular module either over USB if you
+34:09
+have USB sniffers or over serial if you
+34:12
+use like an FTDI to hook to that. What
+34:15
+you're going to see is you're going to
+34:16
+see various things. You're going to see
+34:17
+everything from commands, setups,
+34:20
+configuration data coming from the CPU
+34:22
+to the cellular module that says, hey,
+34:24
+we want you to connect to this APN.
+34:26
+You're going to use this type of
+34:27
+communications or it may actually send
+34:29
+various AT commands to set up HTTP,
+34:32
+MQTT, raw sockets, things like that. Or
+34:36
+if it's going over ECM and you kind of
+34:40
+are sniffing USB traffic, you'll see
+34:42
+everything. I can show you screen dumps
+34:45
+of us sniffing traffic where we're
+34:47
+catching the encryption keys, the
+34:50
+passcodes, S3 buckets, everything that
+34:53
+would show authentication connectivity
+34:55
+and all the certificates and keys to
+34:57
+connect into various cloud and cloud
+35:00
+services, for example. So, you can see a
+35:01
+lot of data. Like I said, it's rarely
+35:03
+encrypted coming from the CPU to the
+35:05
+cellular module. Everything going out
+35:07
+over cellular is perceived to be
+35:09
+encrypted. So, a lot of organizations
+35:12
+don't, especially on a lot of IoT
+35:14
+devices, don't really put the effort
+35:16
+into actually encrypting it coming out
+35:18
+of the CPU, which is bad. But it is what
+35:21
+it is.
+35:21
+>> Well, I think you just hit on a huge
+35:23
+point, right? And that's that that
+35:24
+assumption component, right? A lot of
+35:27
+times we assume encryption's being used
+35:29
+or
+35:31
+we we assume that an attacker can't look
+35:33
+at it, so therefore we don't we don't
+35:34
+worry about encryption or we assume that
+35:36
+it's strong encryption when it's
+35:37
+actually really you know, weak
+35:38
+encryption and things like that. So,
+35:40
+when I teach about product security
+35:42
+testing, I'm always harping on like, you
+35:43
+know, you got you got to verify you got
+35:45
+to verify these things. And the other
+35:46
+thing I always harp on, too, is the the
+35:48
+magic smoke in the box. You got to have
+35:50
+multiple test devices cuz as you
+35:52
+enumerated, you went through and and
+35:53
+used a whole bunch of them. But you
+35:55
+know, kind of bringing this a little bit
+35:56
+back to to the research that that you're
+35:59
+publishing or have or have have
+36:00
+published, I'm curious you mentioned
+36:02
+something about socks five proxies and
+36:04
+as part of the research. And I know that
+36:07
+you were were working on a Metasploit
+36:08
+module with that. So, I'm just curious
+36:11
+like how exactly does does that
+36:13
+Metasploit module allow an attacker to
+36:15
+use a compromised device in the way that
+36:17
+you did your research? Like walk us
+36:19
+through how how that would work with the
+36:20
+Metasploit module. So, so the the
+36:22
+typical attack path I would think about
+36:25
+would be a more advanced embedded
+36:27
+device. Let's say let's say some kind of
+36:30
+robotic autonomous robotic device. You
+36:33
+buy a lawn mower that mows the lawn for
+36:35
+you. It uses cellular connect into the
+36:37
+back
+36:37
+>> to do that yet. I I Those things freak
+36:39
+me out. I don't like a large blade on
+36:41
+something that's autonomous.
+36:44
+Well, how autonomous are they? But
+36:47
+but okay, so you go out and you spend
+36:49
+the several grand on one of these
+36:50
+devices and you want to carry carry out
+36:53
+an attack on whoever whoever it is. We
+36:56
+know these devices connect out into a
+36:58
+larger ecosystem that is actually AI
+37:00
+driven in a large scale. So, the attack
+37:02
+vector would be you're going to modify
+37:04
+the device you're No, no, we we promised
+37:06
+our viewers that we were going to stop
+37:07
+talking about AI. Like you you can't do
+37:09
+this to me, right? Like you know, we're
+37:10
+supposed to be talking about cellular
+37:12
+stuff today. Go on then. Yes, bleep out
+37:14
+bleep it all out. Bleep out any mentions
+37:15
+of AI. Yeah, we'll have to bleep out AI
+37:18
+for this segment.
+37:19
+There you go. So, yeah, go ahead and
+37:21
+bleep go ahead and bleep that out. So,
+37:23
+the smart stuff on the other side of the
+37:25
+fence There we go. There we go. that
+37:26
+we're connecting to to get smart stuff
+37:29
+to do. The goal is is we can take this
+37:32
+device. We know this device connects
+37:34
+into a larger ecosystem. Whatever that
+37:36
+ecosystem is. It could actually go out
+37:38
+through a private APN. It can connect
+37:40
+into an internal network somewhere. So,
+37:42
+the attack vector would be we would
+37:44
+connect up to the serial on this device
+37:46
+cuz like I said, if it's moving a lot of
+37:48
+data, we know it's going to be USB. Or
+37:51
+if it's needs low latency, we know it's
+37:53
+going to be going over USB and using an
+37:55
+LTM or a more advanced module. So, it's
+37:57
+going to have a serial connection. That
+37:58
+serial connection's going to be open. No
+38:00
+one's going to be using it. We just need
+38:01
+to find it. We connect into that. We
+38:04
+hook up our FTDI or UART reader to our
+38:06
+USB to our laptop. We fire up
+38:08
+Metasploit. Now, we've been working on
+38:10
+this module. It hasn't been published
+38:11
+yet. Hopefully we'll get this published
+38:13
+out soon. So, at this point, we bring
+38:15
+the device up and we can go ahead and
+38:17
+fire up this socks five proxy. The way
+38:20
+this socks five proxy works is it takes
+38:23
+all network communications. It
+38:25
+interprets interprets them into AT
+38:29
+commands, AT commands, old Hayes
+38:31
+compatible concept commands that most
+38:33
+communication devices have. Well,
+38:35
+there's more advanced commands that are
+38:37
+available from the various vendors. In
+38:39
+this case, we use what's known as raw
+38:41
+socket commands on the device. And it'll
+38:43
+use these open, send, close, read like
+38:48
+four different commands and it'll
+38:49
+convert all the network traffic into
+38:51
+these AT commands that'll go out to the
+38:54
+modem, communicate out over the network
+38:56
+to do whatever you want to do, and then
+38:58
+reinterpret it back through the device
+39:01
+into the socks five proxy. So, once the
+39:03
+socks five proxy's up and running on the
+39:05
+Metasploit, you can either run external
+39:07
+tools and point to that socks five proxy
+39:09
+or you'll be able to fire up a number of
+39:12
+Metasploit modules that are defined to
+39:16
+allow a global socks five proxy setting
+39:18
+on the device. If they don't, cuz there
+39:20
+is a lot of modules that don't support
+39:22
+the the global socks five proxy. You can
+39:24
+easily run
+39:26
+an external socks proxy tool with
+39:28
+Metasploit. I've done that many times.
+39:30
+And that'll give you access to to the
+39:32
+socks five for the most part in that
+39:35
+particular case. But it'll give you the
+39:36
+ability to route all of your tools
+39:38
+through. So, you can route scanners
+39:40
+through, you can route brute force
+39:42
+tools, you can route exploits through
+39:44
+once you identify targets. So generally,
+39:46
+you basically have a device, it has
+39:48
+trust, it connects out to whatever on
+39:51
+the back end, and now we can use
+39:52
+Metasploit or a number of other tools
+39:54
+through the socks five proxy, and use
+39:57
+that device, that embedded device
+40:00
+ability to communicate as a pivot point
+40:02
+into ever who you want to attack or
+40:04
+exploit. And I often we develop these
+40:07
+tools mainly for testing. There's going
+40:08
+to be organizations out there that need
+40:10
+to test products.
+40:12
+Rapid 7 has its its own IoT pen testing
+40:15
+team. These are tools they'll be able to
+40:17
+use when they're testing products for a
+40:19
+customer that have cellular capability.
+40:21
+It gives them the ability to expand out
+40:24
+and get a broader input or attack vector
+40:26
+into the entire ecosystem and not be
+40:29
+totally stuck down to the hardware. We
+40:32
+have a pivot point to test all of the
+40:34
+pieces of the IoT ecosystem.
+40:36
+>> Yeah, it's that's absolutely amazing,
+40:37
+right? And I love the fact that we
+40:38
+integrate that stuff into these
+40:40
+Metasploit modules. It actually reminds
+40:41
+me, Joe, you and I have been long enough
+40:42
+that we you probably remember this too,
+40:44
+but do you remember I think it was the
+40:46
+2012
+40:47
+time frame? You can tell me if someone
+40:49
+can easily tell me if I'm wrong in the
+40:50
+comments, that's fine.
+40:52
+The old pwn plug that used to be able to
+40:54
+do the bypass 802.11x
+40:58
+on switches doing something very similar
+40:59
+to what you're talking about, right?
+41:00
+Where it would pass through traffic like
+41:02
+it looked like it was normal and then
+41:03
+have a reverse socks proxy back to the
+41:04
+attacker and you could send commands and
+41:06
+inject them on the network as if you
+41:07
+were as if you were authenticated. It
+41:09
+sounds like a similar concept here that
+41:11
+we've been able to build with the
+41:12
+cellular network
+41:14
+that is
+41:15
+it's almost modernized. It's it's it's
+41:16
+pretty interesting to see how that that
+41:17
+that comes together. The ability to make
+41:20
+all of your tools for testing,
+41:22
+evaluation, and attacks part of the
+41:24
+ecosystem Yeah. of that product, and
+41:26
+that's the goal.
+41:28
+Absolutely. Well, I'll tell I'll tell
+41:29
+you what, Joe, this sounds like some
+41:31
+pretty awesome research that we don't
+41:33
+see a lot of different content coming
+41:35
+out on on on a regular basis. So I'm
+41:37
+super happy that we got a chance to talk
+41:38
+to you today on on on the podcast. So
+41:41
+thank thank you for joining us. We will
+41:42
+make sure the show notes has a link to
+41:45
+to Daryl's research and and any recent
+41:47
+presentations he has on that. So go
+41:49
+ahead and check that out. But we'll go
+41:50
+ahead and and sign off here for today.
+41:51
+Thanks, Daryl, one more time. Any last
+41:53
+comments for our viewers? Hack the
+41:54
+world. Let's go hack the planet. All
+41:56
+right. Thanks for joining us, Daryl.
+41:58
+Thank you.
+42:04
+Welcome to the last and final segment
+42:07
+for episode three. We call this the
+42:09
+mitigation minute. So we talked a lot
+42:11
+today about different problems that
+42:13
+we're seeing within within the industry
+42:15
+over the last couple weeks. And so we're
+42:17
+going to take a few seconds here to talk
+42:19
+about potentially some solutions to
+42:21
+that. One of the first things, Jonah,
+42:23
+that we talked about that you brought up
+42:24
+in the situation room was the supply
+42:26
+chain attacks, right? And we saw, you
+42:28
+know, two different potential supply
+42:30
+chain attacks that we briefly mentioned
+42:32
+in the episode. So what are some things
+42:34
+that organizations can do for supply
+42:35
+chain attacks? One of those is
+42:38
+when we were talking with with Harrison
+42:41
+there, you know, we we mentioned that
+42:42
+part of the foundation of being able to
+42:45
+defend against supply chain attacks is
+42:47
+understanding what you even have, right?
+42:49
+We can't defend against things that we
+42:51
+don't know. And so this is where
+42:53
+exercises like product security testing
+42:55
+come really into play. This is taking a
+42:57
+deep dive into the software that you're
+42:59
+going to use or are using on your
+43:01
+network. It's just understanding what
+43:02
+those packages are. There are so many
+43:04
+different packages that if you hear in
+43:06
+the news that there's a problem with,
+43:07
+you don't even know to go look at your
+43:09
+solutions because you didn't know you
+43:11
+were using those packages, right? So
+43:13
+biggest thing one of the big things I
+43:14
+suggest is product security testing. It
+43:16
+will help your organization be more
+43:18
+informed to know what you're even having
+43:20
+to defend against. Outside of that, if
+43:22
+we talk a little bit specifically about
+43:24
+the events that we saw with the supply
+43:27
+chain attacks over the last couple
+43:28
+weeks, doing things like when you're
+43:29
+installing a package from a defensive
+43:32
+perspective, you should be flagging
+43:34
+outbound network connections that are
+43:35
+happening during those those
+43:37
+installation. Those, you know,
+43:38
+especially anything that would be like
+43:40
+an unexpected egress egress point should
+43:42
+produce a high alert in in your
+43:44
+environment. Also, isolating build
+43:46
+environments so that they can't either
+43:48
+reach external infrastructure during the
+43:50
+install phase if that's possible.
+43:52
+Obviously, that's not going to work for
+43:53
+all packages, but if that's a
+43:54
+possibility, making sure that those are
+43:56
+isolated off. Now, we we also talked
+43:58
+about the Claude code leak, and there
+44:00
+are a lots of different consequences
+44:02
+that happen as a result of the leak with
+44:05
+Anthropic's code. Jonah, what do you
+44:07
+what do you think in this from a
+44:08
+defensive perspective here?
+44:09
+Yeah, I mean, we're more looking at that
+44:11
+from the position of they've leaked the
+44:13
+code, it's a big thing for them, but it
+44:15
+can also be a big thing for
+44:16
+organizations because in this case, you
+44:18
+know, there was a rush for this code as
+44:19
+leaked, all these repos suddenly get set
+44:21
+up with like we have the new Claude
+44:23
+code, you can do this cheaper, this is
+44:24
+more efficient. And people who are just
+44:26
+in a rush to try and get the next best
+44:28
+thing might download and install that
+44:29
+and not realize that in itself is
+44:31
+malware. So some things that can be done
+44:32
+there, I mean, you could have some
+44:34
+endpoint detection rules which will
+44:36
+basically flag if repo is like a known
+44:39
+trojanized repo source. And you could
+44:41
+also have it so that it's detecting
+44:44
+execution of unsigned binaries that have
+44:45
+been downloaded from GitHub. And maybe
+44:47
+you should just have like organizational
+44:49
+like best practices going around of
+44:50
+like, okay, this has happened over the
+44:51
+past 48 hours, nobody go and download
+44:54
+and run anything that's related to this
+44:56
+leak.
+44:56
+>> Yeah, kind of have like a like a kind of
+44:58
+like a time period, right? Where you're
+44:59
+like, hey, we're going to wait because
+45:00
+it's related to a leak and we don't want
+45:02
+those, you know, people downloading
+45:04
+things that potentially could be could
+45:05
+be malicious. Really, and we're
+45:08
+especially like what we saw with the the
+45:10
+basically trojanization of the the
+45:12
+leaked code, as we saw that developer
+45:16
+machines were the ones that are getting
+45:17
+compromised, which are a high-value
+45:19
+target for for attackers because they
+45:22
+have a whole bunch of, you know, whether
+45:23
+it's SSH keys, cloud credentials, they
+45:25
+got access to a whole bunch of things
+45:26
+attackers want to access to. And we kind
+45:28
+of need to put them in their own special
+45:30
+risk class when we're talking about
+45:32
+defending those defending those
+45:34
+machines. So I think that's some great
+45:36
+great points, Jonah, on things that we
+45:38
+can do to make sure that we're just
+45:39
+thinking about that it's a possibility.
+45:41
+I think that's half the battle. Half the
+45:43
+time we just need to realize that like,
+45:45
+oh, we don't think Anthropic's code got
+45:47
+leaked, that can be used as an attack.
+45:49
+We have to think like the attackers.
+45:50
+They are going to leverage these events
+45:52
+because it creates things like this
+45:53
+download frenzy where everyone's just
+45:55
+clicking on stuff. They're not really
+45:56
+thinking about the consequences. And we
+45:58
+got to be prepared for those situations.
+45:59
+Lastly, don't fully don't want to skip
+46:01
+over the really cool research that Daryl
+46:03
+presented in his in the in the war room
+46:06
+there on his cellular technology. Now,
+46:08
+that's a really interesting situation
+46:10
+when we talk about protection. I think
+46:11
+that really we split that into kind of
+46:13
+two different classes when we're talking
+46:15
+about protection. So one of the things
+46:17
+that he highlighted was the lack of
+46:19
+encryption used between the different
+46:21
+different modules on the boards. And
+46:23
+like that's not something that you as an
+46:25
+end user is going to have a lot of
+46:26
+control over. So I think really one of
+46:29
+the mitigations that are thoughts that
+46:30
+we need to think about from a security
+46:31
+perspective is trying to make sure we
+46:34
+educate product companies, the hardware
+46:37
+companies that are developing these,
+46:38
+that this is a real threat. And we want
+46:40
+to leverage encryption as much as we can
+46:42
+between the CPU and the cellular module,
+46:44
+right? Can we can we use encryption to
+46:46
+make those type of attacks less likely
+46:49
+in that hardware-based class? And then
+46:50
+lastly, when you're thinking about this
+46:52
+from a consumer perspective, so you are
+46:55
+using this technology, the things you do
+46:57
+have control over, if you've got a
+46:59
+cellular communication unit in a
+47:01
+product, right? Let's make sure that we
+47:03
+segment that off, right? You know,
+47:05
+segmentation is not necessarily a silver
+47:07
+bullet, but it definitely helps reduce
+47:08
+the blast radius if something like this
+47:10
+gets compromised like Daryl was
+47:12
+explaining in in the segment there. So
+47:14
+any other last thoughts on that, Jonah,
+47:16
+before we wrap up episode three? No,
+47:18
+just like, subscribe, and send us a
+47:20
+message if you've got something cool you
+47:22
+want to present on the podcast. Man, I
+47:24
+couldn't have said it better myself.
+47:25
+Thanks, everybody, for listening to
+47:26
+episode three of Hacked It and
+47:27
+Telemetry, a Rapid7 produced podcast.
+47:29
+Until next time,
+47:31
+have a wonderful time and hack the
+47:33
+planet.

@@ -1,0 +1,1424 @@
+0:00
+Hey everyone and welcome to Risky Business. My name is Patrick Gray. Adam Boilow is back
+0:08
+on deck and he'll be joining James Wilson and I in just a moment to talk through the
+0:12
+week's security news and there's lots of like awful and funny things happening so that's
+0:17
+going to be fun. And then after that in this week's sponsor interview we're going to be
+0:21
+hearing from Bobby Filler who heads up our artificial intelligence over at Sublime Security.
+0:27
+Sublime Security makes the most modern sort of contemporary iteration of an email security
+0:32
+platform. So if you are looking to get the best in class email security platform you want
+0:38
+to hit up Sublime. And we're talking to Bobby about I guess how customers these days are
+0:44
+evaluating AI features in products. It's an interesting conversation. They are very AI-heavy
+0:49
+Sublime. And yeah he's going to walk us through the conversations they're having with customers
+0:54
+and the questions they're asking which seem to be the right questions if I'm honest.
+0:57
+And then we can sort of we also have a bit of a chat about how LLMAI selling that compares
+1:04
+to selling machine learning based AI if you want to call it that from a decade ago. So
+1:10
+it's all in all it's a very interesting conversation and it is coming up after this week's news
+1:14
+which starts now and look we got so much wonderful delicious chaos to talk about but we're
+1:20
+going to start off by having a chat about this mini shy lude worm. We've seen this worm
+1:26
+originally pop up last year sometime we talked about it at the time. You know it's a self-propagating
+1:30
+NPM worm. In this case though the initial access is a really interesting thing the thing that
+1:39
+started this all off. And it wound up infecting tan stack which is an extremely wide used thing
+1:47
+in the Devico system. I mean James you're the engineer among us we're going to start off with
+1:51
+you on this one. What is the what was the interesting vector here and can you give us a bit of
+1:55
+background on tan stack? Yeah let's start with tan stack because this is a complicated machinery
+2:00
+and a complicated landscape. So if you're building a react app you know react is like one of your
+2:07
+two fundamental decisions. React is the framework that you're working with and you're probably
+2:12
+writing the code in TypeScript. But that's kind of a kind of saying well I've bought my block
+2:16
+of land and I've got my plans for my house but there's a heck of a lot of other decisions you
+2:20
+need to make about how you're going to assemble that app. And it's things like you know how what's
+2:25
+going to handle the API routes? What's going to handle the state management? All these things are
+2:30
+an entire separate ecosystem of components that have built up and tan stack is a set of those
+2:35
+components they've become wildly popular and they've sort of forged their own paradigm within
+2:41
+the react community. So that's what it does. It is a very integral part of building a react app.
+2:49
+Now the thing that is super interesting about the way that this initial attack vector happened
+2:54
+here is there was no leaked credential, there was no fish credential, there was none of the traditional
+3:00
+sort of ways in that you would expect for an initial compromise. Instead it relied upon a malicious
+3:06
+pull request making its way through a GitHub action and that GitHub action was to the admission
+3:13
+of the tan stack folks improperly configured and but it's just delicious how they did this.
+3:21
+We talked a little bit about this. We ran through the run sheet before we got recording. We do
+3:24
+this every week and the misconfiguration here was quite subtle. This was not like tan stack did
+3:30
+something completely suicidal and dumb here. They did slip up a little but why don't you walk
+3:36
+us through the mechanics of how this malicious GitHub action would wind up giving these
+3:42
+attackers access to tan stacks repost? Yeah it is funny because you pulled me up on the fact that I
+3:49
+was approaching this from my software engineer perspective which is like they tried so hard and they
+3:53
+did almost everything right and you said buddy you're in security now and there's no price for
+3:58
+getting just about everything right and sure enough there is a particular GitHub action that
+4:04
+happens on a pull request trigger which is it's kind of the most one of the most dangerous areas
+4:10
+where a GitHub action can operate because it's essentially the moment when someone says I've got a
+4:15
+pull request you know a set of changes that I would like you to bring into your repo and this action
+4:20
+fires within the context of the repo that the change might potentially be merged into
+4:26
+but can if so configured also pull in those untrusted changes that have been proposed by the
+4:33
+external third party in this pull request. The advisory from GitHub that's actually been out for
+4:38
+a couple of years now to be fair does say this is a very dangerous foot gun if you're using this
+4:44
+you know trigger pull request trigger action be very very careful about bringing in the untrusted
+4:49
+part of the code repo because this is what can happen and you know they they did not follow that
+4:56
+advice and that's exactly what this GitHub action did and that's how the attacker got their
+5:00
+foothold they got code run they poisoned a cache that was then used during the deployment and
+5:05
+it was actually the legitimate deployment step that then pulled that cache out and resulted in
+5:12
+the bad binaries being uploaded to npm. I mean it does feel a little bit though that GitHub has given
+5:19
+everyone a foot gun and said don't shoot yourself in the foot with this foot gun. You know Adam
+5:24
+let's bring you in on this one I mean this GitHub action stuff it just seems like perhaps GitHub
+5:29
+could be doing more but I don't know because I'm not an expert in this field. Yeah they absolutely
+5:34
+could have avoided shipping people a foot gun. I think kind of here what we are seeing is that I don't
+5:41
+know that anyone really expected the whole industry to coalesce around GitHub as the way of building
+5:48
+everything and you know one of the things that I thought was interesting about the story is that
+5:53
+they were sorry sorry to cut you off there and ruin your flow but you remember when
+5:57
+Microsoft bought GitHub and everyone's like it's over for GitHub that's it no one's going to use
+6:02
+GitHub anymore. GitHub's dead right. Yeah no it's it's weird how much GitHub has become you know
+6:09
+a critical part of everyone's of infrastructure and flow but yeah so in this particular case I
+6:14
+feel like like they did so many things right as James was saying but the GitHub action kind of
+6:23
+set up like this. I don't know that anyone really expected this to become so important right and
+6:28
+this particular foot come to be such an important thing. I mean the idea of running a little bit of
+6:33
+automation when you push stuff in and out of a Git repo or make pull requests or whatever else
+6:38
+seems like a good idea and all these little things they all seem like good ideas until you start
+6:43
+really crossing important trust boundaries and then building infrastructure that in very kind
+6:48
+of near-risk real-time pulls in dependencies from other people and so on and so forth and we end
+6:52
+up with the impact of these you know kind of little choices turning into you know quite widespread
+7:00
+compromise of code but I thought the the trick of using the kind of shared cache between
+7:07
+this way the GitHub action can cache artifacts with their build or whatever else they want
+7:11
+to speed up later steps in the process in which when you are read downloading you know heaps of
+7:16
+infrastructure or heaps of dependencies and stuff like that that can make a pretty material
+7:20
+difference to how responsive your build pipeline feels and developers love having their build process
+7:26
+be really snappy because then they can turn things around really fast and it feels like you're
+7:29
+doing stuff from you know that you know kind of desire for everything to be snappy and responsive
+7:35
+was the second kind of part of this right I mean the first thing is GitHub actions you know
+7:40
+executing kind of macro as I guess off triggers the automation events that potentially have
+7:45
+untrusted inputs one problem you know the side effects of those untrusted inputs being processed
+7:50
+in this case poisoning a cache that's then used later on is the second part of the puzzle and
+7:55
+then the third part of courses once it was executing in the release context then it drops this worm
+8:00
+that will propagate into other people's repo steel creds well let's let's you know let's go there
+8:05
+because we've covered the tan stack part of this but then from there as you say it dropped a worm
+8:10
+which went off then and self propagated and it's like it you know you just get on social media
+8:15
+and it looks like people are having a bit of a hard time containing this thing like it is running
+8:20
+real quick you know and we went through this last year and everyone's like oh we've all taken
+8:23
+steps to slow it down and GitHub's like oh you know we're gonna this ain't gonna be a problem
+8:27
+in the future and like here we all are and this time the people behind this worm have added some
+8:32
+real nasty features and one of them is if you try to rotate cred so it will it will you know handoff
+8:38
+all of its API tokens and stuff on your machine to the attacker if you try to rotate them it
+8:44
+detects that they've been invalidated and RMRF's your whole drive which is just like the nastiest
+8:50
+thing to do I don't even know why you would do that unless you're just like I don't know it's like a
+8:56
+real anti-social personality disorder kind of thing to do with your with your npm worm but like this
+9:02
+things out there now and causing all sorts of drama but what to what end is this is this you know
+9:06
+sitting above this whole thing is this gonna be something really dumb like someone trying to
+9:10
+still cryptocurrency or something because that's the vibe I get here it's very hard to tell because
+9:15
+again there's all amounts to stockpiling creds that we then go like for what end for where and so
+9:21
+dissimilar to a PCP it might be a little while until we see either the follow up actions that
+9:25
+they decide to do or they just kind of farm the creds out and and let other actors have a go with them
+9:30
+but it like it is it is odd that we don't know where this is going but it'll go somewhere
+9:37
+the other thing I wanted to add in here is I had a real cold sweat moment of panic this morning when
+9:41
+I read this because I thought to myself it's okay I haven't done like an npm install or a bun
+9:47
+install for a while now so I know I didn't pull in packages during this you know six minutes six
+9:52
+whole minutes where this was ablaze but then it dawned on me that the way that coding agents work
+9:58
+now both codecs and also clawed they work in git worktries and so when you farm your agent off
+10:05
+to go into a task it's working in a new directory that doesn't have all these modules installed and
+10:09
+so time after time after time throughout my day as I'm interacting with agents they are pulling
+10:14
+these packages over and over again so yeah folks need to think you might not have done an npm
+10:20
+install during this window but which one of your agents was working on something that went and
+10:25
+did it that you might not know that you did that you might not but you scared the hell out of me this
+10:30
+morning yeah all right we'll talk about our incident response later but yeah probably time to
+10:38
+move on to the next story now and and finally enough the next story we're going to talk about is
+10:41
+this breach of instructor and the learning platform canvas which is used by K-12 schools and
+10:47
+colleges worldwide I mean it's reported as being an America thing but I can tell you that you
+10:52
+know universities here in in Australia and across in your country New Zealand Adam have been like
+10:57
+delaying exams and things and and dealing with this um finally enough though it being the big story
+11:03
+I don't know that we've got much to add here I mean it was a small breach that initially instructor
+11:09
+was like yes you know attackers tried to compromise us but we have contained it and uh yeah it turned
+11:15
+out not so much a lot of their data got walked including according to the attackers billions of
+11:22
+messages between students and their educators and then of course there was a you know ransom note
+11:27
+kind of dropped on um a shiny hunters ransom note dropped on a login page for this system uh
+11:32
+reporting suggests that they have actually paid now to get the data deleted and you know I mean
+11:37
+that's pretty much the end of it it looks like shiny hunters managed to rack up a win here Adam
+11:42
+any thoughts yeah I mean I just you know paying them out feels bad but on the other hand you see the
+11:47
+amount of pain it was causing you can understand why that was the decision that they were going to
+11:51
+consider and especially in cases where you've got a supplier and their customers and the customers
+11:57
+are all applying pressure to the splitters something anything and the only fast option that a supplier
+12:03
+has is to go pay and that feels bad but you understand why and you know I don't know hopefully very
+12:09
+little bit actually ends up in the pockets of a shiny hunter uh but you know well you hope they
+12:14
+slip up doing their you know they might have something right like that's that's the vibe I get here
+12:20
+is that that could be that could well be how this ends because shiny hunters definitely has like
+12:25
+UK teens vibes right yeah and I kind of mentioned there money laundering slash you know kind of
+12:30
+money handling slash not going out on the immediately spending it on you know on on trash that's
+12:35
+immediately kind of draws attention to them doesn't feel super likely that they may be good at the
+12:40
+tech stuff but that doesn't necessarily translate the good at you know yeah long term crime I mean
+12:45
+everyone always criticises people who pay but I've said it on the show a million times right like
+12:49
+sometimes it's existential yeah and they've got to pay like and it's really hard to say that it's
+12:55
+uniformly wrong in every circumstance which is why I was against legislative proposals that would
+12:59
+have outlawed paying rents yeah I guess that's why I cast it as feels bad as opposed to is the wrong
+13:05
+thing to do you know yeah yeah exactly it just feels gross but what do you do well we're going to
+13:11
+stay with you on this next story Adam because this one has you written all over it uh I thought of you
+13:16
+as soon as I saw this um how how where to begin so um someone screwed up in Germany uh rotating
+13:25
+a key signing key for uh DNS which meant that the entire dot d dot d tld was returning serve fail
+13:34
+on DNS queries where they were they were they were signed zone files right so the they broke the
+13:39
+chain of trust for all of dot d e and cloud flare uh basically its decision and I agree with this
+13:46
+decision I think it was the correct decision and apparently there's an rfc backing this decision as
+13:51
+well but they just let the whole thing fail open right so basically they just switched off for the
+13:57
+one dot one dot one you know uh cloud flare resolver they just switched off DNS sec validation for
+14:02
+all of Germany uh because of this screw up and I I think look absolutely the right decision but it
+14:07
+kind of goes to show you that like this isn't really news you know what I'm like I'm reading this
+14:12
+straight off the cloud flare blog the fact that an entire tld and a big one at that just turned off
+14:18
+dnsc validation and everything was like no one noticed kind of tells you what you need to know
+14:25
+about whether or not the dnsc juices worth the squeeze in my view but I really came for your opinion
+14:31
+on this one yeah it's it's a pretty interesting tail this one and I think you know you kind of
+14:36
+summarized the guts of the technical aspects the interesting with cloud flare is so they
+14:42
+their one dot one dot one resolver does enforce dnsc it validates the domains that it's answering
+14:47
+questions about and the correct behavior in this situation was to return an error right to return
+14:52
+serve fail and you know not answer the query and cloud flare very rapidly realized that you know
+14:59
+that was worse than just answering the queries and marking them as not secure you know saying like
+15:05
+here's the answer but we know you know it's not dnsc validated which is what they ended up deciding to
+15:10
+do their um well thankfully Adam thankfully all of the software that we use and rely upon out there
+15:16
+is set up to to really take note of that note in the return zone file that says this isn't secure you
+15:21
+know and yeah there's really changes a lot of things we I mean I know we play with bunch of dnsc
+15:28
+stuff over the years and you know making like it's one thing to sign your own files on
+15:35
+publish it for other people to validate it's a whole other thing to say we are also going to make
+15:40
+all of our queries fail if dnsc isn't available or you know should be available and isn't because
+15:48
+it's just kind of break stuff and the amount of breakage that dnsc causes versus the amount of
+15:54
+you know kind of impersonation or you know um cage poisoning or whatever other things that's
+15:59
+run and prevent really the you know the impact of dnsc is mostly about bad availability and not
+16:05
+about integrity and yeah does the juicy worth the squeeze for dnsc really not and especially now
+16:10
+that we have so much other crypto led over the top with TLS let's encrypt one let's encrypt one and
+16:16
+the thing is like I guess one of the reasons that I like to beat up on dnsc is the proponents of dnsc
+16:22
+like the real rabid ones are among the most annoying people you'll ever meet in your life
+16:26
+and that's it clearly grew out of the kind of cipher punk way of thinking right where we should make it
+16:34
+perfect without really accepting the reality of the world that we have to live in uh and yeah it's
+16:40
+in it i mean the dns itself is just all tech and then bolting crypto into all tech you know we just
+16:47
+it just you know brittle is the end result right we have let's encrypt we have modern browsers
+16:51
+let's move on yeah and it's not perfect right i mean the the let's encrypt world and the browser like
+16:55
+delegating this all out to tls isn't the best solution but it's the solution we've got and it's the
+17:01
+only one that's you know kind of viable in the real world i don't argue at them that actually
+17:05
+in that everybody uses it it is actually the best solution unlike dnsc which people don't actually
+17:10
+use but anyway anyway we can argue this one we can argue this one more at at great length over
+17:16
+a beer one day moving on and Google's threat intelligence group has released a report
+17:25
+all about um you know what's happening out there with adversaries and whatever and not
+17:30
+surprisingly a i features very heavily um i guess the the item that they spoke about here that's been
+17:38
+uh talked about most is they discovered some threat actors at used a i to uncover an oday in some sort
+17:45
+of web i c administration tool i don't know that sounds like c panel to me i don't know uh but it's
+17:51
+like an mfa something like that i guess but it's an mfa bypass bug that they found and they were
+17:56
+able to i guess um disrupt the actor from being able to do widespread exploitation against that so
+18:02
+that's great a wonderful win for google but the thing that's remarkable to me is looking through
+18:08
+the executive summary of this report and it's all stuff we've been talking about like at length
+18:13
+on the show for months and months and months uh James you've been through this one that was your
+18:17
+take as well yeah exactly you know they open with that exact statements that um this is really just
+18:24
+a trajectory from nascent ai usage by attackers which is where we were from the last report to now
+18:30
+this is you know to use their term industrial scale application of generative models within adversarial
+18:35
+frameworks um but the nice thing about it is they sort of break it down into six headings and
+18:41
+each of them is a very sort of targeted look at where ai is being used for vulnerability discovery
+18:47
+ai augmented development of defensivation autonomous malware operating into end with ai um there's a
+18:54
+good section in here as well about the obfuscated lllm access and i think that's something that needs to
+18:58
+get a whole lot more attention throughout industry is just like how do we how do we prevent the large
+19:05
+scale use of lllm's in an unauthorized sense from these bad actors through things like you know chat
+19:10
+interfaces or rather half-baked lllm's been shoehorned into this product and it's accidentally a really
+19:15
+nice distillation vector for an attacker but but overall not like it's not a super thrilling report
+19:20
+but it's just really great to see there's all condensed down in one place that says yes this is
+19:24
+happening and the trajectory is we're now an industrial scale and let's see where this goes from here
+19:29
+yeah i mean adam you would as someone who has spent your entire career basically uh working in
+19:35
+off-sick i'm guessing you would have found this one pretty interesting yeah yeah it's good summary of
+19:39
+kind of where things are at and all the various places you can use the tooling uh and you know the
+19:45
+you know i think much like james the idea that we can control access to models as a viable kind of
+19:50
+strategy for mitigating the various ways that it's being used doesn't seem like a really robust path
+19:56
+forward but i thought that was just you know this is a great roundup of the state of the world and
+20:00
+obviously they have insight yeah by virtue of being both incident response but also operating one
+20:06
+of the big models and they can look at the arts being used and the ones are yeah they're
+20:09
+it's always interesting reading their work but because they have that kind of both ends perspective on it
+20:15
+yeah and if you want to know about the state of the art in terms of using lm's to do vulnerability
+20:19
+discovery uh last week we spoke about some work from nils provos who's an old school you know security
+20:24
+head uh who uh did some work in instrumenting and orchestrating lm's to do vandev in a way that was
+20:33
+like as effective as mythos even using local models and uh older models uh that was a very
+20:38
+interesting work we we did talk about it last week but since then james did a 90 minute interview
+20:44
+and discussion with nils are all about that work which is available in the risky business features
+20:50
+feed so again i know i've been banging on about it every week but you uh if you are not subscribed
+20:54
+to that feed you are missing some really good stuff so head over to either risky dot biz to get the
+20:59
+links uh the subscribe links or you can just fire up your pod catcher and search for risky business
+21:04
+features but that is a fascinating uh discussion and uh i've also linked through to it in this week's
+21:08
+show notes now uh a big thing that happened at and while you were away for a few weeks is every week
+21:14
+it was like the agenda seemed tailor made to the special guests that we had that week right
+21:19
+just incredibly uh well tailored and then you come back and it's the same right because we got a
+21:25
+whole bunch of really interesting bugs to talk about in stuff that you know very well so first of
+21:30
+all there's the dirty frag be uh a bug we spoke about copyfire last week and james i believe you're
+21:35
+going to correct something that you said last week that was incorrect about that but uh there's this
+21:39
+new one called dirty frag we've also got bugs popping up in like free bsd and whatever a lot of
+21:44
+this feels very ii driven um and i just wanted to get your your thoughts on these on these bugs at
+21:51
+man i really enjoyed copyfail it's a beautiful bug uh and uh spaying up with her read some of
+21:57
+the coverage of that when i got back from my holiday i wanted to refresh my memory about what the
+22:01
+cybers was all about and it just it felt so familiar in so many so many great ways uh dirty frag is
+22:07
+essentially just another variant of the same bug um the guts of copyfail were that you could write
+22:14
+you know corrupt the disc case in in the kernel you could uh you know override data stored in
+22:20
+the kernel's idea of case files off disc uh and that was done through in that particular case
+22:26
+you know something in the like encryption plumbing somewhere uh this is another couple of vectors
+22:31
+in the kernel that you can use to write to uh the page case uh in ways that are surprising and use
+22:38
+that for the local prevesque uh and like the beautiful local prevesque bugs right you know you
+22:43
+don't have race conditions you don't have memory corruption like it's targeted repeatable it's exactly
+22:47
+what you want uh in a in a kernel local prevesque because the last thing you want is in you know
+22:52
+bugs that are going to cause instability uh you want things that are super reliable and so uh
+22:57
+we love a Linux uh prevesque you know we've had to think about Linux being essentially single user
+23:03
+you know from a security point of view you know probably for the last 20 years it's never really
+23:07
+been safe to have multi-user Linux boxes uh and it's nice to see um you know that's sort of
+23:12
+you know reinforced for everybody but i enjoyed both of these bugs actually dirty fact technically
+23:17
+it's kind of two different uh instances of uh of a repeat of the bug that one that works well
+23:22
+on a Ubuntu one that works well on everything else um but yeah they're well worth reading and
+23:27
+understanding uh and i felt yeah it felt nice seeing something so near and dear to my heart uh you
+23:33
+know on the run see it this week well and then there's the free bsd one too which is also uh pretty
+23:37
+hilarious and i mean these are all AI discovered bugs as far as i know i think this free bsd one was a
+23:43
+mythos discovery and uh i think one thing when i was doing a little bit of research on it i you
+23:48
+know plugged it into google or whatever and i think Forbes was running a story saying uh mythos has
+23:53
+found a bug in one of the world's most secure operating systems and i'm like man it's 2026 like come
+23:58
+on uh who who did that headline um but yeah walk us through this one as well yeah so the free bsd
+24:04
+but absolutely feels AI discovered and it feels a little unsporting honestly letting an AI look at
+24:09
+26 year old or however all this you know the the most secure operating system in the world according to
+24:14
+Forbes um they may have confused their bsd variants there perhaps um anyway the the particular
+24:20
+bargain question is that a malicious dsd server can set a value that gets written oh this had a
+24:26
+value that's given to the dsd client um that's when the dsd the free bsd dsd client writes it into a
+24:34
+cache file on disk for later use uh you can kind of you know there's incorrectly a skate meta
+24:39
+character you can inject you know more directives to through the the a shibiklán then next on it runs
+24:44
+and reparsals that file it interprets those directives and you get code exec um and the like that
+24:49
+feels like an AI discovered bug because you know um you know sort of chain that logic together of how
+24:55
+you would use it and what it's good for uh makes a lot of sense the thing that i really liked though is
+25:01
+uh this bug so writing into the least cache file on disk uh dirty frag writing through the cache files
+25:08
+uh writing to uh the cache in memory uh and that bug way out front with shayhullard all three of
+25:15
+those are cache poisoning uh and i'm reminded of that like classic amorphism about they're being
+25:20
+too hard problems in computer science one is naming things the other is cache invalidation uh and
+25:25
+that definitely felt like yeah that uh that is ringing through this week for sure
+25:30
+yeah yeah uh meanwhile james you wanted to correct something uh when you were talking about
+25:35
+copy file last week you said you got one of the technical details wrong yeah so when i read the um
+25:40
+the publication from the theory folks uh there was mention of using the um was the ipasek
+25:46
+encrypted sequence numbers there was a bug in there that basically resulted in a a predictable
+25:52
+four-byte write outside a boundaries and and i assumed that that meant that that was just a really
+25:56
+simple like buffer overflow um in that and on one hand you think okay neat that they found that but
+26:02
+you also think there's so much tooling and and stuff that should have caught things like that um and
+26:08
+so we'll i think we'll link to it in the show notes but there's a great write-up from uh retro dot zip
+26:13
+retro with a zero where they actually sort of did a bit of a record scratch of like it's not your
+26:18
+average four-byte write out of bounds and they go deep into this and it it is crazy the the level
+26:26
+of sort of hoops that were were jumped through to just get this four-byte write into the page cache
+26:29
+so superb work and uh glad they took the time to really explain it yeah that that write-up is
+26:35
+absolutely worth the read-up if you want to understand the specific details because like it
+26:38
+explains it so well i'd be definitely recommend that one yeah and we've linked through to that write-up
+26:44
+in this week's show notes uh now look we're talking about AI discovering flaws in other things
+26:49
+there's a there's a fix just gone out for the Claude Chrome extension which would have enabled
+26:55
+other plugins i'm presuming extensions by that to hijack um the Claude extension there is that
+27:02
+about right uh James yeah it's yeah you look at this one did you just go Claude does not belong in a
+27:09
+Chrome extension right now um because it's it's just so simple how this was done right so if you've
+27:15
+got the Claude extension running um someone else or sorry someone could load a another extension
+27:23
+into the browser that had no permissions you know no elevated permissions whatsoever but just
+27:28
+had some nasty code in there that was interacting with the page and then you know if the browser
+27:33
+goes to Claude.ai for example the malicious extension all it has to do is just inject something
+27:38
+into the DOM which is the bread and butter thing that all of these extensions do and then Claude
+27:43
+sees that thing that's been injected into the DOM and reads it as a just a prompt it's it's like
+27:48
+if it's this easy to trick Claude into reading a prompt out of the DOM in a browser get that
+27:55
+thing the hell out of an extension like the only safe way to really use a model these days is for
+28:01
+you to be the sole source of input into the initial prompt right that is like the the the
+28:06
+cleanest guard rail and surface we have at the moment is because that's when you as the human express
+28:11
+your intent your instructions yes we pull in a bunch of skills and other things along the way but
+28:16
+you've bootstrap that you set the task and that's generally what the model will follow but when you
+28:21
+take Claude and put it in an extension that is reading the DOM and that can become the prompt
+28:26
+nothing good is is going to come up with my friend that's going to be that's going to be a bad time
+28:31
+and meanwhile Google Coping a bit of Flack this week for shipping everybody a 4GB like local
+28:37
+version of Gemini with Chrome where really people just woke up and their computer had seriously
+28:43
+just downloaded this 4GB update um finally enough I mean look this is to be expected right this is
+28:49
+the way the world is going and I've included a story in this week's show notes from Lily Hayneum
+28:53
+and over at Wired the headline is you can disable Gemini and Chrome if it's freaking you out and
+28:58
+the reason I really wanted to include this is this is going to be a future historical artifact
+29:03
+this article where people will be like wow people thought they could avoid AI it's like saying
+29:08
+you know here's how you can have a clean install of windows and disable all web browsers right
+29:13
+remember you don't want to use the web browsers in a browser you used to be able to turn off
+29:16
+JavaScript and that was a legitimate decision the people would make it's just the same sort of
+29:20
+lineage you just exactly exactly but I mean what do we think about Chrome doing this Adam I'd
+29:26
+love your thoughts here I mean I think the the argument for having that tiny model and there
+29:31
+was actually pretty reasonable like I'm being able to do certain things that you don't nest
+29:35
+there one a shove off like that obviously Google by making you run the model even with a really
+29:40
+little one saves them quite a lot of compute I would imagine and rather than having to like
+29:44
+make a have safe browsing make a call off to a Google AI service every time someone visits a page
+29:49
+so so your argument is reasonable but the counterpoint is which it's a witch yeah I mean
+29:57
+an out of things that are going to have like AI models stuck in them like it's as you say it's
+30:02
+just like you know we may as well say let's not put DLL files on things anymore you know like that's
+30:06
+you know that's the kind of the level that we're at these days so like I understand that some people
+30:11
+have you know concerns about AI just generally as a concept like that the training of those models
+30:16
+of the first place was unethical I would I mean that's kind of I can respect that kind of point of
+30:20
+you of it but if you're a technical user and you want to turn off this piece of functionality in
+30:24
+your browser you're kind of on a losing wicket I think yeah I mean I think we're more solid it's
+30:29
+a fun to know solid arguments you remember when Sony started putting like basically malware on
+30:35
+its music CDs back in the day where if you played one of their CDs it would like Trojan your box
+30:41
+to put all of this crazy like you know kernel level like anti copy stuff in your on your computer
+30:46
+without asking you like you know that one okay I think that we could say that one's over the line
+30:50
+but like a browser shipping a model get used to it yeah pretty much yeah uh now look we've just
+30:58
+got a like uh I got to rub out temples now we've talked about like AI bug discovery
+31:04
+that's a very big deal and we've also talked earlier in the year about like how AI is being used
+31:09
+to orchestrate attacks and scale them up and whatever and you know while we're on that topic bugs
+31:15
+in palo alto and eventy still I mean this is the sort of stuff that's going to get absolutely auto
+31:20
+owned by orchestrated AI agents which I am now referring to as infinity e script kitties uh because
+31:28
+that's basically what these agents are but my god man like at this point you know running stuff
+31:34
+like eventy running stuff like a lot of the palo alto gear it's just you're just it was risky
+31:40
+enough before and now it's just suicidal yeah I mean they're they're being yet more bugs in
+31:46
+eventy endpoint manager like how is that even post how is there any code left that is like surely
+31:52
+the best of got rid of all of it by now there can't be anything left um but I don't know what the
+31:56
+specific well as as grux said and you you weren't here and I doubt you listened to it because you
+32:00
+were on holiday but as grux said here a few weeks ago when talking about mazilla patching 271 bugs
+32:06
+that were found with uh with mythos in Firefox he said infinity minus 271 is still infinity and I
+32:12
+think that just applies yeah thanks oh yeah gruck with the wisdom as usual um yeah I mean ultimately
+32:20
+the thing that stood out to me about the eventy story was the sea server of anti came out and said
+32:23
+look we just want people to understand that we are trying to do the right thing it's like nobody
+32:27
+the time to do the right thing was 30 years ago when you stopped investing in the security of
+32:32
+this product all the people who bought it who bought it who bought it you know like many corporate
+32:35
+acquisitions ago that's the problem is that we're running 30 year old trash code and expecting it
+32:41
+to be robust against modern internet modern AI like much like that freeb you see deer speak like
+32:46
+being unsporting as a target like at this point of anti like it's just like it feels like you're
+32:52
+cooking a puppy at this point yeah well and this palo bug two atom is quite awful right so I hadn't
+32:58
+seen I was looking around for a paga apparently there is a paga so this was a palo alto
+33:03
+exec uh it appears to be memory corruption in a content limfator in the year 2026 and a thing that
+33:11
+powers us web content for a living I mean that's babby's that's babby's first exploit really really
+33:16
+is um so there's a slight kind of mitigating factor in that this is in there like captive portal
+33:23
+bit which there's probably no reason to have internet facing but of course people will because
+33:28
+you know why wouldn't you uh but yeah come on like memory corruption and a security appliance in
+33:32
+in the year 2026 and like there should be defense in depth and export mitigation and all these
+33:38
+things but security appliance vendors haven't had to update their products for 20 years
+33:42
+and so you know why rel row and pie and do all of the other export mitigation stuff in here that
+33:48
+would let you get away with having memory option in your content metheater but no that's just
+33:52
+palo alto life so everyone's at least used to patching this stuff so that's good right
+33:57
+yeah James you look like you had some feelings there uh it just you to to that point everyone's
+34:01
+used to patching it but the thing that I got a good gigal out of was when I read the event the
+34:05
+eventy advice it sort of is it they bifurcate what they tell you to do based on how well you
+34:11
+responded to the last time you got owned on this box so it's like you know if you responded
+34:15
+correctly to our advisory in January and rotated your credentials you need to do these steps
+34:19
+if you didn't you are in this bad state and if your box wasn't compromised in January you
+34:25
+need to actually do this instead so just love that it's now like a you've got to look back
+34:28
+over your history of you know not just what do you do with this box now but so they released uh
+34:33
+they released a choose your own adventure it was company their advisory basically yeah
+34:36
+it's a entry of fail that's great moving on and russia is launching kind of its own version of
+34:45
+styling it looks like there's a great write-up of this uh in wide and we've linked through to it
+34:50
+in this week's show notes but it looks like it's gonna take them a while to get this thing up
+34:55
+to being quite reliable but even an intermittent satellite connectivity over a battlefield is
+35:01
+actually going to be quite useful but what's amazing is like how quickly this sort of capability
+35:08
+has been understood to be very important by uh major companies i mean we've got the europeans
+35:13
+essentially launching their own thing and doubling down on their own thing because they're a
+35:16
+little bit worried about continued access to starlink because of elan musk and the united states
+35:21
+and its attitudes towards various things and no doubt the chinese will be working on their own
+35:25
+version of this but it just seems like you know this is absolutely a very important capability
+35:30
+and they're gonna do it i mean there's some delicious details though in this write-up about how
+35:34
+they're the hardware uh for this russian version of starlink is like multiple times bigger than
+35:40
+anything that comes out of space x right which shouldn't be all that surprising but you know they're
+35:45
+given it a crack james i know you've been through this one and i guess one of the things that you
+35:49
+and i both zeroed in on is the orbit path uh for these satellites is is quite different uh to those
+35:56
+from the other companies which i don't know there's some that could be interesting in terms of well
+36:02
+could you shoot these things down and uh have it not actually damage your own uh satellites for example
+36:08
+exactly yeah that there's uh two very interesting differences one is just the count of the satellites
+36:13
+you know whereas starlink has thousands and thousands of these things up there to get
+36:17
+full global coverage especially around um densely populated areas the plan here is to only launch
+36:23
+well only 300 satellites by 2030 that alone will require them to turn out a satellite or two
+36:28
+a week which seems a little bit ambitious but so it's a much smaller number of satellites but the
+36:33
+the orbit path because they wander essentially cover you know uh russia and and it's various
+36:39
+territories around there they can get away with an almost polar orbit on a on a certain incline
+36:44
+that means that they're going to be out of the way of the other satellites and they're also
+36:50
+operating at a much higher altitude about 800 kilometers versus 500 kilometers so it sort of settles
+36:56
+an argument you and i were having because i said you know there's no way that you know an adversary
+37:01
+would shoot one of these down because you take out all the satellites and then you know we'll never
+37:04
+will never go through space travel again but you know if it's only 300 that doesn't sound like
+37:10
+you actually need to disable too many of them and even if you had to do something kinetic it's
+37:15
+probably in a flight path where that debris won't be too dangerous so um yeah gosh when everyone's
+37:20
+got these it's going to be interesting to see what happens if there's a kinetic conflict around them
+37:24
+well the next world war is going to happen in space i guess as well as as well as everywhere else
+37:28
+i guess is where we landed on this but i think also you know there's probably ways to disable
+37:33
+these types of satellites without creating a debris field whether that's just putting a
+37:37
+hole in them with a laser or burning out some of their sensors around tenors you know there's
+37:40
+probably ways to do it and no doubt the very smart people over at us space force working on exactly
+37:47
+this problem um right now but uh yeah just an interesting sign of the times uh moving on we've
+37:53
+got a report here from tech crunch from zakwittica which is looking at a latvian hacker named uh denis
+37:59
+zolo zolo to jose um this guy was doing ransomware stuff uh working for a russian ransomware gang
+38:07
+called karakurt um the interesting thing is here though that the indictment sort of spells out links
+38:13
+between this group and um the russian government basically so it's really good to have some of
+38:19
+those links spelled out in a more explicit way than we've had previously and that's just why
+38:23
+flagged it and put it in this week's show notes uh we've also got a report from john greg over at
+38:28
+the record uh talking about how uh the muddy water crew which is an aranian apt crew essentially
+38:35
+they've been dropping chaos ransomware to kind of cover their tracks which i don't know that's not
+38:41
+so surprising i mean it's right there in the name you know muddy water trying to muddy the waters
+38:46
+uh on attribution um although james you pointed out to me that this does not look like a particularly
+38:52
+you know effective way of obfuscating um uh attribution given that they're signing utilities with
+38:59
+certificates that people know they use for example yeah it did seem like uh well intended but
+39:05
+perhaps poorly executed um but i think you know you made a good point to me which is that even if you
+39:11
+get to the point of realizing hi there's this you know ransomware was actually signed by you know
+39:15
+muddy water you you've already had to deal with that ransomware and all the impact and and that's
+39:20
+what they're aiming for is just to slow you down to distract you so they can get on with doing what
+39:25
+they they want to do otherwise without being noticed so um yeah well i feel like this will actually
+39:30
+work as an obfuscation against people who don't call mandient which is most people but if you do call
+39:35
+mandient they're going to pick an apart and figure it out i mean is that your vibe too uh Adam?
+39:39
+yeah yeah pretty much but i think like the the specific value of this you know in in you know in
+39:45
+terms of it being believable or whatever it's kind of less important than you know the goal is to
+39:49
+get people on through the ransomware off the playbook right they they might have a playbook for how to
+39:54
+respond to ransomware if you can shut them over and that you know what they're going to be doing
+39:58
+for the next three days and it buys you time and like anything where you can like manipulate
+40:04
+how your adversary what how your victim uh i guess uh i still think he might off sick life um
+40:10
+anything where you can manipulate how they respond gives you predictability and that's just really
+40:15
+important it doesn't have to hold the long it might just be long enough for you to you know
+40:18
+action on objectives or whatever else so yeah i think it's you know it's still a worthwhile trick
+40:24
+yeah and uh speaking of ransomware foxcon has confirmed there's been some sort of attack against
+40:30
+its factories in north america looks like a limited impact though i mean from what we can tell so far
+40:36
+it looks like they had a bit of drama with you know the wifi didn't work and they couldn't use
+40:40
+the computers or whatever and i don't know if that's ransomware or if it's people like you know if
+40:43
+they're pulling stuff down and responding or whatever but it looks like they're all back up now
+40:47
+many such cases these days right where you actually see you know there's an initial foothold there's
+40:52
+a bit of drama with a ransomware attack and then things are quickly brought back to normal so it
+40:56
+looks like perhaps that's what's happened here uh but one story i wanted to talk about in a bit more
+41:01
+depth uh john greek has this uh right up in the record um there is a sister initiative uh where
+41:08
+it's called cifortify and the idea here is that they're going to help critical infrastructure
+41:14
+to figure out how to operate offline now this could be because there are ddox attacks happening
+41:20
+targeting critical infrastructure it could be because a campaign like vault typhoon is starting to do
+41:26
+unthinkable things to us critical infrastructure could be for any reason like that but i think this
+41:32
+is a really good idea i think in terms of like resilience um you know going to a utility going to
+41:39
+a bit of critical infrastructure and saying look how dependent are you on us east one right and
+41:44
+that link being active in able in order for you to actually be able to operate your service and
+41:48
+like can we build some contingencies here funnily enough james at one point in your career you kind
+41:54
+of went through this uh with a critical infrastructure provider and where it's landed is okay so for
+42:02
+the for the really insecure utilities and whatever going through this process is is going to be a
+42:07
+really good thing to do but you made an interesting point to me which is for the people who really
+42:11
+know what they're doing for the highly sort of secure environments having to go through an exercise
+42:16
+like this actually winds up introducing a fairly large amount of new attacks surface because there's
+42:21
+all of a sudden a lot more new equipment and a lot of redundancies so yeah it's there is a
+42:27
+downside i guess for some operators was the point you were trying to make to me yeah i was looking
+42:31
+at it from the perspective of if a organization has gone through you know they're cloud transformation
+42:36
+and moved a lot of on-prem workloads up into the cloud and they're heavily dependent on uh you know
+42:42
+telco infrastructure that is managed for them that's the kind of stuff that is straight away is
+42:46
+going to be in the crosshairs if they're you know challenged to say well you know how do you
+42:51
+operate if all of that stuff is going away um inevitably and and this is the the situation i
+42:57
+went through is we had to start bringing some versions of software really create key critical
+43:01
+things back on-prem in a hybrid cloud and on-prem model now that introduces complexity right not
+43:08
+just it's it's one thing to go from cloud to on-prem but if you're having to manage both uh active
+43:13
+standby or active active on-prem and cloud at the same time you've got complexity you've got
+43:18
+additional equipment you've got additional configuration and all of those things when you're not
+43:24
+in the offline mode become really excellent places for an attacker to get access to and to dwell
+43:30
+my point is i think this is still i mean you have to go through this right is it would be my point
+43:34
+which is we live in a world where these links these data centers i mean we saw in Iran right Iran
+43:40
+actually attacking Amazon data centers for example right when there's going to be a conflict these
+43:44
+this infrastructure is going to be targeted and we need to make sure that our critical infrastructure
+43:49
+is resilient yes it does cut both ways but i don't really see that we have another another option
+43:54
+but to do this out of what's your take on this i think this kind of exercise is really useful and
+44:00
+important because you know we build this stuff so quickly all this infrastructure we know
+44:04
+everything is all high tech very quickly and we haven't really thought about the failure modes
+44:08
+now what you do with your you know if you go ahead and do this kind of exercise and you understand
+44:12
+now what the potential failure might look like what you do with that is another thing right building
+44:16
+redone the infrastructure or offline bringing stuff you know back out of the cloud like those are
+44:21
+things powers that you can go down at least understanding what the potential impact could be
+44:27
+so that you're not exploring that the first time when it actually happens and i think in like in
+44:31
+New Zealand for example we have one essentially one or two kind of big fiber links in and out of the
+44:37
+country if those go away because someone does a little submarine snippy snappy which you know great
+44:42
+powers have been known to do in time to conflict little snappy snappy and like we don't understand
+44:47
+and like sure there's a bunch of things we could do it's probably prohibitive the expanse so we're
+44:50
+just going to accept the risk but at least understanding that you know all our national payment systems
+44:55
+are going to stop working without that piece of fiber like that's good knowledge and it's worth
+44:59
+doing these kinds of exercise to know are we going to have power are we going to have water you know
+45:04
+because you don't want to be doing this for the first time for real and of course this will happen
+45:10
+because the first objective of super power during a great power conflict will be to take New Zealand
+45:15
+out of the war strategic dagger pointed at the heart of Antarctica yes yeah we're just going to stay
+45:22
+here with our sheep and because we're not exporting all of our food anymore we're going to have
+45:26
+plenty it'll be fine just no diesel yeah yeah what is it the the New Zealand Defence Strategy of
+45:34
+well they have to go through Australia first thanks buddy your back for those buying
+45:39
+f18s thank you very much f 35 thank you very much we get we get the good stuff we got to I wanted
+45:47
+to link through to a report which unfortunately unless you're a 404 media subscriber you won't be
+45:52
+able to read it on web if you are an email recipient you would have received this one so you can
+45:57
+dig it out of your out of your inbox it did go out for free as an email but Joe Cox managed to get
+46:02
+his hands on the software a bit of Chinese software that's used by people doing scams to do deep
+46:10
+fakes right so you can grab pictures of people send them to these guys for 500 bucks they will
+46:15
+create like a model of this person you're trying to impersonate and it will do it in real time
+46:19
+on zoom on WhatsApp on whatever you want it really fun right up of like Joe's adventure in like
+46:29
+going and procuring the software and they even like remotely set it up for him they set up a
+46:32
+partition on his on his computer and in they came remote support very slick operation James I mean
+46:38
+you know I know you enjoyed this one as well I know I did a couple of things really jump down
+46:42
+and the first is yeah yes just it was such a white glove high touch service those are beautiful
+46:48
+to see they've considered customer service but didn't take a lot in terms of hardware specs they
+46:54
+demanded a i7 processor 16 gig of ram and an Nvidia 4080 that's not the kind of spec that I
+47:02
+thought would be needed to pull this off so that was quite surprising but the thing that is like
+47:08
+just this moment when you go oh my goodness we're in trouble is when you read the part that says
+47:13
+you know exceptions but with an x which is a deep fake detection model it struggled they say
+47:20
+and inverted commas but struggled was actually almost a hundred percent of the samples from this
+47:28
+software they acquired was was mistakenly labeled as authentic despite this research being the
+47:33
+state of the art of deep fake detection and the videos look good they're still a little bit of
+47:38
+uncanny valley but you know the fact that it works when there's something in front of the face it
+47:43
+tracks lighting differences it's it's getting good it's yeah and I wonder I wonder I mean we've
+47:51
+had persona on a couple of times right and they talk about how they do real-time video and stuff
+47:55
+and that's a big part of how they actually do like KYC style you know verification of identities
+48:02
+and it's been used in the enterprise and whatever and you you worry how enduring that sort of
+48:06
+approach is going to be and now I'm sure they've got labs and they're cooking up all sorts of ideas
+48:09
+and detections and whatever but this you know remotely verifying someone's identity is correct is
+48:16
+a wicked problem it has always been a wicked problem and it's going to remain a wicked problem and
+48:19
+I feel like we've had an easy run of it with with video recently and now that's kind of gone
+48:25
+and our final piece this week which is you know I guess we'd call it our skateboarding dog we
+48:31
+spoke about how the FCC in the US is going to ban foreign made routers and looks like they're
+48:35
+pushing through with this but it looked like they were also going to ban foreign routers from
+48:42
+patching and issuing patches from like March next year they've now realized this is not a great idea
+48:48
+and they have pushed that patch ban out to 2029 still a bad idea but it's further away
+48:54
+they've also reversed the ban on patches for drones so well done FCC.
+49:00
+So many bad ideas but yeah bad idea two years down the track we've got a chance with it's the
+49:05
+bad idea is this week that these days we are reduced to struggling with so I guess good news and
+49:11
+we'll check in on a couple years and see you know what they do then.
+49:15
+Yeah right guys well that is it for this week's news great to have you back Adam James great
+49:21
+to chat to you as well and yeah we'll do it all again next week.
+49:24
+Yeah we certainly will Pat I'll see you then.
+49:26
+Yeah thanks Pat seeing a week.
+49:56
+It's also highly inspectable you can write custom rules for it or you can just get their AI agents
+50:01
+to do that for you that stuff actually works really well um crazily well in fact but Bobby
+50:07
+joined me to have a bit of a broader discussion about AI in the cybersecurity marketplace you know
+50:12
+when people are evaluating cybersecurity solutions that use agentic AI what sort of questions
+50:18
+are they asking what are the things they want to know um and let's just start it there but we go
+50:22
+on to talk about a few other things like how this is a bit similar to the machine learning craze
+50:28
+of like 10 years ago it's a fun interview so here's Bobby Filler talking about how customers go
+50:33
+about evaluating agentic cybersecurity platforms enjoy.
+50:37
+Yeah I think they think about it a few different ways and honestly the the easiest one is just
+50:44
+asking questions right how how has this agent been trained what is its background of knowledge
+50:53
+do you use evaluations offline online evaluations to monitor performance when we're talking about
+51:00
+things like agentic use and autonomy has been read-teamed right like that's that's a real
+51:06
+real situation that folks need to consider at this point is these agents can do a variety of things
+51:12
+they have different skills different tools they can reach into it if that hasn't been thoroughly
+51:17
+internally and externally customers are understandably wary of that and then as you move down
+51:23
+the line I think it turns into what's your what's your methodology what is the reason for building
+51:29
+this agent in the first place like what problem did you identify where you felt like I needed this
+51:36
+and those types of questions I think really suss out whether or not a vendor is
+51:41
+balding on something that is just kind of an afterthought checking the box or whether or not
+51:47
+they're building it with with good intentions this idea of up leveling the customer giving them
+51:53
+an opportunity to grow with the product until the point where they feel comfortable releasing
+51:59
+some of their day-to-day responsibilities to it now do you feel like there is and I definitely
+52:05
+feel like this is something that's happening out there do you feel like there's some AI fatigue
+52:09
+among buyers at the moment because I feel like everybody has like bolted some sort of AI
+52:15
+function onto their thing they're like where are they I platform because like that's what you have
+52:18
+to do at the moment right it's just what you have to do so I feel like if I'm a buyer at this point
+52:24
+I'm like oh you want to pitch me your AI solution do you oh great like I haven't had like 10 of
+52:31
+them this week yeah it's it's interesting so I grew I kind of got my background in the in the
+52:37
+heyday of early machine learning being introduced in security products I'm from the end game a lot of
+52:44
+my a lot of my security AI friends were in like crowdstrike and silence and things like that
+52:50
+it was always really funny because you would go to rsa you'd go to black hat be like I'm the person
+52:55
+who you know uses math to catch mouth malware and they're like no just like and you probably
+53:01
+remember snake oil booths and things like that popping up and and it was it was kind of a joke
+53:06
+for a while and it was a it was a tough one I mean it always it always worked though and I think
+53:11
+I think AI is kind of the same it's interesting that you mentioned this right because like Ryan
+53:14
+perme I know still I'm in line who was a co-founder of silence and I remember running into him at
+53:19
+black hat once like just before they launched that product and I'm like hey man you know how you
+53:23
+beat is like I've been working on something it's really cool and silence you know look in the end
+53:28
+they had an exit to you know wherever they wound up and it wasn't really that spectacular but
+53:32
+the product was interesting I think the where they messed up is they missed the EDR train right
+53:37
+but as an anti malware engine doing machine learning classification man it worked well like it
+53:43
+worked really well the problem with all of that machine learning stuff was always going to be the
+53:47
+edge cases it was like how do you handle like anti cheat on that ships with a game or how do you
+53:52
+handle say enterprise products that look like Trojans but but that was the thing is fundamentally
+53:57
+this technology was incredible but then all of a sudden everybody's like it's got machine learning
+54:03
+right it sort of does feel like a repeat of that whole it does it I feel like it kind of like
+54:08
+ebbs and flows and it's fascinating now when I'm when I'm in a lot of these
+54:14
+these customer meetings and talking to folks I don't get I don't feel the same pushback
+54:20
+that I used to in like 2016 what I get instead is there's usually some pressure from
+54:27
+a higher up being like look if if you get funding for this project we need we need the latest
+54:32
+and greatest latest and greatest is AI and it's like okay so there's some self-fulfilling
+54:37
+prophecy there that kind of takes place so people are slapping AI on stuff so that like people
+54:42
+can get authority to buy it because they've been there's a mandate from heaven that says that
+54:46
+they need to find efficiency with AI yeah yeah and then I think on the flip side like in 2016
+54:54
+people weren't using even accidentally using machine learning in their day to day whereas now
+55:00
+it is so it is just so pervasive and everything that you do where I just kind of wonder there's
+55:06
+just like a general malaise or a general comfort around like okay I'm already familiar with
+55:12
+what a lot of this is so you know what is that what does that mean for me and in the product that
+55:17
+I'm trying to buy like maybe I'm not pushing back as much as I should be that's a that's a really
+55:23
+interesting point which is that if if people if the people making the purchasing decisions or
+55:26
+running these programs already familiar with chat bots they've got a general familiarity with
+55:30
+what they can and can't do right that's a feeling for it right yeah and I find that I find that
+55:36
+to be the most interesting because it's like yeah but meanwhile like us cybersecurity experts
+55:42
+are often on the sidelines watching people use these tools external to cybersecurity being like wait
+55:48
+whoa wait you know don't put your medical records on here be careful what you you hook your machine
+55:52
+up to and allow it to do and and then on the same note we're building tooling that's be like yeah
+55:59
+you can probably take your hands off the wheel it's it's fine we'll remediate things we'll catch things
+56:03
+and it's it just seems to be the message just just doesn't seem to be I don't know if it doesn't
+56:10
+resonate or or if we're just not thinking through the potential impacts but I feel like there's
+56:15
+an opportunity for the entire industry to to kind of take a step back and and be like what are we
+56:20
+actually trying to sell here and and what does that look like and and that's kind of what I've
+56:25
+been trying to to communicate internally with this this idea of like SAE levels for autonomy for
+56:32
+like that we're putting it but I mean just going back to what we were talking about earlier which is
+56:36
+like how do people gain trust in these systems I mean it sounds like what you're saying is the
+56:40
+starting point starting level of trust is already kind of high because people are familiar with this
+56:45
+you know with with with you know basic you know chatbot technology so there's already that starting
+56:51
+level of familiarity and then they're working through this stuff mostly with questions what are the
+56:55
+questions that people see most concerned with I mean you mentioned red teaming as being a big
+57:02
+big concern like what are some of the other ones where people are really like you know this is a
+57:06
+this is a deal breaker question for us when we're looking at evaluating a AI enabled security
+57:12
+technology I think one of the the bigger ones I hear is just about data flow kind of through
+57:19
+these agents right there's a lot of I think misunderstanding about about what tends to happen
+57:25
+and I feel like the the main fun around AI use in general is like oh these these frontier providers
+57:33
+are going to take all your data and train on it and it's funny how that became just an accepted
+57:38
+truth when it is just not the case at all that's not how this right right and and that's you know I
+57:45
+do elements of that happen probably on on some level but cybersecurity industry in general has
+57:52
+so many policies and guidelines that we need to adhere to with regards to data it's like we're not
+58:00
+just vacuuming all this stuff up and then shipping it off to to a frontier provider and being like
+58:06
+give me a response back charge me money and and keep the data to yours that that isn't really how it
+58:13
+works so you know part of it is is education right with these customers and be like look this is
+58:18
+this is the way this flows this is what these models actually do when we say we're learning
+58:24
+from your feedback or or from mistakes like this is what we mean it's we're not going back to the
+58:29
+well oh sorry what's interesting here what's interesting here is that you know you're talking about where
+58:34
+there's pushback it seems to be well is it is it safe they're like is it red teams is our data contractually
+58:41
+protected against being included in a training set so it seems like people are not so much pushing
+58:46
+back on can this thing do what it says it does they're more pushing back on is it safe to use it
+58:52
+do you think that's the dynamic here I think that's the start right so that's I I would can like
+58:59
+pitch this more is those are the questions you get pre POC or POV and then once it's in their
+59:07
+environment that's when that's when you get more of the operational questions hey what was this
+59:13
+trained on do these things look like my environment if they don't is in an approximation if it's
+59:18
+not an approximation how do you learn like at what point should I feel comfortable hitting the
+59:24
+toggle button saying like I need to be in an active kind of feedback loop is is opposed to a passive
+59:30
+feedback loop and that is a really interesting thing to navigate because it really can be a choose
+59:37
+your own adventure what level are you comfortable with and you can chip away at that is a vendor by
+59:43
+by giving them explainable kind of transparent reasoning along with any decision that it makes
+59:51
+or you could just say like look you could treat this as any other feature it's just slightly any
+59:55
+other machine learning feature but it's just slightly more intelligent and we found personally
+60:01
+um that it's a it's kind of a back and forth they're give and take where you're showing them evidence
+60:08
+trust is build up you make a mistake trust can degrade but then how quickly do you turn that around
+60:15
+or is the explanation around why that mistake occurred strong enough where that sort of
+60:21
+trust didn't did not evaporate or you just you just said something fascinating there which might be
+60:28
+yeah change my thinking I guess about how how all this works right which is you said I it's
+60:34
+just like a machine learning thing but it's smarter and in many ways that's true right because llm
+60:38
+is just machine learning but like at ridiculous kind of scale that was thought to be like impossible
+60:42
+previously you know you could do that but you'd need so much compute it's ridiculous it's like yeah
+60:48
+here we are like hundreds of billions of compute later um and that's what we got no one expects
+60:53
+machine learning solutions which are just bought and sold like without any question no one expects
+60:57
+them to be perfect and never to make mistakes but it seems like when it comes to a lot of these
+61:02
+like contemporary AI solutions that expectations very different I'd never thought of that before
+61:08
+but like if your machine learning based like ideas or male filtering thing makes a mistake
+61:15
+like no one's even complaining at that point like they might grumble about it a bit if the
+61:19
+mistakes really bad but like why is it that there's such a higher expectation that these AI
+61:24
+solutions are going to have to be you know perfect like people will look to like points are
+61:28
+they're making a mistake and say see this technology's rubbish they don't do that we have a tech
+61:33
+like what is that I I chalk it up to you know the height like the marketing height but around AI
+61:42
+in general is is it like a it's such a level that I feel like it's it's very hard to walk back
+61:50
+and you know I recall the days where it was like our machine learning catches 99.9999 percent
+61:56
+it's like that's probably not true but I think now there's just this expectation that even when
+62:02
+you make a mistake these things are so smart that it's just going to pick it up the next time around
+62:07
+it's like when you're you're talking to a frontier model via chat and you're like oh no no that's
+62:13
+a mistake and it's like it takes on the persona of a human being and you're like oh yeah that's
+62:19
+actually that's a sharp question or that's a good point and I think human beings take that feedback
+62:24
+and they're like oh it's it's learning so now now I shouldn't see that mistake ever again
+62:29
+and I think what were you running the problems particularly with being a security vendor is
+62:35
+you're pulling in these frontier models you're not actively adapting them right like no
+62:40
+I mean this is literally what I was going to say when you're like $30 million yeah yeah yeah like you're
+62:44
+saying all people you know are they learning but they don't you know and even if you put you know
+62:49
+like even if you prime them with the right instructions and prompts and whatever they still
+62:53
+ignore you every now and then we saw this twit twit twit thread recently where someone lost their
+62:57
+entire production environment because they thought they're like text-based you know instructions
+63:02
+to a model of never ever do this with godriles and they're not yeah yeah and that's I love that
+63:10
+consumers are getting a little bit more savvy and and they're learning more than nomenclature
+63:14
+and and kind of what to ask so it is cool to get things like you know what cardrails do you have
+63:19
+around that it's like well you know we the here's kind of what we're doing and this is what we give
+63:24
+it access to and and sometimes it satisfies things but other times they pull the thread a little more
+63:29
+and they're like all right we'll talk to me about tool use like what tools do they have and they're
+63:34
+coming at it and it's getting I I want to say maybe more precise the way they're yeah thinking
+63:40
+about it and they're starting to pull the right threads you know as you go through proc they start
+63:45
+asking you well how you know what why do I need the AI what does the AI actually do yeah exactly
+63:52
+and it's just like and then they get that the taste right and they're like oh wow this this
+63:56
+like takes care of this problem that I I have or I'm throwing too many people at you're like great
+64:01
+and then it's usually at that point they're like could we could we put it over here and I'm like
+64:05
+it took us so long to get to this yeah like let's take a breath let's learn and let's and then we
+64:11
+can start to move it over and it's yeah the parallel is I feel like with self-driving cars and
+64:19
+and kind of what we went through in the late 2010s is like it's certainly not lost on me we're in
+64:25
+words just like yeah kind of funny kind of funny Bobby we're gonna have to wrap it up there we are
+64:30
+out of time great to chat to you about all of this and yeah for those interested they can check out
+64:35
+sublime security a great email security product thanks again no thank you take care that was
+64:42
+sublime securities Bobby Filler there big thanks to him for that big thanks to sublime for being
+64:47
+a risky business sponsor and that is it for this week's show I do hope you enjoyed it I'll be
+64:52
+back soon with more security news and analysis but until then I've been Patrick Gray thanks for listening

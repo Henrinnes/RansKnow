@@ -1,0 +1,1634 @@
+0:00
+An employee in your organization got a
+0:02
+phishing email. They clicked the link,
+0:04
+landed on a real Microsoft login page,
+0:07
+typed their password, and completed MFA,
+0:09
+and walked away thinking that nothing
+0:11
+had happened.
+0:12
+And they were right, you know, nothing
+0:13
+suspicious happened on their end, but
+0:16
+somewhere across the internet, an
+0:18
+attacker's device just received an
+0:19
+authenticated session token for that
+0:21
+account.
+0:22
+The password is irrelevant now. The MFA
+0:24
+prompt is already fired and passed.
+0:27
+And a password reset tomorrow morning
+0:29
+won't fix anything, because the token
+0:32
+stays valid regardless.
+0:34
+That's what we're tracking right now,
+0:35
+and it's working at scale.
+0:39
+>> [music]
+0:43
+[music]
+0:47
+>> Welcome to Shadow Talk, a cybersecurity
+0:48
+podcast powered by ReliaQuest, [music]
+0:51
+the leader in agentless AI security
+0:53
+operations. I'm Brandon Sorato, director
+0:55
+of GreyMatter operations,
+0:57
+and I'm John Dilijan, threat
+0:58
+intelligence analyst. And to start
+1:00
+things off, I have a question for our
+1:02
+listeners.
+1:03
+So, your phishing defenses passed
+1:04
+[music] every check against the phishing
+1:06
+email. They saw a real login page, a
+1:09
+real MFA prompt, and no malicious
+1:11
+attachment. So, the question is, why is
+1:13
+the attacker already inside your
+1:15
+environment? Yeah, and and and most
+1:17
+teams hear that and assume that the
+1:18
+attacker had to break something real,
+1:20
+but they actually didn't.
+1:22
+Yeah, and the technique that we're
+1:24
+talking about in this episode, it abuses
+1:26
+a legitimate OAuth authentication flow.
+1:29
+It's called device code phishing.
+1:32
+You know, you're supposed to get a code,
+1:33
+type it into a real login page, and the
+1:36
+device gets authenticated access.
+1:39
+But the problem is that there's nothing
+1:40
+in the flow that checks whether the
+1:42
+device waiting for the resulting token
+1:45
+is yours or an attacker's.
+1:47
+The user completes real MFA at a real
+1:49
+login page, and that token goes to
+1:52
+whoever sent the lure.
+1:54
+You know, and and which is why the inbox
+1:56
+piece matters. You know, if your team is
+1:58
+already stretched on fishing reports,
+2:01
+the ones doing session theft look
+2:03
+identical to everything else in that
+2:05
+queue.
+2:06
+There's there's no fake domain, no
+2:08
+malicious attachment. It's just a real
+2:10
+log-on page and a code.
+2:13
+You know, the the volume that it that it
+2:15
+masquerades in is really the cover.
+2:17
+Yeah, so exactly. Let's ground this and
+2:19
+what we're actually seeing across our
+2:21
+customer base. You know, the scale of
+2:22
+these campaigns and how the technique
+2:25
+has really shifted in the last few
+2:27
+months here.
+2:28
+So, we've been watching this hit
+2:30
+enterprise cloud accounts since late
+2:32
+March.
+2:34
+And what's different now isn't that
+2:35
+there's one particular campaign, but
+2:37
+it's really that the playbook looks the
+2:39
+same every time we've seen it.
+2:41
+A wide range of victims, but the same
+2:43
+moves by the threat actors.
+2:45
+In our telemetry, we've seen a sustained
+2:48
+increase in this activity since late
+2:49
+March.
+2:51
+And what really stands out from that is
+2:52
+that the post-compromise playbook is
+2:54
+consistent across incidents.
+2:56
+It's not just get the token and start
+2:58
+browsing.
+2:59
+We're seeing malicious inbox rule
+3:01
+creation, rogue device registration, and
+3:04
+business email compromise activity all
+3:07
+running in sequence, back-to-back,
+3:09
+sometimes within seconds.
+3:12
+They're working from a script, and this
+3:13
+isn't someone poking around to see what
+3:15
+they can grab. The playbook is written
+3:18
+before the threat actors even have a
+3:19
+token.
+3:20
+Yeah, John, and to put some scale on
+3:23
+what that consistency really looks like.
+3:25
+You know, a single campaign this spring
+3:27
+alone hit 13,000 organizations across 26
+3:31
+countries. Mostly in the US, you know,
+3:35
+health care, financial services,
+3:36
+professional services, technology, etc.
+3:39
+They took the hardest hits.
+3:41
+But, you don't reach that scale by hand,
+3:43
+and that's what's important here. You
+3:45
+know, someone built a machine for this.
+3:48
+Yeah, and and really, Brandon, you know,
+3:50
+to to piggyback off that number of
+3:52
+13,000 organizations hit, you know,
+3:55
+that's what really matters. Nobody hits
+3:57
+that many targets that fast without
+3:59
+automated delivery and automated token
+4:01
+processing on the back end.
+4:03
+And then there's another dimension,
+4:04
+which is phishing as a service, or these
+4:07
+phishing kits that are spun up for
+4:09
+threat actors to purchase. You know,
+4:11
+back in March, we tracked a campaign
+4:13
+that hit more than 340 organizations
+4:16
+across five countries.
+4:18
+And it was linked to a phishing as a
+4:20
+service platform that launched on
+4:22
+Telegram that same month with turnkey
+4:24
+abilities, including email harvesting,
+4:27
+business email compromise
+4:28
+infrastructure, and AI-assisted
+4:30
+automation.
+4:32
+Now, before that kit and other kits like
+4:34
+it, you needed real tradecraft to pull
+4:36
+off this type of attack at this scale.
+4:39
+Whereas after it, you really just need a
+4:40
+Telegram account and a credit card.
+4:42
+Yeah, John, and security researchers
+4:44
+tracking those those earlier campaigns,
+4:47
+you know, also assessed that this
+4:49
+technique has been more effective at
+4:52
+successfully compromising accounts than
+4:54
+most other targeted spear phishing
+4:56
+campaigns that the same actors had run
+4:59
+in in months past.
+5:01
+You know, that's the comparison that I
+5:03
+really want to flag for the CISO
+5:05
+audience that's listening here.
+5:07
+This isn't just another phishing vector.
+5:09
+It's truly outperforming the other
+5:12
+approaches.
+5:13
+Yeah, that's a really great point, and
+5:15
+and certainly that's why we're covering
+5:16
+it today.
+5:17
+Now, on the other side, there's a
+5:18
+convergence that's happening here that
+5:20
+we're seeing in May, where another major
+5:23
+established phishing as a service tool,
+5:25
+what and this is one that has been
+5:27
+historically one of the most
+5:28
+sophisticated platforms,
+5:30
+added this capability of device code
+5:32
+phishing to its toolkit. Again, another
+5:35
+sign that this is significant and the
+5:37
+threat actors are swarming around it.
+5:40
+So, when an established kit adds a
+5:42
+technique,
+5:43
+it means that the technique is now
+5:45
+available to every subscriber of that
+5:47
+service,
+5:48
+including actors who who have never
+5:50
+built this capability themselves.
+5:52
+You know, the fishing as a service
+5:54
+operators are really converging on this
+5:56
+token theft. Meaning the actors that can
+5:58
+run this technique a year from now won't
+6:01
+be the same ones who invented it. It's
+6:03
+anyone who paid for the subscription.
+6:06
+And there's a second flavor of this,
+6:08
+something researchers are calling
+6:09
+consent hijacking, which is the same
+6:11
+idea, but the whole attack stays inside
+6:14
+the victim's browser. There's no device
+6:16
+code, no email needed. The victim gets
+6:18
+redirected to an OAuth login, and the
+6:21
+authorization code ends up with the
+6:23
+attacker.
+6:24
+This method is primarily delivered
+6:26
+through search engine optimization
+6:28
+poisoning rather than just email, but
+6:30
+does show up in email lures, too.
+6:32
+Different lures, same goal, really
+6:34
+getting at that point of targeting
+6:36
+tokens instead of passwords.
+6:39
+And that's what our telemetry is showing
+6:40
+as well, right? It it's spread across
+6:42
+hospitality, manufacturing, health care,
+6:45
+higher education, etc.
+6:47
+It's not one sector that's vulnerable to
+6:49
+device code fishing.
+6:51
+It's any sector essentially with a cloud
+6:54
+footprint, a cloud account footprint.
+6:57
+The breadth of that targeting alone
+6:59
+tells you that this is a widely
+7:01
+distributed adoption and not a narrowly
+7:04
+scoped campaign.
+7:06
+Yeah, exactly. And that's the landscape
+7:08
+we've set up. But the reason this is a
+7:10
+harder problem than it looks, and really
+7:12
+the reason many defenses that should
+7:15
+catch it aren't, is what Brian's going
+7:17
+to get into next.
+7:19
+Yeah, and so John, here here's why it's
+7:22
+it's hard to catch.
+7:24
+You know, the whole attack it it runs on
+7:26
+legitimate authentication. It it's it's
+7:28
+a real login page that the user's
+7:30
+interacting with. It's a real MFA prompt
+7:32
+that the user has satisfied, and it's a
+7:34
+trusted Microsoft application.
+7:37
+Nothing that the user sees,
+7:39
+and nothing that most tools are going to
+7:41
+be, you know, in tune to fire on, right?
+7:44
+The sign-in looks right. The damage is
+7:47
+really in what happens after.
+7:49
+So,
+7:50
+the user logs into a real portal, they
+7:53
+don't see a fake site, there's nothing
+7:54
+to download, no suspicious redirect that
+7:56
+their browser flags.
+7:58
+And what we've seen in our telemetry is
+8:00
+this campaign class is again is using
+8:01
+legitimate Microsoft authentication
+8:04
+workflows rather than credential
+8:06
+harvesting pages, which is exactly why
+8:08
+it's likely to evade user suspicion and
+8:11
+harder for defenders to distinguish from
+8:12
+normal sign-in activity.
+8:14
+So, the signal that would catch isn't
+8:17
+the login event itself. Yeah, no, it's
+8:19
+not. And And to layer on there, you
+8:21
+know, the timing constraint that should
+8:23
+limit this technique, which is the
+8:25
+device codes being only valid for 15
+8:28
+minutes,
+8:29
+have been engineered around on both
+8:31
+sides of the attack.
+8:33
+You know, state-aligned actors in
+8:35
+earlier campaigns coordinated in real
+8:38
+time with their victims to make sure
+8:40
+that that code got entered before it
+8:41
+expired.
+8:43
+But in the latest iterations, what we're
+8:44
+seeing in these phishing-as-a-service
+8:46
+platforms, they've built in an automatic
+8:49
+refresh into their infrastructure to
+8:51
+really remove that timing constraint
+8:53
+entirely.
+8:54
+As the page that they land on
+8:56
+automatically generates new codes, so
+8:58
+the attacker doesn't have to worry about
+9:00
+it the old codes expiring at all.
+9:03
+Yeah, and what's really, really,
+9:06
+uh, I guess, depending on what what
+9:07
+angle you're looking at it from, uh, the
+9:10
+the the there's a log legiti- legitimacy
+9:12
+problem here. And it And it it is
+9:14
+interesting because, you know,
+9:16
+compromised sessions
+9:18
+from a device code phishing campaign
+9:21
+can inherit, you know, a compliant or a
+9:23
+managed device attribute from the
+9:26
+victim's original authentication. So, an
+9:28
+attacker's activity, you know, after the
+9:31
+fact may actually appear legitimate in
+9:33
+sign-in logs because the sign-in may
+9:36
+look like it's coming from a managed
+9:38
+sign-in because it's inheriting those
+9:40
+attributes from when the user actually
+9:42
+went through accepting or providing that
+9:44
+device code.
+9:46
+And so that's a detection gap, and that
+9:48
+matters, right? Because specifically,
+9:50
+defenders are actively looking for
+9:51
+anomalous sign-in patterns and filtering
+9:54
+on managed devices or not is often a a a
+9:57
+signal that people look into.
+9:59
+And then, you know, on top of that,
+10:00
+there's a there's a consent hijacking
+10:02
+variant to all of this,
+10:04
+the one that stays entirely in the
+10:06
+browser.
+10:07
+That achieves full account compromise
+10:09
+without obtaining user passwords or even
+10:12
+triggering MFA alert to begin with.
+10:14
+You know, the authorization code is
+10:15
+sitting in the browser's address bar, so
+10:18
+there's no suspicious attachment. Again,
+10:20
+there's no credential to steal, nothing
+10:22
+that looks like a traditional phishing
+10:24
+campaign.
+10:25
+You know, however, our team here at
+10:27
+ReliaQuest has seen that this is a
+10:30
+significant because it's exploiting
+10:32
+again an OAuth authorization flow by
+10:35
+intercepting authorization codes before
+10:37
+legitimate applications even ever
+10:39
+consume them.
+10:41
+Yeah, that's exactly right. And you
+10:42
+know, the analysts who have been working
+10:44
+this, including our own, really
+10:46
+anticipate that this consent hijacking
+10:48
+technique would likely expand to include
+10:51
+additional OAuth authentication flows
+10:54
+and first-party applications beyond
+10:57
+where it originally started,
+10:58
+specifically in the next several months.
+11:01
+And given what we've seen with the
+11:03
+phishing-as-a-service kits, adding in
+11:05
+the device code capability in May, you
+11:08
+know, that expansion really appears to
+11:10
+be materializing.
+11:11
+So, let's talk about why a password
+11:13
+reset doesn't fix this, right? Tokens
+11:17
+obtained via device code phishing remain
+11:20
+valid even after the account password is
+11:23
+reset. You know, access persists unless
+11:25
+active sessions and refresh tokens are
+11:28
+explicitly revoked.
+11:30
+This is not a corner case or a
+11:33
+misconfiguration, right? It's It's how
+11:35
+the OAuth token life cycle actually
+11:37
+works.
+11:38
+And defenders who reset the password and
+11:41
+close the ticket have not ended this
+11:44
+attacker's access.
+11:46
+No, they certainly haven't. And And you
+11:48
+know, another important point, too, is
+11:50
+that attackers are even evolving within
+11:51
+this campaign. And this is something we
+11:53
+saw on our telemetry just last week,
+11:55
+back on May 20th, where attackers are
+11:57
+now registering three or more rogue
+12:00
+devices on a compromised account within
+12:03
+seconds, right? So, these are device
+12:05
+registrations that would be used for
+12:07
+MFA.
+12:08
+And so, even a full token revocation may
+12:11
+still leave re-entry pass if the device
+12:14
+registrations aren't cleaned up. That's
+12:17
+a very recent adaptation, and it means
+12:19
+that the remediation checklist got
+12:21
+longer without most response workflows
+12:23
+even knowing it.
+12:25
+Yeah, and and the post-compromise
+12:27
+playbook that you were talking about
+12:28
+earlier, John, you know, inbox rule
+12:30
+creation, rogue device registration,
+12:32
+bulk data staging, you know, typical BEC
+12:35
+activity,
+12:36
+is definitely consistent and and
+12:39
+absolutely automated in most cases.
+12:42
+You know, it's running It's running too
+12:43
+fast to not. And and that gets to the
+12:46
+the two problem structure worth naming
+12:48
+here. Plainly, the the inbox problem,
+12:51
+the volume aspect of that, and the token
+12:53
+theft posture problem. And both are not
+12:56
+the same, obviously, problem. And
+12:58
+solving one doesn't solve the other. So,
+13:00
+automated phishing triage, you know,
+13:02
+that reduces that volume burden, that,
+13:05
+you know, is creating capacity for
+13:07
+practitioners to actually look and and
+13:10
+and identify token theft posture, or
+13:13
+look at token theft posture. But that
+13:15
+that that posture work
+13:17
+still has to happen separately. So,
+13:19
+clearing that queue, getting getting uh
+13:22
+the the the analyst uh more in touch or
+13:25
+in line with being able to to go
+13:27
+proactively look at what posture means
+13:30
+to the organization is ultimately what
+13:33
+what where where organizations need to
+13:34
+head.
+13:35
+Yeah, and that's a great point. It's
+13:37
+certainly something we talk about every
+13:39
+episode of organizations be able to do
+13:41
+the real work that gets them ahead of
+13:43
+these threats.
+13:44
+Um but something I want to stress too is
+13:45
+that the reach here is really
+13:47
+everywhere. You know, you mentioned
+13:48
+quite a few sectors including
+13:49
+healthcare, manufacturing, etc. But it's
+13:52
+it's it's larger than that. It's anyone
+13:54
+running cloud accounts, they're in
+13:56
+scope.
+13:57
+And and you know, as we're putting this
+13:59
+into context here, this device code
+14:01
+fishing, it's not just an emerging
+14:02
+technique anymore. It's a finished
+14:04
+product that's being delivered in these
+14:06
+fishing kits, and the attackers are
+14:08
+running it like one.
+14:10
+And that maturity is exactly what makes
+14:12
+the post compromise window dangerous.
+14:15
+You know, the playbook runs the same way
+14:17
+every time.
+14:19
+The rogue device registration fires in
+14:20
+seconds,
+14:21
+and the inbox rule runs automatically.
+14:24
+After the break, the three things you
+14:27
+can check on Monday morning coming up.
+14:31
+Shadow Talk is brought to you by
+14:32
+ReliaQuest, the global leader in AI
+14:35
+cybersecurity. ReliaQuest helps
+14:37
+enterprise cybersecurity teams contain
+14:39
+threats [music] in minutes with its
+14:40
+agentic AI security operations platform,
+14:43
+GreyMatter. ReliaQuest makes security
+14:46
+possible for the most trusted enterprise
+14:48
+[music] brands in the world. Learn more
+14:50
+at reliaquest.com.
+14:54
+Welcome back.
+14:55
+Before the break, we were talking about
+14:56
+a why a password reset
+14:58
+isn't quite enough.
+15:00
+Token staying valid, rogue devices
+15:01
+stayed registered, and attackers
+15:03
+automation is already ahead of a manual
+15:06
+response.
+15:07
+So, let's get into three specific things
+15:09
+that actually close these gaps.
+15:12
+First,
+15:13
+we want to highlight the conditional
+15:14
+access scope problem. Because this is
+15:16
+where the structural gap lives for most
+15:18
+organizations.
+15:19
+And And a leader level question.
+15:22
+You know, most conditional access
+15:23
+policies are built around one check.
+15:26
+Did the user complete MFA?
+15:29
+You know, where device code fishing here
+15:31
+passes that check every single time.
+15:34
+The user really did MFA on a real page.
+15:38
+The question the policy never asks is
+15:40
+which device walks away with that token.
+15:44
+Yeah, and then the layer in there's also
+15:46
+a first party trust problem that makes
+15:48
+this even harder to address.
+15:50
+You know, when you're dealing with the
+15:52
+consent hijacking variant specifically,
+15:55
+the browser native technique, the
+15:57
+application involved is a first party
+15:59
+application, which really just means
+16:01
+it's implicitly trusted by the identity
+16:03
+provider.
+16:04
+But what this means to organizations is
+16:06
+that you can't block it via application
+16:09
+allow listing without also blocking the
+16:11
+legitimate tool that your team needs.
+16:14
+The control that should address this
+16:15
+isn't application blocking, it's
+16:18
+conditional access scope.
+16:21
+So the three questions worth asking your
+16:23
+identity team tomorrow,
+16:25
+you know, first,
+16:26
+does our conditional access policy
+16:28
+explicitly restrict device code grant
+16:31
+flows where possible?
+16:33
+Say in in Microsoft Entra ID, the OAuth
+16:36
+2.0 device authorization grant flow can
+16:38
+be disabled for users and workloads that
+16:41
+don't require it. You know, if your
+16:42
+standard user accounts don't have a
+16:44
+legitimate need for it, that's a policy
+16:46
+decision you can make right now.
+16:49
+And second, does the policy allow only
+16:52
+authentications from managed devices?
+16:55
+And third,
+16:56
+are your most sensitive data stores and
+16:58
+services protected? Meaning access is
+17:01
+restricted to physical office locations
+17:04
+or known IP ranges where the risk
+17:06
+profile is lower.
+17:08
+Yeah, and an important point to really
+17:10
+stress here is that even for advanced
+17:12
+teams,
+17:14
+a conditional access policy can be
+17:16
+matured and well maintained for the
+17:19
+traditional credential theft model, but
+17:21
+it still potentially misses the device
+17:23
+code grant flow entirely.
+17:26
+And especially a CISO whose team is
+17:29
+already stretched on fishing volume
+17:31
+likely hasn't had the capacity to review
+17:34
+that CA scope for the device code grants
+17:37
+and especially for first-party
+17:39
+application trust.
+17:41
+So really the policy and the technique
+17:43
+need to be aligned.
+17:46
+And that's the policy question.
+17:48
+The next one is what your response
+17:50
+actually does once a policy violation
+17:53
+lands.
+17:55
+Yeah, and that's [clears throat] where
+17:55
+we're going next. So the second piece is
+17:58
+what happens when you confirm a
+17:59
+compromise.
+18:01
+And specifically whether your response
+18:03
+workflow is scoped to actually end the
+18:06
+attacker's access, not just reset
+18:08
+passwords.
+18:10
+So the foundation here is something
+18:12
+worth stating plainly.
+18:14
+Tokens remain valid after a password
+18:16
+reset unless active sessions and refresh
+18:20
+tokens are explicitly revoked.
+18:24
+Now this is how OAuth was designed to
+18:26
+work. A password reset and token
+18:28
+revocation are two separate operations
+18:31
+where if your run book only does the
+18:33
+first one, the attacker still has
+18:35
+access. Not by an accident, but by
+18:38
+design.
+18:39
+And the And the freshest signal that I
+18:41
+want to bring up in this episode is is
+18:42
+from our own telemetry on on which we
+18:45
+saw on May 20th. You know, attackers are
+18:47
+now registering three or more rogue
+18:49
+devices per compromised account within
+18:52
+seconds of getting the token. And and
+18:54
+and that's new, right? And existing
+18:56
+workflows that revoke sessions but don't
+18:58
+also deregister those rogue devices
+19:02
+leave the attacker with another entry
+19:04
+point or entry path rather into the
+19:06
+network. So even after a clean
+19:09
+revocation of that of that asset is run.
+19:13
+Yeah, that's exactly right. So, you
+19:15
+know, kind of take it back to what we
+19:16
+talked about earlier, the timing
+19:18
+dimension matters here. We discussed
+19:20
+that post-compromise playbook, multiple
+19:22
+events happening in sequence, such as
+19:24
+inbox rule creation and device
+19:26
+registration. It's running fast. So, if
+19:28
+the response workflow is waiting for a
+19:31
+human analyst to work through your queue
+19:34
+and manually trigger remediation steps,
+19:37
+the attacker's automation already has
+19:38
+completed multiple steps before the
+19:40
+first remediation action even runs.
+19:43
+So, the and the attacker's response to a
+19:45
+confirmed compromise
+19:47
+is automated and it runs in seconds.
+19:50
+So, the response really needs to match
+19:52
+that speed. You know, a workflow that
+19:54
+automatically revokes tokens and
+19:56
+deregisters rogue devices the moment a
+19:58
+phishing confirmation fires means that
+20:01
+your remediation isn't waiting on a
+20:02
+human to run each step manually, while
+20:05
+the attacker's automation is already
+20:06
+finishing.
+20:08
+The attacker's post-compromise sequence,
+20:11
+again, it's scripted, it's fast, and
+20:12
+that response needs to be too.
+20:14
+So, the recommendation here is concrete.
+20:17
+Open your security tool or your identity
+20:19
+management platform and verify two
+20:20
+things.
+20:21
+First, that your token relocation
+20:24
+workflow fires automatically on
+20:26
+confirmed phishing reports, not just
+20:28
+manual analyst triggers.
+20:31
+And then second, that your workflow's
+20:33
+scope covers that rogue device
+20:35
+deregistration alongside token
+20:38
+revocation, not just session termination
+20:41
+or password resets alone.
+20:43
+Yeah, and I really really got to jump in
+20:45
+there just to to re-emphasize that,
+20:47
+right? Especially with what we we we
+20:49
+just released and talked about um from
+20:52
+something uh we we observed on May 20th.
+20:55
+You know,
+20:56
+this is this is recent enough that many
+20:58
+existing response workflows weren't
+21:01
+built with this scope. You know, if your
+21:04
+your revocation workflow was designed
+21:07
+around revoking sessions plus revoking a
+21:10
+refresh token.
+21:12
+It's probably not addressing the rogue
+21:13
+device restraints that an attacker can
+21:15
+use to pivot back into the environment.
+21:18
+And and the last one we want to talk
+21:19
+through is is the volume problem because
+21:22
+it's the environment that these
+21:23
+campaigns run in. And it's not separate,
+21:26
+right, from the the token theft problem.
+21:28
+And so the the inbox problem is what
+21:30
+gives these campaigns so much runway.
+21:32
+You know, a team buried in fishing
+21:34
+reports doesn't have the bandwidth to
+21:36
+notice that some of those reports aren't
+21:39
+credential theft. They're token theft.
+21:41
+You know, it's the same camouflage. It's
+21:43
+just a different game.
+21:46
+Yeah, and especially that camouflage it
+21:48
+was is what makes things much harder.
+21:50
+You know, the lures themselves that are
+21:53
+being used in these emails are making
+21:55
+things worse, not better. And our
+21:57
+analysts are projecting that future
+21:59
+device code fishing campaigns will lean
+22:02
+heavily on more legitimate looking
+22:05
+uh uh lures. You know, things like
+22:07
+collaboration platform invites, IT
+22:09
+support requests, and HR notifications.
+22:12
+Those are the categories that are
+22:14
+hardest to triage at speed with high
+22:17
+plausibility and high volume. Really the
+22:20
+kind of email a busy employee acts on
+22:23
+without even thinking. Which is exactly
+22:25
+why the threat actors pick those themes.
+22:29
+So the question for the volume side is,
+22:31
+you know, how many steps require a human
+22:33
+to action? Like those steps between a
+22:36
+user reporting a suspicious email and
+22:39
+that email being removed from every
+22:41
+inbox.
+22:42
+An automated fishing investigation
+22:44
+workflow that triages reported emails,
+22:47
+scores them, removes malicious messages
+22:50
+from every inbox on the distribution
+22:52
+without waiting on analyst action
+22:55
+compresses the window for those
+22:57
+campaigns to have run in your
+22:58
+environment. So you're not removing the
+23:01
+human review step permanently, you're
+23:03
+removing it from the critical path when
+23:05
+confidence is high enough to act
+23:06
+automatically.
+23:08
+Yeah, and then there's a critical
+23:09
+distinction here that's worth noting,
+23:12
+you know, is between the automated
+23:14
+fishing triage addressing the volume
+23:16
+problem. You know, it's not going to
+23:18
+specifically address the revoked tokens
+23:21
+and it's not going to audit your device
+23:23
+registrations or update your conditional
+23:24
+access scope. But what it really does is
+23:27
+create the time and capacity for your
+23:30
+practitioners to focus on those things
+23:31
+that matter and do the posture work that
+23:34
+the volume management alone can't do.
+23:37
+That's the technical picture, right?
+23:38
+Three reps,
+23:40
+three specific fixes. What we want to
+23:42
+close on is the question underneath all
+23:44
+of those.
+23:45
+What it actually takes to operationalize
+23:48
+a response that runs faster than the
+23:50
+attacker's playbook.
+23:52
+Right? So let's close this out, you
+23:54
+know, we've we've covered a lot of
+23:55
+ground, the technique, why it's
+23:57
+structurally hard to catch, and the
+23:58
+three specific places to look.
+24:01
+Three things at hand to a security
+24:02
+leader listening to this right now.
+24:05
+Right? The first, you know, your fishing
+24:06
+volume
+24:07
+and your post-authentication posture,
+24:10
+again, aren't the same investment. Even
+24:13
+though they they they there are
+24:14
+similarities. You know, a team that's
+24:16
+keeping up with the queue
+24:18
+can still have conditional access policy
+24:21
+that nobody is reviewing in relation to
+24:24
+the the the specific grant flows that we
+24:26
+spoke about earlier.
+24:28
+The second thing is about what, you
+24:30
+know, what we saw in our in our report
+24:32
+in May of this fishing as a service
+24:34
+convergence and the changes that it has
+24:37
+to the the the risk picture. You know,
+24:40
+when a major established fishing
+24:42
+platform adds a new token theft
+24:44
+capability and makes it available to its
+24:46
+subscriber base, the threat actor
+24:49
+in the mix changes.
+24:52
+Right? What was primarily a, you know,
+24:54
+state-aligned actor problem or a, say a
+24:58
+more sophisticated threat actor, the
+25:00
+kind of things organizations, you know,
+25:02
+manage by by watching geopolitical
+25:05
+signals or investing in very expensive
+25:09
+threat intelligence platforms is now a
+25:11
+commodity tooling problem. You know, the
+25:13
+volume of actors with access to this
+25:15
+capability went up sharply in May. And
+25:18
+that changes the likelihood calculus,
+25:20
+not just the techniques description. The
+25:23
+third thing here is the operating
+25:24
+reality that these three fixes point
+25:26
+towards. You know, the attackers
+25:28
+post-compromise steps are scripted, and
+25:30
+they're running in seconds. You know,
+25:32
+rogue devices registered in seconds,
+25:34
+inbox rules firing in that same window.
+25:36
+If your
+25:37
+response is still waiting on a human to
+25:39
+click through each step, you've already
+25:42
+lost that race before the alert is even
+25:44
+opened.
+25:45
+So, the the bigger, broader question
+25:47
+here, the one that lives past whatever
+25:48
+configuration changes you make this
+25:50
+week, is whether or not your response
+25:52
+was built for a world where the
+25:54
+credential is the target. Because it
+25:57
+isn't anymore.
+25:58
+That's a not a next quarter
+25:59
+conversation. It's definitely a
+26:01
+conversation you want to be having this
+26:02
+week.
+26:03
+And for the leaders listening again
+26:05
+right now, the 10-minute tomorrow
+26:06
+morning action, ask your identity team
+26:09
+when they last reviewed the conditional
+26:11
+access policy scope, specifically for
+26:13
+device code authentication grant flows.
+26:15
+Not the MFA policy broadly, that that
+26:18
+specific grant flow. If they can't
+26:21
+answer that question in under a minute,
+26:23
+you know that the review never happened.
+26:25
+If it takes more than that to find out,
+26:28
+you have the answer that you already
+26:29
+needed.
+26:30
+All right. So, those are some great
+26:31
+recommendations for the leaders. I'm
+26:32
+going to bring it home for the operator
+26:34
+side of things.
+26:35
+You know, and where I'd really land this
+26:37
+is the mental model shift that we're
+26:39
+really asking for. Where a confirmed
+26:42
+phishing report no longer means just
+26:44
+reset a password and close the ticket.
+26:47
+The response is session containment now,
+26:49
+including tokens, devices, and active
+26:52
+grants all in scope.
+26:54
+That's a different starting point than
+26:55
+where most response efforts begin today.
+26:59
+And the reason that that shift matters
+27:00
+isn't just the analysts weren't fast
+27:03
+enough before. It's the attacker's
+27:05
+device registration, those inbox rules
+27:07
+executing in seconds and in parallel.
+27:10
+That manually triggered response
+27:12
+workflow is just structurally slower by
+27:14
+design than an automated one. Not a
+27:17
+criticism of a team, but really just the
+27:19
+reality of how the two timelines are
+27:22
+comparing.
+27:23
+So, when a confirmed phishing email
+27:25
+arrives, the question that analysts
+27:28
+now need to ask to start isn't did the
+27:31
+user's password get exposed, but rather
+27:33
+does the attacker have an active
+27:35
+session?
+27:36
+Are there rogue devices registered on
+27:38
+that account?
+27:39
+And is the revocation workflow already
+27:41
+running?
+27:43
+So, tomorrow morning for those
+27:44
+practitioners,
+27:46
+pull the last 30 days of sign-in logs
+27:48
+filtered on device code authentication
+27:51
+events.
+27:52
+That data tells you whether this grant
+27:54
+flow is active in your environment and
+27:56
+at what volume. It's a starting
+27:58
+baseline. And by the end of the day,
+28:00
+you'll have the three things on your
+28:02
+screen that you didn't have this
+28:03
+morning, an understanding of the volume,
+28:06
+the accounts that use the
+28:07
+authentication, and really a starting
+28:09
+point to begin to look for these
+28:11
+unexpected authentications we've been
+28:13
+laying out.
+28:14
+To close this out,
+28:16
+with everything that we discussed in
+28:17
+today's episode,
+28:19
+the real real real question here is
+28:21
+whether your response was built for the
+28:23
+world that we're actually in today,
+28:26
+where the credential isn't the target
+28:28
+anymore.
+28:29
+That's all for this week. Thanks for
+28:31
+listening to another episode of Shadow
+28:32
+Talk. If you'd like to get in touch,
+28:34
+we're just an email away, and you can
+28:36
+send your questions to
+28:37
+shadowtalk@reliquest.com.
+28:39
+Please don't forget to subscribe so you
+28:41
+can get next week's episode delivered to
+28:42
+direct to your podcasting platform of
+28:44
+choice.
+28:45
+And we'd really appreciate it if you can
+28:47
+rate and review Shadow Talk wherever you
+28:48
+listen.
+28:49
+It will make a huge difference and help
+28:51
+us reach new listeners.
+28:53
+We'll be back next week with another
+28:54
+episode of Shadow Talk.

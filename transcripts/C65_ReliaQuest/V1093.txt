@@ -1,0 +1,1106 @@
+0:00
+Picture a security team on an early
+0:01
+morning. They pull up their
+0:03
+vulnerability remediation queue. It's
+0:05
+clean, no unpatched devices. But what
+0:08
+they don't see is that three of their
+0:10
+devices are still vulnerable to
+0:12
+attackers because they require manual
+0:15
+remediation.
+0:17
+Those were never tracked as separate
+0:18
+items, never verified, and never signed
+0:21
+off. Well, this is a gap that many teams
+0:24
+are still missing.
+0:27
+>> [music]
+0:31
+>> Welcome to Shadow Talk,
+0:33
+a cybersecurity podcast powered by
+0:35
+ReliaQuest, the leader in agentless AI
+0:38
+security operations. I'm Taimur Tariq,
+0:41
+senior manager of gray matter
+0:42
+operations.
+0:43
+>> And I'm John Deljan, threat intelligence
+0:45
+analyst. And today, we're digging into
+0:48
+something that should make every
+0:49
+security team stop and ask a tough
+0:52
+question. What if the devices your team
+0:54
+marks as fully patched are still
+0:56
+vulnerable to attackers?
+0:59
+>> And as John mentioned, this episode we
+1:01
+unpack that exact gap. Our threat
+1:04
+research team wrote a detailed report on
+1:06
+this specific campaign. But the design
+1:09
+gap exposed in the report and this
+1:11
+episode is one we've seen before and
+1:14
+will continue to see again.
+1:16
+>> Yeah, exactly. And And that is really
+1:18
+the vulnerability required manual
+1:20
+post-patch steps or configuration
+1:23
+changes that the patch itself didn't
+1:25
+include. And what makes this so critical
+1:28
+is that the devices looked remediated.
+1:30
+The firmware version matched, the ticket
+1:33
+itself was closed. From every normal
+1:36
+monitoring perspective, these were
+1:37
+healthy devices.
+1:39
+>> And that's the gap initial access
+1:41
+brokers have found, right? They walked
+1:43
+through a door that seemed locked from
+1:45
+the inside, but in reality, it wasn't.
+1:48
+>> Yeah, exactly. And in this episode,
+1:50
+we're going to walk through how these
+1:51
+attacks happen, how the bypass works,
+1:54
+how fast the attackers moved once they
+1:56
+were in and really what two specific
+1:59
+workflow changes can close that gap. So,
+2:02
+let's examine this.
+2:03
+So, in this episode we're going to be
+2:04
+highlighting that report you mentioned
+2:06
+Taimon, which really covered a campaign
+2:09
+of exploitation around CVE-2024-12802
+2:15
+or an authentication bypass in
+2:18
+SonicWall's SSL VPN appliances.
+2:21
+Now, in the majority of incidents that
+2:23
+we investigated in the report, the
+2:25
+affected devices had the correct
+2:27
+firmware version applied.
+2:29
+The patch management workflow checked
+2:31
+the version, it matched the advisory
+2:33
+requirements, and the device came off
+2:35
+the remediation queue with a clean bill
+2:37
+of health,
+2:39
+which was technically accurate, except
+2:41
+the advisory also required six manual
+2:44
+LDAP reconfiguration steps on top of the
+2:47
+firmware update.
+2:49
+And those were steps that were never
+2:50
+completed
+2:51
+as they had to be done separately.
+2:54
+Now, the reality is that most patch
+2:56
+manager workflows don't track these as
+2:58
+separate tasks to be completed after the
+3:01
+patching.
+3:01
+>> And this is where the workflow design
+3:03
+matters. A lot of patch management
+3:05
+processes are built around the firmware
+3:07
+version as the single completion step.
+3:10
+The version matches the advisory, and
+3:12
+then what our team does is that they
+3:13
+consider that task is closed and the
+3:15
+device is out of the queue.
+3:17
+That works when the advisory's only
+3:19
+requirement is a firmware update.
+3:22
+But when the advisory also documents
+3:24
+post patch steps that need to be taken,
+3:27
+a firmware version check alone doesn't
+3:29
+tell you whether those steps were done.
+3:31
+The device looks fully remediated on
+3:33
+every workflow view, but in reality, it
+3:36
+isn't.
+3:37
+>> Yeah, and so importantly from the
+3:39
+defender's perspective, the device looks
+3:41
+completed, but from the attacker's side,
+3:43
+it's still wide open.
+3:45
+Now, real quick, I also want to explain
+3:47
+the bypass mechanism behind this CVE.
+3:50
+And simply put, there are two different
+3:52
+username formats that a user could
+3:54
+authenticate with, UPN and SAM or SAM,
+3:58
+with MFA really only being applied to
+4:01
+one. Now, more specifically, the
+4:03
+authentication logic on these devices
+4:06
+treats a user's UPN or the user
+4:09
+principal name and their SAM account
+4:11
+name as separate identities,
+4:14
+with MFA requirements only applying to
+4:16
+one of those formats, whereas the other
+4:19
+goes through without an MFA check.
+4:22
+Now, here's what's important from an
+4:23
+operational perspective. You know, the
+4:25
+groups that are behind this are running
+4:28
+what looks like a very disciplined
+4:30
+campaign to broker initial access.
+4:34
+They come in through the VPN,
+4:35
+authenticate, sweep for domain joint
+4:38
+assets,
+4:39
+test for reused credentials, and then
+4:42
+log out. All of this happens in about 30
+4:45
+to 60 minutes across all the intrusions
+4:47
+we saw.
+4:49
+And the important fact they're
+4:50
+voluntarily logging out really shows
+4:53
+that these actors aren't staying in the
+4:55
+environment and deploying ransomware.
+4:57
+Instead, they're establishing the
+4:58
+access, validating it, and leaving. And
+5:01
+that's consistent with what we see
+5:03
+initial access brokers do, who sell
+5:06
+access to downstream operators for those
+5:09
+follow-on attacks.
+5:11
+Another important element of this
+5:13
+campaign that we saw was around the
+5:15
+credential brute forcing.
+5:17
+And we saw as few as 13 authentication
+5:21
+before the attacker was able to land a
+5:23
+valid credential pair.
+5:26
+Now, normally, it would take hundreds or
+5:27
+thousands of these attempts. So, this
+5:29
+really shows that it's likely the
+5:31
+attackers are testing the old exposed
+5:34
+passwords here, and users are reusing
+5:36
+them with only minor changes.
+5:40
+>> There's also an important parallel I
+5:41
+want to name, because it highlights how
+5:43
+the gap we're discussing has been a
+5:45
+consistent problem.
+5:47
+Back in 2023, we saw the Citrix bleed
+5:50
+vulnerability. And the post patch
+5:52
+requirement there had the same exact
+5:55
+design.
+5:57
+There was a firmware update alone that
+5:59
+was completely insufficient. Defenders
+6:02
+also had to manually terminate active
+6:04
+sessions and rotate credentials
+6:06
+afterwards. Teams that applied the patch
+6:08
+didn't complete those manual steps and
+6:10
+they remained exposed. In some cases for
+6:14
+weeks after the patch was marked as
+6:16
+applied.
+6:17
+>> Yeah, and that's an important point
+6:19
+because the you know, the pattern is
+6:22
+continuing here. And not only is the gap
+6:24
+serious in this current campaign, but
+6:27
+it's also showing up across
+6:28
+environments.
+6:30
+And the question for teams really is
+6:32
+what happens when an attacker finds that
+6:34
+gap? How much runway do they actually
+6:37
+have to exploit it? So, Damon, can you
+6:39
+walk us through that some?
+6:40
+>> Yep. And let's put some time on the
+6:42
+clock here because the attacker's
+6:44
+timeline in this investigation is the
+6:46
+thing that forces our current response
+6:48
+processes to come into question.
+6:51
+So, we can look at one specific case
+6:53
+that we investigated. The attacker
+6:55
+authenticated through the VPN and
+6:57
+reached a domain joined file server in
+7:00
+under 30 minutes. The full sequence was
+7:03
+initial authentication, internal recon,
+7:06
+they attempted pre-ransomware staging,
+7:08
+and this took roughly 40 minutes. And
+7:10
+it's not just this investigation. That's
+7:12
+consistent with the average about that
+7:14
+34-minute breakout time that we report
+7:17
+on in our ATR and we've mentioned dozens
+7:19
+of times on this podcast as well.
+7:22
+>> Yeah, and just to back that up, as we've
+7:23
+mentioned before, if your response
+7:25
+workflow relies on human review and
+7:28
+manual containment, you're giving the
+7:30
+attacker too large of a window to
+7:32
+operate.
+7:33
+>> Right. And now let's take a look at this
+7:34
+picture because it gets a lot more
+7:36
+complicated when you look at the
+7:37
+behavioral detections.
+7:39
+In one case we investigated, the threat
+7:42
+actor attempted to deploy
+7:44
+post-exploitation tooling and a driver
+7:47
+designed to disable endpoint protection.
+7:49
+Both were blocked by the endpoint
+7:51
+detection. That part worked, but the
+7:53
+actor didn't stop there. They pivoted.
+7:56
+Instead of continuing to push on the
+7:58
+tool deployment, the actor switched to
+8:00
+manually reviewing files on the file
+8:02
+server using a standard text editor.
+8:05
+They were browsing directory structures,
+8:07
+reviewing config files, reading
+8:09
+documents. That activity blends with
+8:11
+normal activity that we would see on a
+8:13
+file server. It generates events, but
+8:16
+the events alone look like normal user
+8:18
+activity.
+8:20
+>> Yeah, and so the to really translate the
+8:22
+practitioner reality from that here is
+8:24
+that detections were able to stop the
+8:26
+tooling, but really could not prevent
+8:28
+the file access entirely. You know, the
+8:31
+attacker adapted in real time and was
+8:34
+able to hide inside the noise of
+8:36
+standard operations. So, it's just an
+8:38
+important reminder that actors don't
+8:41
+just simply fold when their first tool
+8:43
+gets blocked.
+8:44
+>> Exactly, John. And next, let's talk
+8:46
+about that third dimension of what is
+8:48
+most exposed here. And it's the one
+8:51
+that's the hardest to fix immediately.
+8:53
+The SonicWall Gen 6 devices that were at
+8:55
+the center of the campaign that reached
+8:57
+end of life in April 16th, 2026, no
+9:01
+further from firmware updates or vendor
+9:04
+support was provided. The patch that was
+9:06
+supposed to close the gap is the last
+9:08
+patch these devices will ever get.
+9:11
+And this is something we've seen with
+9:13
+similar campaigns that exploit SonicWall
+9:15
+devices. These devices are still in
+9:18
+production across a lot of environments,
+9:20
+especially in organizations that grew
+9:22
+through acquisitions. When you inherit
+9:25
+infrastructure, you don't always inherit
+9:28
+a complete picture of the asset
+9:29
+inventory. A device that came in through
+9:32
+an M&A integration may have been running
+9:34
+for years without ever fully entering
+9:37
+your organization's standard patch
+9:40
+management process. It's not that anyone
+9:43
+made a deliberate choice to leave it
+9:44
+unmanaged, it just never got discovered
+9:47
+and brought into your program, which
+9:48
+compounds the gap that we've been
+9:50
+describing here. A device that never
+9:52
+fully entered the patch management
+9:54
+program is also a device that never had
+9:57
+its post patch manual steps tracked or
+10:00
+verified.
+10:01
+>> Yeah, and really to add on to that, you
+10:03
+know, the attack surface that we're
+10:05
+describing around these devices are
+10:07
+really vulnerabilities in perimeter edge
+10:10
+devices is the same one that we see
+10:12
+threat groups consistently target. And
+10:15
+as a reminder, we've seen similar TTPs
+10:17
+used by groups like Akira ransomware and
+10:20
+many others.
+10:21
+>> The attacker only needed 40 minutes and
+10:24
+they were able to target a gap many
+10:26
+organizations still have.
+10:29
+After the break, we'll cover what it
+10:30
+takes to close that gap.
+10:34
+>> Shadow Talk is brought to you by
+10:35
+ReliaQuest, the global leader in AI
+10:38
+cybersecurity.
+10:39
+>> [music]
+10:39
+>> ReliaQuest helps enterprise
+10:41
+cybersecurity teams contain threats in
+10:43
+minutes with its agentic AI security
+10:45
+operations platform, GreyMatter. [music]
+10:48
+ReliaQuest makes security possible for
+10:50
+the most trusted enterprise brands in
+10:52
+the world. Learn [music] more at
+10:53
+reliaquest.com.
+10:57
+>> Welcome back. We've established the gap
+10:59
+and how fast attackers move through it.
+11:02
+Now, let's talk about what actually
+11:03
+closes it.
+11:05
+>> Yeah, so starting out, number one is
+11:07
+going to be the workflow change that
+11:08
+really prevents the gap from opening in
+11:11
+the first place, and it's really
+11:12
+something we've been alluding to all
+11:13
+episode here. But to be clear, it's a
+11:16
+patch management process conversation
+11:19
+that needs to happen. The tooling that
+11:21
+most teams use is already capable of
+11:23
+tracking this. But the question is
+11:25
+whether the process has been designed to
+11:28
+require it.
+11:30
+So to restate, a lot of patch management
+11:32
+workflows are configured to close an
+11:35
+advisory ticket when the firmware
+11:37
+version is updated, full stop.
+11:40
+But, in the SonicWall and the Citrix
+11:42
+bleed examples, these advisories also
+11:44
+included documented manual remediation
+11:47
+steps. Now, that information may have
+11:50
+been in the ticket notes, but if the
+11:52
+workflow doesn't include a separate
+11:54
+verification line for those steps,
+11:56
+they'll get skipped by many teams like
+11:59
+we've seen in this report.
+12:01
+>> The second area is how the advisory was
+12:03
+scored. And what that scoring divergence
+12:06
+means for how organizations prioritize
+12:08
+it.
+12:09
+The CISA authorized data publisher rated
+12:12
+the CVE a 9.1, so a critical. That's a
+12:16
+score that should put an advisory at the
+12:18
+top of the urgent remediation queue.
+12:21
+The vendor's own advisory carried a 6.5,
+12:24
+so a medium score, which is lower on
+12:26
+that same vulnerability.
+12:28
+Organizations that are pulling their
+12:30
+prioritization
+12:32
+from the vendor score alone would have
+12:34
+queued this as a routine update.
+12:36
+An advisory that deserved urgent manual
+12:39
+verification treatment.
+12:41
+And this is an important point. This is
+12:43
+not about the vendor scoring it wrong.
+12:46
+The CVE prioritization from only a
+12:48
+single authority is an incomplete
+12:50
+policy.
+12:52
+>> Yeah, and I want to double down on that
+12:53
+because, you know, Timon, this is
+12:54
+something we spoken about in length in
+12:56
+previous episodes. We had an episode in
+12:59
+February where we talked about the the
+13:02
+patch management process and what
+13:04
+organizations can do to to fix that. You
+13:08
+know, one of the things we really spoke
+13:09
+about there was the limitation of using
+13:12
+only the CVE scoring
+13:14
+around vulnerability management. And
+13:16
+what we recommended, I'll just highlight
+13:18
+one quick piece of that was to use
+13:20
+another scoring system like EPSS or the
+13:24
+exploit prediction scoring system.
+13:26
+And this system builds its signal from
+13:29
+real-time exploitability context,
+13:32
+including a proof of concept
+13:33
+availability, you know, observed
+13:35
+attacker targeting, as well as asset
+13:38
+prevalence in the wild. It really
+13:40
+estimates the 30-day probability of
+13:42
+exploitation in a way that's closer to
+13:45
+the attacker's behavior than a static
+13:48
+severity rating. EPSS gives you another
+13:51
+severity rating that's grounded in
+13:53
+what's actually happening in the threat
+13:55
+environment.
+13:56
+>> And based off of what John just
+13:58
+explained, I want to take a moment to
+13:59
+ask a governance question for the
+14:02
+leaders in the room.
+14:04
+Does your vulnerability management
+14:05
+policy specify who scores to trust when
+14:08
+scores from organizations disagree on
+14:11
+that same CVE?
+14:13
+And do you supplement that with other
+14:15
+sources, such as EPSS?
+14:19
+>> Yeah, good question. And then finally,
+14:21
+to round things out, you know, the third
+14:22
+change here we're going to talk about
+14:24
+that's going to be on the response side.
+14:26
+You know, the numbers we've highlighted
+14:27
+in this report, as well as in many other
+14:30
+previous reports, make it pretty clear
+14:32
+that our manual response is just not
+14:34
+keeping up.
+14:35
+So, we established the timeline here in
+14:37
+the case we saw initial authentication
+14:40
+to file server access happened in under
+14:43
+30 minutes.
+14:44
+And the full intrusion sequence played
+14:46
+out in across roughly 40 minutes.
+14:49
+Now, we you know, I know we harp a lot
+14:51
+on automated response and why it's so
+14:53
+critical in every episode. So, I'm not
+14:55
+going to get into the specifics of that
+14:57
+here, but what I do want to highlight is
+14:59
+a specific use case of automated
+15:00
+response that's relevant to this
+15:01
+campaign.
+15:03
+So, in the SonicWall devices, there's a
+15:05
+session type field within the
+15:07
+authentication logs. And it shows a
+15:09
+value of sesh equals CLI. And that's
+15:13
+what was across all the brute forcing
+15:15
+attempts we observed. Now, really, the
+15:17
+field identifies the connection as a
+15:21
+machine-initiated
+15:23
+authentication or the kind that's being
+15:25
+generated by a script or some kind of
+15:27
+automated tooling. It's a high
+15:29
+confidence signal for brute forcing.
+15:31
+Now, this signal can then be paired with
+15:34
+the automatic blocking of a source IP or
+15:36
+a source host to ensure that the brute
+15:38
+forcing is not successful.
+15:41
+Another element of this campaign is
+15:44
+since we saw those old passwords being
+15:46
+first reused by users as they create new
+15:48
+passwords and then from there once
+15:50
+they're known being targeted by threat
+15:52
+actors,
+15:53
+teams can take their automated response
+15:55
+a step further and automatically reset
+15:58
+passwords for the user accounts that are
+16:00
+being brute forced to reduce the chance
+16:03
+that reused passwords will then be brute
+16:05
+forced.
+16:06
+This can also be combined with something
+16:07
+like a workflow automation of an email
+16:10
+or a portal notification that to that
+16:12
+user to give them targeted information
+16:14
+and ensure that the old passwords are
+16:16
+not being reused, really warning them of
+16:19
+the threat.
+16:20
+>> Let's bring this home. So, there's two
+16:22
+major takeaways. One for the leaders
+16:24
+listening and one for the operators.
+16:27
+I'll kick things off with the leaders.
+16:29
+Two governance gaps came up in this
+16:31
+episode. First, patch management
+16:34
+workflows that treat firmware versions
+16:36
+as the sole completion step with no
+16:39
+separate tracking for post-patch manual
+16:41
+steps.
+16:42
+Second, vulnerability prioritization
+16:45
+policies that were that rely on a single
+16:48
+scoring authority when multiple
+16:51
+authoritative sources exist and
+16:53
+frequently disagree.
+16:55
+Both of these are process design
+16:57
+questions. The morning action that I
+16:59
+have for leaders is ask your team what
+17:02
+class of perimeter device advisory.
+17:05
+Specifically, advisories that document
+17:07
+manual post-patch steps should
+17:10
+automatically trigger an escalated
+17:13
+remediation queue in your vulnerability
+17:15
+management policy. That's the question.
+17:18
+The answer there will tell you whether
+17:20
+your current policy distinguishes that
+17:22
+class or treats all advisories exactly
+17:26
+the same.
+17:27
+If the policy doesn't distinguish that
+17:29
+class today,
+17:31
+that's the gap to close before the next
+17:33
+advisory lands.
+17:35
+And based on what we've seen in Edge
+17:37
+device advisories over the last several
+17:39
+several years, there will always be a
+17:42
+next advisory.
+17:44
+>> Yeah, there certainly will, Taimur. Now,
+17:47
+taking things down to the operator side,
+17:49
+so back to what I mentioned earlier, the
+17:51
+best signal for detection and response
+17:53
+efforts here is going to be in that
+17:55
+session type field of your VPN
+17:57
+authentication logs. Specifically, that
+18:00
+sesh equals CLI value that identifies
+18:03
+the connection as being a machine
+18:06
+authentication. And again, it shows up
+18:08
+on all the brute forcing we saw in this
+18:10
+report.
+18:11
+Which really means that your team has a
+18:13
+high confidence detection signal that
+18:15
+fires early on in the the attack chain.
+18:19
+So, you can also detect and respond on
+18:22
+the pivot that comes one step later. And
+18:25
+this is when that session type
+18:27
+transitions from CLI to GMS with the
+18:31
+same source IP.
+18:33
+And that GMS value, it's assigned the
+18:35
+moment the threat actor moves from
+18:37
+credential harvesting to the active
+18:40
+internal access.
+18:42
+So, to be more specific, the CLI by
+18:44
+itself is the brute forcing phase,
+18:47
+whereas the CLI to GMS transition on the
+18:50
+same source IP is the successful initial
+18:53
+access. Again, another great opportunity
+18:56
+for detection and automated response.
+18:59
+So, the 10-minute tomorrow morning
+19:01
+action for practitioners, open your VPN
+19:04
+authentication log sources and verify
+19:06
+two things. First, whether that sesh
+19:08
+equals CLI authentication events are
+19:11
+being ingested and ready for alerts. So,
+19:14
+we need to have those logs fed to our
+19:16
+alerting, make sure they're ready to
+19:17
+fire. And then second, whether that CLI
+19:20
+to GMS transition on the same source IP
+19:24
+is an event that your automated response
+19:26
+is set up to act on.
+19:27
+If either of those answers are no, you
+19:29
+have a detection gap for this campaign
+19:32
+that you can remediate.
+19:34
+So, what we covered today is a process
+19:36
+gap that a lot of teams are facing right
+19:38
+now. The same gap has surfaced before
+19:41
+and it will surface again.
+19:43
+A clean dashboard reflects what your
+19:45
+workload tracked.
+19:47
+However, the attacker can still exploit
+19:49
+patched devices.
+19:51
+That is the operational reality that
+19:53
+this campaign and report showed.
+19:56
+Well, that's all for this week. Thanks
+19:57
+for listening to another episode of
+19:58
+Shadow Talk.
+20:00
+If you'd like to read the full report,
+20:01
+it's available in the link tree below.
+20:04
+And if you'd like to get in touch with
+20:05
+us, we're just an email away. You can
+20:07
+send your questions to
+20:08
+shadowtalk@reliaquest.com.
+20:11
+Finally, please don't forget to
+20:12
+subscribe so you can get next week's
+20:13
+episode [music]
+20:14
+delivered direct to your podcast
+20:16
+platform of choice.
+20:17
+And we really appreciate it if you can
+20:19
+rate and review Shadow Talk wherever you
+20:20
+listen. It will make a huge difference
+20:22
+[music] and help us reach new listeners.
+20:24
+We'll be back next week with another
+20:25
+episode of Shadow Talk.
+20:30
+>> [music]
+20:36
+[music]

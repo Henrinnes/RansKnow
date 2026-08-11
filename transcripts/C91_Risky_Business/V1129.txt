@@ -1,0 +1,1576 @@
+0:00
+Hey everyone and welcome to another episode of Risky Business.
+0:07
+My name's Patrick Gray.
+0:09
+This week's show is brought to you by Permiso and they make a really interesting sort of identity
+0:14
+security product, I guess.
+0:15
+It monitors identity actions or account actions and can tell you when some weird stuff is going
+0:21
+on and we're joined by Permiso's in a little bit later on to talk through how they detect
+0:27
+shiny hunters activity actually and what sort of things stand out as red flags in logs
+0:33
+that are going to give you an idea that something's up.
+0:35
+You know, this is useful stuff to know even if you're not using their platform.
+0:39
+So do stick around for that interview.
+0:41
+Adam Boilello is away at the moment.
+0:43
+He's overseas.
+0:44
+Hope you have a good time.
+0:45
+Adam, if you're listening, so this week we are joined by a very special guest, Kauhoast.
+0:51
+He is an international man of mystery who is currently working as a postgraduate research
+0:57
+at King's College London on the topic of cyber war.
+1:02
+He is the Gruck.
+1:03
+The Gruck, welcome to Risky Business.
+1:05
+Good to be here.
+1:07
+All right.
+1:08
+And as always, these days James Wilson joins us as well.
+1:13
+James, how's it going?
+1:14
+Good man.
+1:15
+Good to be here.
+1:16
+All right.
+1:17
+So we're going to kick things off with a discussion of this verse cell incident.
+1:21
+Actually before we talk about the verse cell incident, James, can I get you to give a
+1:24
+give listeners who are not necessarily familiar with the cell just a quick recap on what they
+1:28
+do?
+1:29
+Because honestly, and I know this, like I'm telling on myself here, but I kind of had to
+1:33
+look up exactly.
+1:34
+I knew that they had the next JS connection, but I wasn't actually sure what their online
+1:38
+cloud service is.
+1:39
+And I figure if I didn't know, there's probably plenty of people listening who don't
+1:42
+as well.
+1:43
+It's quite a sprawling landscape.
+1:45
+So yes, their origin story, I guess, is producing and building next JS, which is one of
+1:50
+the most popular JavaScript type script based web app frameworks these days that does everything
+1:56
+from front end right through to back end, et cetera.
+1:59
+It's the first to say they didn't stop there.
+2:00
+They're now a hosting provider.
+2:02
+You don't have to host next JS stuff with them.
+2:04
+It can do all manner of things.
+2:06
+And they've gotten heavily into the, of course, all the things AI.
+2:09
+And they're actually one of the leading AI SDKs that people use to build their apps at
+2:14
+the moment.
+2:15
+So they're a big deal.
+2:18
+Yeah.
+2:19
+And they got owned and it looks like, you know, we would say, you know, in cases where
+2:23
+people get owned really badly on the show, we would say they got owned quite a lot.
+2:27
+It doesn't look quite like that's what's happened here, although they have had an incident
+2:32
+which has impacted some customers.
+2:34
+I guess the mechanics of the attacker, probably the more interesting things here than the
+2:38
+impact of it.
+2:39
+Can you just walk us through how this happened?
+2:40
+Yeah.
+2:41
+The chain of events here begins with an info stealer was made its way onto an employee at
+2:48
+context.ai, which is something completely unrelated, unrelated to Virsel.
+2:53
+That info stealer, I think it was on their personal laptop, actually, this context AI
+2:56
+employee.
+2:57
+The logs out of that, it basically, actually, was traded as these things do a bunch of
+3:01
+credentials out of the browser.
+3:04
+And the attacker went through those and found that, okay, they were able to get access
+3:08
+to things like the Virsel tenant that context AI uses to host the product, the super based
+3:13
+database they use, their auth kit implementation.
+3:15
+So it's suffice to say everything you need to very much own all things context AI.
+3:22
+What it seems they've done then is with that access to the super based database, they've
+3:26
+gone through and found that's where all of these OAuth tokens that are stored because
+3:30
+context AI is one of these things that you add to your Google workspace, for example,
+3:34
+so that it's your AI assistant that goes rifling through all of your mail and drive and
+3:38
+all these wonderful things, which of course for it to rifle through, you've got to give
+3:42
+it access to all those things.
+3:44
+So the attacker's gone and found, okay, I've got super based, super based seems to be
+3:47
+chock full of OAuth tokens.
+3:49
+What's interesting out of these OAuth tokens finds that one of them belongs to a Virsel
+3:53
+employee.
+3:55
+And what it appears is from there, they've then gotten themselves quite misive API access
+4:01
+to the Google workspace that an internal Virsel employee was using and then they're
+4:04
+off to the races from there.
+4:06
+Yeah, and it looks like the precise way that they've moved, literally, on whatever and
+4:11
+managed to obtain a bunch of secrets from Virsel customers is not clear.
+4:15
+But you can tell from Virsel's communications that they do actually have, they have actually
+4:19
+thought about, because they do like this hosted front end thing, right?
+4:23
+Like that's really where their hosting started.
+4:25
+They've actually put some thought into how to protect customer secrets in their interface.
+4:30
+Do simple protections where you can mark stuff as sensitive and that is basically a right
+4:35
+only permission for secrets which only get pooped out.
+4:40
+The other side via the build environment, you know, when you're actually deploying apps,
+4:44
+right?
+4:45
+So what it appears has happened here is a bunch of Virsel customers had environment variables
+4:49
+and didn't mark them sensitive and that's how these attackers were able to like access
+4:53
+their console somehow and just read them out.
+4:56
+Yes, that exists.
+4:58
+So there is still a lot of dots we've got to try to connect on that one.
+5:03
+I think it's safe to assume that with a very, you know, broad spectrum access to that
+5:07
+Google workspace, there's a lot of things that would have been possible and you're right.
+5:11
+Virsel, I think not only did they do a good job of spelling out what the incident actually
+5:16
+did, they were very quick also to say not just the usual advice of Heybrote, your credentials
+5:22
+and tokens, of course, you've got to do that.
+5:23
+But I actually appreciate that they called out a couple of things they did around.
+5:28
+I think secrets are now sensitive by default, which is a very good thing.
+5:31
+It probably should have always been that way, but good on them for making that change.
+5:34
+And just a couple of other things that like they really owned this and said, look, we
+5:37
+could have done better.
+5:38
+Here's the things that we're doing better and they are legitimate things that I think
+5:41
+will from this point onwards help to prevent the exposure that an event like this can cause.
+5:47
+Look, the incident comms on this from Virsel have been absolutely top right, like absolutely
+5:51
+superb.
+5:52
+It feels like they've updated when they've had information.
+5:55
+I remember at some point James, you were like, well, I have an email from them.
+5:58
+And just fight the fact that we knew that they'd emailed some people and then they did
+6:01
+email you and they said, look, it doesn't look like you are impacted.
+6:05
+They've called in Mandy and I'm guessing Mandy hadn't been advising them on this as well.
+6:08
+So yeah, looks, looks pretty good.
+6:10
+There was a apparently like shiny hunters were responsible and then some shiny hunters
+6:15
+people are saying, no, it wasn't us.
+6:17
+And then there's like forums, you know, forum posts popping up where people are saying
+6:22
+we're going to sell data taken from Virsel.
+6:24
+But then it's like not really sure if it's just like stuff out of one, you know, Gmail
+6:29
+inbox or whether it's like serious data or whatever.
+6:32
+So as to who did this, we don't quite know who we.
+6:35
+Yeah, we don't know.
+6:37
+And but I think what we can take a lot of comfort from it from is that whatever this
+6:42
+data is, it doesn't seem to be the kind of thing even if it falls into whoever's hands
+6:45
+might be silly enough to purchase it could lead to some sort of, you know, broad spectrum
+6:50
+supply chain attack or a large scale attack on customers of sell.
+6:54
+I largely feel like this is done and dusted and there's been some good lessons learned
+6:58
+along the way.
+6:59
+And, you know, I guess we just got a way to see now, but I don't feel like there is
+7:03
+a huge looming, looming danger from whatever.
+7:05
+Yeah, it's not another shoe to drop right on this.
+7:07
+Yeah, I don't think so.
+7:08
+I think, you know, a point of discussion around this is that this Virsel's staffer had
+7:13
+given really permissive authorizations to context AI to, you know, basically own that
+7:19
+account.
+7:20
+Which is what you have to do if you want to get any extract any sort of value from these
+7:24
+AI assistants, you need to give them permissive access to your account.
+7:27
+But you know, Matt Johansson, Matt Jay on Twitter has pointed out that, you know, based
+7:32
+on things context has said, it looks like Virsel wasn't even a paying customer of context.
+7:38
+And that seems a bit weird that a Virsel staffer would be allowed to connect their account
+7:43
+to context AI in such a way.
+7:46
+And you wonder if maybe their environment was a little bit too permissive.
+7:50
+Or do you think that that's a cheap shot from working in a lot of corporates with Google
+7:56
+workspaces and knowing how these things get set up.
+7:59
+I find it very unusual.
+8:01
+This claim that context AI says, well, Virsel wasn't even a paying customer.
+8:06
+Yet they had this very permissive access.
+8:09
+An enterprise would be very uncomfortable even saying to someone, yes, I'll permit you
+8:14
+to use that free tier account in an enterprise because they're going to want contract.
+8:19
+They're going to want turns.
+8:20
+They're going to want to know.
+8:21
+Yeah.
+8:22
+Right.
+8:23
+Because when something like this happens, they want to go and look at that agreement and say,
+8:26
+right, where's the liability pay up?
+8:27
+And in a free tier where you've just clicked in the UL or not read it, you don't get any
+8:31
+of that.
+8:32
+So I don't think this is a Virsel was okay with this.
+8:35
+I think this was a, it was too easy to do something that shouldn't have been allowed.
+8:42
+Yeah.
+8:43
+I think that's a fair point.
+8:44
+Grap, you want to jump in here, please.
+8:45
+Yeah.
+8:46
+I've got a couple of things.
+8:47
+One is I think that it's, it's interesting that this shows how modern cybersecurity is
+8:54
+a lot less about exploits and a lot more about OAuth tokens and what you've connected to
+9:00
+what else, right?
+9:01
+Like it's, it's all at this very, very high layer and it's got very little to do with dropping
+9:05
+Oday.
+9:07
+But the other thing is that like shadow IT used to be the person who brought in like a
+9:13
+Wi-Fi router and put it under their desk.
+9:17
+And now it's someone who like connects your entire network to some random flybind, to
+9:24
+some third party application that might have all sorts of additional access.
+9:29
+All right.
+9:30
+And it's so funny that this just come up today, right?
+9:33
+Because permissar, like I recorded this sponsored of you like before all of this happened.
+9:37
+It's just like they must be like pinching themselves at it.
+9:39
+Because they're like this is literally what we're talking about is all of this stuff.
+9:43
+And it's a problem.
+9:44
+And it's this man.
+9:45
+Yeah.
+9:46
+We did the best of ourselves.
+9:47
+This is like, this is, you guys have got some great foresight.
+9:51
+This is brilliant.
+9:52
+Yeah.
+9:53
+We're doing everything we can to deliver value for our sponsors, including hacking
+9:57
+the cell just so it connects nicely to the sponsored of you.
+10:00
+But yeah, it is, look, it is the case, right?
+10:02
+That, that's how stuff done these days.
+10:04
+And indeed, I think it is even in the sponsored of you this week or it could have been another
+10:07
+one recently where it's like, you know, attackers aren't even touching the endpoint anymore.
+10:11
+They don't need to.
+10:12
+I mean, in this case, there was an attacker touching an endpoint because they did use an
+10:15
+info stealer.
+10:16
+But you don't even need that anymore, I guess, it's the point.
+10:19
+You have to think Grunk's point is a good one, right?
+10:20
+And we've gone from they break in to they log in to now you logged in for them.
+10:25
+Yeah.
+10:26
+Not bad.
+10:27
+I like it.
+10:28
+All right.
+10:29
+Now look, speaking of vulnerabilities, though, and I wanted to get your take on this one,
+10:33
+like Mozilla has apparently found 271 bugs in Firefox by using Mythos.
+10:41
+No idea what the token cost is there.
+10:44
+I'm guessing it was substantial.
+10:46
+You know, are you on board with predictions of a bit of a bug apocalypse?
+10:50
+Because I do think that's the way this is going to head.
+10:53
+And, you know, but yeah, what's your feeling here?
+10:57
+I'm of two minds about it.
+10:59
+On the one hand, like 271 is, that's a big number.
+11:02
+That is a lot of bugs.
+11:05
+But I'm also, like I'm not sure, does that mean that there are now overall 271 fewer bugs
+11:13
+in Mozilla?
+11:15
+Or does it mean that infinity minus 271 is still infinity?
+11:19
+Right?
+11:20
+Right.
+11:21
+It has it, meaningfully changed things.
+11:25
+And I don't think we know yet.
+11:26
+I think that's going to be the, like that's going to be the question, particularly because
+11:30
+now generating code is so much easier as well.
+11:35
+So in a way, adding bugs is going to go a lot faster.
+11:39
+There's this thing too, right?
+11:40
+Where, like, you look at a company like Fortinet, right?
+11:44
+Where there's software is super buggy and super bad.
+11:46
+And you think there's already stuff they could be doing to fix this and they're not.
+11:50
+So do we think they're going to spend money throwing a whole bunch of tokens at this
+11:54
+problem when they're not putting people on this problem to begin with?
+11:57
+Like why would they throw the money from tokens into it?
+12:00
+But like, I wanted to bring James in here because you did an interview with Brad Arkin
+12:04
+that you published last week.
+12:05
+Now, Brad, of course, was for a time, the CISO for Adobe, right?
+12:10
+Which meant that he was responsible for Flash and Adobe reader and stuff.
+12:14
+And these products were bottomless pits of vulnerabilities.
+12:17
+And he thinks the discourse around mythos is a bit dumb because you
+12:23
+aren't going to improve the quality of software by just burning tokens to shake out bugs
+12:28
+quite to Grucks point where he's like infinity minus 271 is still infinity.
+12:32
+I mean, it's really, Grucks just basically saying what Brad told you last week.
+12:37
+Yeah, look, I think there's some key words there, right?
+12:39
+You know, does it improve the quality potentially?
+12:41
+But quality doesn't equal safety and prevention from exploit and and
+12:45
+Brad's crystal clear point to me was, look, we, we could have in time,
+12:50
+enumerated all the bugs, fixed all the bugs in Flash and in reader,
+12:52
+but it wouldn't have done us any good.
+12:54
+What we had to do is look at the commonality and say,
+12:57
+what do these vulnerabilities tell us about higher order concepts in our code base
+13:01
+that we can go and do very targeted fixes around?
+13:03
+You know, like do you fix 100 bugs and potentially introduce who knows how many
+13:07
+regressions and leave, however many bugs still there?
+13:10
+What do you say?
+13:10
+Let's just wrap that up in a sandbox at sandbox and the arbiter between the sandboxes
+13:14
+is a smaller code attack surface.
+13:16
+Bang, that is then a material difference in your attack surface.
+13:20
+So I'm with Gruck here.
+13:22
+It's an impressive stat.
+13:23
+It's great to see mythos being used.
+13:24
+But this, this does not equate that the software is now any way
+13:33
+further towards being inexploitable or less exploitable.
+13:36
+It's that you don't get there from just 271 bugs being fixed.
+13:41
+One of the things I remember that Flash used to do when there were, you know,
+13:45
+back when we were on that, that treadmill, all those years ago,
+13:49
+they used to kill the techniques that were used in the exploits.
+13:55
+So they realized that it was just going to be impossible to, you know, fix all the,
+13:59
+like the various different types of confusion.
+14:02
+And so they started killing the techniques that got used to cause say, like a type confusion,
+14:09
+like that had one specific technique that was exploited.
+14:13
+So they killed that technique, which meant that it didn't matter if they left
+14:17
+the actual type confusions in there, you couldn't turn that into an exploit.
+14:22
+And I don't know if AI is going to get you to that understanding or if it's just
+14:26
+going to enumerate all of the different type confusions that you have.
+14:30
+Because there's two different things.
+14:32
+And one of them, like meaningfully moves you forward and the other
+14:37
+doesn't, right?
+14:38
+Yeah.
+14:38
+Well, it's funny, right?
+14:39
+It's just so funny bringing this up because it's been long enough now that I,
+14:42
+you know, I'd feel comfortable saying, you know, some of the things that Brad told me
+14:46
+back then, which is like, I mean, they were trying to kill flash, right?
+14:49
+They wanted to kill flash.
+14:51
+No one in security at Adobe wanted flash to be a thing.
+14:53
+And then some product group would always like bring it back, reanimate it's
+14:56
+corpse for some project, make it a dependency.
+14:58
+And they'd be like, oh my God, here we go again.
+15:01
+But you know, when they finally killed it, the cocks came, you know, the cocks were popping.
+15:05
+But that was, you know, I think that was a really interesting case study.
+15:09
+You know, when we look at the impact that stuff like, you know, frontier models might
+15:13
+have on bug discovery.
+15:14
+And is that actually going to fix everything?
+15:16
+I think what we are saying is probably not.
+15:18
+No.
+15:19
+And moving on to this next story and mist is now going to this is like insane, right?
+15:24
+So mist has obviously fallen behind on doing vulnerability triage and enrichment.
+15:29
+Like this has been a story for over a year now.
+15:32
+At various points, they've talked about, oh, we've got a new contract to helping.
+15:35
+And you know, we'll get right on it.
+15:36
+And now they're just like, eh, we're not really going to bother.
+15:40
+But there's got to be some, you know, there's got to be some really strict criteria
+15:43
+before we bother enriching something.
+15:45
+Otherwise, we're just going to take the vendor's word for it.
+15:47
+Basically, and one of the criteria is that the bug might, it has to be on the kev list,
+15:52
+on the sister kev list.
+15:53
+And then our very next story is sissa cyber putting out an alert about the axiast compromise.
+16:01
+You know, about the axiast supply chain attack.
+16:03
+So like with sissa suffering so badly at the moment, you know, as I've referred to it constantly on the show,
+16:09
+it's we have entered sissa's century of humiliation.
+16:13
+You know, you just sort of think, what is this doing?
+16:15
+Like you're relying on a government agency that has now become quite dysfunctional,
+16:20
+not due to its own fault, but because it's being targeted by the White House for being,
+16:24
+I don't know, woke radical left or something.
+16:26
+And I just think, you know, where does this end at your point, Gruck,
+16:31
+when we were talking about this before we got recording is,
+16:33
+you reckon this might be missed kind of getting ahead of the frontier model bug apocalypse.
+16:38
+And just saying, yeah, we're going to just preemptively wipe the white flag here.
+16:42
+I think it's the smart move.
+16:44
+I mean, if you are missed and you see Mozilla coming out and saying, hi,
+16:49
+we've got exactly one product and there were 271 security issues that we killed this month.
+16:57
+As this to go, that it like, that's not happening.
+17:00
+Like that is like, we cannot.
+17:03
+Like, that's just not a thing that we can do.
+17:06
+So yeah, like the smart move is just go, yeah, if you're not on the list, you're not getting in.
+17:11
+Yeah, James, you and I were chatting as well.
+17:13
+And about whether or not you think AI could make a dent in solving this.
+17:19
+And the answer there is like, at least with current models, probably not.
+17:23
+You know, the work is not, I don't know, I don't know that it's quite repeatable enough
+17:28
+that you could get an AI agent to work out like a CVS score reliably.
+17:31
+I think it's not a 3.0.
+17:33
+That's a 10.0.
+17:35
+Absolutely right.
+17:39
+There's that.
+17:39
+And then there's like, okay, when does the madness end?
+17:41
+If the AI is finding the bugs and the AI is probably writing a vulnerability disclosure
+17:45
+and then AI is determining whether you are AI discovered bug and AI written vulnerability
+17:49
+disclosure is accurate, just stop at some point that there's enough AI in the loop at that point.
+17:55
+I really don't think it's going to, even if you've commented it well, it's not going to help.
+17:59
+Give all the money to open AI, skip the whole security theatre with finding the bugs and enriching
+18:05
+them, just give all the money, you know, AI, run your tokens to your thing.
+18:10
+Just reminding me of how like in the earlier days of chat GPT, people were writing bullet points
+18:15
+and then asking chat GPT to generate an email, which they would send to someone who would then
+18:19
+put it into chat GPT and say, can you give me a bullet point summary of this email?
+18:25
+God the horror.
+18:26
+We've got a story here from Alexander Buntten over at the record talking about how a ransomware
+18:32
+attack against a British pathology provider or pathology lab.
+18:37
+The fallout is still being felt more than 18 months later in, you know, the fallout is still
+18:43
+affecting British healthcare operations. James, walk us through this one mate. Like what's the
+18:48
+go here? How badly have things been affected? Yeah, look, it's a troubling story. So in June 2024,
+18:55
+there was Sonovus was essentially the provider that was attacked here. Now Sonovus is essentially
+19:02
+a pathology blood testing service, but the knock on effects that had to the entire healthcare system
+19:07
+was incredible and still being felt because, you know, if the blood test couldn't be done in time
+19:13
+and there was a backlog of that, then you can't determine which blood supplies you need for which
+19:17
+transfusions. And if you're not doing the transfusions, then you can't manage your blood supply
+19:21
+stocks and your logistics around it. And so it's an interesting article because it points out the
+19:28
+GS18 months later this poor organization is still struggling with systems that are not fully recovered.
+19:34
+They still have a massive backlog of attacks and even just one single provider of diagnostics
+19:40
+and pathology can have such a massive ripple effect throughout the healthcare system.
+19:45
+Yeah, I mean, these are the sort of stories that make me, you know, I've always made me treat the
+19:50
+ransomware issue as a national security issue. And in fact, this morning we were having a look at
+19:53
+Catalan's newsletter and associated risky bulletin podcast script. And yeah, one of a former FBI
+20:01
+official was testifying before, you know, House Homeland Security Committee in the United States saying,
+20:05
+hey, we think you should make, you know, that these ransomware operations should be designated as
+20:09
+terrorist groups or terrorist operations. I think in that case to unlock more prosecutorial
+20:15
+and surveillance tools against them. But, you know, I think finally, people have realized a few
+20:21
+things, which is it is worth exercising state power against these kinds of groups, not just law
+20:26
+enforcement power, like I mean real state power. And that it's not unacceptable. It's not something we
+20:31
+can ignore anymore. Grekk, any thoughts there? Yeah, and I'm like, I'm all for it. I think that the
+20:38
+ransomware groups, they're permitted to exist because they provide actual value to Russia as
+20:45
+a tool of state power, right? Like they don't exist, you know, simply because Russia allows corruption
+20:53
+and whatever. I think that they literally give Russia additional tools of state power. And if
+21:01
+nothing else, they give them a bargaining chip at one point to be like, look, we will shut down
+21:06
+the ransomware gangs if you give us these concessions. I agree with you on the bargaining chip thing.
+21:13
+I think this state power arguments a little bit, a little bit softer to be honest.
+21:17
+Okay, it's one I'm willing to make. But I admit that it's very much, you know, assume a ransomware
+21:23
+group of radius R, traveling at constant velocity. Right? It's like to me, it makes a lot of sense to
+21:31
+view it as this gives the state the ability to do rating operations, which deligitimize the
+21:38
+political protections and so on of adversaries, right? That makes sense to me. But it's very,
+21:47
+it's very unlikely that it makes sense to the Russians. They don't think about it like that.
+21:52
+Right? Because they're not as sophisticated as I am and don't really understand everything.
+21:55
+So it's an exercise of state power. So he's saying that it's an exercise of state power that they
+22:00
+don't realize is an exercise exactly right? They fail to appreciate what they have. That's what's
+22:05
+going to think on. But anyway, it means that using state power against it is absolutely the right move.
+22:10
+Yeah, I mean, I think that the, you know, my argument is a little bit different. My argument is
+22:15
+that they're failing to do anything about it, which, which means that they've sort of broken the
+22:19
+compact of, you know, behavior of responsible states. And that's when you get, you know, the people
+22:24
+in basements that Fort need involved basically. Anyway, moving on now, we're going to swap out
+22:29
+Gruk because we're worried he's going to go off and attend. So we're going to bring in Gruk 4.7,
+22:35
+who is an LLM. Now, we were going to get real Gruk to talk about this one, but he can be a little bit verbose.
+22:41
+Right? So we've, we've distilled him into a model. So we can properly scope the response we're going to
+22:48
+get for this one. So here goes. Gruk, I want you to act as an expert in cybersecurity, who is
+22:54
+providing tightly scoped commentary on a cybersecurity podcast. The audience for the podcast is
+23:00
+people who are knowledgeable about offensive and defensive cybersecurity and work in both the
+23:05
+intelligence community and private sector. I have provided you with a link to an article from
+23:11
+the record titled in defeat for Trump House extends electronic spying program for just 10 days.
+23:19
+Please read this article and get ready to provide us with expert commentary about it.
+23:24
+Before you generate any output, we have some rules. Keep your comments directly relevant to what
+23:33
+is written in the article. Do not invoke Bismarck, the general or the ship. The grain trades
+23:41
+impact on warfare through the ages is not relevant to this discussion. Please refrain from connecting
+23:50
+an analysis of the economic model of the Ming dynasty to this discussion on 702 reauthorization.
+23:59
+Now we have established the rules. Tell me what do you think of the latest trouble the US
+24:03
+government is having in reauthorizing the 702 intelligence collection process? What do you think
+24:10
+about this latest trouble that the US government is having reauthorizing 702? Gruk 4.7. Take it away.
+24:16
+It's interesting that you would bring up Bismarck because
+24:25
+stop or I'll take away your tokens.
+24:30
+The FBI have brought this on themselves. The 702 program is a very important piece of the
+24:38
+national security apparatus. It allows them to look at communications between foreigners
+24:46
+and people located inside the US. That is very useful because if you want to attack the US,
+24:52
+it helps to be inside the US. Well, it also allows them to actually monitor the communications
+24:58
+of two parties located outside the United States when they're using US infrastructure like
+25:02
+Facebook. That was the original intent of 702. I think where you're going with the FBI brought
+25:08
+them on to itself. It's like incidental collection is a thing where sometimes you wind up accidentally
+25:13
+grabbing some data on US persons. The FBI was authorized to look at that data because hey,
+25:20
+it could be useful in stopping terrorism. Then in 2023, they just did some ludicrous number of
+25:24
+queries where it looked like maybe they had been accidentally automatically querying the 702
+25:29
+dataset every time they plugged someone's name into it. Everyone freaked out and here we are,
+25:34
+a couple of years later. The fact that they're having difficulty getting this reauthorized is
+25:40
+because they've failed to make the case for why they need it. Then afterwards, they went ahead
+25:47
+and they abused it or they appeared to abuse it. I think that if people don't know why you need a
+25:54
+thing but they know that you abuse something, they're not going to want to give it to you.
+26:01
+This is entirely on them. I think it's interesting that the pushback is coming from the Republicans who
+26:07
+look, it's really weird. I feel like I'm having a stroke anytime I try to talk about American politics
+26:11
+because the Republicans you would normally associate with being hawkish. But then you've got a
+26:19
+Republican president who ran on an anti-war platform who promptly starts a war in the Middle East.
+26:25
+You had Bush starting the war, but then the whole rhetoric in the US is about war-mongering
+26:29
+dams. As I say, I feel like I'm having a stroke. I mean, he used a surprise to see the pushback
+26:36
+against this coming from the right. Because this year, 7.02 was a Bush thing. It was a Republican
+26:42
+party who gave the United States 7.02. Does that part of this surprise you?
+26:47
+Nothing surprises me anymore this year. In a rational world, if this was 2022, 2023, and I was seeing
+26:58
+the right is coming out against law and order, that would make absolutely no sense. But I guess
+27:05
+law and order is woke these days. It makes no sense. Honestly, I don't know what's going on.
+27:11
+I'm with you on that one. Ultimately, do you think 7.02 is going to get reauthorized in some
+27:15
+form? I feel like the Congress is going to do a power while they'll give some concessions
+27:20
+or whatever, maybe make the FBI more oversight on the FBI or make them get warrants or something,
+27:24
+but ultimately, 7.02 is going to get re-offed. It has to be. It has to be.
+27:29
+If for nothing else, I think if they got rid of it, there'd probably be a huge drop in GDP
+27:35
+just because they'd have to fire all those agents who are maintaining the infrastructure that it runs
+27:41
+on. There's so much involved that getting rid of it overnight is impossible.
+27:46
+That's it. The title wagging the dog. It's big 7.02.
+27:54
+You cannot get on the wrong side of big 7.02. We'll see how that shakes out.
+27:58
+James, let's bring you back in here because we've got a story here from Jonathan Grieg over at
+28:02
+the record looking at a crypto infrastructure company that apparently got hacked by the North Koreans.
+28:09
+It's a big one. It's not right up there with the 1.3 billion that we had last year,
+28:14
+but this is a $290 million theft. You said to me already, this was very interesting and started
+28:21
+explaining it to me and I'm like, wait till I recording. I want to get fresh reaction. Tell us about it.
+28:27
+Yeah, super interesting because normally it's like a crypto exchange,
+28:31
+had a bug in a contract or a bug in something and it's like a self-contained attack.
+28:35
+The thing that gets attacked is the thing where the funds disappear from.
+28:39
+That's not the case here. Yes, $290 million was taken from this kelp down,
+28:44
+but the way that it happened was actually by compromising something else entirely.
+28:48
+There's this thing called layer zero. When I step through this to understand it,
+28:53
+there is this thing called RSEath, which is basically a token or a type of thing that you can
+29:01
+issue that says, I've really got ether and I've stored it in this place and they've issued this
+29:07
+RSEath and then people can actually go to other institutions in the crypto marketplace and say,
+29:13
+look, I've got all this ether. What will you give me as leverage because of this? They can earn
+29:18
+yields and all this other sort of stuff, right? But the role layer zero provided is it is basically
+29:25
+the service that validates these transactions around this, you know, eth-staked coin.
+29:31
+And I think what the attackers determined here is that if a crypto exchange add there or a
+29:37
+dow out there is solely relying on layer zero alone to trust the validation of those exchanges,
+29:43
+then they don't have to hack them. They just go and make sure that they can essentially
+29:47
+make get layer zero to produce falsified records about how much ether someone actually has.
+29:53
+And then they can go to that down and say, well, look, I've got all this ether. Look at layer zero,
+29:59
+that'll verify it. And then the now goes, yeah, great, that's a huge stake. What would you like
+30:03
+to do with it? And they've just then said, well, I'd like to withdraw all these funds based on the
+30:06
+fact that I've got. So it's like a fake bank statement saying, hey, look, I've got $2 billion,
+30:12
+surely you can let me drive away in this new Porsche. And that checks luck at a bounce.
+30:16
+And they phone the number on it and your girlfriend picks up and goes, yeah, this is the bank.
+30:20
+What do you want? So I mean, that's a lot of cash. Like who are the bag holders here? Who lost the
+30:27
+money in the end? Is it actually like this? Like I don't understand this stuff nearly well enough,
+30:33
+James? Yeah, look, I couldn't get a clear read on that either because it is, you know, it's crypto and
+30:38
+it's pseudonymous and it's all these wallets. And so it's suffice to say these were,
+30:43
+you know, there were big wallets involved here. If you're playing in this ecosystem, it's because
+30:47
+you're a large holder of crypto and you're specifically losing, using these leverage services to make
+30:52
+even greater use of your crypto. This is not just a modern power. I got a little bit of crypto
+30:58
+back when it was cool. Now, there's like complex derivatives and stuff like I saw some humor around
+31:02
+this one, you know, with pictures of like screen caps from the big short and stuff of like, now
+31:06
+what we do is we've got this staking protocol and then we learn it. It's just, it gets real,
+31:11
+it gets real complex real quick. I think the only people who understand this are in North Korea
+31:16
+making a lot of money out of the fact that everyone else is trying to look like they understand it
+31:21
+and just giving money to them, right? Like it's yeah. Yeah, I mean, I think there's a reasonable
+31:27
+case to be made that the North Koreans understand this stuff very well. I think you might be right there,
+31:31
+buddy. Now, looks, staying on the topic of crypto, we've got this exchange called Grinnex.
+31:38
+Now, these guys are frequently doing business with, they're frequently, they're exchange-based
+31:46
+encourages done, but they're frequently doing business with like Russian ransomware actors and
+31:49
+whatever. So they've got owned and like what, $13 million got pinched. Other people put the value
+31:55
+at $15 million and they're shutting down basically like they're cooked, they're done. And they've
+32:00
+come out and they've said, oh, this was unfriendly states like Westerners, you know, sort of pointing
+32:05
+the finger at five eyes, but you know, look Tom, our colleague Tom Yuran who hosts the weekly
+32:13
+between two nerds podcast with you, Gruk. If you want to, if listeners out there are really
+32:17
+enjoying Gruk's vibe, you can listen to him every week in between two nerds, which is published
+32:21
+to the Risky Bulletin podcast feed here on the, it's part of the Risky Business Extended Universe.
+32:28
+But yes, it looks like, yeah, Tom said no, it doesn't really, doesn't really feel like a Western
+32:34
+operation. James, your take was the same. And you know, there's even some analysis here from
+32:39
+elliptic saying, yeah, it doesn't look like it. It looks like more like a crime operation. Gruk,
+32:43
+you had some feelings in your waters about this one as well. Yeah. So like, when I started reading it
+32:48
+and the first thing I saw was, you know, like this was a hostile, like this was a hostile state
+32:53
+that has attacked us because we are, you know, helping Russian financial sovereignty. And I immediately
+32:59
+thought, oh, it's the Australians. This is great. Like they're going after, you know, the infrastructure
+33:03
+that ransomware relies on. And as I kept reading, I just just like, this doesn't feel right. Like this
+33:09
+is, like this is not, like it should be the Australians. This is what they should be doing. But this
+33:15
+is absolutely not them. We do like a bit of a slash and burn operation. Like I just, he likes to
+33:20
+torch, you know, bulletproof hosting providers and stuff. It's pretty tasty. Pretty tasty. Yeah. So,
+33:25
+I mean, what I would expect is if it's the Australians, they would have sent all the money to burn,
+33:29
+like they would have burned all of the crypto at addresses, you know, like, screw ransomware or
+33:36
+something like that would have just gotten 15 billion. Just to make them cry. I know it's so cool.
+33:41
+Yeah. Yeah. Yeah. But that's not what they did. They managed to finish it. It got pinched. And then
+33:46
+they got laundered through like a fairly complex sequence of transactions. And that screams,
+33:54
+let's just say, activist who doesn't like the Russians. Yes. Is there a country of anywhere
+34:03
+where people don't like Russians? It will remain a mystery. All right. Let's move on to the next
+34:09
+thing here. And we've got a piece here from TechCrunch from Lorenzo actually doing a bit of a roundup
+34:14
+on these defender bugs. They've been kicking around like people who, if you glued to InfoSex
+34:20
+social media like I am, you would have seen there was some sort of disclosure drama, someone calling
+34:25
+themselves chaotic eclipse wound up blogging about these bugs and saying, oh, you know, MSRC,
+34:33
+wasn't being nice to me. So he go and dropped like they odate them basically. And now people are
+34:38
+actually out there using the bugs. We love to see it. Feels a little bit like the late 90s. James,
+34:42
+what do we know here about these about these bugs and the exploitation of said bugs? Yeah,
+34:47
+three bugs, all very Windows Defender Centric. But interestingly doing three very different things.
+34:53
+So one goes after the updated mechanism. It's able to essentially hijack the point in time when
+35:00
+Defender thinks it's got a legitimate update and goes and applies it. And because of course,
+35:04
+Defender is operating as a very highly privileged operation. That's a real nice way to put
+35:08
+boundaries where you want them to be. So I'm guessing that's like a local pre-visc that one. Yeah.
+35:14
+These are all pre-visc of some different flavor. Sorry, the third one's not. But the second one
+35:18
+certainly isn't again Defender, but looking at the way that it essentially quarantines files.
+35:23
+There's some sketchy logic around what it does. And the exploit here is if you just can
+35:30
+get the file into the right position, right as Defender goes to quarantiner and look into it,
+35:36
+then it happens to sort of write the file back into place without the quarantine in there.
+35:40
+And so you just get there at the right time and your file ends up in the right spot at the final
+35:45
+step. But then the nice one is that if those are not to your flavor, luckily he's got a third one,
+35:52
+which just crashes Windows Defender and then you can do whatever you want on the system anyway.
+35:58
+It's pretty funny, right? Because like everyone thinks of Crowdstrike as being the 800 pound
+36:02
+gorilla in EDR. And it's not. It's Microsoft. I mean, Defender's install base and like the
+36:06
+amount of money Microsoft make out of this stuff, it makes Crowdstrike look like a Ma and Pa shop.
+36:11
+Yeah, yeah, just crazy. Real quick, we got a report here from Axios that says that NSA is using
+36:18
+Mythos despite the fact that the White House has declared them Radical Left Wing terrorists.
+36:24
+So whatever it is. So that's kind of an interesting data point. You know, don't know what that's all
+36:29
+about, but I'm sure we'll be here and plenty about it. I think I saw some comments from Trump too,
+36:33
+where he was saying that anthropic a radical left, but like we'll get along because they're smart
+36:37
+and we'll find something and you know, just the usual sort of thing like I really wish he wasn't
+36:45
+so funny, you know, like what else have we got here? Oh, now here's one for you, Gruck. So we spoke
+36:53
+about the original research into this proof point, the proof point threat research team, but been
+36:59
+doing some really fun research into this hacking campaign where people get into like shipping
+37:04
+companies and whatever and basically manipulate the system so that they can send their own truck drivers
+37:09
+or hired truck drivers to pick up containers and like deliver them to like their warehouses or whatever.
+37:13
+So there's like like freight hijacking, but like new school techniques in freight hijacking,
+37:19
+freight hijacking. They the proof point team, they took a punt on something, which is they grab some
+37:26
+of the malware from these organizations that's doing this and they detonated it inside like a
+37:31
+deception environment, right? Like a simulated environment that wasn't even set up to look like a
+37:35
+transport organization and they collected so much good telemetry and I'm like, I'm embarrassed
+37:42
+for these attackers for not realizing that they were in basically like a honeypot environment.
+37:48
+Was that your takeaway here too, Gruck? Yeah, I mean, I think one of the things that should have
+37:53
+clued them in is just this sheer amount of credentials and everything they touched was gold,
+38:00
+right? Like they're like, oh, I wonder if there's a log into Gmail. Oh, there's 20. Oh, I wonder if
+38:04
+they've got access to shipping manifest. Oh, there's 2,000 of them. I wonder if those
+38:11
+posters for people who work in intelligence, which is like if she's a 10 and you're a 6, you know what I mean?
+38:16
+Like it's a 10, it's too much to be true to it's if you pop shell and it's just this good like,
+38:23
+yeah, it's probably not. But yeah, I mean, it looks like they were going after like in this case,
+38:29
+they were looking for financial access into like banking accounting, tax software, money,
+38:33
+transfer services, transport related entities, fuel cards, whatever. Like they seem like this
+38:38
+group just does omniforod in anything transportation. That's exactly what I was thinking is that this
+38:44
+very much feels like the mob in a way and like, you know, if you've got you're like BEC guys,
+38:50
+they learn how to do one sort of scam, you know, like maybe it's a tax refund or whatever. And they
+38:56
+hammer that until something else comes along. But these guys are just omnivorous, right? Like they
+39:01
+get in and they're like, let's find the credit cards. Let's find the cards that they use for
+39:07
+fueling up their trucks. Let's find whether we can get cargo manifests and pick up some good stuff
+39:13
+instead. It's like, it's very much like, let's make money and we're using cyber to do that. As
+39:19
+opposed to like, let's use cyber and make some money. Well, I'm going to let you very quickly go
+39:24
+off and attention about the IRA because we know how much you love talking about the IRA. We negotiated
+39:28
+this and I have negotiated this. This is an allowed time. So what's fascinating is historically one of
+39:37
+the main sources of revenue for the IRA was hijacking trucks. There's actually a famous photo of all
+39:44
+these IRA terrorists in a data's jackets, which came from an adidas truck that got hijacked. It was
+39:51
+used to track them because the only people who had adidas jackets were people with connections to
+39:57
+the IRA. But similarly, it used to be a huge thing for the new Jews. It used to be a huge thing
+40:04
+for the new Jersey mob. They used to get tons of money from hijacking trucks. It looks like now
+40:12
+that the trucks have sort of digitized and they're cyber enabled, I guess the mob has become
+40:19
+cyber hackers to get back into, throw back to the 1970s. Good for that. Or this is just the new
+40:27
+form of I organized crime. It's not a bunch of like sopranos look alike. Actually pulling the strings
+40:32
+on this, it's people who look more like the three of us. I'm just thinking that there's a whole bunch
+40:38
+of old guys. We're going to get the team back together. We're going to do one more heist.
+40:45
+That's it. Just one more score. All right. So we've got a few more to talk about and then we're
+40:52
+going to wrap it up for the day. This story is absolutely insane for people who've been really
+40:58
+monitoring the situation when it comes to the straight of hallmur as being closed. There was this
+41:03
+crazy situation the other day where an Indian boat was trying to go past the blockade and the
+41:08
+Iranians were shooting at it. And the captain is like on the radio is saying, what are you doing?
+41:13
+We're on your list. You gave us approval to go. It turns out it looks like that may have been
+41:17
+one of the boats that reportedly fell for a crypto scam and paid a whole bunch of like USDT,
+41:24
+like crypto coins, stable coins, to who they thought was the IRGC so that they could sell their boat
+41:29
+out of the straight of all mues. But it looks like the money may have gone to scammers. And that's how
+41:34
+not only did they lose the money, but then they were getting shot at by the IRGC like what a world.
+41:39
+Yeah. Look, this is absolutely crazy. Maybe it's those New Jersey guys who are, you know,
+41:45
+they're stealing freight. They're scamming the straight of her mues. They're all over this one.
+41:52
+It's wild though. Like, I wish I had thought of that. This was like the perfect crime.
+41:57
+Oh, we got our law and audit story here, James. And you noticed something interesting.
+42:01
+And this one, a couple of guys in New Jersey, you've been given really long prison sentences
+42:05
+for running the North Korean laptop farms. What's crazy though is it seems like one of the people
+42:09
+was like the mastermind. And then the other one was kind of like pretty junior in the scheme.
+42:13
+And they both cut basically the same jail sentence, which is crazy. Yeah, that's what surprised me.
+42:18
+I mean, one got eight years, one got nine years, but there's a big difference seemingly in their
+42:23
+involvement. You know, one guy was doing the trips to China that just happened to be really close
+42:28
+to the North Korea border. And when to school with someone who was North Korean and like,
+42:32
+obviously has all the wherewithal and connections to set this up and to be running the operation.
+42:38
+And the second guy was, it seems to be just one of these poor folks that get stuck running
+42:43
+the farms. And there was bound to be more than just him running those farms. But,
+42:49
+yes, both got the same penalties, which is harsh. But also in the article, it says that between
+42:53
+them, they were paid $600,000 by North Korea, between them over this three or four year period,
+43:00
+which is just like, two same worth squeeze. Yeah, I don't think that half of it was going to
+43:06
+the guy who was, you know, changing the batteries and making sure everything was plugged in.
+43:11
+Yeah, no. So 600,000 between the two of them probably most of it went one way. I think you've
+43:16
+got your bang on there. Real quick, I wanted to talk about like a week or two ago, we spoke about
+43:22
+CISA adding a bug in the true conf video conferencing client to the kev list, which is like,
+43:29
+I'd never heard of true conf. And, you know, that that seemed a bit weird. And we've got a Vlad
+43:37
+Stiron, Vlad Stiron, sorry, probably murdering his name anyway from Ukraine, a running hacker on
+43:43
+the socials. He heard us talk about that and he had to do a double take because it turns out true
+43:48
+conf is Russian. So he's wondering why on earth, CISA is asking, you know, is asking government
+43:55
+agencies to immediately, like the ordering government agencies to get this stuff out of their
+43:59
+network, sort of implies that it is in their network and what is it doing there, that seems very
+44:03
+strange. And then it gets weirder from there because it turns out like in this piece, there was
+44:08
+a some sort of campaign targeting targets in Southeast Asia, I think. And then we had a newsletter
+44:14
+piece this morning, James, you and I were working on that when cattle and filed it. And it looked like
+44:21
+a Ukrainian APT crew is going after true conf server bugs. So it looks like, you know, we're just like,
+44:27
+oh, gee, that's weird true conf. What's that? And it's it's apparently being hacked by everyone.
+44:32
+And it's Russian and it's like, that's a little bit of funny context there. Look, I'm going to
+44:37
+speed up through these because we are running out of time. Last couple of things to talk about here.
+44:42
+BlueSky and Mastidon both got DDoSed. The joke, of course, going around is that dozens of users were
+44:48
+impacted. But that's not fair. I mean, I'm a blueSky user. It's a it's a pretty active social media
+44:55
+network. Mastidon and plenty of stuff happening there. But yeah, this is going to happen when it's not
+44:59
+some, you know, mega co-op social media network. This is going to happen. But don't worry, because
+45:05
+Eric Ella, over at CybersecurityDive, he reports that the US and nearly two dozen other countries
+45:10
+have struck back against DDoS for higher platforms. And they've taken down 50 websites associated
+45:15
+with booterservices. Now, sure, I think that's a good thing to do. But I'm not really expecting that
+45:21
+it's going to make that much difference. Grak, what do you think there? But I'm just going to go back
+45:25
+to what I said earlier. Infinity minus 50 is still in the text. Exactly right. Yeah, that was very,
+45:33
+like I think I think the reason to do this is for the deterrent effect, not because you really
+45:36
+think it's going to make that much of a difference. I think it's more a case that if you don't
+45:39
+occasionally arrest these people, all of a sudden you have infinity times two. So, it is worse like,
+45:45
+I don't know, let's just go with that. Yeah, double infinity. Yeah, double, really infinity.
+45:51
+And then finally, we've got a piece from the Russian media, which is talking about how it's
+45:58
+basically Russian propaganda aimed at Russians saying, man, if you run a VPN app on your phone,
+46:04
+it can explode, which gives you the idea of like, because we've talked about how they have, you
+46:09
+know, canned mobile internet in St. Petersburg and Moscow. And, you know, there's like serious
+46:15
+content restrictions happening. So obviously, VPNs are proliferating and they're trying to combat
+46:19
+that with this sort of ludicrous propaganda, but you do get the sense that perhaps the reason
+46:24
+the internet crackdown is coming is because they're preparing for a mobilization, because they're
+46:28
+running out of people in their war against Ukraine. Is that the feeling you get, Groc? Yeah, absolutely.
+46:34
+They've been trying different attempts. So they've shut down telegram. They've shut down a bunch
+46:39
+of other messengers. They're interfering with things that are not based in like things that are not
+46:46
+sovereign internet for Russia. It seems very much like they're trying to, they're ramping up for
+46:54
+a shutdown of some sort. Yeah, yeah. That's, yeah, like that has to be for some reason.
+46:59
+Well, guys, that's actually it for the week's news. Groc, thank you so much for joining us, mate.
+47:04
+It's a pleasure to have you on. You've done one of these before, but it's been years since you've
+47:07
+come on and joined us at Khoi Hosts on the Main Show. Again, anyone who wants to hear more Groc,
+47:12
+if you just can't get enough Groc, you can go find him on the Between Two Nodes podcast, which
+47:17
+is published into the Risky Bulletin RSS feed. But yeah, that is it. Groc, thank you very much. And James,
+47:23
+thank you as, thank you also, mate. What have you got coming up this week? You've got, oh, that's
+47:27
+right. We're interviewing Nicholas Carlini from Anthropic on Friday. We're hoping to publish it
+47:32
+that day. So if you can't get enough James, you go and subscribe to Risky Business Features.
+47:38
+But yes, thanks to you both. And I'll catch you both soon. Thanks for having me.
+47:43
+Well, thanks, Pat. Great to meet you, Groc. That was the Groc and James Wilson there with a chat
+47:47
+about the week's security news. Big thanks to both of them for that. It is time for this week's
+47:53
+sponsored review now. And permiso is this week's sponsor. It was founded by a bunch of like ex-fire
+47:58
+I-mandeant people who basically, yeah, I guess, you know, just had the good idea of building a
+48:06
+product and a platform that looks at identity and account activities and come from that detect various
+48:13
+you know, types of malicious activity. And you know, that's turned out to be a really good idea
+48:18
+because as we were just talking about in the news, this is how a lot of the, a lot of attacks
+48:24
+happen these days. It's just funny stuff to do with identities, account resets, things like that.
+48:29
+So Ian R. is with permiso and join me to talk really about how they're tackling, I guess some of
+48:36
+the tricraft used by groups like Shiny Hunters, which are very sort of identity centric in the
+48:40
+way that they attack things. He is Ian R. When you're looking for bad things from a modern threat
+48:44
+actor, it's not go find the bad IP anymore or go find the bad file hash anymore. There's no
+48:50
+like easy tells is like how do they do things just a little bit differently than your normal user does.
+48:57
+So when they're registering MFA, man, if I see somebody go from Android to Apple, that's weird.
+49:05
+People don't do ecosystem changes or somebody has an iPhone 17, the next device they register
+49:11
+is a 12. Doesn't make sense, right? So even some little things like that stand out. But the
+49:20
+the real crux of it is you have to find, you know, combinations of these signals across the various
+49:28
+places you're looking. So not just the IDP. Oh, once they get through the IDP, what do they do next?
+49:32
+They're landing in 365 and searching or hitting co-pilot to go find some documents on how your VPN
+49:39
+works. Right? So now weird MFA event and a search for VPN documents. Ooh, more interesting.
+49:48
+That's the way we kind of think about the world and with modern threat actors like these guys,
+49:54
+but also the North Koreans, the pesky North Koreans. You like to refer to them?
+50:00
+You've been listening to the show. Yep. Excellent. Yep. Yeah, the pesky North Koreans,
+50:05
+APT 29, right? They all operate the same. Get some valid creds. Land in your SaaS
+50:10
+point forms. Learn as much about your environment as possible for carrying out their mission,
+50:14
+whatever that mission happens to be. Yeah, I mean, when we talk to Adam Bilo, who's had a very
+50:19
+long career as a pen tester out in my co-host, of course, Adam. You know, he talks about like the
+50:24
+first thing he does on target is go looking for the docs, right? So he can figure out what the
+50:28
+what the network looks like. I mean, it feels like yeah, using a platform like yours to spot that
+50:35
+sort of activity makes a lot of sense. But I'd also think like what I'm hearing from you is like,
+50:39
+if you don't have a platform like that, maybe what loading up those sort of documents with
+50:43
+canaries is going to be quite fruitful. Oh, for sure, right? They're going to look for the same
+50:50
+things. In fact, I should share them with you at some time. I keep a long list of the search terms
+50:55
+I've ever seen shiny hunters scatter spider various groups use and I love search terms for
+51:01
+detection because search terms show intention. I know what a bad guy wants when I see what they're
+51:06
+searching. And sometimes it's almost like they're reading off an SOP. You can see like, oh, they
+51:10
+searched for password then AVD, then VDO, then VDI. Oh, they really want to get to Azure virtual desktop.
+51:18
+Great. Now I know what to go look for on that side of the house. But yeah, so if you know what
+51:26
+they're looking for, you can implant some things in there with a canary for sure. But the very least
+51:31
+make sure you're logging those things and looking at them. You can tell a bad search. Nobody
+51:37
+searches for a KAA unless they're looking for long with gaxxies. Right? And that's a really easy
+51:43
+tell there. Yeah, it's interesting though because because what you're telling me though about those
+51:48
+two things, right? Like someone changing from Apple to Android. Recently, my mate Dave changed from
+51:54
+iOS to Android, thus ruining a very long lived iOS group chat. Thanks a lot, Dave, for going to
+52:01
+Android and doing that. That was very disappointing for the rest of us. So it does happen. But I just
+52:08
+what you're saying is is like, okay, that is a marker. Like that's a that's a flag. You know,
+52:15
+that becomes immensely more valuable when you see, okay, so someone switching to Android, maybe
+52:20
+not a big deal. Someone switches to Android, then they're conducting searches for internal docs.
+52:24
+That's when your confidence can go up astronomically once you start training these things together.
+52:30
+Right? For sure. And then to pull in like a little bit of the UBA stuff, right? And then they
+52:37
+use co-pilot. This is user-ever-used co-pilot. They're coming from residential proxy. Do they ever
+52:43
+come from a residential proxy? Like you can you can start tying in some of your anomaly stuff, which
+52:49
+is normally way too noisy on its own, but you start tying anomaly with some impactful events,
+52:55
+some known TTPs. You start finding some really interesting things. Co-pilot has been a huge
+53:03
+boon for our thread actors lately. So it's a way of getting around all these search term
+53:10
+detections that I've been looking for is now they're just going co-pilot and ask find all the
+53:14
+VPN documentation instead. It does it faster. I just ask co-pilot like just what can you tell me
+53:21
+about XYZ, right? And it does. Exactly. And then co-pilot and you're not getting a vocation
+53:27
+login out of co-pilot by default. You have to do a lot of extra things to enable the level of log
+53:33
+you need to know what that actual search term was. Now you guys start guessing. So now when I see
+53:38
+co-pilot, when it has an event, co-pilot interaction event, it shows you what file it touches to
+53:45
+answer your questions. So now I have to start taking some guesses like, oh, the file name has VPN
+53:50
+in it. The file name has password or login in it. Right. Maybe that's a kickative.
+53:56
+Have you thought about kicking out your own co-pilot query, which is tell me about what's in this
+54:00
+file name? Exactly. Yes. And more so, give me the content. Steve, help me understand the
+54:06
+contents. Like, that's always the hardest part from a log perspective is, man, I could I could
+54:11
+take a good guess at what that file name might be. But I don't know unless I can guess a deal.
+54:15
+P markers or look at the content itself. Yeah. One of the most fruitful log sources, because as I say,
+54:21
+you know, you're taking in a bunch of very quiet different, you know, logging, right? From the
+54:28
+IDP from SAS, from your own environment, from your, you know, 365 or whatever. You know, I guess
+54:34
+what are the most fruitful combos there? Because you're always here about people, oh, yeah, you know,
+54:39
+it's a long tire of different stuff that you can ingest. But usually there's a couple of things where
+54:43
+you just like, no, you absolutely have to use this and this and that gets you like, you know, it's like
+54:46
+the rocks in the jar, you know, you start by putting the rocks in the jar and then the pebbles and
+54:50
+then the sand, you know, it'll make a lot of the jar. What are the rocks that go in the in the jar
+54:54
+for this sort of detection? Exactly. Yeah. So I would say, you know, where do we see the attackers most?
+54:59
+That's the places you want the logs from. So you're whatever your federation source is, right? Whatever
+55:05
+IDP you have, Octa, Entra, whatever. Better make sure you're getting great logging from there.
+55:12
+And then you're going to go right to your SAS platforms of interest. So what are ones getting hit
+55:17
+all the time? Your Google workspace 365, those types of sweet-sick product for sure. But then sales
+55:27
+force, we know a lot of sales force stuff going on. Yeah. Sales force logging is kind of atrocious if
+55:34
+we're being real, but they're necessary. You need to look at them snowflake logging. You need to see
+55:41
+what people are doing there. Right? The places where people go, you need to make sure you have logging.
+55:47
+Endpoint logging, I'll be in a lot of these cases, ends up being almost useless though because in
+55:52
+most of these scenarios, they're not sitting on one of your endpoints. They're sitting on their own.
+55:58
+It becomes a weird case where, you know, me coming from the man behind you and back around,
+56:01
+I'm like, I really want some good endpoint investigations again. I just don't see as many as I would
+56:06
+I would hope. Well, it's kind of becoming irrelevant. I was literally having that conversation
+56:11
+with a friend of mine yesterday about how well, you know, endpoint security has been the bread
+56:18
+and butter like money-wise for InfoSec for so long, but it's like let that robot sink because we're
+56:23
+getting a new yacht. You know, like it's all very much changing. But I also wanted to ask you,
+56:28
+we're talking about AI just a moment ago. One of the tricky things at the moment where a lot of
+56:34
+vendors like yourself are having to retool or just refocus a little is you've got to work out
+56:40
+when a user is using an AI agent with their own credentials to perform a certain task, right? Because
+56:46
+knowing what a user is doing versus what one of their helper agents is doing is becoming more and
+56:51
+more important. You actually have, you know, the way you're chipping away at this is actually kind
+56:55
+of interesting because you're doing stuff like looking at user agent strings and whatever, which
+56:59
+I mean, I think for now is going to be perfectly fine. Later down the line when people are using
+57:06
+agents maliciously, they're going to start faking user agent strings and we're in a whole different
+57:10
+kind of weird detection and evasion war, but like currently that's that's kind of how you're doing
+57:15
+it, right? It's like, you know, certain behaviors and agent strings and whatnot.
+57:20
+Yeah, right. I guess maybe it's the detection background in us, right? But when a lot of our clients
+57:27
+want us to help them like measure adoption of AI and how do I do that? Well, I kind of look at
+57:33
+the same data set and I look for markers of AI. Well, if somebody's using co-pilot, there's a
+57:37
+log event for that. If somebody is summarizing a chat and Slack, there's a log event with that
+57:44
+securing. When somebody installs open call on their system, there's some file artifacts that are
+57:49
+made when someone connects open call into teams or Slack. Well, it uses a particular user agent when
+57:56
+it goes in. So there's so I think you just have to be flexible about the ways that you can look like
+58:01
+detection, right? I mean, sometimes I need request parameters. Sometimes I need a user agent to do
+58:06
+the type of detection I need. I need to be able to look at all those log sources, pull out what those
+58:11
+markers are as signals and then start labeling the identities that are doing them. We'd use badges
+58:17
+as our terminology there. So like badge people as you're an AI user or you're an AI agent or you're
+58:23
+AI builder based off of these things that you're doing. Not just, you know, your configuration, but
+58:29
+what you actually do. Has there been much cost of a demand for actually, you know, trying to
+58:37
+try to untangle a little bit? Oh, for sure, right? And it's weird. It starts off traditionally like,
+58:43
+hey, first we just want to know, like, who is even doing anything I had related? Right? So it starts
+58:49
+very nebulous like that. And then immediately after we're able to answer that question, the client's
+58:55
+next one is like, well, so what now what do I do? So now we apply like our normal exposures type
+59:02
+of the framework for it. Well, here's some AI identities that also have access to sensitive data.
+59:07
+Do you care about that? If you do, great. Let's go reduce the risk on those or here's some
+59:11
+overprivileged identities that are doing something in AI. But ultimately, we always get to kind of
+59:20
+now is anybody abusing it who's doing shadow AI usage? Well, shadow AI when I have the IDP
+59:26
+logs, right? Or I can say like, oh, I can see who federates into chat GPT or not. But I also have
+59:34
+their endpoint logs so I can see who's using chat GPT and I didn't see a federation event.
+59:41
+Okay, that's a shadow AI user, right? That somebody's in their personal account. They're not going
+59:45
+through the prescribed path. Man, I know that this is a big one because when I talk to Ireland,
+59:51
+the browser maker, that's what they want to talk about. We find shadow AI when I talk to push,
+59:56
+they talk about that as well. We find shadow AI. Now, here you are, in our from this,
+60:01
+I'm talking about how you find shadow AI. So I'm going to infer from this that this is something
+60:06
+that there is market demand for and everybody wants. But look, we're going to wrap it up there.
+60:10
+We've run out of time. In our thank you so much for joining us on RISKY Biz to, yeah, I guess
+60:15
+throughout some ideas there for how people can think about doing detections on groups like
+60:19
+shiny hunters and also I guess how they might think about building some detections as well for when
+60:25
+a user is in fact not a user, but is in fact a little lobster claw. Pleasure to chat to you, my friend.
+60:31
+Cheers. All right, thank you so much. That was Ian Alveur from Permissar, big thanks to them
+60:37
+for that. And that is it for this week's show. I do hope you enjoyed it. I'll be back soon with
+60:43
+more security news and analysis. But until then, I've been Patrick Gray. Thanks for listening.

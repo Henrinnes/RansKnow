@@ -1,0 +1,1672 @@
+0:01
+An employee checks into a hotel. They
+0:03
+connect to the Wi-Fi and open their
+0:04
+laptop, and they get signed out of
+0:07
+Microsoft 365. Well, they sign back in
+0:09
+with the same prompt they've seen a
+0:11
+thousand times. But, in the background,
+0:13
+an attacker just [music] walked away
+0:15
+with valid credentials. But, the key
+0:17
+thing is there was no fishing email, no
+0:19
+malicious link that a user needed to
+0:21
+click, or suspicious attachment. Well,
+0:23
+that's the campaign that we're unpacking
+0:24
+on today's episode.
+0:29
+>> [music]
+0:37
+>> Welcome to ShadowTalk, a cybersecurity
+0:39
+podcast powered by ReliaQuest, the
+0:41
+leader in agentic AI security
+0:43
+operations. I'm Alexandra Mork, Threat
+0:45
+Intelligence Manager.
+0:47
+>> And I'm John Diligent, Threat
+0:48
+Intelligence Analyst. Now, today's
+0:49
+episode is focused on a new campaign
+0:52
+[music] that our threat research team
+0:54
+just published a report on. A lot of
+0:56
+great research coming from our team
+0:57
+here, and in this report they unpack how
+1:00
+threat actors were compromising hotel
+1:03
+and conference center Wi-Fi gateways to
+1:06
+silently harvest Microsoft 365
+1:09
+credentials from traveling corporate
+1:11
+employees.
+1:12
+>> Yes, I'm really interested to delve into
+1:14
+this one and and discuss it on the
+1:16
+podcast today, because what's really
+1:17
+interesting about this whole situation
+1:20
+is that it's not really a fishing story
+1:22
+in the way that we usually cover them.
+1:24
+So, as you mentioned at the top of the
+1:25
+episode, there's no email lure, there's
+1:27
+no user click, there's no endpoint
+1:29
+compromise. And essentially, the
+1:31
+attacker sort of owns the network that
+1:33
+the employee is sitting on, and that's
+1:35
+really enough for them to carry out
+1:37
+their objectives.
+1:38
+>> Yeah, can't wait to unpack it here. And
+1:40
+our team has tracked this activity since
+1:43
+at least June of 2026,
+1:45
+with compromised gateways identified
+1:47
+across multiple cities in the United
+1:49
+States, and even internationally in
+1:52
+countries such as India and Saudi
+1:54
+Arabia.
+1:55
+Also, the tradecraft overlaps with
+1:57
+APT28,
+1:59
+who is a known Russian military
+2:01
+intelligence group that goes by names
+2:03
+such as Fancy Bear or Forest Blizzard.
+2:06
+Now, they were behind a similar campaign
+2:08
+called Frost or Armada that was
+2:11
+disrupted back in April.
+2:13
+>> Yeah, so today we're going to break down
+2:15
+how this attack works, why the DNS
+2:17
+controls that most organizations already
+2:20
+have don't actually stop it, and of
+2:22
+course, most importantly, the controls
+2:24
+that do. So, let's jump straight into
+2:27
+it. John, why don't you begin by walking
+2:30
+our listeners through what our team
+2:32
+found? So, start off with the mechanics.
+2:35
+So, who's being targeted and how does
+2:38
+the attack actually get started?
+2:40
+>> Yeah, I'd be happy to. So, the
+2:42
+compromised devices that we investigated
+2:45
+were captive portal appliances or the
+2:47
+Wi-Fi gateways that you see at things
+2:50
+like hotels, conference centers, and
+2:52
+hospitality venues.
+2:54
+Now, these attacks could also extend to
+2:56
+Wi-Fi at places like airports,
+2:59
+co-working spaces, universities,
+3:01
+healthcare facilities, and other event
+3:03
+venues. Now, we assess with low to
+3:05
+medium confidence that the attackers got
+3:08
+initial access by exploiting exposed
+3:11
+management interfaces.
+3:12
+So, the thing like internet-facing SSH
+3:15
+and SNMP,
+3:17
+as well as web administrator consoles.
+3:20
+Now, that in combination with weak or
+3:22
+reused administrative credentials likely
+3:25
+gave them that initial access into those
+3:26
+devices.
+3:28
+And that methodology is consistent with
+3:30
+what has been previously documented in
+3:32
+that other campaign we mentioned, the
+3:34
+Frost Armada.
+3:35
+>> All right, excellent. So, we've covered
+3:37
+the the sort of initial access part of
+3:39
+it. So, once the attackers are in, what
+3:42
+does the access that they've got
+3:43
+actually give them?
+3:45
+>> Well, the quick answer is everything
+3:47
+they need. Now, because these gateways
+3:49
+serve as the DHCP assigned DNS resolver
+3:53
+for every guest that connects, and you
+3:55
+can really think about DHCP really as
+3:58
+the system that hands out access for
+4:01
+everything on the connects to the
+4:03
+network. Helps to get to the internet.
+4:04
+Well, that admin access alone is enough
+4:07
+to start redirecting traffic at scale.
+4:10
+The attackers don't need to touch a
+4:11
+single endpoint here because they have
+4:13
+that back-end control. And from that
+4:16
+position, the attacker can configure DNS
+4:19
+response forgery.
+4:21
+So, when for example, when your device
+4:23
+queries a legitimate site like
+4:25
+microsoftonline.com
+4:26
+to log in, the gateway silently answers
+4:29
+with an attacker-controlled IP address
+4:32
+instead, and serves a malicious login
+4:35
+page as a result. And we've identified
+4:38
+four different attacker-registered
+4:40
+domains being used for this Microsoft
+4:42
+impersonation, and the pattern is
+4:45
+something like m365-owa.com,
+4:49
+or for example, owa-m365.com,
+4:53
+as well as others. Now, all these
+4:55
+domains were hosted on the same two IP
+4:57
+addresses and operated by the same actor
+5:00
+based on the shared registration
+5:02
+details.
+5:03
+>> So, to sort of clarify what you're
+5:05
+saying, that the user is going to think
+5:08
+that they're on the real Microsoft login
+5:10
+page.
+5:11
+>> Exactly, and that's one of the elements
+5:13
+that makes this so dangerous.
+5:15
+So, when they enter those credentials,
+5:17
+the threat actor just harvests them on
+5:19
+the back end. Now, from there, the
+5:21
+credentials will likely end up for sale
+5:23
+on criminal marketplaces and forums,
+5:25
+with low-level access credentials going
+5:27
+for as little as $10, and privileged
+5:30
+access like administrator credentials
+5:32
+going for upwards of thousands of
+5:34
+dollars if not being used very quickly
+5:37
+in a turnaround attack against the
+5:39
+organization. Now, we've also seen this
+5:41
+campaign evolve with some of the latest
+5:43
+tactics, and I'm sure you at home
+5:45
+listening are very aware of device code
+5:48
+phishing as we've mentioned it a bunch,
+5:50
+but this campaign also included a subset
+5:53
+of cases where we saw device code
+5:56
+phishing. And so just a quick reminder
+5:58
+in that device code phishing from the
+6:00
+user's perspective, it looks like a
+6:02
+normal Microsoft sign-in or
+6:04
+authorization prompt. And once they
+6:06
+approve it, you know, the attackers in.
+6:08
+And they often do so because they're
+6:10
+mid-workflow and they just want to get
+6:12
+back to their work. But what they can't
+6:14
+see is that it actually is providing the
+6:17
+attacker direct access to the
+6:19
+environment and Microsoft is issuing
+6:22
+them a valid a lot token because it's a
+6:24
+legitimate authentication flow.
+6:26
+>> All right, thank you for that. So what
+6:28
+that results in is essentially the
+6:30
+attacker ends up with harvested
+6:32
+credentials or even worse, MFA satisfied
+6:36
+access to Microsoft 365.
+6:39
+>> Exactly. Exactly. It's a dangerous
+6:41
+attack chain.
+6:42
+>> Yeah, certainly is. But good that we're
+6:44
+raising awareness of it for everyone
+6:45
+listening, like you say. And then I
+6:47
+think the the other part that I wanted
+6:48
+to dig into is that you mentioned that
+6:50
+this whole activity campaign could
+6:53
+potentially tie back to um a
+6:55
+Russia-linked group called APT28.
+6:58
+How direct is that link? Like what what
+7:00
+level of confidence do we have there?
+7:02
+>> Yeah, so attribution is still unclear
+7:05
+overall, but the tradecraft does overlap
+7:08
+with that previous campaign we mentioned
+7:09
+Frost Armada. Specifically, the
+7:11
+gateway-level DNS poisoning targeting
+7:14
+Microsoft authentication domains and
+7:16
+SOHO or small office home office, as
+7:19
+well as gateway devices for that initial
+7:21
+access vector.
+7:22
+Then they pair that with
+7:23
+adversary-in-the-middle Microsoft 365
+7:26
+account compromise.
+7:27
+And all of that appears in the prior
+7:30
+attacks we've seen from APT28.
+7:33
+But there are also some differences
+7:34
+here, including the targeting of the
+7:37
+captive portal appliances at hotels and
+7:39
+conference centers. That was not
+7:41
+previously documented. The
+7:42
+infrastructure here, we identified the
+7:44
+domains and the IP addresses. They don't
+7:46
+align with prior APT activity.
+7:49
+And in that Frost Armada campaign
+7:51
+specifically, the attackers selectively
+7:53
+redirected the traffic using keywords.
+7:56
+Whereas in this campaign, all DNS
+7:58
+requests are resolved to the malicious
+8:00
+infrastructure.
+8:01
+>> All right. So, you're saying that the
+8:03
+assessment is resting on TTP overlap
+8:06
+rather than any shared infrastructure or
+8:09
+code reuse that we've noticed.
+8:11
+>> Yeah, yeah, exactly. And really at
+8:13
+minimum here, it is tradecraft being
+8:15
+reused.
+8:16
+>> But
+8:17
+when you talk about techniques, there
+8:19
+was also a secondary technique that was
+8:21
+observed that that you that that we
+8:23
+covered in the report that was WPAD
+8:24
+abuse. So, why don't you walk us through
+8:27
+that?
+8:28
+>> Yeah, certainly. So, in about 1/3 of the
+8:30
+cases we saw in this campaign, Windows
+8:33
+devices that hadn't disabled WPAD
+8:36
+allowed attackers to attempt web proxy
+8:40
+auto-discovery abuse, which is WPAD. For
+8:43
+context, WPAD is a Windows feature that
+8:46
+automatically retrieves proxy settings
+8:49
+when a device joins a network.
+8:51
+Now, it checks a DHCP option first and
+8:54
+then does a DNS lookup for a host named
+8:57
+WPAD. In this case, both of those are
+9:00
+controlled by an attacker.
+9:02
+So, if WPAD succeeds, then Windows
+9:05
+retrieves a malicious proxy
+9:08
+auto-configuration file that routes most
+9:11
+application traffic, things like
+9:13
+standard web browsing through Chrome
+9:15
+through Chrome, core authentication
+9:17
+components, and most enterprise
+9:19
+applications using Windows networking
+9:22
+all through the attacker's proxy.
+9:24
+And that massively broadens the
+9:26
+redirection potential here beyond just
+9:29
+authentication traffic.
+9:30
+>> Yeah, and that's um another divergence
+9:32
+from Frost Armada that we should point
+9:34
+out. WPAD abuse wasn't featured in that
+9:37
+prior reporting on the Frost Armada
+9:39
+campaign.
+9:40
+>> Yeah, exactly. That's another element
+9:42
+here kind of muddying the water of the
+9:44
+attribution towards APC 28.
+9:46
+>> Yeah, exactly. Never never
+9:47
+straightforward, is it? Um and then one
+9:50
+last thing that really stood out to me
+9:52
+from the report, the last thing that I
+9:53
+want to highlight um before we move on
+9:55
+to discuss the problem in detail, is the
+9:58
+operator panel that our team found.
+10:01
+>> Yeah, so on July 23rd, our team observed
+10:05
+website content hosted under one of the
+10:08
+malicious domains ms365-device.com
+10:12
+that appeared to be an attacker
+10:14
+administration panel for a web server.
+10:16
+You know, very similar to what we found
+10:19
+in our report on the Jalisco web panel.
+10:21
+In this case, it was a different one.
+10:23
+And it had functionality to upload and
+10:25
+serve HTML pages, rotate lure pages in
+10:29
+either a fixed or random mode, manage
+10:32
+downloadable files, track visitor
+10:34
+telemetry, and restrict access to the
+10:37
+panel through an IP allow list.
+10:39
+Now, that's a very sophisticated and
+10:41
+actively maintained piece of
+10:43
+infrastructure.
+10:44
+And it's present as recently it's
+10:46
+presence as recently as July 23rd really
+10:49
+suggests that the campaign is still very
+10:52
+active. That was only a week ago.
+10:55
+All right, so we kind of set up the
+10:56
+scene around the campaign. But Alex,
+10:58
+let's kind of start breaking down the
+11:01
+the challenges here and why it's such a
+11:03
+difficult problem for defenders.
+11:05
+You know, as I read through this report,
+11:07
+what really stuck out to me is I imagine
+11:10
+most organizations think they have
+11:12
+defenses in place around this. A lot of
+11:14
+these attacks seem kind of
+11:16
+uh trivial credential harvesting. But as
+11:18
+we unpack this, I think they'll find
+11:20
+that the defenses still have gaps.
+11:23
+>> Yeah, exactly. There are there are real
+11:24
+nuances to this, and that's why it's so
+11:26
+good to be talking about it and
+11:27
+outlining it for for you you listening.
+11:30
+So, if we start off with the structural
+11:33
+part of this,
+11:35
+this is essentially just the fact you
+11:36
+can't get away from that traveling
+11:37
+employees are just fundamentally
+11:39
+vulnerable. You know, you've got the
+11:41
+fact that your security team has got no
+11:43
+control over remote Wi-Fi, like the ones
+11:46
+used by hotels or conference centers,
+11:49
+airports, cafes, co-working spaces, that
+11:51
+type of thing. And that attack surface
+11:53
+is just going to exist every time your
+11:55
+employees travel, every time they go out
+11:57
+of the office, and it just grows every
+11:59
+time someone books a new business trip.
+12:02
+>> Yeah, and really when we look at this
+12:04
+specific attack, one of the things that
+12:06
+makes it so difficult is that it doesn't
+12:08
+require user interaction here.
+12:11
+You know, in the last few episodes we've
+12:13
+talked about things like phishing or the
+12:15
+voice phishing, click fix, as well as
+12:18
+other phishing kits, and all of those
+12:20
+really require the user to do something.
+12:22
+Click a link, paste a command, take a
+12:24
+phone call, and this campaign doesn't
+12:27
+require any of that. A single
+12:29
+compromised gateway that's outside of
+12:31
+your network puts every employee on that
+12:34
+network at risk regardless of how
+12:36
+security-savvy the individual actually
+12:38
+is.
+12:39
+>> Yeah, and I think this is where a lot of
+12:41
+security teams are going to hear this
+12:43
+and think, "Well, we've got DNS security
+12:45
+controls in place. We're absolutely
+12:46
+fine." But the reality is that most
+12:49
+common DNS protections don't stop this
+12:52
+activity.
+12:54
+>> Yeah, and and that's another great
+12:55
+point. So, if your device has a
+12:58
+hard-coded resolver, for example, like
+13:00
+Google's 8.8.8.8,
+13:02
+their DNS server, then you might assume
+13:05
+that you're safe because you're not
+13:07
+using the hotel's DNS.
+13:09
+But this is an important piece where you
+13:11
+have to realize there are still gaps.
+13:13
+For example, the request still leaves
+13:15
+the device as unencrypted traffic that
+13:18
+the compromised gateway can read, forge,
+13:21
+and redirect.
+13:22
+The gateway sees a request or a DNS
+13:25
+request specifically going to that
+13:27
+Google DNS server, it intercepts it and
+13:30
+responds with the attacker's IP before
+13:32
+it ever gets to Google.
+13:35
+>> Yeah, of course. And then endpoint DNS
+13:38
+encryption tools also have a similar
+13:40
+gap, as I understand it.
+13:42
+>> Yes, they do. So, um and this one's a
+13:44
+bit more subtle here. So, most DNS
+13:46
+encryption tools default to what's
+13:49
+called a opportunistic mode.
+13:51
+And that means if the encrypted
+13:53
+resolution fails for any reason, the
+13:56
+tool falls back to a plain text DNS
+13:59
+resolution. And that plain text fallback
+14:02
+is exactly what the gateway can forge.
+14:05
+So, an organization might think it's
+14:07
+protected, but because the DNS is
+14:10
+actually in opportunistic mode, then the
+14:12
+fallback path is still open.
+14:15
+>> Yeah, and then there's the whole device
+14:18
+code flow aspect, which increases the
+14:20
+potential for damage of this campaign,
+14:22
+really. So, as we've mentioned before,
+14:25
+device code phishing, it it tricks users
+14:27
+to authenticate and complete MFA that
+14:30
+then grants the attacker access. And
+14:32
+this just makes one of the best defenses
+14:34
+against credential attacks, MFA,
+14:36
+effectively obsolete. And I know that
+14:39
+this is the second episode in a row
+14:40
+where device code abuse has come up. So,
+14:43
+you know, it's really topical, really
+14:44
+hot right now. Between Helix using it in
+14:46
+vishing attacks and now APT 28 adjacent
+14:50
+activity using it downstream of DNS
+14:52
+poisoning, it just feels like another
+14:54
+example of why it's quickly becoming one
+14:57
+of the most abused authentication paths
+15:00
+we track and and something that's really
+15:01
+trending at the moment. The last piece
+15:03
+that I want to flag is that WPAD abuse
+15:05
+that we've spoken about, because it's
+15:07
+really stealthy in a way that makes it
+15:10
+particularly hard to detect. Proxy
+15:13
+traffic is generated through a malicious
+15:15
+PAC file, PAC file, and it looks just
+15:18
+like routine HTTPS network connections
+15:21
+in logs. So, that means that without
+15:23
+really specific visibility into proxy
+15:26
+authentication behavior, it's just going
+15:28
+to blend in and defenders aren't going
+15:30
+to notice it.
+15:31
+>> Yeah, and really want to restress again
+15:34
+here that the campaign infrastructure is
+15:36
+still active, right? We saw that
+15:38
+operator panel as recently as July 23rd
+15:41
+and it hasn't been taken down. So, there
+15:44
+are new victims connecting to
+15:45
+compromised gateways as we record this
+15:48
+episode.
+15:49
+>> Yeah, exactly. Crucial one to be
+15:51
+speaking about this week and and that's
+15:53
+why we scheduled it in, right? We were
+15:54
+going to maybe discuss something else,
+15:55
+but we thought this was this was
+15:57
+something that that was really timely to
+15:59
+talk about at the moment.
+16:00
+So, to recap the problem that we that we
+16:03
+spoken about so far, we have this
+16:05
+critical attack surface that exists
+16:07
+outside of your control. We have common
+16:10
+DNS protections that don't stop it.
+16:13
+MFA, another relied on protection that
+16:16
+doesn't stop the device code variant of
+16:18
+it. We've got WPAD abuse that is really
+16:20
+hard to see in logs, and the campaign is
+16:23
+ongoing.
+16:24
+That seems like an awful lot to defend
+16:25
+against. Seems like really bad news, but
+16:27
+actually good news is that there are
+16:30
+controls that close the gaps. And we're
+16:31
+going to get into what all of those are
+16:33
+just after the break.
+16:36
+>> Shadow Talk is brought to you by
+16:37
+ReliaQuest, the global leader in AI
+16:40
+cybersecurity.
+16:41
+>> [music]
+16:41
+>> ReliaQuest helps enterprise
+16:43
+cybersecurity teams contain threats in
+16:45
+minutes with its agentic AI security
+16:47
+operations platform, GreyMatter. [music]
+16:50
+ReliaQuest makes security possible for
+16:52
+the most trusted enterprise brands in
+16:54
+the world. Learn more at reliaquest.com.
+16:59
+>> All right, we are back. So, John, our
+17:01
+team is really clear in the report,
+17:03
+thankfully, that there is one primary
+17:05
+control that essentially neutralizes
+17:08
+this campaign. Doesn't happen very often
+17:10
+where we can give such specific advice,
+17:12
+but this is one of those cases. So, why
+17:14
+don't we start there?
+17:15
+>> Yeah, it's it's a solid recommendation,
+17:18
+and you know, if you've been halfway
+17:19
+listening throughout this episode, this
+17:21
+is the major takeaway here. This is the
+17:23
+point to really hone in on. So, the
+17:25
+single most effective control here is
+17:28
+enforcing an always-on VPN with a full
+17:32
+tunnel configuration on every corporate
+17:35
+device. We would need to be really
+17:37
+precise about what that means because a
+17:39
+lot of organizations think that they
+17:40
+have it and they don't. A full VPN
+17:43
+tunnel routes all traffic including DNS
+17:47
+through the corporate network before it
+17:49
+ever reaches the hotel or the public
+17:52
+gateway. So, when your employee connects
+17:54
+to hotel Wi-Fi, the DNS query for that
+17:57
+legitimate microsoftonline.com
+18:00
+never is able to touch the hotel's DNS
+18:03
+resolver. It's encrypted inside the VPN
+18:06
+tunnel and resolved by your corporate
+18:08
+DNS
+18:09
+so the attacker-controlled gateway has
+18:11
+nothing to forge.
+18:13
+>> Yeah, and we really want to emphasize
+18:14
+the always-on part there because that
+18:17
+matters just as much as the full tunnel
+18:20
+part of the recommendation.
+18:22
+>> Yeah, and that's a a great point to call
+18:24
+out because, you know, the VPN needs to
+18:26
+turn on automatically on a network
+18:29
+connection and have supplemental
+18:31
+controls that prevent internet access
+18:33
+until the tunnel is active. Otherwise,
+18:36
+you leave a window, sometimes only a few
+18:39
+seconds, where the device is on the
+18:42
+hotel network itself without the tunnel
+18:44
+active and that's enough for a DNS query
+18:48
+to leak out and get poisoned.
+18:50
+>> Yeah, and to add on top of that, the
+18:52
+tunnel itself can also introduce gaps.
+18:55
+So, we really need organizations to be
+18:57
+auditing for split tunneling exceptions.
+19:00
+>> Yeah, so there's another strong piece to
+19:02
+emphasize here. A lot of enterprise VPN
+19:06
+configurations have a split tunnel
+19:09
+exception for performance reasons and
+19:11
+this can be things like sending, you
+19:13
+know, traffic like Zoom calls and Teams
+19:15
+and Microsoft 365 directly to those
+19:19
+websites and tunneling everything else
+19:21
+through the VPN. However, if any of
+19:24
+those exceptions cover DNS or
+19:26
+authentication traffic, then this attack
+19:29
+still works against you. So, every
+19:32
+exception you have here really needs to
+19:34
+be reviewed with this campaign in mind.
+19:37
+>> Yeah, exactly. And then the second
+19:40
+control that I would really emphasize
+19:41
+here is one that we actually discussed
+19:43
+in the Helix episode as well, and it
+19:45
+applies just as much here as it did
+19:47
+there. So, this is all about device code
+19:50
+um vishing that that part of the attack,
+19:52
+and it's essentially to disable the
+19:54
+device code authentication flow at the
+19:57
+identity provider. So, John, let's break
+20:00
+this down a little bit. Most of our
+20:01
+listeners are probably already aware of
+20:03
+this, but just quickly walk us through
+20:04
+it for those that aren't. A bit of a
+20:06
+quick reminder here.
+20:07
+>> Yeah, yeah. So, the quick action is in
+20:09
+Microsoft Entra ID, you can configure a
+20:12
+conditional access policy that blocks
+20:14
+the device code flow. You know, the flow
+20:16
+was designed for input-constrained
+20:19
+devices, you know, things that it's hard
+20:21
+to enter a password on like smart TVs
+20:23
+and IoT devices. You know, but at the
+20:25
+end of the day, it has very few
+20:27
+legitimate use cases for most enterprise
+20:30
+users in most environments.
+20:32
+>> Yeah, brilliant. And this is where these
+20:34
+two attack chains actually converge. So,
+20:37
+Helix uses device code abuse in that
+20:40
+initial vishing call that we saw from
+20:42
+that threat actor, but this DNS
+20:44
+poisoning campaign uses device code
+20:46
+abuse as the as the account compromise
+20:49
+mechanism, right downstream of the
+20:51
+gateway compromise. So, we've got the
+20:53
+same authentication flow, but two very
+20:56
+different initial access paths, and that
+20:59
+one conditional access policy that you
+21:01
+mentioned neutralizes both. So,
+21:03
+something that that we really do want
+21:05
+people to to listen to and prick their
+21:07
+ears up, here.
+21:08
+>> Exactly. And And that's really why it's
+21:10
+worth mentioning again, because it's one
+21:12
+high-level uh I should say high-leverage
+21:14
+control that is allowing for defense
+21:17
+against multiple campaigns. So,
+21:20
+another reminder, if you haven't done an
+21:22
+audit of who's permitted to use device
+21:24
+code authentication in your environment,
+21:27
+it should be on your to-do list this
+21:28
+week. And then from there, block the
+21:30
+flow by default and start granting
+21:33
+exceptions only when there is a real
+21:36
+justified business need for it.
+21:38
+>> Yeah, excellent. Really solid advice
+21:40
+there.
+21:41
+Um and beyond that, beyond these two
+21:43
+headline controls that we just talked
+21:44
+about, there are two other
+21:46
+lower-profile, but still really
+21:48
+important defenses that that I want to
+21:50
+cover in this episode. So, let's first
+21:52
+talk about the uh the the WPAD
+21:54
+neutralization.
+21:56
+>> Certainly. So, it's important to
+21:58
+understand that WPAD itself is enabled
+22:01
+by default on Windows. And in most
+22:04
+enterprise environments, it really isn't
+22:05
+needed. So, if your organization doesn't
+22:08
+require automatic proxy discovery, then
+22:11
+you can disable WPAD via a group policy.
+22:14
+Specifically, look for the WinHTTP Auto
+22:17
+Prox SVC setting, and that eliminates
+22:20
+the entire secondary redirection channel
+22:23
+that we saw in about 1/3 of those cases.
+22:26
+Now, if WPAD is required, then you can
+22:29
+restrict the PAC or the PAC file
+22:31
+retrieval to approved internal hosts
+22:34
+only.
+22:36
+You shouldn't be letting Windows pull a
+22:38
+proxy configuration from an arbitrary
+22:40
+host that could come from a compromised
+22:43
+gateway.
+22:44
+>> And that same principle applies on the
+22:47
+DNS encryption side as well, because
+22:49
+strict mode encrypted DNS is the other
+22:52
+strong recommendation that that we want
+22:54
+to highlight here.
+22:55
+>> Yes, certainly. So, if you deployed DNS
+22:58
+over HTTPS or DNS over TLS, then you
+23:02
+should check the mode. We mentioned that
+23:04
+opportunistic mode earlier, and that's
+23:06
+the default for most tools, and its gap
+23:09
+is that it allows plain text fallback
+23:12
+when encrypted resolution fails. So,
+23:15
+strict mode disables that fallback
+23:17
+entirely. If your tools are running in
+23:20
+opportunistic mode, then the gateway can
+23:22
+still cause encrypted resolution to
+23:25
+fail, enforce the fallback, and then
+23:28
+forge the plain text response from
+23:30
+there. Strict mode really closes the gap
+23:32
+here.
+23:33
+>> Excellent. So,
+23:35
+moving on from that, a question that I
+23:37
+know all of you listeners are going to
+23:38
+be having is, "Well, how do I actually
+23:40
+hunt for this in my environment, right?"
+23:42
+Like these These recommendations and
+23:43
+things are great going forward, but what
+23:45
+about if something has already happened?
+23:47
+John, walk us through where to look on
+23:48
+the hunting side of things.
+23:50
+>> Certainly. So, there are a few
+23:52
+high-value signals here that you at home
+23:54
+can start looking for in your networks.
+23:56
+The first is going to be auditing for
+23:59
+proxy authentication logs, um
+24:01
+specifically looking for authentications
+24:03
+coming from unknown hosts. If you're
+24:05
+seeing authentication traffic that's
+24:07
+routed through proxy hosts you don't
+24:09
+recognize, well, that's a really strong
+24:11
+signal for active credential harvesting
+24:13
+via a rogue proxy.
+24:15
+Now, the second area is in the DNS
+24:18
+traffic itself. You can look for
+24:20
+anomalous DNS responses, especially
+24:23
+resolutions to domains similar to what
+24:26
+our team publish in the report, or
+24:28
+really things that look like they are
+24:30
+mimicking legitimate Microsoft 365
+24:33
+domains. You know, some of the ones we
+24:34
+called out were things like
+24:36
+ms365-device,
+24:38
+ms365-live,
+24:40
+etc. There are also some associated IP
+24:43
+addresses in the report that are great
+24:45
+for hunting artifacts, and they can go
+24:47
+into your intelligence feed to be ready
+24:49
+for detection content immediately.
+24:51
+>> Yeah, brilliant. And then, once you
+24:53
+detect it using all of that hunting
+24:55
+advice that that you've just outlined
+24:56
+there, containment really needs to be
+24:59
+fast. I mean, when when does it not, but
+25:01
+in this instance it it it does really
+25:02
+need to be fast.
+25:04
+>> Yeah, exactly. This is a great use case
+25:06
+for automated response playbooks here.
+25:08
+And there's four that we'd call out
+25:09
+specifically, you know, you can isolate
+25:11
+a host here to cut off any active WPAD
+25:14
+proxy sessions. You can disable a user
+25:17
+account to prevent credential replay, as
+25:20
+well as terminate live sessions to stop
+25:22
+the attacker access, which is very
+25:24
+important for the device code flow. And
+25:28
+then finally, delete device. As we've
+25:30
+seen, attackers are registering devices
+25:32
+for additional persistence on accounts.
+25:35
+So, uh automated play that removes those
+25:37
+registered devices can stop that
+25:39
+persistence from uh I should say that
+25:41
+threat actor from regaining access to
+25:43
+the environment via persistence.
+25:45
+>> Brilliant. And then, finally, after all
+25:47
+of that, even with all of these controls
+25:50
+in place that we've just spoken about,
+25:52
+there is a human awareness piece that
+25:54
+that we should mention as well.
+25:55
+>> Yeah, exactly. It never hurts to keep
+25:57
+your employees informed as they are
+25:59
+often the first line of defense here.
+26:02
+So, employees should be trained to
+26:04
+verify the URL of any page that's
+26:06
+requesting credentials,
+26:08
+particularly when they are connected in
+26:11
+these remote locations, like hotels,
+26:13
+conference centers, airports, or other
+26:15
+public Wi-Fi networks.
+26:17
+Even with a full tunnel VPN policy being
+26:20
+enforced, that awareness helps closes
+26:22
+the gap here for edge to cases where
+26:25
+things might fail, you know, the VPN
+26:27
+client could fall short to start,
+26:30
+someone could connect on a personal
+26:31
+device, a device that could fall out of
+26:34
+policy and no longer have the defenses
+26:36
+in place. So, really this is just extra
+26:38
+defense in depth here, but not a
+26:40
+replacement for the technical controls.
+26:43
+>> Yeah, I think I think that's a really
+26:44
+great call call out. It's it's the two
+26:46
+of them working together, right? The
+26:47
+security team cannot prevent everything
+26:49
+on their own, so they need that
+26:50
+awareness and they need that help from
+26:52
+all the other end users in in the
+26:54
+enterprise really.
+26:55
+Um excellent. So, why don't we pull this
+26:57
+back? We're getting towards the end of
+26:58
+the episode. So, let's recap what you
+27:01
+can actually do with everything that
+27:03
+we've spoken about. We've given quite a
+27:04
+few recommendations, but really just to
+27:06
+summarize it for everyone to go away
+27:08
+with. I'm going to start off with the
+27:09
+security leaders. So, if you are a CISO
+27:13
+or a security leader listening to this,
+27:15
+the strategic question that this episode
+27:17
+is is really challenging you to ask is
+27:20
+essentially a mobility question. So,
+27:21
+your travel policy and your identity
+27:23
+architecture really need to be designed
+27:25
+with the assumption that the network
+27:27
+your employees are going to connect to
+27:30
+during their travels is going to be
+27:32
+actively hostile. You know, a bit bit
+27:33
+like that sort of zero trust um attitude
+27:36
+that we that we always recommend. And
+27:38
+the campaign that we've discussed in
+27:40
+this episode proves that this extends
+27:42
+beyond just [clears throat] how these
+27:44
+employees access your organization's
+27:46
+network remotely when they're away from
+27:48
+the office, but also how they're
+27:50
+accessing even basic resources like
+27:53
+Microsoft Office and and things like
+27:54
+that. And the good news here, as we've
+27:56
+outlined, is that you don't need a huge
+27:58
+program to address it. You just need two
+28:00
+policy decisions.
+28:02
+So, the first tomorrow morning action
+28:05
+that I have for you is to pull your VPN
+28:08
+configuration and confirm two things.
+28:11
+One, that always-on full tunnel VPN, so
+28:14
+that's always-on full tunnel, that needs
+28:17
+to be enforced on every single corporate
+28:19
+device. And then the second action is
+28:22
+that split tunneling exceptions have
+28:24
+been audited with this campaign in mind.
+28:27
+Any exception that's going to allow DNS
+28:29
+or authentication traffic to bypass the
+28:31
+tunnel is a real gap.
+28:34
+And then after that piece, it's the
+28:36
+conditional access review. So, you need
+28:38
+to be asking your identity team, "Who in
+28:41
+our environment is permitted to
+28:43
+authenticate via the device code flow,
+28:46
+and what is the business justification
+28:48
+for each of those accounts?
+28:50
+As we've said, device code phishing does
+28:52
+not seem to be going away. It seems to
+28:54
+be the new thing that we're all dealing
+28:55
+with. So, you really want to make sure
+28:57
+that you're protected and only allow
+28:59
+that for for the type of accounts that
+29:01
+that really do need it.
+29:03
+>> Yeah, those are some great
+29:04
+recommendations. So, for our operators
+29:07
+here, I have two tomorrow morning
+29:09
+actions for you. Number one is going to
+29:11
+be around that a user awareness here.
+29:13
+So, I would build a short and targeted
+29:15
+awareness training for your traveling
+29:18
+employees that they can reference this
+29:20
+week. It really doesn't need to be a
+29:22
+full training module. I think a one-page
+29:24
+email or a small slide deck is enough.
+29:27
+Cover a couple things. One, that hotel,
+29:29
+conference, and airport Wi-Fis should be
+29:32
+treated as hostile networks. And if they
+29:34
+see an unexpected Microsoft 365 sign-in
+29:37
+or device code prompt while they're on
+29:39
+the road, they should really slow down
+29:42
+and review the URL for red flags rather
+29:46
+than quickly approving it.
+29:48
+Now, I'd send that training to your
+29:49
+frequent travelers and your executives
+29:52
+first.
+29:53
+Number two, audit your endpoint
+29:55
+configurations for WPAD status and your
+29:59
+encrypted DNS mode. If WPAD is enabled
+30:02
+and you don't need it, you can disable
+30:04
+it via group policy. And if your DNS
+30:07
+encryption is running in opportunistic
+30:08
+mode, flip it over to strict mode. And
+30:11
+those are two configuration changes that
+30:13
+eliminate a significant portion of the
+30:16
+attack surface in the campaign we've
+30:17
+outlined today.
+30:19
+Both of them are actionable tomorrow
+30:20
+morning. Hotel Wi-Fi is no longer just a
+30:23
+risky network. It's an active credential
+30:26
+harvesting channel. Enforce always-on
+30:29
+full tunnel VPNs, disable the device
+30:31
+code flow, and treat every public
+30:34
+network your employees connect to as
+30:37
+hostile.
+30:38
+That's all for this week. Thanks for
+30:39
+listening to another episode of Shadow
+30:41
+Talk. If you'd like to read the full
+30:43
+report, it's available in the link tree
+30:45
+below.
+30:46
+And as a reminder, you can give us some
+30:48
+feedback via the survey in that link
+30:50
+tree as well. And we're still always
+30:52
+available at shadowtalk@reliaquest.com
+30:54
+if you'd like to send us an email. We'll
+30:56
+be back next week with another episode
+30:58
+of Shadow Talk.
+31:03
+>> [music]
+31:11
+[music]

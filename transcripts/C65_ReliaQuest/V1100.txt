@@ -1,0 +1,1340 @@
+0:00
+89% of organizations that suffered a
+0:02
+SaaS breach last year believe they had
+0:05
+appropriate visibility [music] at the
+0:06
+time. And most of them had logs, but
+0:09
+what they didn't have was alerting on
+0:11
+what mattered.
+0:12
+Well, today we're digging into the
+0:14
+breach that put that gap on display and
+0:16
+what it actually takes to close it.
+0:22
+>> [music]
+0:28
+>> Welcome to Shadow Talk, a cybersecurity
+0:30
+podcast powered by ReliaQuest, a leader
+0:33
+in agentless AI security operations. I'm
+0:36
+Brandon Tsorado, director of GreyMatter
+0:38
+Operations. And I'm John Diligent,
+0:40
+threat intelligence analyst. And today
+0:42
+we're talking about why your cloud
+0:44
+integrations [music] are probably less
+0:46
+secure than you think. So, John, the
+0:48
+Vercel story just broke on Sunday and
+0:50
+it's all over the news. It's the same
+0:53
+story we keep seeing with these
+0:54
+third-party and supply chain risk
+0:56
+incidents. Yeah, it really is, Brandon.
+0:59
+And what strikes me about this one is
+1:01
+that Vercel didn't get compromised in
+1:04
+the traditional sense of phishing emails
+1:06
+or vulnerability exploitation. You know,
+1:09
+their infrastructure wasn't exploited
+1:11
+for initial access, but rather through a
+1:13
+third party.
+1:15
+An employee signed up for a third-party
+1:17
+AI productivity tool using their
+1:19
+enterprise account, granted it broad
+1:22
+permissions, and that tool then got
+1:24
+compromised. And suddenly Vercel's
+1:26
+internal data is on sale for $2 million
+1:30
+on the dark web. And really that
+1:32
+high-level attack pattern of threat
+1:34
+actors breaching widely used tools and
+1:36
+achieving third-party access, it's the
+1:38
+standard playbook for groups like
+1:40
+ShinyHunters. Compromise one integration
+1:43
+and hundreds of downstream tenants are
+1:45
+exposed. And the number from the
+1:48
+Salesloft Drift breach, 700
+1:51
+organizations exposed through that one
+1:52
+tool, is what should make every security
+1:55
+leader pause and ask, "If a SaaS tool my
+1:58
+team authorized gets hit or compromised
+2:00
+tomorrow,
+2:02
+would I even know?"
+2:04
+Yeah, and the tough answer to that
+2:05
+question is that most don't. But the
+2:08
+really wild thing here is that the logs
+2:10
+exist for most organizations. The
+2:12
+evidence is there, but the question is
+2:15
+whether the detections are built around
+2:17
+it. Yeah, and that gap between having
+2:19
+some logging and having detections ready
+2:22
+to fire on the right behavior before
+2:24
+damage is done is where the most
+2:26
+breaches go unnoticed. And that's
+2:28
+exactly what we're getting into today.
+2:30
+So, John, let's make sure our listeners
+2:32
+understand exactly what happened here.
+2:34
+Walk us through the Vercel incident to
+2:36
+kick us off here first. Yeah,
+2:38
+absolutely. So, let me set things up for
+2:39
+our listeners. So, to start, if you
+2:41
+don't know, Vercel is a cloud platform
+2:44
+as a service or PaaS that's designed for
+2:47
+front-end developers to build, deploy,
+2:49
+and host websites and applications. And
+2:52
+what makes a compromise like this
+2:54
+particularly concerning is that the
+2:56
+primary risk here isn't limited to the
+2:58
+platform itself or Vercel itself. It's
+3:01
+the potential for the downstream impact
+3:03
+on third parties that are connected
+3:05
+either directly or indirectly to Vercel.
+3:08
+So, the Vercel compromise likely started
+3:11
+with a Lumma stealer infection on a
+3:14
+context.ai's
+3:16
+employee's machine. And so, for some
+3:19
+more information, context.ai
+3:21
+is an AI workflow productivity tool.
+3:24
+And one of its features is deep
+3:26
+integration with Google Workspace on
+3:29
+behalf of its users, including Vercel.
+3:31
+So, the infostealer harvested a
+3:34
+context.ai employee's corporate Google
+3:37
+credentials, which then gave the
+3:39
+attackers access to context.ai's
+3:42
+internal environment. And from there the
+3:45
+threat actors leveraged an OAuth
+3:48
+integration between context.ai
+3:51
+into Vercel to pivot into Vercel's
+3:53
+infrastructure. And a really important
+3:55
+note here is that this was a legitimate
+3:58
+trust relationship that was originally
+4:01
+authorized by a Vercel employee. At no
+4:04
+point did the attackers need to touch
+4:05
+Vercel directly. So, the attacker
+4:08
+accessed customer environment variables
+4:11
+inside Vercel's platform. And
+4:13
+separately, a threat actor then appeared
+4:16
+on BreachForums claiming to sell stolen
+4:19
+data, including Vercel's employee
+4:21
+credentials, API keys, NPM and GitHub
+4:25
+tokens, and their source code. That
+4:28
+threat actor on BreachForums claimed
+4:31
+affiliation with the group ShinyHunters
+4:33
+and asked for a $2 million payment for
+4:36
+the data.
+4:37
+However, it's important to note that
+4:38
+individuals of ShinyHunters have
+4:41
+publicly denied involvement in the
+4:43
+attack.
+4:44
+With that being said, tactics are still
+4:46
+consistent with what we've seen
+4:48
+ShinyHunters do in documented previous
+4:50
+attacks. For example, the recent
+4:53
+compromise of Anodot, which was a SaaS
+4:56
+application that helps monitor for
+4:57
+outages. Yeah, and John, just to
+5:00
+reiterate, you know, the real concern
+5:02
+isn't what happened to Vercel. It's it's
+5:04
+happening It's what really happens next
+5:06
+year. You know, a compromise like this
+5:09
+is doesn't just stop at that vendor.
+5:11
+It's cascading it down to their
+5:13
+customers. And that's the same pattern
+5:15
+we saw here with that that Anodot
+5:17
+example that you just mentioned. Yeah,
+5:19
+that's exactly right. And to bring it
+5:20
+back to that Anodot compromise, you
+5:22
+know, threat actors were able to steal
+5:25
+sensitive data downstream from at least
+5:27
+a dozen other organizations. And this
+5:30
+even got to big name organizations like
+5:32
+Rockstar, for example. Um and to that
+5:35
+point, too, you know, the playbook that
+5:36
+we're outlining here is really becoming
+5:39
+bread and butter for many groups like
+5:41
+ShinyHunters. So, Brandon, I'll pass it
+5:43
+over to you. Can you explain why this
+5:46
+playbook of cloud applications has
+5:47
+become a major target?
+5:50
+Yeah, John. So, really the the economics
+5:53
+have flipped and they flipped a long
+5:55
+time ago, but, you know, hitting one
+5:57
+SaaS tool gets you hundreds of victims,
+6:01
+right? Hitting one enterprise network is
+6:04
+going to get you one environment. If
+6:07
+you're a financially motivated group,
+6:09
+that's not even a decision anymore,
+6:11
+right? You you go where that multiplier
+6:13
+is.
+6:14
+And really the first driver that is, you
+6:17
+know, causing all of this is again that
+6:20
+that that reach that these these threat
+6:22
+actors have. You know, if you if you
+6:24
+were to breach a a widely used platform
+6:26
+and you inherit every organization that
+6:29
+essentially is connected to it, uh steal
+6:32
+the data, extort downstream victims,
+6:34
+repeat. It it's really a a distribution
+6:37
+channel, not necessarily a target. Yeah,
+6:39
+and as we mentioned, you know, this is
+6:41
+the ShinyHunters playbook. For example,
+6:43
+credential abuse at Snowflake, OAuth
+6:46
+compromise at Salesloft and Drift, and
+6:48
+now OAuth supply chain at Vercel. You
+6:51
+know, there's different mechanics each
+6:53
+time, but it's the same group, the same
+6:55
+thesis. Get into a tool that a lot of
+6:57
+companies trust and steal downstream
+7:00
+data.
+7:01
+Exactly. And and and so now like on that
+7:04
+on that second point, right? So, data
+7:05
+exfiltration from a widely used platform
+7:08
+or software is just easier than than a
+7:11
+full network compromise. And when I say
+7:13
+easier, what I really mean is that this
+7:16
+model is just more efficient to execute,
+7:19
+right? Deploying ransomware on an
+7:20
+enterprise is, you know, a dozen-stage
+7:23
+attack chain. Uh I got to get initial
+7:25
+access, I got to move laterally, I might
+7:27
+have to steal some more credentials,
+7:29
+maybe unhook an EDR, uh destroy backups,
+7:32
+etc. You know, every stage is a place
+7:34
+defenders can catch the adversary.
+7:37
+Hitting a cloud tool collapses most of
+7:40
+that, you know, logging in with stolen
+7:42
+credentials and just pulling the data
+7:44
+and and the the adversary is done. You
+7:46
+know, that same outcome,
+7:48
+a fraction of the work, a fraction of
+7:50
+the risk is really what's appealing
+7:52
+here.
+7:53
+And so, that's that's the the attacker
+7:55
+side, right? On the defender side, two
+7:58
+gaps explains why we we keep seeing this
+8:01
+and why this keeps landing.
+8:03
+And that that first part is is logging.
+8:06
+And not in the way, you know, most
+8:07
+people are are thinking. It's
+8:11
+it's not that these logs don't exist,
+8:14
+right? It's it's that coverage is uneven
+8:17
+and that unevenness is what's creating
+8:19
+false confidence. You know, a security
+8:21
+team has, you know, say their Microsoft
+8:24
+detection, alerts are tuned, you know,
+8:26
+content is well built. That source is
+8:30
+essentially flawless. It's it's it's
+8:32
+humming.
+8:33
+But when senior leadership, you know,
+8:35
+ask about visibility related to these
+8:38
+SaaS applications, the answer is, "Yeah,
+8:40
+yeah, of course we have the the the
+8:42
+logging. It's all there." We're and the
+8:44
+problem with that is that,
+8:46
+you know, the likes of a Salesforce
+8:48
+tenant or the Workday instance, the the
+8:50
+30 other SaaS applications and tools
+8:53
+that the business actually running on,
+8:55
+those sources are either not connected,
+8:58
+they're partially connected, or
+9:00
+connected without any detection log
+9:02
+logic layered on top. You know, and one
+9:05
+strong source is, you know, carrying
+9:06
+that whole picture and that assumption
+9:09
+is that the rest of the the coverage
+9:11
+looks the same. And in reality, it
+9:14
+doesn't. The second part here is, you
+9:16
+know, conditional access. And this is
+9:18
+where the most, you know, people I I'd
+9:20
+say are are oversimplifying it. It's
+9:23
+it's it's not one policy, you know, in a
+9:25
+in a chain like this in particular,
+9:27
+there's at least three distinct layers
+9:29
+where scoped access policy can break the
+9:32
+attack. You know, when first, right, the
+9:35
+OAuth grant is made, second, when that
+9:37
+stolen token is later used, and then
+9:40
+thirdly, you know, when that attacker
+9:41
+pivots into internal systems. You know,
+9:44
+each one lives in a different admin
+9:46
+console, often configured at various
+9:49
+points in time for, you know, various
+9:51
+different reasons, and even mature
+9:53
+programs rarely review them as one
+9:56
+connected
+9:57
+And attackers know that.
+9:59
+So, essentially you can have the tools,
+10:02
+the policies, and the logs, and still
+10:04
+have a gap an attacker walks straight
+10:07
+through.
+10:08
+When we come back,
+10:09
+what actually closes that gap?
+10:11
+And the answer isn't more tools.
+10:15
+Shadow Talk is brought to you by
+10:16
+ReliaQuest, [music] the global leader in
+10:19
+AI cybersecurity. ReliaQuest helps
+10:21
+enterprise cybersecurity teams contain
+10:23
+threats in [music] minutes with its
+10:25
+agentic AI security operations platform,
+10:28
+GreyMatter. ReliaQuest makes [music]
+10:30
+security possible for the most trusted
+10:32
+enterprise brands in the world. Learn
+10:34
+more at reliaquest.com.
+10:38
+Alrighty, and we're back. So, before the
+10:40
+break, tools, policy, logs, you know,
+10:43
+still being a gap. You know, we we we
+10:45
+had mentioned that this this still isn't
+10:47
+enough. So, John, I'm curious for you,
+10:49
+can you break down what's the actual
+10:52
+visibility problem here, right? I feel
+10:53
+like we've been talking around it. So,
+10:55
+let's get into the nitty-gritty. Yeah,
+10:57
+certainly. And and, you know, picking up
+10:59
+back up on your conversation before the
+11:01
+break. So, the issue here isn't really
+11:03
+whether the logging exists, it's whether
+11:05
+the right data is getting to the right
+11:08
+place, and whether anyone's built
+11:10
+detections on top of it. You know, and
+11:12
+we see this across our customer base,
+11:14
+right? So, like thinking about that
+11:16
+golden standard of a log source, usually
+11:19
+Microsoft 365 comes to mind. It's
+11:21
+usually the most mature, right?
+11:23
+Visibility is generally strong,
+11:24
+detections are live, and response
+11:26
+windows are tight. It's not always
+11:28
+complete, but it's definitely the
+11:29
+closest that most organizations get.
+11:32
+Then you start looking at tools like
+11:35
+Salesforce, Workday, and the rest of the
+11:37
+SaaS estate. Again, the platforms that
+11:40
+ShinyHunters is actively targeting. And
+11:43
+that's where the visibility drops off.
+11:45
+Which puts everyone involved in a tough
+11:47
+spot.
+11:48
+You know, we've built the detections for
+11:50
+these exact attack patterns, the content
+11:52
+is tuned, and the response actions are
+11:54
+ready.
+11:55
+But without the visibility available,
+11:57
+none of it has anything to fire on.
+12:01
+We nor our customers can operationalize
+12:03
+what can't be seen. And this isn't us
+12:06
+just making a case for ourselves,
+12:07
+external research backs this up, too.
+12:10
+And I really want to draw our listeners
+12:11
+in here to pay attention. You know, put
+12:13
+put down what you're working on on the
+12:14
+side for a moment and just really listen
+12:16
+to these next few stats because they are
+12:18
+really eye-opening to the problem we're
+12:20
+trying to outline here. So, 75%
+12:24
+of organizations had a SaaS-related
+12:26
+security incident last year. But the
+12:28
+number that should really stop every
+12:30
+security leader is that 89% of
+12:33
+organizations that suffered a
+12:35
+SaaS-related breach believe they had the
+12:38
+appropriate visibility at the time.
+12:41
+So, they thought they were covered, but
+12:43
+they weren't.
+12:45
+And only 43%
+12:47
+of organizations are doing continuous or
+12:50
+near real-time SaaS monitoring. The rest
+12:54
+are running periodic audits. Which
+12:57
+really means that you find out about the
+12:59
+breach on a schedule, not when it's
+13:02
+actually happening.
+13:03
+Yeah, and and which is a problem,
+13:05
+obviously, right? When when the average
+13:06
+breakout time, again, we talk about it
+13:08
+almost every episode, but, you know,
+13:10
+that that window between initial access
+13:12
+and an attacker actually moving
+13:14
+laterally, you know, being 34 minutes.
+13:17
+Yeah, that's a great point. And, you
+13:18
+know,
+13:20
+to be specific there, that's the window
+13:21
+where detection and response is most
+13:23
+critical.
+13:25
+You know, exfiltration itself can happen
+13:26
+in minutes. But really, once that data
+13:29
+is leaving, you're in containment mode.
+13:31
+The damage has already been done. So,
+13:33
+that real detection window is that
+13:35
+breakout, you know, when the attacker is
+13:37
+still pivoting from one system to the
+13:39
+next.
+13:40
+And that's exactly where this falls
+13:42
+apart because it ties back to the main
+13:44
+point you made earlier. So, those
+13:46
+controls and logs live in different
+13:49
+admin consoles, right? Salesforce is in
+13:51
+one place, Workday's in another,
+13:53
+Microsoft 365 in a third.
+13:55
+That's a heterogeneous enterprise, and
+13:58
+it's not wrong. It's just how modern
+14:01
+companies are built.
+14:02
+But if you've got 34 minutes to stop
+14:05
+lateral movement across all of them, you
+14:07
+can't be logging into each console to
+14:09
+piece the story together. Signals have
+14:12
+to be correlated as they come in across
+14:14
+sources in real time. Otherwise, that
+14:17
+breakout happens, and you're stuck
+14:20
+writing the postmortem.
+14:22
+All right, Brandon, so passing over to
+14:23
+you, you know, we mentioned that cloud
+14:26
+visibility wasn't the only challenge for
+14:28
+defenders here. Can you walk us through
+14:30
+what other defenses can be put in place?
+14:32
+Yeah, John, so I I I look at this and
+14:34
+see, you know, three glaring uh
+14:36
+recommendations that kind of come
+14:37
+directly from um the Vercel breach
+14:40
+because
+14:41
+there were three distinct layers when
+14:43
+looking at this where a properly
+14:45
+configured policy could have potentially
+14:48
+broken that chain.
+14:50
+And so, that is the first layer here,
+14:52
+right? And and it's the highest leverage
+14:53
+one.
+14:54
+Is that the OAuth grant itself. You
+14:57
+know, Google Workspace admins can
+14:59
+restrict which third-party apps users
+15:01
+are allowed to authorize. You know, a
+15:03
+trusted app list, you know, scope-based
+15:06
+restrictions, admin approval required
+15:09
+before any new grant goes through
+15:12
+is is is is critical. In an environment
+15:15
+running that policy, a third-party app
+15:17
+can't receive a refresh token without
+15:20
+admin sign-off.
+15:21
+So, no approval, no refresh token, and
+15:24
+that chain never even starts.
+15:26
+That's a native platform control, and it
+15:28
+again, it's no additional tooling
+15:30
+required.
+15:31
+And this is the layer that breaks the
+15:33
+attack before any credentials are ever,
+15:35
+you know, at risk in the first place.
+15:37
+You know, most orgs know that control
+15:39
+exists, but the the honest, you know,
+15:42
+answer or reason as to why that this is
+15:44
+this is still a place is the convenience
+15:46
+factor for security. You know, every new
+15:49
+OAuth grant is then becoming an IT
+15:51
+ticket. You know, production teams are
+15:53
+going to push back. And over time, you
+15:55
+know, that control gets loosened, and
+15:57
+and and sadly sometimes just turned off
+15:58
+entirely.
+16:00
+Now, the second layer here is where
+16:02
+things get technically nuanced. And and
+16:05
+I want to be precise, though, right?
+16:08
+Traditional conditional access was built
+16:10
+for human sign-ins, right? Device trust,
+16:13
+location checks, MFA, etc.
+16:15
+But when an attacker is using a refresh
+16:17
+token, you know, Context AI had been
+16:20
+storing,
+16:21
+they're not doing an interactive sign-on
+16:23
+anymore. They're making back-end token
+16:25
+exchanges directly with Google.
+16:28
+And most conditional access policies
+16:29
+don't apply to that path
+16:32
+the way that they would say, you know,
+16:34
+um for a interactive log-on with a user
+16:37
+logging in from a new laptop.
+16:40
+But what does apply is a different class
+16:43
+of control here.
+16:44
+You know, scoped restrictions limit what
+16:47
+the app can do even if it gets
+16:48
+compromised.
+16:50
+You know, say a token, in this case from
+16:51
+Context AI, only gives the attacker the
+16:54
+scopes the app originally had,
+16:56
+no full account control, etc.
+17:00
+App access policies let admins disable
+17:03
+the app across the tenant in one action.
+17:05
+And anomaly detection on app behavior,
+17:08
+say an app suddenly reading thousands of
+17:10
+emails from a new ASN,
+17:13
+can trigger an an an
+17:15
+um you know, in this case, revoke the
+17:17
+actual token itself.
+17:19
+So, the lesson here is that once the
+17:21
+refresh token is out the door,
+17:23
+you're not in this conditional access
+17:25
+policy world anymore.
+17:27
+You're in a detect-and-revoke type
+17:29
+world.
+17:30
+The third layer that I'm going to talk
+17:31
+in here talk about here is Vercel's own
+17:34
+identity provider, you know, that that
+17:35
+single sign-on layer. So, when when the
+17:38
+attacker pivoted from the compromised
+17:40
+Google account into Vercel's internal
+17:43
+systems, that pivot required an actual
+17:46
+authentication event.
+17:47
+And that's where full conditional access
+17:49
+comes back into play here. So, a
+17:51
+conditional access policy at the IDP
+17:53
+level, say again, Okta, Entra,
+17:56
+wherever single sign-on lives, could
+17:58
+have required a managed device for an
+18:00
+admin console access, set up through,
+18:03
+you know, to have MFA before even
+18:06
+reaching customer data, or say an IP
+18:08
+allow list on internal dashboards. Any
+18:11
+of those kind of breaks this pivot even
+18:13
+with a fully compromised Google account.
+18:16
+So, this is also where corporate versus
+18:19
+BYOD matters most. You know, if if if
+18:22
+you're an admin console, um or if your
+18:25
+admin consoles require, say, a managed
+18:27
+compliant device, an attacker on their
+18:30
+own infrastructure with valid
+18:31
+credentials
+18:33
+never gets in, no matter how good,
+18:35
+again, the credentials that they've
+18:36
+obtained are from the start. So, let's
+18:39
+close this out with what organizations
+18:41
+actually do with everything we've just
+18:43
+covered. And I want to start on the
+18:45
+leadership side. Then, John, you know,
+18:47
+we'll have you bring it home here from
+18:48
+the practitioner level. For security
+18:50
+leaders, the headline from this episode
+18:52
+is a question you need to answer not
+18:54
+eventually, but right now.
+18:56
+You know, who controls which third-party
+18:58
+applications are authorized against your
+19:00
+enterprise data?
+19:02
+Because if the answer is individual
+19:03
+employees, you have the same exposure
+19:06
+that led to the Vercel breach here.
+19:08
+Every OAuth grant to an enterprise
+19:09
+account creates a new trust
+19:11
+relationship.
+19:12
+Refresh tokens, persistent API access,
+19:15
+data flowing to a third party you didn't
+19:18
+vet.
+19:19
+Now, that's not a decision to leave with
+19:21
+end users. It's a security decision, and
+19:24
+it needs to be governed centrally.
+19:27
+The second priority is treating OAuth
+19:29
+governance as a formal category of risk.
+19:32
+It's not a IT hygiene task anymore.
+19:35
+Employees are connecting AI productivity
+19:37
+tools to enterprise accounts faster than
+19:39
+organizations can even track.
+19:42
+And prohibition here is not the answer.
+19:44
+That's just how you create shadow IT at
+19:46
+scale.
+19:47
+And what you need is a documented OAuth
+19:49
+governance policy with four specific
+19:51
+controls.
+19:53
+An admin approval workflow, so no
+19:55
+third-party app can receive an
+19:56
+enterprise account grant without review.
+19:59
+An allow list of pre-vetted apps for
+20:01
+common workflows.
+20:03
+Scope-based gating, so sensitive
+20:05
+permissions like a mailbox read or drive
+20:08
+access or directory access always
+20:10
+triggers admin review regardless of the
+20:12
+app.
+20:13
+And periodic recertification.
+20:16
+So stale or abandoned grants get
+20:19
+revoked.
+20:20
+That policy doesn't require new new
+20:22
+technology. It requires a decision.
+20:26
+So that morning action for the leaders
+20:27
+listening, open your identity provider's
+20:29
+app governance settings.
+20:31
+Google Workspace, Micro- Microsoft
+20:33
+Entra, or whatever platform, you know,
+20:36
+fronts your enterprise accounts, and
+20:38
+pull the list of third-party OAuth
+20:40
+applications currently authorized.
+20:43
+Then ask one question.
+20:45
+How many of those grants were issued
+20:47
+directly by end users without admin
+20:49
+review?
+20:50
+Every one of those is an uncontrolled
+20:53
+trust relationship with your data.
+20:56
+That's your starting point.
+20:58
+Those are some great recommendations,
+20:59
+Brandon, for the security leaders. Let
+21:01
+me bring it home for the practitioners
+21:03
+here. So really the core issue is this.
+21:06
+You can't detect what you cannot see.
+21:09
+And right now most organizations have a
+21:11
+blind spot specifically at the SaaS and
+21:15
+cloud integration layer.
+21:17
+So the telemetry that would have
+21:18
+surfaced this type of compromise, things
+21:21
+like API call volumes, consent events,
+21:24
+data access attempts, you know, it's
+21:26
+technically available in most
+21:27
+environments. But the question is
+21:29
+whether it's operationalized.
+21:32
+And often it's not turned on, it's not
+21:34
+retained long enough, or it's scattered
+21:36
+across admin consoles that don't talk to
+21:38
+each other.
+21:39
+Again, collection collection isn't the
+21:41
+issue, correlation is.
+21:44
+So it's not a tooling failure, it's a
+21:46
+coverage failure.
+21:48
+And really that's exactly what that 75%
+21:51
+SaaS incident rate is telling us.
+21:54
+There's one more piece worth flagging
+21:55
+here, especially as attackers start
+21:58
+running parts of this a playbook with AI
+22:00
+assistance. So enumeration and lateral
+22:03
+movement are compressing.
+22:05
+And the reconnaissance phase that used
+22:07
+to take hours or days now happens in
+22:10
+minutes because the attacker has an AI
+22:12
+model enumerating resources in parallel
+22:15
+and deciding what to pull next.
+22:18
+So what this really means is if your
+22:20
+detection rules were tuned on a dwell
+22:22
+time or velocity thresholds from
+22:25
+incidents a few years ago, they may not
+22:27
+fire on what the current threat actually
+22:30
+looks like today.
+22:32
+So it's worth revisiting detection
+22:34
+thresholds on three things specifically.
+22:37
+The first being how fast unique
+22:39
+resources are being enumerated inside a
+22:42
+single session.
+22:44
+Second, how quickly failed access
+22:46
+attempts start converting to successful
+22:49
+ones. Which is a signature of automated
+22:52
+probing.
+22:54
+And then finally, how much variety in
+22:56
+data types shows up in a short time
+22:59
+window.
+23:00
+These are all signals of AI accelerated
+23:03
+attacks that they leave. And they don't
+23:05
+look like the attacks our rules were
+23:07
+originally written against.
+23:10
+So your morning action for
+23:11
+practitioners, what you can do tomorrow
+23:13
+morning. Go to your highest value SaaS
+23:15
+platform's admin console. Again, those
+23:18
+tools like Salesforce, Workday, or any
+23:20
+platform that hosts sensitive business
+23:23
+data.
+23:24
+You need to confirm that the audit trail
+23:26
+is active. Retained.
+23:28
+And being surfaced somewhere your team
+23:31
+actually reviews them. Your SIM, your
+23:33
+SOAR, your data lake, monitoring
+23:35
+platform, it really doesn't matter where
+23:37
+it lands as long as it lands somewhere
+23:39
+connected to detections.
+23:41
+Then check whether you have active
+23:43
+alerts built around new OAuth grants.
+23:47
+Access attempts from unfamiliar sources.
+23:50
+And anomalous data retrievals.
+23:52
+If any of those are a no, then you have
+23:54
+your starting point. Awesome. I love it,
+23:56
+John.
+23:58
+So really the the bottom line from
+24:00
+everything we covered today.
+24:02
+SaaS security isn't a question of
+24:04
+whether logging is enabled or
+24:06
+conditional access policies exist. It's
+24:09
+whether your coverage actually reaches
+24:11
+the places attackers are exploiting now.
+24:14
+The third-party apps, the OAuth grants,
+24:17
+the integrations nobody formally signed
+24:19
+off on. If your defenses stop at the
+24:22
+systems your team deployed,
+24:25
+ShinyHunters already knows exactly where
+24:27
+to start.
+24:29
+That's all for this week. Thanks again
+24:31
+for listening to another episode of
+24:32
+ShadowTalk. If you'd like to get in
+24:34
+touch, we're just an email away. You can
+24:36
+send your questions over to
+24:37
+shadowtalk@reliaquest.com.
+24:40
+Please don't forget to subscribe so you
+24:41
+can get next week's episode delivered
+24:43
+direct to your podcasting platform of
+24:45
+choice. And we really appreciate it if
+24:47
+you can rate and review ShadowTalk
+24:48
+wherever you listen. It will make a huge
+24:50
+difference and help us reach new
+24:51
+listeners. [music]
+24:53
+We'll be back next week with another
+24:54
+episode of ShadowTalk.
+24:57
+>> [music]
+25:05
+[music]

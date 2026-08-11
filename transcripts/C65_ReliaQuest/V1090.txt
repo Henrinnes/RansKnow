@@ -1,0 +1,1506 @@
+0:00
+How many third-party applications in
+0:02
+your environment have active OAuth
+0:04
+access to your Salesforce right now? And
+0:06
+what if an attacker leveraged their
+0:08
+legitimate access for data theft?
+0:10
+Well, that's what we're diving into on
+0:12
+this episode of Shadow Talk.
+0:17
+>> [music]
+0:25
+>> Welcome to Shadow Talk, a cybersecurity
+0:27
+podcast powered by ReliaQuest, a leader
+0:30
+in agentic AI security operations. I'm
+0:33
+Alexandra Moore, threat intelligence
+0:34
+manager. [music]
+0:35
+>> And I'm John Dilgen, threat intelligence
+0:37
+analyst. Now, we've covered OAuth abuse
+0:40
+and device code phishing in a recent
+0:42
+episode, but it's still continues to
+0:44
+evolve, and our threat research team
+0:46
+uncovered last week yet another reminder
+0:50
+that SaaS integrations remain a largely
+0:53
+underestimated risk.
+0:55
+>> Yeah, that's definitely true. And the
+0:57
+campaign that our team found used Clou
+1:00
+which is a new legitimate integration,
+1:02
+and essentially used the integration's
+1:04
+own credentials to quietly siphon CRM
+1:07
+records at scale through a door that was
+1:09
+already open.
+1:11
+>> Yeah, and really it's the same pattern
+1:12
+we've seen before in the Salesloft Drift
+1:16
+and other compromises. The key thing is
+1:18
+that organizations need to understand
+1:21
+that every third-party application with
+1:23
+active OAuth access to a critical
+1:26
+platform is part of their attack
+1:28
+surface. This includes the credentials
+1:30
+that it carries, the service accounts
+1:32
+behind it, and the tokens that it
+1:35
+generates all can be hijacked by
+1:37
+attackers. Now, we want to be clear here
+1:39
+since external reporting has been
+1:41
+unclear. Now, ReliaQuest tracked and
+1:43
+observed these Clou attacks across our
+1:46
+customer base, but we were not directly
+1:48
+affected ourselves. We do not use the
+1:50
+Clou integration.
+1:51
+>> Yeah, good call out there, John. And I
+1:53
+think what's interesting is that these
+1:55
+Clou attacks are also reflective of a
+1:57
+larger trend where threat actors are
+1:59
+essentially targeting OAuth tokens and
+2:01
+device codes. So, the second thread that
+2:03
+we're going to pull in today's episode
+2:05
+is this broader surge in OAuth phishing
+2:08
+and how AI-powered phishing as a service
+2:10
+kits put sophisticated, high-volume
+2:13
+campaigns really within the reach of any
+2:15
+threat actor with a subscription.
+2:18
+>> Yeah, so really we have one major issue
+2:20
+here with two converging problems within
+2:23
+it. The trusted integrations as an
+2:25
+unguarded entry point and an AI-fueled
+2:28
+attack ecosystem making phishing faster
+2:31
+and harder to catch than ever before.
+2:34
+Let's dive into both.
+2:35
+>> All right, brilliant, John. Let's begin
+2:37
+with the Clue/Salesforce integration
+2:40
+story. Can you give us a bit of context
+2:42
+and and break down the details of that?
+2:44
+>> Yeah, absolutely. So, like we mentioned
+2:46
+last week, our threat research team
+2:48
+discovered how compromised Clue
+2:51
+integrations were being used to
+2:53
+authenticate to Salesforce via OAuth.
+2:56
+This enabled threat actors to exfiltrate
+2:59
+customer relationship management or CRM
+3:01
+data. Now, if you don't know, the Clue
+3:04
+integration is a competitive threat
+3:06
+intelligence platform that syncs battle
+3:09
+card and win and loss data within
+3:11
+Salesforce.
+3:12
+>> All right, I'm going to stop you there.
+3:14
+So, just before you take us into what
+3:16
+our team found and what happened sort of
+3:18
+downstream in Salesforce, can we go back
+3:21
+a step? So, we talked about, you know,
+3:23
+what happened in the incident that we
+3:24
+observed, but how did that Clue
+3:26
+integration get compromised in the first
+3:28
+place?
+3:29
+>> Yeah, that's a that's a good question
+3:30
+and it's important context to set things
+3:33
+up here. So, Clue stated in their public
+3:36
+releases that their compromise began on
+3:38
+June 11th, when threat actors gained
+3:41
+access to some of Clue's back-end
+3:43
+systems, specifically a system that
+3:46
+manages connections to other software
+3:49
+platforms.
+3:50
+Now, from there, the threat actors
+3:52
+pushed malicious code uh through an
+3:54
+update that was designed to harvest
+3:56
+OAuth tokens. The And these are the
+3:58
+tokens that Clues customers used to
+4:01
+connect the platform to their own
+4:04
+environments, including to applications
+4:06
+like Salesforce.
+4:08
+Now, in the attacks that we observed
+4:10
+across our customer base, the adversary
+4:12
+first authenticated through a
+4:14
+compromised Clue integration with Clue
+4:17
+service accounts. They generated OAuth
+4:20
+tokens and ran automated Python scripts.
+4:23
+The scripts performed discovery against
+4:26
+the Salesforce object catalog via Git
+4:29
+and REST API queries.
+4:31
+>> Yeah, now I think that those scripts
+4:33
+that you're mentioning were likely
+4:35
+attempting to identify the locations of
+4:37
+highly privileged data. You know, we've
+4:39
+we've seen this a lot in other attacks.
+4:41
+>> Yeah, we definitely have. And just to
+4:44
+kind of layer in a reminder for our
+4:45
+listeners there, our research in the
+4:47
+past has shown that many of these data
+4:49
+discovery scripts are built to identify
+4:53
+the most critical data the fastest,
+4:55
+helping threat actors steal that data
+4:57
+first and making sure they get the
+4:59
+highest payment possible.
+5:02
+So, really the major thing here to
+5:04
+understand about the Clue integration
+5:06
+compromise is that a legitimate
+5:08
+integration's own credentials were used
+5:11
+to quietly siphon CRM records at scale
+5:14
+through a door that was already open for
+5:17
+its own legitimate functions.
+5:19
+>> Great, thank you. That's a a really
+5:20
+comprehensive overview there, but it's
+5:23
+interesting hearing that because it
+5:26
+makes me think about attribution for
+5:27
+these latest attacks. You know, what
+5:28
+what you're outlining there sounds a lot
+5:30
+like the MO of Shiny Hunters, you know,
+5:33
+a group that we know and love and have
+5:35
+have spoken about many times on the
+5:36
+podcast before.
+5:38
+>> Yes, it certainly does. Um but
+5:40
+unfortunately, the attribution here is a
+5:42
+little muddy, but still let's dive into
+5:44
+it. So, on June 19th, uh a relatively
+5:48
+new group calling themselves Icarus
+5:50
+listed Clue on their data leak site.
+5:53
+Then on June 22nd, they started listing
+5:56
+several of the downstream victims from
+5:59
+these attacks, including some big name
+6:01
+organizations. Now, the listings gave us
+6:04
+a sense of what was likely taken in
+6:06
+these data captures. This included
+6:09
+Salesforce records like business contact
+6:12
+information, subscription details, sales
+6:14
+communications, and opportunity notes.
+6:17
+That CRM data is highly valuable for
+6:21
+targeted follow-on attacks and social
+6:23
+engineering.
+6:24
+>> Yeah, and just to jump in there and sort
+6:26
+of put that into perspective for our
+6:27
+listeners, when we talk about CRM data
+6:30
+being valuable for follow-on attacks,
+6:33
+we're not just talking about contact
+6:34
+lists here, you know, we're talking
+6:36
+about what you just mentioned, the the
+6:38
+opportunity notes, the pricing details,
+6:40
+the sales communications. This is the
+6:42
+kind of intelligence that makes a spear
+6:44
+phishing email almost indistinguishable
+6:46
+from a from a legitimate one. So, it's
+6:48
+it's really valuable data there if it's
+6:50
+deployed in the right ways.
+6:52
+>> Yeah, it really is, and you know, kind
+6:54
+of put some context behind that, right?
+6:56
+A threat actor can use that information
+6:59
+in their phishing emails, in their calls
+7:01
+to help establish credibility with the
+7:04
+target to help them ensure that they
+7:06
+will click those phishing links and
+7:08
+enter in their tokens.
+7:09
+>> Mhm.
+7:10
+>> So, what's also interesting and where
+7:12
+the attribution starts to get a little
+7:14
+messy here, like you mentioned, Alex,
+7:17
+the TTPs are very consistent with what
+7:20
+we've seen previously from Shiny Hunters
+7:22
+across their attacks in 2025 and 2026.
+7:26
+We've repeatedly seen the group abusing
+7:29
+OAuth access to connected applications
+7:32
+for bulk extraction of Salesforce data
+7:35
+and extortion, which really maps well to
+7:38
+what we're seeing here with this Clue
+7:39
+integration compromise.
+7:41
+Now, on top of that, there's also a
+7:43
+claim of responsibility from a
+7:46
+ShinyHunters linked Telegram channel
+7:49
+that came on June 21st stating that the
+7:52
+Salesforce instances belonging to
+7:54
+several of Clue's partners had been
+7:56
+exfiltrated. However, we'd flag that
+7:59
+Telegram message with low confidence as
+8:02
+Telegram claims from threat actor
+8:03
+channels are notoriously unreliable and
+8:06
+difficult to independently verify.
+8:09
+Another piece of this that I I'd
+8:10
+highlight here that's worth noting is
+8:13
+that the organizations were named on
+8:15
+Icarus' leak site, not ShinyHunters. And
+8:18
+I think that's an unusual detail that's
+8:20
+worth understanding because it may
+8:21
+indicate that Icarus is operating
+8:23
+independently here rather than this
+8:25
+campaign being linked to ShinyHunters
+8:27
+also.
+8:29
+>> All right. So, it's quite quite a
+8:30
+complicated picture that you've that
+8:32
+you've outlined there with lots of
+8:33
+different um permutations and lots of
+8:35
+different possibilities, but I guess the
+8:37
+the takeaway is that although the the
+8:39
+TTP overlap in in these incidences
+8:42
+compelling, the attribution picture here
+8:44
+is is still developing and and hopefully
+8:46
+something will come out in the in the
+8:47
+days and weeks to come, but but right
+8:48
+now we're still not really sure what's
+8:50
+going on in terms of the threat actor
+8:51
+responsible.
+8:53
+>> Yeah, exactly. But also at the end of
+8:55
+the day, that attribution is the less
+8:56
+important part of things. You know, what
+8:58
+we can say with confidence here is the
+9:00
+pattern of attacks, the abuse of the
+9:03
+trusted third-party integration with
+9:05
+OAuth token theft leading to Salesforce
+9:08
+exfiltration at scale and extortion from
+9:11
+there.
+9:12
+Now, as we've seen in the Clue attacks,
+9:14
+there's really also a larger trend here
+9:17
+of threat actors targeting OAuth tokens
+9:19
+and device codes.
+9:21
+Now, we've also recently seen a large
+9:23
+volume of OAuth phishing.
+9:26
+And it's really important to understand
+9:27
+that many of the AI-based
+9:30
+phishing-as-a-service toolkits that are
+9:32
+offered to threat actors on criminal
+9:34
+forums, things like Cali 365,
+9:37
+have OAuth phishing functionality built
+9:40
+directly into them, make it very easy
+9:42
+for attackers to create phishing web
+9:44
+pages for these campaigns at scale.
+9:48
+>> Yeah, and I guess just to expand a
+9:49
+little bit on those phishing kits, with
+9:51
+these types of phishing kits,
+9:52
+essentially the threat actors just have
+9:54
+to enter the URL of any brand that they
+9:57
+want to impersonate, and then AI just
+9:59
+quickly builds them an imitation
+10:01
+phishing page that can steal these OAuth
+10:04
+tokens essentially in real time.
+10:06
+>> Yeah, and it really just makes it very
+10:08
+trivial and easy for attackers to
+10:11
+implement that and get things spun up.
+10:13
+Now, last week we identified a large
+10:15
+volume of OAuth device code phishing
+10:17
+across our customer base that we
+10:20
+assessed was likely driven by Cali 365.
+10:24
+Now, for those less familiar with device
+10:26
+code phishing, it's a tactic where
+10:28
+attackers trick users into entering a
+10:30
+device authorization code on a
+10:33
+legitimate-looking webpage, which really
+10:36
+hands the attacker a valid OAuth token
+10:39
+without ever needing the user's password
+10:40
+or MFA.
+10:42
+Now, the campaign we observed primarily
+10:44
+targeted organizations in the
+10:46
+manufacturing sector, but really was
+10:48
+across all sectors, including education,
+10:51
+finance and insurance, and aerospace as
+10:53
+well.
+10:54
+But, the key component of the incidents
+10:57
+we saw across our customer base had
+11:00
+connections from IP addresses hosted on
+11:02
+the Tencent ASN, specifically AS132203,
+11:08
+right after the devices codes were
+11:09
+stolen,
+11:10
+and then the threat actors then
+11:11
+transitioned to IP addresses hosted on
+11:14
+proxy providers for the rest of the
+11:16
+attack chain for more anonymity.
+11:19
+All right, so that was quite a lot we've
+11:20
+just covered in the threats here as far
+11:23
+as the campaigns and the primary
+11:24
+threats. But, Alex, can you break down
+11:26
+what are some of the major challenges
+11:28
+here to organizations from those?
+11:30
+>> Yeah, of course. So, the the number one
+11:33
+challenge that I think we need to think
+11:34
+about is that integrations do serve as
+11:37
+entry points for attacks. We've we've
+11:39
+seen this in quite a few attacks now,
+11:41
+such as SalesLoft Drift that you
+11:42
+mentioned earlier and others, but this
+11:45
+recent Clue abuse really just drives
+11:47
+this home. It's it's another reminder
+11:48
+that integrations for applications that
+11:51
+hold sensitive data can be a front door
+11:54
+for attackers. And and specifically in
+11:56
+the Clue campaigns, we had the the
+11:58
+shared credentials, the tokens, and the
+12:00
+service accounts that were all abused to
+12:02
+allow the threat actors access to
+12:04
+Salesforce. And and I do really want to
+12:06
+stress here the use of service accounts
+12:08
+by threat actors. We've called out
+12:10
+before in previous episodes how these
+12:13
+accounts are often um over-privileged
+12:15
+and and under-monitored, and that really
+12:17
+makes them ideal for attackers to
+12:18
+exploit. And in this campaign, the
+12:21
+service accounts not only provided
+12:23
+access, but they also helped to mask the
+12:26
+attackers' discovery and data access
+12:28
+attempts, and and really just made them
+12:30
+look like standard operations.
+12:32
+>> Yeah, and I'm going to double down that
+12:33
+point, you know, just something I saw
+12:36
+the service account abuse firsthand in
+12:38
+my incident response experience, and all
+12:40
+that is really to just say that service
+12:41
+account monitoring and hygiene should be
+12:44
+a top priority for organizations.
+12:47
+>> Yeah, exactly. You you've got firsthand
+12:48
+experience of how important this is. Um
+12:51
+so, something that that we really want
+12:52
+listeners to take away from this episode
+12:54
+here.
+12:55
+The next major challenge for defenders
+12:57
+to talk about is around how defenders
+13:00
+process intelligence when attacks like
+13:02
+this happen. And the reality for a lot
+13:05
+of of security teams is that
+13:07
+intelligence processing is often really
+13:09
+slow and really siloed, and it ends up
+13:12
+in the intel essentially not being
+13:14
+actioned properly. Um for example, both
+13:16
+the service account abuse and the SaaS
+13:18
+integration targeting are playbooks that
+13:21
+we've seen and we've spoken about
+13:23
+before, but there's obviously a a of gap
+13:26
+in in terms of those pieces of intel
+13:28
+being operationalized and actually
+13:30
+turning into real-life defenses. So, we
+13:33
+may have a security team that's that's
+13:35
+read that attack analysis report, you
+13:36
+know, they they've blocked the IOCs, but
+13:39
+does that mean that they're fully
+13:40
+protected, right? Have they got
+13:41
+detections, hunts, and blocks all in
+13:43
+place?
+13:44
+And if a team is is fully protected,
+13:47
+it's probably a quite a slow manual
+13:49
+effort to get to that stage of
+13:51
+protection. And they probably only have
+13:53
+visibility into what the report gives
+13:55
+and not what other organizations are
+13:57
+seeing around similar threats.
+13:59
+>> Yeah, and just to kind of layer in here
+14:01
+and and maybe piece this together at a
+14:03
+high level, Alex, what you're saying
+14:04
+here is that the advanced organizations
+14:07
+need the ability to quickly
+14:09
+operationalize intelligence that is
+14:11
+shared, not just in reports, but across
+14:13
+organizations as well.
+14:15
+>> Yeah, exactly. It's the issue of
+14:18
+operationalizing those pieces of intel
+14:20
+in the in the first place and actually
+14:22
+translating them into reality in your
+14:23
+security program, but then it's also you
+14:26
+want to you want to benefit from the
+14:28
+shared experience of what other
+14:29
+organizations are experiencing so that
+14:31
+you've got intelligence from a from a
+14:33
+wide range of sources.
+14:35
+And then the final defensive challenge
+14:38
+that we want to call out is how the
+14:40
+availability of these AI-enabled
+14:43
+phishing-as-a-service kits is really
+14:45
+allowing threat actors to scale massive
+14:48
+campaigns much faster than than manual
+14:51
+review and response can keep up. This is
+14:53
+a familiar story here, you know, we keep
+14:54
+talking about how um manual responses
+14:57
+just can't keep up with what threat
+14:58
+actors are doing, and and this is
+15:00
+another example. Um and in in our own AI
+15:03
+threat report, which just released uh
+15:05
+yesterday on our blog, actually, that
+15:07
+picture becomes even clearer. So, we're
+15:09
+seeing attackers that can now launch or
+15:12
+adjust or redeploy campaigns in a matter
+15:15
+of hours, not in a matter of days. And
+15:18
+and really importantly, AI is eroding a
+15:21
+lot of the traditional signals that
+15:23
+email security tools and end users both
+15:26
+rely on to catch fishing. You know, you
+15:28
+think you used to think about things
+15:30
+like typos and and awkward phrasing and
+15:32
+really low-quality branding and that
+15:34
+would scream fishing email a mile off.
+15:37
+But now those tells are gone. You know,
+15:39
+you've got really polished, really
+15:41
+convincing lures that are clearing
+15:43
+secure email gateways and they're
+15:45
+landing directly in user inboxes and
+15:48
+they're landing sort of more directly
+15:49
+than ever before. And that reality is
+15:52
+really driving an inbox flood. So, it's
+15:54
+not just that there are more fishing
+15:56
+emails, it's that more of them are
+15:58
+getting through these upstream controls
+16:01
+because they look so legitimate, because
+16:02
+they've got that AI polish. And this
+16:05
+just makes many teams really overwhelmed
+16:07
+by the resulting volume in their fishing
+16:10
+inboxes and it means that they just
+16:11
+don't have the time or the people power
+16:14
+to be proactive, right? They can't be
+16:16
+proactively hardening their defenses
+16:18
+because they're stuck responding or
+16:20
+reacting to fishing emails and this is
+16:22
+this is just leaving them in this
+16:23
+reactive autopilot mode while the
+16:26
+campaigns just keep evolving you know,
+16:29
+alongside.
+16:30
+>> Yeah, it really does. All right, so we
+16:32
+laid out how the threat actors are
+16:35
+walking through trusted integrations,
+16:37
+why siloed intelligence leave defenders
+16:40
+a step behind, and how AI is scaling
+16:43
+fishing faster than most teams can
+16:44
+manage. Now, after the break, the steps
+16:47
+that your team can implement today to
+16:49
+get ahead of the threat.
+16:52
+>> Shadow Talk is brought to you by
+16:54
+ReliaQuest, the global leader in AI
+16:56
+cybersecurity. ReliaQuest helps
+16:58
+enterprise cybersecurity teams contain
+17:00
+threats in minutes [music] with its
+17:02
+agentic AI security operations platform,
+17:05
+GreyMatter. ReliaQuest [music] makes
+17:07
+security possible for the most trusted
+17:09
+enterprise brands in the world. Learn
+17:11
+more [music] at reliaquest.com.
+17:15
+>> All right, welcome back. Now, dive into
+17:18
+how organizations should strengthen
+17:20
+their defenses against the threats that
+17:22
+we've discussed in this episode.
+17:24
+So, John, let's start with you. Can you
+17:26
+explain how organizations should defend
+17:28
+against this whole Clou Salesforce
+17:30
+integration campaign?
+17:32
+>> Yeah, certainly. So, the first thing you
+17:34
+need to do is reset and reissue
+17:37
+everything tied to the Clou and
+17:39
+Salesforce integration. This includes
+17:42
+service account passwords, refresh
+17:44
+tokens, client secrets, and active OAuth
+17:47
+grants. It's really important that you
+17:49
+ensure that you revoke the refresh token
+17:52
+here, not just the passwords, all right?
+17:54
+Because that refresh token is what helps
+17:57
+the threat actors keep persistent
+17:59
+access.
+18:01
+Next, you can hunt for unusual REST API
+18:04
+query volume, repeated pagination
+18:06
+through larger result sets, and access
+18:09
+from unfamiliar IP addresses. Now, in
+18:12
+the activity that ReliaQuest observed,
+18:15
+the user agent python-urllib
+18:19
+was a key IOC in our threat hunting.
+18:21
+Finally, organizations should lock down
+18:23
+API access to known infrastructure only.
+18:27
+This can be done through IP allow
+18:28
+listing on third-party integration
+18:30
+accounts and connected applications.
+18:33
+And these same restrictions can be
+18:35
+extended to SIM and SOAR APIs so that
+18:38
+requests from outside approved sources
+18:41
+can fire alerts and be blocked.
+18:44
+>> Yeah, and just to layer on there what
+18:45
+you said, Salesforce integrations should
+18:48
+be obviously the immediate focus given
+18:50
+the the threat that we've discussed
+18:52
+today, but that allow listing should
+18:54
+eventually apply to any integration
+18:57
+accounts or any APIs that are connected
+18:59
+to your applications that hold any of
+19:01
+your sensitive data.
+19:03
+>> Yeah, exactly. So, the Salesforce
+19:05
+integrations are that short-term step,
+19:07
+but the long-term posture step should be
+19:10
+that organizations are starting to look
+19:11
+more towards those other integrations.
+19:13
+As we mentioned, they are becoming the
+19:15
+front door.
+19:17
+So, we also mentioned that defenders are
+19:19
+often slow to act on intelligence and
+19:21
+have limited intelligence visibility.
+19:24
+Alex, can you explain how they can
+19:25
+improve here?
+19:27
+>> Yeah, of course. So, first, I think you
+19:29
+need to expand your intelligence sharing
+19:31
+and intelligence collection and expand
+19:34
+it to include more reliable sources and
+19:36
+more organizations. So, you can think of
+19:39
+things like um sector-specific ISACs or
+19:42
+intelligence papers or different news
+19:44
+sources. These are all great ways to
+19:46
+increase your intelligence collection.
+19:48
+But, of course, they can still be
+19:50
+limited. So, for example, many campaigns
+19:53
+appear across sectors and change in real
+19:56
+time after the reporting has has been
+19:57
+published. You know, these things
+19:59
+continue to develop. And these methods
+20:01
+make it really difficult to act on the
+20:04
+intel, you know, because it still needs
+20:05
+to be categorized and operationalized
+20:07
+into defenses. So, even if you've got
+20:09
+all those reports coming in, cat uh sort
+20:11
+of operationalizing it, sorry, is a
+20:13
+whole other story.
+20:14
+And that's where Agenda AI can really
+20:16
+come in and can help take a lot of the
+20:19
+workload off of your team. So, you
+20:21
+should set up a workflow to collect IOCs
+20:25
+and TTPs out of reports and out of feeds
+20:28
+and then be able to build detections and
+20:30
+hunts and and provide quick defense
+20:32
+recommendations from them so that that
+20:34
+intel isn't just, you know, numbers on a
+20:36
+page or sitting in a folder somewhere
+20:37
+and never seen. It's actually being
+20:39
+incorporated into your security
+20:41
+programs.
+20:42
+>> Yeah, it's a great call out and use case
+20:44
+for AI here. But, I also think that
+20:46
+advanced security tools will help
+20:49
+provide a herd immunity of defensive
+20:52
+intelligence here and collecting and
+20:54
+operationalizing IOCs and TTPs on your
+20:56
+team's behalf. You know, for example,
+20:58
+ReliaQuest customers get that value from
+21:01
+our teams researching these campaigns
+21:03
+like what we've covered in this episode
+21:05
+including Clue and Cali 365 that we
+21:08
+operationalize what we collect on their
+21:11
+behalf within Graymatter.
+21:13
+>> Yeah, exactly. That's a That's a great
+21:14
+call out. Um and so, moving into the
+21:17
+final recommendation here, for those
+21:19
+organizations that find themselves just
+21:22
+drowning in volume from their phishing
+21:24
+inboxes, what can they do?
+21:26
+>> Yeah, so the the simple answer here is
+21:28
+to fight AI with AI. We know that threat
+21:31
+actors have AI directly built into these
+21:33
+phishing-as-a-service tool kits.
+21:36
+And these toolkits not only allow for
+21:38
+phishing infrastructure to be spun up
+21:40
+quickly and at a large scale, but they
+21:42
+have the functionality included for the
+21:45
+most dangerous threats, such as this
+21:47
+OAuth device code capture that we've
+21:49
+been talking about.
+21:51
+They even get around certain security
+21:54
+controls such as the time-to-live
+21:57
+security measures on these codes by
+21:59
+having the phishing page generate a code
+22:01
+right when the user accesses a malicious
+22:03
+link.
+22:05
+>> Yeah, and and just to come in there and
+22:06
+and call something out, I think there's
+22:08
+a really important shift that's
+22:10
+happening and it's behind what you've
+22:11
+just said because for a long time, the
+22:13
+level of capability required to uh sort
+22:16
+of code and implement the capabilities
+22:17
+that you just described required real
+22:20
+technical skill. And now we're seeing
+22:22
+the barrier to entry is just really gone
+22:24
+because you don't need that technical
+22:25
+skill anymore. And this is essentially I
+22:28
+think why we're seeing a large part of
+22:30
+campaign volume surge in the way that
+22:32
+they are.
+22:33
+>> Yeah, definitely it is. And then on top
+22:36
+of that, you know, the tools are helping
+22:38
+the threat actors make better emails
+22:41
+that are less likely to be caught by
+22:42
+security tools and end users, really
+22:45
+increasing the likelihood of successful
+22:47
+phishing. As we mentioned those common
+22:50
+red flags that users and tools are
+22:52
+trying to look for in the phishing
+22:54
+emails and web pages are becoming less
+22:56
+and less with AI, the things like the
+22:58
+typos and the poorly generated images.
+23:01
+So, defenders need an AI tool that can
+23:03
+quickly analyze difficult-to-detect
+23:05
+emails, find the true positives, and
+23:08
+autonomously delete them, block the
+23:10
+sender and the phishing attachments or
+23:12
+URLs, all without a human in the loop.
+23:15
+And this is really critical to free up
+23:16
+your team's time so they can focus on
+23:19
+the real work that needs to be done
+23:21
+before the next attack hits.
+23:23
+>> Exactly. And let's start to close out
+23:26
+now. We've come to the end of the
+23:27
+episode. So, let's end by thinking about
+23:29
+what you can actually do with everything
+23:32
+that we just covered. Um so, I'll start
+23:34
+on the leadership side, as usual, and
+23:36
+then John, you can take the practitioner
+23:37
+piece. So, for [snorts] the CISOs and
+23:39
+security leaders listening,
+23:42
+the central point today is really just
+23:44
+another harsh reminder that your attack
+23:45
+surface is constantly expanding. Every
+23:49
+third-party SaaS integration that
+23:51
+carries OAuth access to a platform that
+23:54
+you use that holds critical data is
+23:56
+really just becoming part of your
+23:58
+perimeter now. Clue is just one example.
+24:01
+Salesloft, Drift, that we've mentioned a
+24:02
+couple of times, is another. And in each
+24:04
+of these cases, that trusted connection
+24:07
+became the front door for attackers to
+24:09
+to to walk in through.
+24:11
+And then the second leadership point is
+24:13
+all about intelligence, scale, and
+24:15
+speed. So, the campaigns that we
+24:17
+described today, the Cali 365 powered
+24:20
+device code phishing across different
+24:22
+sectors like manufacturing, education,
+24:24
+and aerospace, those just aren't waiting
+24:27
+for you to get your quarterly threat
+24:29
+briefing cycle. You know, that they're
+24:30
+happening now. They're developing in in
+24:32
+hours. And the organizations that stay
+24:35
+ahead of these campaigns are the ones
+24:37
+who are operationalizing shared
+24:39
+intelligence in real time, not the ones
+24:42
+who are being reactive, right? And and
+24:44
+blocking IOCs 2 weeks after a campaign
+24:46
+has peaked.
+24:48
+So, the tomorrow morning action here is
+24:50
+going to be a question for your security
+24:52
+teams, which is what SaaS applications
+24:55
+in our environment hold critical data
+24:58
+and which third-party integrations have
+25:01
+a lot access to them. And you really
+25:03
+want to map out that list. And if the
+25:05
+answer there is, "Oh, I don't know. I'd
+25:06
+have to check." That makes it really a a
+25:09
+priority to get that inventory done
+25:11
+because the integration that you haven't
+25:12
+reviewed is most likely going to be part
+25:15
+of the next attacker's attack chain.
+25:18
+>> Yeah, it definitely will be. Now, on the
+25:20
+practitioner side, a few important
+25:22
+things to call out. So, first, if you
+25:24
+have a Clue in Salesforce integration,
+25:27
+you need to reset and reissue everything
+25:29
+tied to it. Those service account
+25:31
+passwords, refresh tokens, and the
+25:33
+active OAuth grants. And remember, don't
+25:35
+stop at just the password reset. Make
+25:37
+sure you revoke that refresh token.
+25:40
+Then, pull your Salesforce API logs, and
+25:43
+you can hunt for the unusual REST API
+25:46
+queries, and specifically that
+25:48
+Python-urllib
+25:50
+user agent.
+25:51
+Now, second, pull your service account
+25:53
+inventory. You know, the Clue compromise
+25:56
+worked largely in part because the
+25:59
+service accounts tied to them were
+26:01
+over-privileged and under-monitored. And
+26:03
+this is not a Clue-specific problem.
+26:06
+It's really a larger posture problem
+26:08
+that exists across many environments
+26:11
+right now.
+26:12
+Every service account with OAuth access
+26:14
+to a SaaS platform needs to be scoped to
+26:17
+least privilege and covered by layered
+26:20
+detections and defenses.
+26:22
+If either of those conditions is not met
+26:24
+for any account on that list, then you
+26:26
+have a gap. So, in line with that, your
+26:28
+tomorrow morning action is to open your
+26:30
+identity and access management tooling
+26:33
+and pull every active service account
+26:35
+with OAuth access to any application
+26:38
+that holds sensitive data. For each one,
+26:40
+ask two questions. Are we enforcing
+26:42
+least privilege to the best of our
+26:44
+ability?
+26:45
+And are there alerts watching for
+26:47
+unusual API activity from this account?
+26:50
+If the answer is no to either of them,
+26:52
+then you have your starting point.
+26:54
+So, in closing, every SaaS integration
+26:56
+you've approved could be a key handed to
+26:59
+someone else. The real question is
+27:02
+whether you'd know if that key gets
+27:03
+copied.
+27:05
+Well, that's all for this week. Thanks
+27:06
+for listening to another episode of
+27:08
+Shadow Talk. If you want to read more
+27:10
+about the Clue attacks or our AI threat
+27:13
+research report, links to both are
+27:15
+available in the link tree below.
+27:18
+If you'd like to get in touch with us,
+27:19
+we're just an email away. You can send
+27:20
+your questions to
+27:21
+shadowtalk@ourlightquest.com.
+27:24
+And please don't forget to subscribe so
+27:26
+you can get next week's episode right to
+27:28
+your podcast platform of choice.
+27:29
+>> [music]
+27:30
+>> And finally, we really do appreciate it
+27:31
+if you can rate and review Shadow Talk
+27:33
+wherever you listen. It will really help
+27:35
+make a huge difference and help us to
+27:37
+reach new listeners. We'll be back next
+27:39
+week with another episode of Shadow
+27:41
+Talk.
+27:45
+>> [music]
+27:50
+[music]
+27:56
+[music]
