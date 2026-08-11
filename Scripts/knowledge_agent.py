@@ -152,16 +152,111 @@ def _load_aliases(path: Path) -> Dict[str, str]:
     return alias_map
 
 
+# Aliases that collide with common English/business words (confirmed via
+# Scripts/audit_family_aliases.py against /usr/share/dict/words). A bare
+# match on one of these isn't enough evidence of a family mention -- it
+# needs a disambiguating ransomware-context term nearby. See the Phase 0.2
+# writeup in the experimental plan for the before/after counts this fixes
+# (Play 386->111, Qilin 88->21, Hive 23->10, etc.).
+AMBIGUOUS_ALIASES = {"agenda", "cactus", "clop", "hive", "inc", "maze", "medusa", "play", "royal"}
+
+CONTEXT_TERMS = [
+    "ransomware", "ransom", "encrypt", "decrypt", "gang", "group",
+    "extortion", "victim", "breach", "malware", "attack", "leak",
+    "affiliate", "threat actor", "cyber", "hacker", "incident",
+    "compromise", "double extortion", "raas",
+]
+CONTEXT_WINDOW_CHARS = 15 * 8  # ~15 tokens, generous chars-per-token estimate
+
+
+def _has_context(text: str, pos: int) -> bool:
+    start = max(0, pos - CONTEXT_WINDOW_CHARS)
+    end = min(len(text), pos + CONTEXT_WINDOW_CHARS)
+    span = text[start:end]
+    return any(term in span for term in CONTEXT_TERMS)
+
+
+# Batch 1's "Vendor/Independent" bucket lumps 25 channels too coarsely for
+# a channel-type-shift experiment (Sophos and MalwareTech both land in it).
+# Reclassified by hand based on what each channel actually is.
+VENDOR_INDEPENDENT_OVERRIDE = {
+    "C26": "Independent",   # MalwareTech
+    "C27": "Independent",   # VX Underground
+    "C28": "Vendor",        # Black Hills Information Security
+    "C29": "Vendor",        # Security Onion Solutions
+    "C30": "Vendor",        # SANS Institute (training org)
+    "C31": "Vendor",        # Mandiant
+    "C32": "Vendor",        # Sophos
+    "C33": "Vendor",        # ESET
+    "C34": "Vendor",        # Elastic
+    "C35": "Vendor",        # Splunk
+    "C36": "Vendor",        # Wazuh
+    "C37": "Vendor",        # TrustedSec
+    "C38": "Conference",    # Blue Team Village (DEF CON village)
+    "C39": "Government",    # MITRE ATT&CK (FFRDC)
+    "C40": "Vendor",        # Magnet Forensics
+    "C41": "Vendor",        # Belkasoft
+    "C42": "Independent",   # DFIR Science
+    "C43": "Vendor",        # Active Countermeasures
+    "C44": "Vendor",        # VMware Carbon Black
+    "C45": "Vendor",        # Arctic Wolf
+    "C46": "Vendor",        # Dragos Inc
+    "C47": "Vendor",        # Cybereason
+    "C48": "Vendor",        # ThreatLocker
+    "C49": "Vendor",        # LogRhythm
+    "C50": "Vendor",        # Darktrace
+}
+
+
+def _normalize_channel_type(raw: str, channel_id: str) -> str:
+    raw = (raw or "").strip()
+    if channel_id in VENDOR_INDEPENDENT_OVERRIDE:
+        return VENDOR_INDEPENDENT_OVERRIDE[channel_id]
+    if raw.startswith("Conference"):
+        return "Conference"
+    if raw.startswith("Vendor") or raw == "Platform Vendor":
+        return "Vendor"
+    if raw.startswith("Media"):
+        return "Media"
+    if raw in ("DFIR", "Independent", "Government"):
+        return raw
+    return "Unknown"
+
+
+def _load_channel_types() -> Dict[str, str]:
+    col = "Channel_Type (DFIR/Vendor/Conference/Independent)"
+    mapping: Dict[str, str] = {}
+    for reg_path in (
+        ROOT / "rubrics" / "Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx",
+        ROOT / "rubrics" / "Dataset_Channel_Registry_Batch2.xlsx",
+    ):
+        if not reg_path.exists():
+            continue
+        df = pd.read_excel(reg_path)
+        for _, row in df.iterrows():
+            cid = str(row["Channel_ID"]).strip()
+            mapping[cid] = _normalize_channel_type(str(row.get(col, "")), cid)
+    return mapping
+
+
 def _find_families(text: str, alias_map: Dict[str, str]) -> List[str]:
     found = set()
     for alias, canon in alias_map.items():
         pat = re.escape(alias).replace(r"\ ", r"\s+")
-        if re.search(rf"\b{pat}\b", text, flags=re.IGNORECASE):
+        compiled = re.compile(rf"\b{pat}\b", flags=re.IGNORECASE)
+        if alias not in AMBIGUOUS_ALIASES:
+            if compiled.search(text):
+                found.add(canon)
+            continue
+        # Ambiguous alias: only count it if at least one occurrence has a
+        # disambiguating ransomware-context term nearby.
+        if any(_has_context(text, m.start()) for m in compiled.finditer(text)):
             found.add(canon)
     return sorted(found)
 
 
-def extract(vid: str, txt_path: Path, meta: dict, alias_map: Dict[str, str]) -> dict:
+def extract(vid: str, txt_path: Path, meta: dict, alias_map: Dict[str, str],
+            channel_types: Dict[str, str]) -> dict:
     text = _norm(txt_path.read_text(encoding="utf-8", errors="ignore"))
 
     families     = _find_families(text, alias_map)
@@ -173,14 +268,21 @@ def extract(vid: str, txt_path: Path, meta: dict, alias_map: Dict[str, str]) -> 
     plat_signal  = max(plat_cnts,   key=plat_cnts.get)   if any(plat_cnts.values())   else None
 
     yt_id = meta.get("YouTube_Video_ID", "")
+    ch_id = meta.get("Channel_ID", "")
+
+    try:
+        rel_path = str(txt_path.relative_to(ROOT))
+    except ValueError:
+        rel_path = str(txt_path)
 
     return {
         "Video_ID":            vid,
-        "Channel_ID":          meta.get("Channel_ID", ""),
+        "Channel_ID":          ch_id,
         "Channel_Name":        meta.get("Channel_Name", ""),
+        "Channel_Type":        channel_types.get(ch_id, "Unknown"),
         "Video_Title":         meta.get("Video_Title", ""),
         "YouTube_URL":         f"https://www.youtube.com/watch?v={yt_id}" if yt_id else "",
-        "Transcript_Path":     str(txt_path),
+        "Transcript_Path":     rel_path,
         "Year":                meta.get("Year"),
         "DurationSeconds":     meta.get("DurationSeconds"),
         "Transcript_Provider": meta.get("Transcript_Provider") or "youtube_api",
@@ -205,6 +307,7 @@ def extract(vid: str, txt_path: Path, meta: dict, alias_map: Dict[str, str]) -> 
 
 def run(only_missing: bool, out_path: Path) -> None:
     alias_map = _load_aliases(FAMILY_LIST)
+    channel_types = _load_channel_types()
     print(f"Family aliases loaded: {len(alias_map)}")
 
     existing_ids: set = set()
@@ -235,7 +338,7 @@ def run(only_missing: bool, out_path: Path) -> None:
 
     records = []
     for i, (vid, txt_path, meta) in enumerate(todo, 1):
-        records.append(extract(vid, txt_path, meta, alias_map))
+        records.append(extract(vid, txt_path, meta, alias_map, channel_types))
         if i % 100 == 0 or i == len(todo):
             print(f"  [{i}/{len(todo)}] {vid}", flush=True)
 
