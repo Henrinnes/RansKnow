@@ -1,0 +1,578 @@
+0:00
+Good morning, good afternoon, everyone.
+0:10
+Today, we're diving into the OAuth problem you didn't know you have.
+0:16
+We're going to be looking at how the tools we have all become accustomed to to make integrations seamless and easy are creating holes in your enterprise security.
+0:26
+My name is Evier Tabora and I'm a security engineer with MacroFage Security.
+0:31
+I focus on making small business and startups will be more secure.
+0:36
+Now, the real important thing is I'm sure you guys are wondering why there's a picture of me with a lot of fur up there.
+0:42
+That's because when I work with clients, this is the picture that they see.
+0:46
+So everybody recognizes me as the dog with the pipe.
+0:48
+So I figure I'd make this easy for them if they're watching online or something.
+0:54
+So today, we're going to cover some background on OAuth.
+0:58
+We're going to cover how it's actually leveraged.
+1:01
+Some of the common misconceptions around its safety.
+1:04
+How we can take advantage of this, specifically using some internal tools.
+1:09
+We're then going to go into a demo, as long as the internet works, so I'm sure it will.
+1:14
+We will then figure out how to defend ourselves against these attacks.
+1:20
+But more importantly, why this is such a big problem you didn't know you have.
+1:26
+So for those of you who are in a hurry, maybe you have a flight to catch,
+1:30
+or must attend a meeting, and what otherwise really likes to stay for a riveting presentation, this slides for you.
+1:37
+Go ahead and take a picture and then safely get to your flight or your meeting.
+1:41
+And then for all of you here, this is a sneak peek of everything you're going to take away from this presentation.
+1:50
+Now, first, let's go ahead and refresh our memory on OAuth.
+1:56
+So this problem actually began back in the day, like way back in the day.
+2:01
+You see, some folks were trying to figure out how they could get their beautiful cars safely and securely valid.
+2:08
+They wanted to make sure staff could park the car, but not have access to the glove box or the trunk.
+2:16
+So what did they come up with?
+2:18
+Well, enter the Valay key.
+2:21
+In the 70s, we saw the popularization of the Valay key.
+2:24
+So how does it work?
+2:26
+Well, it's actually pretty simple.
+2:28
+You ride up to the parking spot, you find your Valay attendant, and then you give them a key, but this key is different.
+2:34
+It's one of those gray keys.
+2:36
+It has limited access to the car.
+2:38
+That means they can drive the car around, do what they need to, but they can't access the things that you were worried about.
+2:44
+In other words, they get a different key, not the primary key.
+2:48
+Then nowadays, this is kind of all digital, it's electronic, so you can grant a Valay specific speed limit, maybe certain acceleration types, some maybe erase GPS locations.
+2:59
+So it limits the ability only to what they need.
+3:02
+Pretty clever.
+3:04
+They found some kind of interesting solution.
+3:07
+Now, if only the Valay key had come with the 1961 Ferrari 250 GT, then Cameron would have had a much better time in this movie.
+3:15
+And in case you're not familiar with this, this is from the movie Ferris Beeler's Day Off, where the Valay actually take the car for a super sweet joy ride.
+3:23
+So poor Cameron.
+3:24
+Now, fast forward, about 30 years later, a couple of engineers had a similar problem.
+3:32
+Similar to how the car manufacturers were trying to solve that Valay security problem, a couple of engineers needed to find some kind of standard way where they could authorize API calls without having to give out username and password and impersonate the customer.
+3:49
+So how could one service, say something like print express, get access to Luigi's pictures in Google Drive without Luigi having to give his username and password.
+4:00
+In other words, that primary key, or having to download the files and then re-upload them to the service, because that really sucks.
+4:10
+Well, this is where OAuth comes in.
+4:14
+In 2007, the OpenID community came up with OAuth, and it was quickly adopted thanks to Google, Netflix, and Twitter.
+4:23
+In 2009, there was a big security patch that came out to ensure things stayed secure.
+4:30
+And then in 2010, OAuth 2.0 kind of began, and they kind of started working on a new solution for it.
+4:39
+But see, that's where things got wicked. There was a clear disagreement on some of the fundamentals of OAuth, and there were large enough that at the time the primary editor, Aaron Hammer, withdrew his name and left the working group.
+4:54
+And it was an epic move, and it caused all sorts of attention.
+4:59
+Promptly thereafter, though, OAuth 2.0 was released. So now all of you are probably saying, why is this even important?
+5:08
+Well, today, if someone wants to implement OAuth 2.0 for their web service, well, they need to synthesize a lot of information, and it comes from a different number of RFCs or drafts.
+5:22
+And this is interesting because the standards itself, they don't require, for example, a token type, and it doesn't require any specific grand types.
+5:33
+So it's almost left, well, it is left to the implementers, and they have to decide what items they're going to be supporting.
+5:42
+What's interesting, too, is that the standard doesn't give any guidance on the token string size, as an example, which ends up being like one of the first things that implementers ask when they get started, which is kind of messy.
+5:55
+And then the implementers also have to read up on the security items, things that they have to figure out guidance, cautions, and they need to understand all these implications as they work to implement OAuth, and they're kind of forced to figure that out.
+6:13
+The thing is, the result of this whole mess is that we get a consent flow that kind of looks like this.
+6:21
+So if you notice, you initiate your login, it goes to the server, and then you get prompted for consent.
+6:28
+Now, there's no requirement that consent prompts have to look a certain way, or that it has to have certain specific functions.
+6:37
+Once you initiate the login, how we actually consent for those scopes, it can vary, and then the flow proceeds to do what you see in the slide.
+6:46
+You go through, you get your off code, then you get your access token, and then you get to the protected data. That's the nifty part.
+6:53
+So let's keep this in mind, because we're going to come back to this.
+7:00
+Now, in reality, what we actually experience, or folks are accustomed to experience, is that you see something like this.
+7:06
+You find your social login, you pick which one you like, and then you sign in, and then you get one of these prompts that look like this.
+7:15
+You know, I'll tell you, hey, you're signing into Google, and this is what it's going to use, or hey, you're signing into Microsoft, and you have all these little things that show you the different grants that it's supposed to receive from that.
+7:28
+Now, as a reminder, these prompts, they're only for authorization, and that's part of the OAuth standard.
+7:37
+They are not for authentication, even though this kind of fools you think you're authenticating and granting at the same time, but you're not. It's purely for authorization.
+7:47
+So, the key takeaway here is that there's a ton of social logins that you can use, and it's used for OAuth grants, and there's a number of them.
+7:57
+This specific table kind of shows you the more popular ones, and how they're roughly leveraged on average.
+8:03
+So, if you notice, some providers use kind of just purely for social things, some for enterprise, and some do both.
+8:11
+Now, make a mental note of this, because this is going to be interesting.
+8:16
+Now, Riri has a question for all of you, so show of hands. How many folks here use OAuth in their daily lives? Like they use to sign in somewhere?
+8:25
+Quite a lot. Now, how about in your corporate environments, where you guys work? And a lot more. Okay, that's awesome. Well, thank you, Riri. Appreciate the help there.
+8:37
+So, now that we understand how we got here, let's better understand some of the misconceptions behind OAuth.
+8:46
+So, let's just recall, OAuth again is not for authentication, is for authorization. So, you may be thinking, well, we use MFA. Well, that's great.
+8:59
+But whether you are not use MFA is not going to impact that OAuth flow, because once you're signed in, it won't matter. It's the service to service item.
+9:08
+You're probably saying, well, all the applications that we use are in the marketplace, so they're reviewed.
+9:14
+But just because these applications are reviewed doesn't mean that they're not over-permissioned.
+9:21
+So, you're probably thinking, well, our applications are behind corporate VPN. So, ha, gotcha.
+9:27
+Well, OAuth is a service to service item, as I mentioned before. So, once it's authorized, whether you're behind VPN or not, the authorization has already occurred.
+9:37
+So, really, this is more for your user who can actually reach the application or not.
+9:42
+Well, you're also probably saying, look, we got top-notch security training. That's fantastic. Security training is great. Keep investing in that.
+9:50
+But let's be honest, how many trainings go over OAuth consent fishing as an example?
+9:56
+You're probably saying, oh, we got URI validation. We don't leverage implicit flows and iframes. We don't use credential flows.
+10:05
+That's great. But that focuses on the inherent OAuth flow security, but nothing to do with the consent flows.
+10:14
+So, this leads us, yeah.
+10:19
+What's wrong with the client credential flows?
+10:22
+With the client credential flows, the way that it does is it uses a device item piece and then the way that the token is actually granted is different.
+10:32
+It doesn't go through some security checks. So, then the device just winds up getting the clear text or not clear text token, but it gets a token.
+10:38
+You can easily extract it and device itself. So, the trust functionality is not the same.
+10:43
+And that's actually a really cool, interesting thing we can go way more in depth into for another time, though. I appreciate that question.
+10:50
+So, this leads us to the most common attacks, which are consent fishing and broad permissions. They're actually being requested and granted often.
+11:00
+So, this is actually great for attackers and why? Well, that's because the flows are very commonly recognized.
+11:08
+As many of you guys showed, raise your hands on how you use this functionality. Folks just see him and kind of automatically grant them.
+11:14
+It's pretty much set it and forget it, which is the other good part about this that we can use to our advantage.
+11:21
+OAuth approvals are persistent and then you have the access once you have them in for different platforms.
+11:28
+It takes some work to revoke these permissions. So, it's not as straightforward as you may think, which makes it interesting.
+11:37
+So, up here are two examples of valid OAuth consent screens. On the left, you have one from Google and on the right, you have one from Microsoft.
+11:46
+And again, notice that one says accept, the other one says allow. They're sort of different. They're sort of the same and they're both valid.
+11:56
+Now, to drive the point home about some of these misconceptions, take a look at this OAuth consent flow here.
+12:02
+Now, ignore the fact that you're seeing two logos that are normally never together. Google and Microsoft.
+12:09
+But this consent flow is from Power Automate. Now, this is the permissions that it's actually asking for.
+12:16
+You can see your Google Drive, you can see a couple items, your profile, your email address. Cool.
+12:22
+So, you're probably thinking like, if that consent flow has no issues, it's straight up from the marketplace, it's from Power Automate.
+12:30
+It can be trusted. We can totally go forward with it. And you say that until you look at who the developer is, it's a commercial Gmail account.
+12:40
+That's straight up forward, a phase palm right there. So, folks are going to look at this and they're going to go look that it's from a Gmail account.
+12:47
+So, really, now you're starting to see trusting one from the other is starting to become a little bit difficult as you go through this consent flow.
+12:55
+So, now that we've become familiar with some of these misconceptions of OAuth, let's take advantage of OAuth itself.
+13:01
+Let's see how we can use this to our advantage.
+13:05
+So, in the last decade or so, we've really dug into the ecosystem narrative.
+13:13
+So, with Google, Apple, and Microsoft, kind of being the ones that are the biggest players in the space.
+13:21
+Now, the interesting thing in the ecosystem is that the authorization servers and the resource servers can be both providers of the same service.
+13:31
+So, your authentication and then the resources can come from the same one.
+13:36
+So, using the quirks in these environments, we can kind of get people to become familiar to a uniform OAuth flow, which is kind of cool.
+13:49
+So, with these OAuth flows, once they get approved, or they can easily get approved because there's reduced scrutiny.
+13:56
+And we're going to get into those little quirks in just a minute.
+13:59
+But there's reduced scrutiny in the ecosystem with a tenant, and we can leverage these inherent tools in them to actually get those persistent rights and access to things.
+14:11
+Now, the cool thing is that using these tools, you can bypass them with a spam because those tools are internal to the ecosystem.
+14:17
+They're already trusted, so you can leverage them to actually send email or those kinds of things on your behalf.
+14:23
+And it'll kind of avoid the spam detection.
+14:27
+And Microsoft and Google are great examples of these.
+14:31
+Specifically, we have Microsoft Power Automate, which has some tools in it that you can leverage.
+14:36
+And then you have Google Apps Script.
+14:39
+Now, I've bolded in Google Apps Script because we're going to use this one in our specific attack demo for this.
+14:45
+Google Apps Script sits right in the middle of this whole thing, and it's within that ecosystem, and we're going to dig into it right now.
+14:53
+So why am I focusing on Apps Script for this specific attack?
+14:57
+Well, Apps Script doesn't require any installation. It's a SaaS app, and it's provided by default.
+15:04
+In fact, commercial tenants get them, and so do the enterprise tenants. They get Apps Script automatically, and it's enabled.
+15:10
+Apps Script is also using JavaScript, and it's...
+15:14
+Apps...Ajava Script is everywhere. A lot of developers are very familiar with it. They use it very common. Very common language.
+15:22
+The other cool thing here is that what you create in Apps Script can become accessible in a relatively easy fashion, and we'll focus on that in just a little bit.
+15:32
+And one of the key cool things here is that Apps Script was designed to integrate with all of the Google Workspace ecosystem.
+15:41
+So I'm going to repeat that one more time. It was designed to integrate with all of Google Workspace.
+15:47
+Not just Sheets, not just Drive, all of it. This includes admins and a couple of other things as well.
+15:54
+So you're probably saying, all right, Evier, then what's the catch? You're like, this is... sounds too good to be true.
+16:01
+Well, here's the catch. Apps Script forces your app to be reviewed by Google.
+16:06
+So there's some protections that are kind of built in, especially when you're kind of trying to make it open to the entire internet.
+16:15
+Google has additional warning screens, and they put these notifications when your app hasn't been reviewed.
+16:21
+So it kind of makes it a little bit harder for you to try to get your app quickly in the public domain.
+16:27
+Google also has some timeouts so that Apps Script becomes harder to be abused, specifically like it'll only run for about five minutes, and then it just kind of times out on you.
+16:38
+Now for our purposes, we care about the consent screens here with Apps Script.
+16:44
+This is what those extra consent screens actually look like. So if you notice here, there's a big, red sign that says, hey, this application has not been reviewed by Google.
+16:56
+Hasn't been verified at all. And then they take it a step further, and then you go into another part of that consent flow, and they say, we have not reviewed this at all.
+17:05
+You probably want to retail to the developer, and then they give you the developer email address right below.
+17:10
+So every step of the way, they're given these big red warnings. And so if you decide to click on it, that's on you.
+17:16
+Now most folks are very familiar when they see these red signs because of their browsers. So whether it be edge, chrome, safari, they see a red triangle that are like, nope, back to safety.
+17:25
+And they'll click that button back to safety. That's pretty good.
+17:28
+So what, rats, foiled again?
+17:33
+Well, not exactly. Let's actually recall this OAuth flow here. Now we take a look at step three.
+17:42
+There's no requirement for a standardization of consent prompts. So that means that you don't actually have to warn users of anything.
+17:51
+In fact, the red triangle thing and the extra orange one, that's just a Google thing.
+17:56
+In the OAuth framework itself, you don't need that. All you have to do is prompt for consent.
+18:02
+So how you do that can be different by each implementer. Now this is key here because all of us are used to that kind of Microsoft or that Google prompt.
+18:11
+That's what we've been trained to actually catch.
+18:15
+So keep that step three here. Mental note of that one.
+18:21
+So our attack today is going to leverage Apps Script.
+18:25
+Now by using a tool within the Google ecosystem, you get to use that quirk that I was talking about.
+18:34
+The Google ecosystem treats public and internal applications different in the OAuth flow.
+18:40
+And you're going to see why in just a second. So when you deploy an application, you deploy it as a web app.
+18:49
+And then once you deploy it as a web app, Google is going to treat it as an internal script and then it's going to do its thing.
+18:56
+This is really good for us because that means that you can use it strategically, taxes Gmail, taxes drive files, or anything else within the ecosystem itself, which is pretty nifty.
+19:09
+So what is it exactly that I'm talking about here? Let's focus on this.
+19:15
+So this is directly out of Google's development page.
+19:19
+And if you notice the note down in the bottom, notice that it doesn't have like a little yellow color, like a lot of it talks do.
+19:26
+It just says, hey, if your app is marked as internal, then you are not going to receive that unverified screen.
+19:37
+As a matter of fact, if you mark your application as internal, then we're also going to remove the 100 user cap.
+19:44
+So if you are familiar with Apps Script, if you ever tried to deploy an Apps Script out to the World Wide Web, you get that red, big triangle, and you're capped out 100.
+19:56
+So if 100 users click it, that's it. You can't authorize the app anymore.
+20:01
+Well, I'm behold, if you mark it internal, those two critical items all of a sudden magically go away.
+20:08
+And you're probably thinking, well, yeah, that's working as intended. Yes, but that's the important part.
+20:14
+The Google takes the World Wide Web deployment as a kind of very risky item, and it is.
+20:20
+But context is missing within this note that your organization may be two people, or maybe a hundred thousand people or more.
+20:27
+So that's a very big range, and they don't take that context or risk into account when they're internal applications.
+20:34
+This is what we're going to take advantage of today.
+20:38
+So as a reminder, this is a screen we don't want, because then we can't do anything.
+20:46
+People are going to be able to go back to safety on this.
+20:50
+What we want is something like this, the things that people are already accustomed to, left and right, Google or Microsoft.
+20:57
+If it looks like that, people are way more willing to click allow or accept, which is cool.
+21:05
+So what's the workaround? Well, the way that we obtain an OAuth flow that looks like the one that we just showed to get that more normal flow is by creating a Google sheet.
+21:17
+Then what we do is we embed an app script into that Google sheet, and then we deploy the script as a web app, and we open it to the entire enterprise.
+21:29
+So, pretty cool.
+21:32
+Now what's the outcome of this whole thing?
+21:35
+Well, we do this so that the OAuth flow looks like any of the other flows that we saw, that the one on the left and the one on the right, Google or Microsoft.
+21:43
+Because Google doesn't require the review for the internal apps, then we actually don't get the OAuth flow warnings.
+21:50
+And then it allows us to more easily be able to gain access to files or emails or other actions again within the whole Google workspace ecosystem.
+22:01
+So, how do we do this in an efficient and easy way?
+22:07
+And I think all of you in this room probably are already thinking about this. Like, how would we do this? Yes, you are correct. The answer is AI.
+22:14
+And we literally leverage any one of these to create this. Now, I'm sure all of you are familiar on trying to prompt engineer your way through this.
+22:23
+There are so many cool examples of this. But the important thing here is using any one of these three or other LLMs, you can actually generate both an OAuth flow and OAuth consent, the whole nine yards in 10 minutes or less.
+22:37
+Super cool. And you can do this repeatedly for anything else that you may want, whether it be drive files, email, any of that stuff.
+22:45
+Now, I'm going to show you a demo here of impracticality what this actually looks like. So, bear with me here.
+22:54
+So, here we have Gemini as an example. Now, we're going to give it some very strict instructions on what it needs to do.
+23:00
+And we're just going to say, hey, leverage open AI to fill out a Google sheet for me. We all know how AI works. So, we're going to speed through this prompt.
+23:09
+We've just seen that it generates the actual script here. And then we're going to actually use this to our advantage.
+23:15
+Now, engineering our way through this can be different for everybody, but it's pretty much the same thing.
+23:19
+So, here we have Snoop Dogg. Snoop Dogg is one of our employees. And Dr. Dre is also one of our employees. Now, Snoop Dogg is interested in Dr. Dre's files.
+23:28
+He wants to get access to some of these files. So, he's going to take the script that he generated from Gemini.
+23:33
+And now, what he's going to do is he's going to go to Google Sheets. And he's going to actually create a whole new sheet from scratch.
+23:42
+And he's going to try to make it look like it's going to be something useful for Dr. Dre.
+23:47
+So, he's going to rename it. Maybe he's going to rename it to something like transactions for Dre or something.
+23:53
+So, it's something that Dr. Dre would probably be interested in. Now that he's doing that, he's going to go ahead and probably add some columns in there.
+24:01
+He's probably, what would Dr. Dre be interested in? So, he's got some deals and artists, and then we'll throw in a mount column in there.
+24:07
+Great. This is looking a lot better. Now, here's the crux of the matter. We're going to go to our extensions, and then we're going to go to Apps Script.
+24:15
+Apps Script is going to load for us, and notice it just kind of loads right away off the default. It's not off.
+24:21
+And then he's going to take that script, that Gemini generated, and he's going to plug it in there.
+24:25
+Snoop is going to look through, make sure that everything kind of looks correct. There's no lines missing. The whole code is in there. Great.
+24:31
+Now, he's going to put his email address in that variable. Snoop's email address goes there.
+24:37
+And then the key thing here is we want to tell Apps Script to give it the right permissions. How do we do that?
+24:42
+We actually add the Drive API scopes in them. Google Apps Script already allows you to do this. You can pick from any of these. You can pick all of them if you'd like.
+24:48
+Once we add that, perfect. Now we're going to add to naming this project. Now this is important.
+24:54
+However you name it here is what is going to appear in the consent prompt. So in this case for us, we're going to name it our JGBT Automations or something.
+25:06
+Makes it a little bit more useful. Great. So we rename it. Awesome. Now what we're going to do is just kind of check a couple more items, make sure it's looking right.
+25:14
+But now what we're actually going to do is scroll back up. Let's make this a little bit more different.
+25:19
+We're going to change this, you know, share my files. And we're going to name it instead, something similar to the top line.
+25:25
+But instead of with AI, we're going to add with Opus. So kind of give it two options.
+25:29
+In our demo, we're even going to shrink this down just to one option. But you can change anything on this in Google Apps Script as you would expect.
+25:36
+Now we're going to deploy it. Now here is where it gets really awesome. We actually deploy this as a web app. And look how simple this is.
+25:43
+We create a new one. And then what we're going to do is as the user, it's going to be whoever launches the actual web app that we're doing here.
+25:51
+And then we deploy it to the entire org. And we just hit deploy. Google is not checking for things. It's not doing anything else. It's not asking you what's this consent for.
+26:00
+It just does it. Once we have this, let's fill a little bit more information here. So Dr. Dre is not suspicious.
+26:06
+So we're going to add an artist. We're going to add M&M. And then we're going to throw in 50% in there. Cool.
+26:11
+Now that we do this, we're going to take advantage of what we discussed earlier. This tool is going to be able to send notifications and emails on our behalf and skip all the spam junk.
+26:20
+So we use an ad feature. We go to share. And then we're going to send it to Dr. Dre. Why not? We're trying to take advantage and access these files.
+26:29
+Perfect. Once we select Dr. Dre, let's give it a little message for him. Let's let him know, hey, you can take advantage of this. It's got some AI tools in there.
+26:38
+And then there's a new menu. Use the AI tool functionality. Great. I'm going to figure out what we should do next.
+26:47
+And then as I finish sending the message, I'm going to say, hey, use the AI tools and enjoy.
+26:52
+Oh, wait. If I type enjoy, he's going to know I'm up to no good. Let's erase that. Let's put peace on there. Probably ends it better.
+27:01
+Now we send it. Once we send it, our magic is kind of done. Let's switch over to our Google Drive. And if we go to what items are being shared with us, you notice that nothing is being shared.
+27:14
+I have no files being shared with me at this point in time. Let's switch over to Dre's account. And notice he got an email. And it actually came from Google itself.
+27:22
+So there's no spam to worry about here. If you look at the email, it has our message. Says joy. And there's any immediate link to the sheet.
+27:30
+So let's open the sheet up. Dr. Dre is working on it. He's like, hey, what are these columns? Oh, there's that AI menu that Snoop mentioned. Let's just click it.
+27:40
+And here's the magic of this whole piece. When you click it, it's going to try to run its automation. If you look at it, it's asking you for consent already.
+27:48
+You click OK. And lo and behold, we have no warnings. We don't have those yellow boxes. It goes straight to the actual grants that you want.
+27:58
+We're going to check all of them because why not? It's automation. It's AI. It's got to do everything. We click next. And I put a toast so you can see what is happening there.
+28:07
+It tried to do the chat GPT, but we didn't put an API key and it started sharing the background, the files in the background.
+28:13
+Dr. Dre is going to run it again because nothing happened. So he's going to share some more files with us and let's see what happens.
+28:19
+So it didn't nothing AI didn't do anything in this specific example because we want it that way. Let's switch back to Snoop Dogg's account.
+28:26
+And if you look at it, Snoop Dogg has two new files shared with them. Let's click on the first one. Let's see what that's about.
+28:34
+And it looks like it says Snoop Dogg doesn't know about this, but we're going to make a lot of money from interesting.
+28:42
+And that's the entire exploit. And as you can see, you were able to do this in under 10 minutes and depending on how you work your Apps Script, if you want it's prompt, not prompt, add things, subtract things, it could happen entirely in the background.
+28:57
+And you can have AI do things for you in it so it makes it look like the sheet is way more useful than it is.
+29:04
+And the individual on the other side that's manipulating that sheet will have no idea. Now the cool thing is that you can have it pause, run some more, pause, or some other things.
+29:14
+You can make it take admin actions if you know that that account is an admin account within your Google workspace.
+29:19
+You can do almost anything to it. Creativity is endless there. You get to pick.
+29:26
+Now, this is what Power Automate actually looks like. Now, you have to forgive me because Power Automate requires all these licenses to actually be able to test more of these things.
+29:36
+But actually Power Automate has these cool little built-in features. It has connectors built in so you could expel trade information just through OAuth right away. Like you don't even have to do any extra work.
+29:46
+And if you've noticed, like we mentioned before, the OAuth actually consent is from the AAPTS Gmail app. So you would trust it because it's at a Gmail anyways, which is really funny.
+29:57
+Now, we go into the point of this presentation where you're like, okay, maybe I should have taken the blue pill. Now I have to go and fix a bunch of Apps Script and Power Automate stuff in my organization.
+30:09
+So how do we actually defend against these OAuth attacks? Well, before we get into that, there's several challenges that we face when we try to address this type of OAuth attack.
+30:20
+First one being that, you know, as we learned, as you guys demonstrated, OAuth is everywhere. I got to mean everywhere. And figuring out which OAuth flows are good and bad is really difficult.
+30:31
+Especially when you tie that from internal tools that people may use and also try not to slow down the company speed and the development, it gets challenging.
+30:41
+Now, all the frequent changes that come with some of the tools, with people adapt, what they don't use, that also makes it a little bit more difficult.
+30:50
+And then it's just really hard to determine if these applications are appropriate or not for your enterprise. It just gets super, super hard.
+30:57
+So then it kind of makes you put you in the position of should I do anything, should I not, where do I go next from here? What actions do I actually take?
+31:04
+Well, this is where we get to the defense. This is a three-pronged approach and we start with identifying the Apps. Once we identify the Apps, we actually enable the needed Apps.
+31:17
+And then once we do that, then we can prevent it with automation. It's really great, have your cool, those three-pronged approach, great. But how do you actually do it?
+31:27
+Well, we start off on the audit side, you're going to actually audit all your OAuth Apps and then determine if you need them or not. So which one are actually critical for you to use and which ones are just optional.
+31:40
+This is going to help you create a baseline of the court applications of which ones are required and not. Now once you establish that baseline, instead of leaving the default, you switch to an allowless framework so that the Apps are then not randomly approved or just logged into Nilly-Willie, how people desire.
+31:59
+And then you add in the automation so that it's really easy for people to request additional Apps. And then if possible, what you do there is you add automation so that it can check for the OAuth scopes that are being requested.
+32:12
+And then you can automatically add it either to the allow list or just deny it. And this could be your ticketing framework or if you want it through Slack or Teams, you can do it that way to remove friction from folks from doing that and still keeping things secure.
+32:27
+And that's how you do it in a nice practical way. Now it's a lot easier said than done because this will take a little bit of time as you've run through it for yourselves.
+32:36
+Now this is what it looks like internal in the Google administration tool. So if you notice on Google Admin, this is what it looks like. These are the defaults when you first get it and you notice third party integration that just is set to allow for everyone. If you look at internal ones, it's set to trust it. Trust all the internal applications. That's your default. That's what you're dealing with.
+32:56
+So what you want to do is actually change this either to do not to do not allow those applications. And what that implies is any OAuth application that you have has to be reviewed and added to an allow list.
+33:10
+If it is not on that allow list, it just can't run. Folks can't sign into it. It won't work. Then you go into the internal app side of things and uncheck that box. Now you can do this together. You can do these independently.
+33:23
+And that's going to save you that hassle of what just happened. Now on the Microsoft side of things, what we do is go into the applications and do the same roughly the same thing. Instead here, you can start off with only allow the ones that have certain OAuth scopes to them. And you can preset those.
+33:44
+And then if they have those, they'll be allowed. And if they don't have those, then they'll be automatically denied. If you want to take it a step further and match how Google does it, then you just do the first one and you don't allow it. And everything has to go through an approval flow like we mentioned on the three pronged approach.
+34:00
+And that's how you would approach it on the Microsoft side.
+34:04
+Now this defense, although good, this is what it actually looks like.
+34:11
+There we go. This is what it actually looks like when you implement it. That should play.
+34:24
+So we're back in Dr. Dre's account here. And we're going to go into the settings and look at the OAuth scopes and the connections you can see that chat GBT automations are enabled. They're all there. Has been modified.
+34:35
+Let's go and try to run the automation again because we want to see if it actually works now. Notice that the consent flow comes right back up again. This time, it's denied.
+34:45
+Even though it was an internal application using a trusted app going through the ecosystem flow, it was just straight up denied.
+34:53
+And the same thing would occur if you were on the Microsoft side as well if you turn on those features for the apps that you have.
+35:00
+So the really nice thing about this specific defense is that if you already had applications and maybe they were way over permissive, it will stop them right in and there.
+35:10
+Or if you just want to prevent it from the get go, you could also do that right away.
+35:19
+So now the important piece. Let's go ahead and tie all these items together and let's make it make sense for us.
+35:26
+So we now know OAuth exhaustion is a real vulnerability.
+35:32
+Tools like Apps Script and our troublesome because they're trusted within ecosystems. So once they're trusted, it's not too much that you can do.
+35:41
+Additionally with the advent of AI, a lot of the gains that we had done in the consent prompt space.
+35:47
+They've been reduced quite a lot. They've been diminished because these AI tools, especially on the agent side, they don't care about consent prompts.
+35:56
+They care about going and getting the work done that you've tested with. OAuth was not designed for authentication or to evaluate intent.
+36:06
+So it makes this even more dangerous, especially heading into the agent side.
+36:13
+Now look at Clawd for example. It has so many connectors. These are just a couple.
+36:20
+But you can look at all the other ones that they have. They all leverage OAuth. And they all have very broad permissions.
+36:28
+Why? Because it's trying to be the user or trying to impersonate those. What about MCP servers? Or even worse. What about tools like OpenClaw?
+36:40
+So if you don't address OAuth now, you might find agents or connectors punching big security holes in your enterprise security and causing more harm than you had considered.
+36:52
+So maybe the title of this talk instead should be the agent problem you didn't know you have. That's maybe for a different time.
+37:04
+Thank you all for showing up and coming. My name is Evier Taborra. If you want to contact me, you can scan that QR code. Thank you all. Appreciate it.

@@ -1,0 +1,630 @@
+0:00
+Hello, and welcome to our talk. My name is Bastion and I'm with
+0:14
+Royan and today we will talk about the active directory database, also called
+0:19
+ntds.dit. In other words, we are identified in a misconfiguration and
+0:24
+the purpose of this talk is also to give you to want explore your own ntds
+0:32
+after. So we are from a French security company, a security consulting
+0:40
+company called XMCO and so we are auditors, especially for active
+0:48
+directory but also other stuff and we are also contributors from own
+0:55
+solution, active directoration in our company called iambuster based on
+1:00
+ntds analysis. So today what we will see why we would like to analyze the
+1:08
+ntds, so what is interesting inside the ntds and also we will have a quick look
+1:16
+at the format and the structure of the database and how to get to pass and
+1:21
+get the data outside a Microsoft environment. And at the end we will take a
+1:28
+look at on the trending topic which is ACL and control path and also present
+1:34
+our little script to help you to dig inside ntds. Ntds stands for nt directory
+1:42
+service. You have a copy, so this is basically a big file, could be small but
+1:49
+usually it's kind of big. It's stored on each domain controllers of your domain
+1:56
+and the format is ESC format, it was created by Microsoft and was shipped first
+2:07
+with windows nt in 1995 and after Microsoft used this format also for other
+2:14
+windows solution, active directory as well and outlook. And you may wonder why
+2:22
+Microsoft didn't use SQL formats at that time. We didn't find any official
+2:30
+statements but multiple sources said it was mostly because of performance
+2:38
+issue and technical issue. So but if you have official statement you can share
+2:44
+it after. So the story behind this presentation, so we were
+2:55
+been disturbed before in active directory environments and after
+3:01
+compromised a domain we like to grab the ntds and test the password
+3:08
+strength. And so it was the kind of bonus for customer in the report with
+3:16
+other findings. And after that some customer start asking us a specific
+3:23
+active directory password audits. So then we start like building our own
+3:30
+scripts with Python, we were familiar with Python and also we use imparquet at
+3:37
+that time and we were wondering if we can go further than just auditing password.
+3:46
+So there's a lot of previous work on dntds, Jorghumus has made a great work. He
+3:55
+released a format specification paper in 2011 and also a library in C
+4:04
+language, lib ese, db. His work inspired other tools in packets, ntds,
+4:13
+xrout, airbus, bta and we are not exhaustive here other tools as well. And later
+4:18
+also Microsoft published managed ESC and T that provide access to the library
+4:25
+to the DLF, ESC and T. I know DS internal use it, maybe other tools as well.
+4:34
+So a little bit more on the ntds what you can find inside all data on your
+4:41
+active directory is inside the database. The size of the database could start from
+4:47
+30, maybe, megabyte. To like 15 gigabyte, 15 gigabyte is actually the most
+4:55
+biggest one we have seen in production. Maybe you guys have a biggest one. 15
+5:01
+gigabyte, it's like 2,000, 200,000 users and the domain was created in 2001
+5:12
+because when your domain is old you have a lot of backlog translation and the size
+5:18
+of the ntds get bigger. So yeah, so do someone has a bigger one that 15 maybe?
+5:29
+One of our customers. Okay. It could go until I think one terabyte or something like that
+5:47
+according to Microsoft. So to them the ntds you need domain
+5:52
+I mean writes by default and you can them it easily with ntds you tool. This is the
+5:58
+most common one. And the database is almost the same on each domain controller. I said
+6:06
+almost because we will see later in the presentation some attributes value are not replicated
+6:11
+between them. So finally why we want to analyze it. It's an alternative way to audit your
+6:22
+active directory offline. Like you can conduct an offline audit or a light forensic in comparison
+6:34
+to dynamic tool you know like blood on or purple night or whatever. So you don't need to be connected
+6:44
+to the system, the information system or to the domain. You just need to have the file and
+6:52
+it's only it's the only way to audit the password because this is the only place you will find
+6:58
+the password hashes. So at the end is useful for Brotemov that doesn't want to generate
+7:08
+extra notes on their network. It could be useful also especially when you audit a sensitive
+7:14
+environment. I know when we go to a factory, industrial factory they don't like too much when
+7:23
+we connect to the network and sending many requests. So they prefer like offline audits. They
+7:31
+are afraid that we can maybe break their machine. And also it could be useful for pentestors
+7:38
+after compromising a domain to have extra findings in the report. So we will see what could be
+7:50
+interesting in security perspective. So you have everything on users like activity, if they
+8:01
+have SPN, if they are security attributes or not, delegations, also the membership. You have
+8:11
+the password, so the password properties which is you can try to break password with tool like
+8:21
+John the Reaper or Ashcrow because you have the password hashes. You have the format, LM or NT,
+8:28
+so you can find if they still use LM of solid format. You can detect password we use. A fun fact is
+8:38
+we have a customer who has a tearing in his domain. But one domain I mean use is the same password
+8:48
+on his T1 account and T2 account. So breaking the wall tearing. And we didn't break the password
+8:56
+because it was strong. But you can compare the password hashes to say, okay, so you use the same
+9:01
+password. So if you T2 admin is compromised, you can also compromise your T0 accounts. And you
+9:10
+have also information about the password change date, etc. System because every machine on your
+9:19
+activity directory has an account. So you have also a property on the system machine. If you can
+9:26
+detect if the the cable was password has been changed, basically or not, you have information on
+9:32
+the trust, the way of the trust, if lapse is installed on your domain, etc. etc. And of course,
+9:42
+ECL are part of the NTS. I will let Freud talk about that later.
+9:54
+A little bit feedback. We have analyzed last year 80 domains, 80 different NTS from different
+10:01
+companies. Password is still an issue, but I think you already know that. But high privilege
+10:09
+accounts are less weaker than before, less weaker than before. Before we have seen more than that.
+10:18
+We still have LM formats in 2020, but it's mostly service accounts that haven't changed
+10:26
+the password since their creation. And a thing is interesting, it's changing your password
+10:34
+regularly, doesn't make your password stronger because the user will have an extra character at the end
+10:42
+of the previous password or whatever. So this is, we have cracked almost the same amount of
+10:52
+password that was changed before six months ago and after six months ago. And a little bit of
+11:01
+overview of your system in production today. So this is a good graph to see Microsoft version
+11:08
+failed because we've never seen Windows Vista and Windows 8 maybe a couple of times, but Windows
+11:16
+7 never. And we have still Windows XP, Windows 2003. And today, Windows 10 is the most used for
+11:25
+clients and Windows 2016 is the most used for servers. Other categories is non-Windows system.
+11:35
+So macOS, Linux, maybe NAS storage, etc.
+11:45
+We have talked about what we could find in the NTS, but what is not part of the NTS, but very
+11:52
+interesting in security perspective. Event logs for forensics, investigation are not part of
+11:59
+your NTS, of course for your NTS. If Event logs were in your NTS, it will be so big, you won't be
+12:06
+able to read it. That's why conducts a non-flient forensics with your NTS, it's very light because you
+12:17
+don't have any event logs and event logs are more precious because you have everything.
+12:23
+If you have good logs, of course, to track user action and contaction.
+12:28
+GPU details are not part of the NTS as well. You have GPU reference, like the name of the GPU,
+12:39
+the ID of the GPU, the creation of the GPU, but the content, the XML file are stored in your
+12:47
+CISVOL share on your domain controller. So you will need to go in this folder to see what exactly
+12:54
+do GPU. AdCIS templates also are not in the NTS as well as Windows patching level and Windows
+13:04
+system configuration. If you want to know the last KB installed on a Windows machine, you will
+13:13
+need to go after the machine directly and ask it directly. You just know the version of the
+13:21
+Windows, like Windows 10, 11, etc. So a little bit about the format and the structure. So as I said
+13:32
+before, to dump the NTS, you need NTS cutil. It dumps by default tree files. If you run the command,
+13:44
+as you can see here, the NTS. file, of course, the system hive and the security hive.
+13:53
+System hive will be useful for us. We will see why after.
+13:57
+Here another view of the NTS tables. You have more than 12 tables. Most of them are useful to run
+14:09
+the service, active directory service. And for them are very useful for us because they contain
+14:16
+data very interesting. The MISC subject data table, sorry, it contains metadata on all other
+14:26
+tables, especially for the data table. The data table contains information on objects. So this is
+14:35
+the huge one and the biggest one and you have all information on user, machine, groups, GPU, etc.
+14:47
+After you have the link table, useful to know the relationship between objects.
+14:52
+And the SD table that contains security descriptor of objects useful to audit the CLSE.
+15:04
+So the data table could be also named as the hollow table because it's full of
+15:11
+holes inside. Why? So you could have more than 3,500 columns. But depending on the type of the
+15:22
+objects, most of the columns will be empty. So for instance, if you have a domain object,
+15:35
+the domain object has different attributes than machine icons or user icons.
+15:46
+So it could be represented like this. So each entry represents an object, user, computer,
+15:56
+domain, etc. And as you see, depending on the kind of entry here, we have the column empty
+16:04
+of the load. It depends. But the problem is when you read at first time the data table,
+16:12
+you can see that the name of the column here, I completely abstract for you. You don't know
+16:18
+really what is inside. And so you can guess, maybe. So here you can take a look at this column
+16:27
+and you will see, Legolas, Gimli, Aragon, maybe, this is the same account name, maybe.
+16:34
+But when it starts to be a number, it's hard to know what's exactly inside and what kind of
+16:42
+data is in this kind of column. And just a word on the SD table, the SD table contains a
+16:50
+security descriptor. It's very small comparing to the data table and only four columns.
+16:58
+So we will talk about at the end of the presentation. So how you can pass and get the data of your
+17:08
+NTS. So as we said before, the column name is abstract. So the first thing to do is to go to the
+17:24
+MC subject. And inside the MC subject, you have all the column names in your data table.
+17:30
+And so you can grab the ID of the columns. And in the data table, you have a attribute ID
+17:38
+columns that helps you to identify on the same line the LDAP name. And the LDAP name, it's usually
+17:49
+more familiar for you. And when you have the, when you know the ATTM 590045 here, corresponding to
+18:00
+the SMA account name, after you just need to go to this column and grab the SMA account name for
+18:08
+your domain users. So this process is kind of boring and you don't want to do that each time you
+18:16
+look at your NTS. So it's not really documented by Microsoft. I can't find like a really good
+18:28
+dictionary of translation from the Microsoft website. We just realized a script that outputs
+18:37
+all the translation between the abstract attributes and LDAP name. It will be
+18:45
+the same on all activity directory except depending on the version. If you have a Windows 2003
+18:55
+level, comparing to Windows 2016 level, Microsoft added some attributes of course. So you
+19:03
+will have more attributes. The most recent your level is the most more attribute you have.
+19:15
+So to get the data, you have different library, C like Lib, ESEG and T, Python, you have
+19:24
+impact yet you have DSECTS and Go also. But with external library, so to get the data, you cannot
+19:35
+use like a kind of SQL language to directly grab your data. You will need like a file to read
+19:46
+from the beginning of the data table to the end to find your data. So here if we want to find
+19:55
+how many user that log 10 times on your domain controller, you will need to iterate all over your
+20:02
+data table and save the corresponding semi-contain. So reading the old data table for a small
+20:12
+NTS like 30 megabytes, it's kind of 10 seconds. But for a 15 gigabytes, it could take several hours
+20:22
+so you won't do that many times. So you prefer maybe reads at least at once and store all the results
+20:34
+in another database like SQL or no SQL to request it for your audit or your forensic.
+20:45
+If you're working exclusively on Microsoft on Windows environments, if you can use the
+20:51
+managed ESE library, this one should be faster. We haven't tried yet but we should. But this is,
+21:01
+this library can use internal index that Microsoft use and it could be really faster and maybe you
+21:08
+don't need to store the whole entity's data in another kind of database.
+21:17
+This is a very basic function that's a read your data table and looking for accounts that log 10 times.
+21:30
+So you just need to specify, no, it doesn't work either. So you just need to specify which attributes
+21:44
+you want to look at and after you iterate all over the data table and you print it out your
+21:52
+the semi-containment, the log-on-cont value. So here we use the Fox IT, this sect
+22:01
+library which is great if you want to take a look.
+22:10
+Data in the NTS as types of course, different types. We are not excessive here but we have
+22:19
+Integer, Large Text, etc. In the column names, you have a letter and this letter indicates what
+22:29
+kind of type is inside your column. So for instance, if you have a G, it should be an Integer,
+22:37
+should be because sometimes we have some surprised, M, Large Text, etc.
+22:46
+So just a very short list of what kind of attributes in that translation.
+22:55
+And you have also special kind of attributes. So you have encrypted attributes for sensitive
+23:10
+data such as like LM and NT password hashes. Those attributes are encrypted with the pack.
+23:25
+The pack, also the password encryption key, is also encrypted with the boot key and the boot key.
+23:36
+You will grab it in the system hive. That's why when you do like an entity SQL, it
+23:44
+gives the system hive and with the system hive you can grab the pack and you can decrypt the
+23:52
+NT and the LMH. Exception, also, yeah, the boot key is unique for your domain controllers.
+24:00
+So don't mix them up with other domain controllers of your domain, it won't work.
+24:05
+And also the labs legacy. So the first version of labs didn't require a boot key to read
+24:17
+the password because Microsoft stored them in clear text in the NTDS.
+24:25
+Now they released a new version last year. We haven't seen in productions once, only once,
+24:34
+but I think it will start to be more common and now it's encrypted. But you can still
+24:44
+store it unencrypted. But you can normally it should be encrypted in the future.
+24:54
+Just a word on the description field. It's not designed to store the password, but we
+25:03
+still see password in this field. And sometimes it's privileged accounts. So it was not designed to
+25:13
+do that, to use it, to store sensitive information and it's accessible to every user on your domain.
+25:21
+Another kind of attributes are non replicated attributes. So the attribute value are not
+25:33
+synchronized between domain controllers. So for instance, if we take an example with login
+25:41
+accounts, so if the gamely goes on the DC1 and the logon, so on the DC1 the counter will be
+25:51
+incremented. But on the DC2 and DC3, the counter won't be incremented. So if you want to know
+26:02
+how many times gamely logged on on your domain, you need to get the three NTDS and addition the logon
+26:10
+accounts together, all the logon accounts. So those kind of attributes, if you are only one copy of
+26:19
+your NTDS, you cannot trust them. Usually Microsoft documents on his website if they are replicated
+26:27
+or not. Normally. And the last kind of attributes are dynamic attributes. We call it dynamic because
+26:38
+they are not at the active directory installation. They are added after by third-party software,
+26:49
+like labs, legacy for instance. So when you are installed labs, this solution
+26:58
+modifies your active directory schema and add new attributes in your active directory.
+27:05
+So to retrieve the labs password, for instance, first of all, you need to look at the
+27:13
+LDAP name of labs password, which is MMS, MCS, IDM password. And when you have a match, it means
+27:23
+labs is installed on the domain. You have to look at the special ID, int ID, the column is called
+27:32
+in ID. And then you will be able to retrieve the right column to get the labs password.
+27:42
+So you don't need the missing subject for this one. You just need to go. But it's time on each new
+27:49
+domain. It's different. So now I will let Florian talk about SDTable and ACL and also talk about
+28:01
+a little script. Thank you, Bastion. So yeah, for now we were mostly focusing on the data table
+28:11
+and what kind of interesting findings we have when we look at the configuration of users,
+28:18
+machine, system, and so on. But the ACL topic is very trendy and we wanted to add that to our
+28:25
+tooling. So first we started by looking what was already done in the past. So mostly these two
+28:32
+projects made by also French people. So, ID contributors and BTA, they are not maintained anymore,
+28:42
+but where grid start for us to understand how ACL works. So that was there and very helpful for us.
+28:49
+And also of course, Sean mentioned it this morning. And they said this live, this white paper was
+29:01
+really great to have a starting point in understanding how ACL work in an active directory. So thank you to them.
+29:11
+So what was our plan to tackle the SDTable, how to parse it and how to identify
+29:17
+potentially vulnerable ACL through the analysis of the NTS. So our goal was to make a pattern
+29:24
+script to do that because our company we mostly use Python, it's easy to code in Python.
+29:31
+And we don't want to have a really big infrastructure to do that so we just want to store
+29:37
+the information in CSV files from now at least. So we saw that BTA was actually
+29:44
+made in Python as well. So for us, we were very lucky. It's not maintained anymore, but
+29:50
+some pieces of code we think can be reused for us. So we will look at that a bit later.
+29:59
+Also, even though in packets, it's really useful to parse the NTS and at least some part of it.
+30:06
+We saw that the DCT library from Fox IT is actually very much efficient than in packet to do so.
+30:14
+And it was really easy to use, we will show you that later.
+30:20
+And for testing purposes, we used LORD, which is an active directory environment that can
+30:28
+deploy easily on AWS. So if you wanted to play with permissions, setting permissions,
+30:37
+performance extractors in today's and see what it does on the data, it was convenient for us.
+30:45
+And for the future, we want to have the same time energy than bloodhound when it comes to the
+30:54
+AC edges that we identify. So for example, the white owner, white account restriction, and so on.
+31:00
+So how do we find the ACL for an object in the NTS?
+31:10
+So let's take an example. So first, we look at the data table, which contains information for
+31:16
+every object in the injection trajectory. And let's speak a specific object here, how are we going?
+31:23
+So we see that its anti-security descriptor is 296. And that is really important for us,
+31:32
+because we want to cross-froreference that with the SDID value in the SD table, which contains
+31:39
+the data related to the security descriptors and so the permissions on the objects.
+31:46
+So in just the table, we look for the SDID value that matches 296. And we grab the SD value.
+31:57
+That contains the actual permissions on the objects.
+32:03
+So in practice, how does it look? So with this, it's just a few lines of code to pass the SD table,
+32:11
+and which of these two values, so the SDID and the wall value of the SD value. And it looks
+32:19
+a bit unfairly at first, but fortunately, there was some documentation about the structure
+32:28
+of a security descriptor by Microsoft. And so the most interesting bits in the structure for us
+32:37
+and our topic are the owner and the DACL elements. So the owner is of course the object,
+32:47
+his owner, or the object we are analyzing, and the DACL or discussionary access control
+32:53
+list contains actual permissions that are set on the object. Let's take a deep look in the DACL.
+33:02
+So you can see it as an array of access control entries. And each access control entries
+33:09
+is like that. So there is a size, a type for us, the most interesting types are access
+33:16
+allowed types, but you can find access deny types, because sometimes you want to deny permission
+33:21
+to an object, but if you want to look for suspicious assail that I could be using in the
+33:27
+pen test also, we just look at a load. There is an access mask which contains the actual permissions
+33:35
+that are set on the object, and there are some object flags. And finally, the SDID object
+33:42
+that has the permission or on the object that you are analyzing. So let's take a look at the
+33:50
+object types. So basically there are GUIDs, and they are present only where some specific A-CIRR
+33:58
+sets. So for example, with property, with property, or control access. Let's take a specific
+34:05
+example. So if in my AC I had the white property access mask with this object type, which translates
+34:15
+to the MSDS query credentialing attributes that you can find in the documentation of Microsoft,
+34:22
+you can conclude that you actually have not key credentialing permission on the object.
+34:27
+What does that mean? It means that you can perform a shadow query and check and take control of
+34:32
+the object if you have a PKI infrastructure in the environment that you are auditing.
+34:38
+Second example, with the control access mask and this object type, which translates to the
+34:45
+user-forced change password extended white, it means that you can force change password of the
+34:52
+objects that you are analyzing. So by doing that in trading over each AC, you can conclude
+34:58
+what permissions an object has over another object. And there are some specific case for the GUID
+35:06
+of the object type in a rated object type, so the zero, zero, zero, zero, zero, even when there is
+35:12
+no GUID, which means that you actually have all the permission, all the whites and all the
+35:21
+properties or extended whites on the object. So for example, white property with zero, zero,
+35:26
+zero, zero, zero, you can white any property on the object.
+35:32
+So in practice, to pass the edge of the BTA project was very helpful for us because we could take
+35:40
+its code and redept it a little and make it work. So it's after translates the binary data to a
+35:48
+more friendly readable JSON structure. And in this JSON structure, you can actually find
+35:56
+the table of the Dacia structure that I showed you earlier.
+36:03
+So now let's take a practical example. Let's say I am an administrator and I want to configure
+36:10
+the Modify Owner right on the Oregon object for GUID. So I will use ADSI or any
+36:20
+power-short scripting to set up this permission for GUID on Oregon and you can see on the
+36:28
+white screenshot that it is actually set. So GUID can modify the owner of the Oregon object.
+36:36
+In the blood on the blood on the world, it would be like that. You would see this edge
+36:42
+after running sharp on and importing it in blowdown. So you have a white owner edge from Gimli to
+36:50
+Oregon. So let's do what we did earlier to find these privileges in this table. So first we
+37:02
+find the anti-security descriptor of our own. And then we look for in the post as the table
+37:12
+for the DSL of the object that matches the SDID 296. So it looks a bit like that, which is
+37:23
+you will agree much more readable than before. And now we have this big RRI that contains all the
+37:31
+AC and so we iterate over it to analyze all the permission and we finally end up on this AC.
+37:40
+So we can see that there is an access type access load, a white owner flag set to true and an
+37:47
+ACID. And this ACID, if you look in the post that the table, sorry, we can actually see that it
+37:56
+is actually Gimli. So what this structure means, it means that Gimli has the white owner right
+38:05
+on Oregon, which anti-security descriptor is 296. So we made a script that automates this process
+38:17
+and dumps all the suspicious ACO into a CSV file. And so if we were to take the example of blowdown
+38:25
+that we showed before, the white owner edge is represented here in our script. So you have
+38:31
+Gimli that have indeed white owner whites on Oregon.
+38:40
+So finally words, we released an open source script in Python that does automate all of these
+38:47
+or the parsing and dumping of data table and is table in CSV files. So it's really easy to use
+38:54
+just have to provide it with the NTS and the system hive and it will do the work for you.
+39:01
+So you will find all the information on the GitHub.
+39:08
+It looks like this. So we put some calculation of execution time for each function.
+39:16
+Julie is a bigger ZNTDS. The longer it will take, especially for the parsing
+39:23
+ACO parts and the two of them, the data in six different reports matching well. Domain data,
+39:32
+group data, user data, suspicious ACO, trust data.
+39:36
+And we still have some work to do on this script. There are some bugs that are
+39:45
+some are related to the libraries that we use to parse the NTS. So this act and there are
+39:51
+open issues on the project but it will not be treated in the in the community or sync. We have also
+40:00
+some way of improvement regarding the new labs attributes that are not incorporated at the moment.
+40:10
+And we haven't made the mapping for the generic core, generic white permission on that,
+40:19
+just to matter of deciding what rights some of rights the objects have and do that. So it will
+40:27
+be done in the future. Also things that we want to do to improve the two are maybe to decry
+40:35
+decry everything and have something that is really ready to use and everywhere. Maybe use a
+40:44
+proper DB to store the object because actually at the moment we are just using CSV files and
+40:50
+doing all the parsing in Python without actual storage of the data.
+40:59
+We are thinking of doing some interactions with the blood down, for example,
+41:04
+being able to translate our data into blood down compatible data. So that's been
+41:11
+gested in the tool and that it draws the beautiful graphs. So we could maybe perform the blood
+41:18
+and how it directly forms having the NTS which would be really cool. And maybe enrich the data
+41:26
+that is in the Neo4G database by actually pointing out which user uses the same passwords that
+41:33
+would allow us to identify more attack paths in blood down. Also we think that we have some work
+41:45
+to do on the SCL for some containers or GPUs. So that will be also something for the future.
+41:51
+And maybe collecting even more interesting attributes. So Bastion talked about dynamic attributes
+41:57
+like labs but all the tools from vendors can also modify the schema of the activity actually.
+42:04
+So we saw, for example, in PEN test that some tools actually are the attributes that is
+42:10
+readable by all users and that contains the MD5 of the password of the user. So that will be
+42:16
+interesting to be correct. And yeah, if you have suggestions, do not hesitate to put us
+42:23
+on the issue and get up. We'll be happy to treat it and also if you have progress there,
+42:29
+they're welcome. Oh yeah, we're good.
+42:40
+Thanks guys. Any questions?
+42:49
+Oh, they're good. Thanks again. Ah, where's one? Sorry.
+42:57
+Yeah, just one question. Regarding the tools said that you are going to provide,
+43:01
+you have like any roadmap on what you want to still continue to push, let me contribute
+43:08
+to the community on the script. Like what is the next step for your
+43:12
+and today's script? I think adding new attributes, extra attributes, just like we have talked just
+43:19
+before and also I think put everything in MongoDB database that it could be interesting to
+43:31
+to perform most sophisticated requests for audits after.
+43:42
+Any other questions?
+43:50
+Okay, thanks again. Thank you.

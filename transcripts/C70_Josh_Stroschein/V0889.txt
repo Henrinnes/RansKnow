@@ -1,0 +1,198 @@
+0:00
+And what I'm hoping to accomplish with this video is that we will just I really be able to tie together
+0:05
+The concept and now what happens when you lose visibility in the string?
+0:09
+So in order to do that, I'm gonna take our simple program here. This is the that was the modified version
+0:15
+This is the wide character. These are the strings, right?
+0:19
+These are the two most important strings from this program and you can see in this modified version now
+0:25
+Replacing these with essentially
+0:28
+Offuscated strings that is X-word strings taking each bite of the original string each character and X-wording it with a hard-coded value a single bite
+0:37
+To get these
+0:39
+New hex values and then just putting these into an array. So basically this is a this is a still our string. It's just now in an offuscated state
+0:47
+This will prevent us from being able to see these strings statically during our static analysis
+0:53
+The strings during runtime though
+0:56
+We just add a little simple function here call it decrept and this has a loop that X-ors
+1:04
+Each bite of that array with the X-word key and it decrypts those in place. So it takes this original
+1:13
+array of bytes
+1:15
+passes that as the pointer to then use each bite
+1:19
+Texor with the key to get the original value and that's one of the properties of X-word if you take a bite
+1:25
+X-word with a value. So we'll call that the key you get your cypher text you take that cypher text X-word with the same key
+1:31
+You get your original byte. So that works great. So at runtime those two strings then are decrypted and now they can be used in the program as they
+1:41
+Originally were intended and how they were intended to be used. So let's take a look at that
+1:46
+We'll go to a terminal here. We'll open up
+1:50
+Floss. I've already compiled those programs. This is the ASCII version
+1:54
+Right. So with those encrypted strings
+1:57
+They're still single byte single byte key single byte per character if we were to do the same thing with our wide character
+2:04
+Our approach would just have to take into account the multiple byte nature of each character now
+2:11
+This is just to give you a simple example X-word is still very commonly used in order to do things like this to protect and hide strings because
+2:18
+It still is effective at mitigating our static analysis and it's not overly complex to defeat but if your static tools
+2:27
+Can't recover them then it's as effective as they need to be now if something is more sensitive you can see of course more
+2:36
+You know stronger use of cryptography or other convoluted ways of protecting not just those strings
+2:42
+But you know anything within the binary itself
+2:46
+Okay, so here we have our output now and this is another reason
+2:49
+That you'll see that floss can be a little bit more helpful and that it has this decoded string section
+2:55
+So obviously there is some X-word that it goes through and tries to observe to then automatically they use the word decode
+3:02
+I disagree. I'm gonna go with the crypt
+3:04
+And we can argue about that in the comments. So there's the two strings and it's recovered those in this entirety
+3:10
+So it had to do that remember I mentioned in the earlier part of the series that the the stack strings the tight strings the decoded strings
+3:17
+Those are all a little bit of that extra magic that floss does these are ASCII strings and so if we go back and
+3:25
+Scroll through our ASCII string section right here. You'll recall these were a little bit higher
+3:31
+Right in this location they were in conjunction with the open string
+3:37
+I didn't we didn't protect that but they're not here. They're missing
+3:41
+Okay, so let's just take a look at this one in Malcat so we can go and find those
+3:45
+Offiscated strings they're gonna be basically in the same location after compilation
+3:50
+They're just gonna be in their offiscated form
+3:54
+Okay, so we'll go to the entry point
+3:58
+We'll cruise on down to Maine
+4:00
+Let's see push push push call yep. You'll notice now
+4:06
+We're not at 40100 or 401040 and if you want to know why I'm gonna tell you it's because
+4:18
+Our decrypt function now sits at the beginning of that section
+4:22
+So we could actually go up a little bit higher here
+4:25
+40100
+4:27
+right so that's the address that we're at and
+4:31
+Let's see here. There's our XOR loop. There's our key. And so that's actually the function
+4:35
+Right, so here's Maine in any case and you'll see that here is our offiscated data
+4:43
+so these are those offiscated bytes
+4:45
+2A 36363 2 7A and if we go back and look in our original source code
+4:51
+we'll see 2A
+4:54
+zoom in here 2A 36363 2 right there's all those those are those bytes
+5:00
+Now this isn't necessarily an ideal solution for an adversary
+5:04
+I I manually went in and XOR these pasted them into these arrays
+5:09
+To create the function. So you know, there's more sophisticated ways to protect your strings
+5:14
+But the goal here was just to give you some idea if we run the program as you might expect
+5:20
+It's still going to work
+5:23
+Because those strings will be decrypted when they are needed. Okay, so I've got fake net running
+5:28
+And if we run the program we know it worked. We've got the exact same behavior out of the program
+5:33
+It executed the payload that it downloaded via fake net in this case
+5:37
+And we can look at the fake net logs to see there's our request
+5:42
+To example.com
+5:46
+There it is for update.exe
+5:49
+And then you may be wondering if you've never really dug into this where do all these extra headers come from
+5:53
+Well, these are certainly strings right right and they come from
+5:57
+The the library so we'll use the library the URL download defile
+6:02
+Use the library in order to generate this request
+6:04
+So that library is what actually added all these additional headers
+6:08
+We didn't do it you saw that in this source code. We didn't add those
+6:11
+So that's another thing that you sometimes have to be able to differentiate from
+6:16
+So these are you know, these are certainly buried somewhere
+6:20
+In the library code not are executable
+6:25
+All right and to tie this all back together
+6:29
+If we did not have the ability statically to pull those strings out to identify and potentially
+6:35
+Start to piece together. What are the capabilities in this case? Where is it downloading from maybe where is it
+6:41
+Writing the file to the file system or the name that is going to use
+6:46
+It effectively slows down our analysis and we have to resort to other techniques
+6:50
+We have to dig into the binary do a little reversing we have to rely upon
+6:53
+Dynamic analysis to see the behavior itself
+6:57
+Now we did not change
+6:59
+Something we can look at just briefly here if you go to symbols in malcat you can see we did not change
+7:06
+We don't need kernel 32 the import structure
+7:09
+So we can still see these and go oh yeah
+7:11
+This are so this looks like it's going to download a file and execute because we've got download to file and we got shell
+7:17
+Execute so that's still a pretty strong indication and so it's obvious then that another
+7:23
+Step in making your binaries harder to analyze is that you hide the imports you you do you essentially resolve those in the code
+7:32
+At runtime and do that thing that the linker in the operating system do you just do it manually?
+7:37
+So again if you want to dig into runtime linking that is the concept and you'll find a ton of videos here on the channel that it take you through that
+7:45
+But that would be the last piece of evidence that is sort of the foundation for a lot of the application that you're going to run into
+7:50
+Well, maybe we'll just do that one more video. I think that would be interesting to look at so
+7:55
+Hang tight one more video
+7:57
+I'll just do some basic runtime linking with get proc address and load library
+8:01
+I'm just going to use AI to modify this program
+8:03
+So I actually won't take too long and then we'll see the final piece of this sort of basic puzzle that we've been exploring in terms of hiding strings and imports
+8:10
+So talk to you all in the next video

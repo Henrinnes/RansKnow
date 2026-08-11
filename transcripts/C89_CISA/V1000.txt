@@ -1,0 +1,674 @@
+0:00
+Hello everyone.
+0:12
+In this video we are going to demo the pipeline challenge for Presence Cup 7.
+0:15
+This challenge is all about taking advantage of DevOps technologies, so we are going
+0:18
+to be doing some fun stuff with CIST pipelines, Ansible playbooks, and Terraform plugins
+0:22
+among other things.
+0:24
+So the premise of this challenge is that we are a member of a spy agency, and we have
+0:27
+initial access to an enemy agency's network.
+0:29
+We ultimately want to accomplish two goals.
+0:31
+We want to deploy our malware on the enemy options that we want to pull down and analyze
+0:36
+the enemy's ransomware kit.
+0:38
+So let's get into the challenge.
+0:40
+Question 1 says, survey the SSH server for more information.
+0:43
+So let's log into the SSH server with the given credentials.
+0:48
+SSH user1 at SSH server.
+0:52
+Fastword1.
+0:55
+Now that we are logged in, let's start by enumerating the network.
+1:02
+We can see that there is an additional interface on this machine, so let's run an MAP scan
+1:05
+on this network.
+1:16
+Looking at the results of the scan, we can see that there are a few additional containers
+1:21
+running in this network.
+1:22
+We have a GIT team machine, a GIT runner machine, and a controller.
+1:26
+Now let's just do some basic host enemoration.
+1:28
+Let's run LST through the files in the current directory.
+1:33
+You see we have a backups folder?
+1:34
+Let's take a look at that.
+1:36
+We would dog get repo in there.
+1:40
+So let's copy this repo over to our Gala machine to analyze it.
+1:43
+We can use SCP to copy the GIT repo into our current directory.
+1:50
+So let's see the end to GIT.
+2:13
+Let's use GIT commands to show the commit.
+2:19
+We can see a few different commits here, and given the titles of all these commits, like
+2:22
+inventory, vault, playbook, this all looks like Ansible stuff.
+2:26
+So let's show this commit here, the one that adds a vault.
+2:30
+We are going to run GIT show then the commit hash.
+2:38
+And we see we have a vault file here.
+2:40
+Now this is encrypted, so let's try to decrypt this file.
+2:43
+Let's copy it to a local vault.game file.
+2:45
+Let's get rid of all these plus characters.
+2:50
+We can save that.
+3:07
+Now we can run Ansible to John to put this in a format which we can crack.
+3:20
+Say that to a file called hash.
+3:22
+We can run John on that hash file.
+3:29
+And we see the password is bananas.
+3:31
+So let's use that password to decrypt the file.
+3:34
+So Ansible Vault decrypt vault.game.
+3:45
+Enter the password bananas.
+3:50
+Now we can cat the vault file.
+3:53
+And here we see we have a GIT user, a GIT pass, and the first token.
+3:58
+So token2 says, compromise the CI-CD pipeline to escalate your privileges.
+4:02
+You can assume that there are some pipelines based on the fact that there is a GIT runner
+4:06
+machine in a GIT T machine.
+4:08
+So given these credentials, let's try to use them to log into GIT T.
+4:11
+To do that, let's forward our local port 8080 to the GIT T web port.
+4:32
+Now we can browse to port 8080 on our local host.
+4:43
+Let's sign in.
+4:49
+So test user and then the password we found.
+5:02
+And we're logged in.
+5:03
+And we see two repositories that we are a member of.
+5:07
+So let's take a look at these repos.
+5:10
+So we have a test repo.
+5:13
+You can see that there's been one commit.
+5:16
+And it's just a CI.emelfile.
+5:21
+So this is going to be a workflow that's basically just running two echoes.
+5:24
+It's not really doing anything functional.
+5:26
+If you take a look at actions, you can see we have this button in the corner here that
+5:32
+says rerun all jobs.
+5:35
+Now we will only see this if we have right access to this repo.
+5:38
+So that's good to know.
+5:39
+If we look at the job, it says it's been rerun a shared runner.
+5:43
+Take a look at the CI.emelfile again.
+5:48
+It also runs on shared.
+5:50
+Now let's take a look at the Dev repo.
+5:54
+It looks like we have a similar structure here where we have our workflows.
+6:04
+We have our consumers folder that's empty, provider folder that's empty.
+6:07
+And we have another CI.emelfile.
+6:11
+Now this is running an interesting job here.
+6:14
+So we see this job is called variable check job.
+6:16
+It's running on a schedule.
+6:17
+So it runs every minute.
+6:19
+It also runs on shared.
+6:21
+So there's a good chance this job and the previous job run on the same runner, which is
+6:25
+most likely that get runner we saw on the MF scan.
+6:29
+What this does is it checks for dev variables.
+6:31
+So we see some secrets passed into the environment like dev user, dev pass, dev pat and token
+6:37
+two.
+6:39
+And then it runs a script that seems to just check if the correct user is running and
+6:43
+these variables are passed in.
+6:44
+Then it's going to sleep for five seconds.
+6:47
+Then echo the check is complete.
+6:48
+If we go to actions, we'll see we don't have that run workflow option.
+6:55
+We had in the test repo.
+6:57
+So as test user, we don't have right access to this repo.
+7:02
+Now from here, we can try to do is gain access to the get runner via a test repo job.
+7:07
+And then we can try to leak the dev variables when the dev job runs on the same runner.
+7:12
+So that's the vulnerability with shared runners.
+7:14
+But let's do that.
+7:15
+Let's clone the test repo and the dev repo.
+7:23
+So we can just clone this directly onto SSH server.
+7:27
+So get clone into the credentials.
+7:45
+And now we clone the test repo.
+7:48
+Let's do the same with the dev repo.
+8:00
+Now let's see the into test.
+8:04
+Let's check out our own branch.
+8:06
+So let's do get checkout tech be test branch.
+8:15
+Now let's take a look at the CIFile.
+8:16
+Let's do them dot get T workflows test CIFile.
+8:26
+Let's add a job that will give us a shell on the get runner.
+8:33
+So let's have this run on our test branch.
+8:42
+We can just do a quick net cache over this.
+8:45
+So we'll do net cat tech VLP 4444 tech e been bash.
+8:58
+This is just going to open a bind shell on the runner.
+9:00
+Let's save the file.
+9:02
+Then we'll do get add.
+9:07
+Then get commit.
+9:08
+Let's call it shell.
+9:13
+We're going to get this prompt here.
+9:16
+We have to add an email and a name.
+9:19
+We could just do the examples.
+9:20
+It's not important with these actually are so you can just copy paste.
+9:29
+Let's run that commit again.
+9:33
+This time it worked.
+9:34
+Push to the test branch.
+9:41
+And that should start a shell on the runner.
+9:52
+So let's connect to that shell.
+9:53
+But first let's just do that from a fresh SSH server.
+10:00
+Now let's run net cat get runner 4444.
+10:12
+We have a connection.
+10:16
+Let's just run an ID.
+10:19
+We are the runner user.
+10:21
+We have to run a PWD to get our working directory.
+10:24
+And here we'll see something interesting.
+10:27
+We're basically in an ephemeral directory that's going to get destroyed once this job is
+10:31
+complete.
+10:32
+So what we want to do now is we want to capture the process that gets started by the dev
+10:36
+job and print out the process environment to get those dev variables.
+10:39
+But we can't do that right now because our current net cat shell is blocking the
+10:43
+get runner.
+10:44
+So we have to finish this job before we can access the dev job.
+10:48
+However, once our net cat shell ends will lose access.
+10:52
+So what we can do now is we can create an additional net cat shell using no hub and
+10:56
+set sit commands.
+10:58
+So it will survive the killing of our current process.
+11:01
+But before we do that, we want to change our directory to something that won't get
+11:04
+destroyed after this process ends.
+11:07
+So we can just do CD into temp.
+11:11
+If we want we can see the into the home directory.
+11:13
+It doesn't really matter.
+11:14
+But let's just get out of this directory.
+11:17
+So now we can run our net cat shell.
+11:24
+Use tacade to keep that persistent.
+11:27
+We can listen for 55555.
+11:33
+Run that in the background.
+11:37
+So we'll run that.
+11:38
+Now that we have a new shell listening, we'll close our current shell and we'll connect
+11:42
+to this new one.
+11:47
+Now we're back in.
+11:54
+We can run ID and PWD again.
+11:59
+We're in temp.
+12:01
+And now this is good because the job will have finished and now the dev job will be
+12:04
+allowed to run.
+12:06
+So we noticed that the dev job ran a sleep 5 command and what we want to do is just capture
+12:10
+that sleep process and dump the environment variables.
+12:14
+So let's use a quick little shell loop that will constantly check for that sleep process
+12:18
+and then dump the environment variables to a file.
+12:23
+So this is the command, just a while loop one liner here and the dev job runs every minute.
+12:28
+So we just have to wait and be patient.
+12:32
+And once we let that run, we'll see we have all of the dev variables as well as the second
+12:36
+token.
+12:37
+So let's copy all this over to our Calibox.
+12:43
+Let's make a new tab.
+12:45
+We can use this to store our credentials.
+12:50
+All right, so let's move on to the third token.
+13:01
+So token 3 says, take advantage of the InfraRunner to extend your access deeper into the network.
+13:06
+The token will be in temp token 3.text on the InfraRunner.
+13:11
+So let's use our new credentials to log in to get t once again as dev user.
+13:20
+Sign out as test user.
+13:23
+Sign in as dev user.
+13:40
+You see we have access to the dev repo and now an InfraRebo.
+13:44
+Let's take a look at the InfraRebo.
+13:52
+We have a workflow in this repo.
+13:53
+So this is an interesting workflow here.
+13:55
+So this is going to run every minute, just like the dev job did.
+13:58
+It's going to run a job called InfraDownload.
+14:01
+So we see here that what this is doing is it's deleting the dev folder and then creating
+14:06
+the terraform.d plugins folder.
+14:10
+And we see why it deleted the dev folder because it then clones the dev repo.
+14:16
+Then it's copying files from the dev repo into the terraform plugin directory and in the
+14:21
+current directory.
+14:22
+Then it's going to run terraform in it and terraform plan.
+14:27
+So what we want to do is we want to push our own terraform provider plugin and our own
+14:31
+main.tf file to the dev repo.
+14:34
+Wait for this job to run.
+14:35
+In which case it will run our custom plugin that can give us a reverse shell on the Infra
+14:39
+Runner, which is likely the controller machine we saw in our end map scan.
+14:43
+So let's do that.
+14:45
+Let's go to our Calibox.
+14:48
+Let's make a new tab.
+14:54
+And in the challenge description, we see that we want to build in the TFgoMod directory
+14:59
+because this already has pre-installed terraform libraries.
+15:05
+So we'll start by building that terraform provider.
+15:08
+Let's do Vim main.go.
+15:13
+And this is going to be our provider here.
+15:15
+So you can see we import some terraform libraries and these are going to be the ones that are pre-installed
+15:20
+already.
+15:21
+And then we're just creating a reverse shell function.
+15:25
+It's going to connect back to our SSH server on port 7777 and launch a shell.
+15:31
+And then we have our main function.
+15:33
+It's just going to execute our rev shell function.
+15:37
+So let's save this.
+15:41
+Then let's make our main.tf.
+15:49
+So this is what's going to consume our provider file.
+15:52
+And this is just taking the source of our rev shell.
+15:54
+We'll create this local directory soon and use it as our plug and directory.
+16:00
+So let's build this module.
+16:02
+Let's build this statically so that it runs on different Linux distros.
+16:06
+If we want, we can enumerate the OS information on the runner.
+16:09
+And we'll find that that's actually running Alpine Linux.
+16:12
+So a different distro than the Calibox.
+16:15
+We want to build statically.
+16:25
+So now that we've built that, we'll see that a default build is a file called tfgo.
+16:50
+What we'll do next is we'll create that local directory.
+16:53
+And inside it, we'll create a directory structure that Terraform can parse.
+17:00
+And then we'll copy our tfgo file into that directory and we'll rename it Terraform Provider
+17:04
+RevShell v0.1.0.
+17:20
+And now we can copy our local directory over to the dev repo on the SSH server.
+17:34
+We can copy our main.tf to the dev consumers folder on our SSH server as well.
+17:44
+Now, we should expect the infra job to run these providers at the wheat push.
+18:13
+So we need to create our reverse shell listener on port 7777.
+18:39
+Now we need to push our files to the dev repo so that the infra job can take them up.
+18:48
+Let's do a git add.
+18:52
+git commit, tag m, provider, and consumer.
+19:02
+git push origin main.
+19:20
+Now we can wait for the listener to catch the shell once the infra job launches our provider.
+19:33
+And we receive the connection.
+19:34
+Now we quickly need to create another shell in the same way we did before using no hop
+19:38
+and set sit.
+19:43
+Our current shell will close on its own so we can't wait too long to do this.
+19:48
+Close out with control C. We can connect back to it on port 8888.
+20:02
+Now around the controller we can get the token.
+20:10
+So now we have a third token.
+20:12
+Let's move on to token 4.
+20:15
+Question 4 is as follows.
+20:16
+The Ansible ADM user periodically runs Ansible tasks.
+20:20
+Use these tasks to deploy and execute the custom backdoor on manage nodes.
+20:24
+Once you have executed the custom backdoor on the manage nodes, run the greater check
+20:28
+at HTTP greater.
+20:30
+Be sure not to alter any pre-existing Ansible tasks or the greater check will fail.
+20:35
+So it looks like we're going to be taking advantage of some Ansible tasks.
+20:38
+So let's look around this file system and see if we can find any Ansible playbooks
+20:42
+or other Ansible files.
+20:44
+A common place to look is in the op directory.
+20:55
+We can see a few files in op playbooks.
+20:57
+We can see an inventory file, a system check playbook file, a tools FTP playbook, a vault
+21:03
+.gaml, and a vault pass.
+21:05
+And we'll see that we have read permissions on the inventory file and write permissions
+21:09
+on the system check playbook file.
+21:12
+So the fact that we can write the system check playbook is good for us to know because
+21:15
+we can overwrite this playbook with our own tasks.
+21:18
+And then those tasks will be run against whatever is in the inventory file.
+21:31
+If we enumerate these files, we can see that the inventory file targets the op user
+21:35
+on the ops1, ops2, and op3 machines.
+21:38
+And all this is doing is just running a built in gather facts command from Ansible.
+21:43
+Just basic system information.
+21:45
+And what's interesting to know is if we continue to look around the file system, we'll
+21:49
+actually find an Ansible.config file in the Etsy Ansible directory.
+22:05
+What this is doing is it sets a few defaults.
+22:07
+It sets the default vault inventory file, which is the inventory file we found in op
+22:12
+playbooks.
+22:13
+And this also sets a default vault password file.
+22:16
+And this is the vaultpass.text file we found in our playbooks as well.
+22:21
+This reference is a vault.gaml file, likely the one we also found in op playbooks.
+22:27
+What's important to note here is that a default vault password file is going to be used
+22:31
+as the password file to decrypt any vault file we specified in a playbook.
+22:36
+What we see here is that vault.gaml seems to be holding a variable called ops pass, which
+22:44
+is likely the password for the ops user.
+22:47
+So what we can do here is we can actually write some lines in the system check playbook
+22:51
+that ask for privilege escalation, which will cause our Ansible tasks to be run as root.
+22:57
+So let's copy the contents of system check playbook.
+23:07
+Before we edit the playbook, let's download custom backdoor from the greater.
+23:11
+You can use curl to download the custom backdoor and save it to 10.
+23:37
+Now let's edit on SSH server.
+23:40
+So we can open systemcheckplaybook.gaml on SSH server and copy the text into this file.
+24:05
+So let's add some lines to this file.
+24:10
+Let's create an additional task that executes our custom backdoor and we'll use the become
+24:15
+field and we'll set that to true.
+24:18
+Then we'll use the vars files field and set that to opplaybooksvalt.gaml.
+24:24
+Then we'll set vars and we'll set the Ansible become password to ops pass.
+24:31
+Now what this is doing is this is going to try to escalate privileges by using the
+24:35
+ops pass variable inside vault.gaml.
+24:38
+Then the actual task is going to first transfer the backdoor to the opstations and then execute
+24:44
+the backdoor.
+24:45
+And we'll run this with Async and pull so that we don't hold up any other Ansible tasks.
+24:51
+And we'll make sure we keep the original gatherfax task within the file so it's not to overwrite
+24:55
+it.
+24:56
+We'll save that file and let's transfer it over to the controller.
+25:01
+Now the way we can do this is we can go on the controller.
+25:06
+We can open a NetCatListener on port 9999 and save the output from that listener to
+25:11
+temp systemcheckplaybook.gaml.
+25:16
+Then we can go to SSH server.
+25:29
+We can connect to that port 9999 on controller and send all the text from systemcheckplaybook.gaml
+25:36
+through that connection.
+25:40
+You can see the controller is going to go back to controller.
+25:56
+We can see that if we cat temp systemcheckplaybook.gaml, we will have our changes.
+26:07
+Now let's overwrite opplaybook.gaml.
+26:11
+So we'll cat temp systemcheckplaybook.gaml and we'll redirect that output to optplaybookssystemcheckplaybook.gaml.
+26:34
+Now we can wait for the Ansible ADM user to run our new playbook.
+26:40
+After waiting, we can browse to HTTPGrader.
+26:50
+We can hit the RunGrader button and if we overwrote the playbook correctly, we'll get
+26:55
+the fourth token.
+26:56
+Now we can move on to token5, which says gain access to the file server and extract
+27:01
+the x-cryps or binary.
+27:03
+Analyze the file to find a token.
+27:06
+So if we want to access the file server, we'll probably need FTP credentials.
+27:16
+What's interesting is that we notice a tools FTPplaybook.gaml file inside of opplaybooks.
+27:22
+And often what happens with these playbooks is if they use hard coded credentials, you
+27:27
+can find those credentials within the logs of the node they were run on.
+27:31
+And if this file was run on the ops nodes, then we could potentially find these FTP credentials
+27:35
+within the logs on the opstations.
+27:38
+So let's connect to our back door on one of the opstations in order to look at the logs.
+27:44
+So we can connect with Netcat, tag v, ops1, 4444.
+27:54
+And we see that we are running as root.
+27:56
+So our privilege escalation that we wrote into this system check playbook was successful.
+28:01
+Next we can run lsvarlog.
+28:05
+And we'll see there's a syslog file.
+28:08
+So let's grep for FTP in that syslog file.
+28:17
+After running that grep command, we can see that there are credentials for the file server.
+28:23
+We can then use those credentials to access the file server.
+28:26
+So we'll do FTP file server.
+28:31
+Enter the username and password.
+28:39
+And we can run a der.
+28:42
+And we'll see the xcryptsor binary.
+28:44
+We can do get xcryptsor.
+28:51
+And we can quit out of the FTP prompt.
+28:56
+Now we can analyze xcryptsor on ops1.
+28:59
+Let's just try running strings and grep for PCCC.
+29:12
+And if we do that, we can get the file token.
+29:14
+That concludes the pipeline challenge for PresenceCuff7.

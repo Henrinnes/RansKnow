@@ -1,0 +1,764 @@
+0:00
+Thank you so much.
+0:08
+So today we will be talking about exploiting the in vehicle browser.
+0:13
+This is a kind of a novel attack that had never been tried before and I tried in 2022.
+0:19
+So we will talk about this.
+0:21
+So it's about like my brief introduction.
+0:24
+I work in accelerotechnologies.
+0:27
+It's a US based company.
+0:29
+And I'm a manager there.
+0:32
+My focus is normally on binary exploitation.
+0:36
+I started my journey into AIML security since six in sorry, we can say eight months.
+0:43
+But I do have a experience of automotive and telecom security as well.
+0:49
+I had been an X chapter lead for Nell Ahmedabad which is an open security forum in Vajraath
+0:56
+in India.
+0:58
+I'm an author and project lead off auto hack OS which like it's an operating system like
+1:04
+fluid operating system for you know for the automotive security.
+1:10
+So it comes with pre configured and tools everything that you require for your testing
+1:16
+your vehicle.
+1:17
+Okay.
+1:18
+It again it has this LT and GSM stack recombiled for your Ubuntu 22.
+1:27
+I am a training author of auto sec pro which is available on Pantist magazine and Hacking
+1:34
+night.
+1:35
+So this is the course that I had offered.
+1:39
+I had been a speaker at Dakateshah Nalcon, Hidcon besides Delhi, besides Maharashtra,
+1:45
+besides Ahmedabad in the Bounty Bash, United call and Nalconnities.
+1:51
+So I'm a core team member and a co-organizer of a telecom village at Defcon US and lifetime
+2:00
+learner.
+2:02
+So I do mistakes.
+2:03
+I learn from it but ultimately we have to hack it.
+2:07
+So the more I try to learn the more I understand that I know nothing and that's the reality.
+2:16
+So in today's world you know I used to say to everyone that you know in the world of
+2:24
+autonomous vehicle if a driver is not driving your car a software is driving your car and
+2:30
+if a software is driving your car it can be hacked.
+2:34
+So welcome to the world of this autonomous vehicle.
+2:39
+So today's agenda is we'll talk about the difference of auto and right auto as well
+2:43
+as Android automotive OS.
+2:46
+The browser integration into this automotive OS and we'll talk about the attack surfaces.
+2:52
+We'll talk about browser APIs, car services and car APIs, recond methodology, exploitation
+2:59
+methodology.
+3:00
+We'll see the POC on the real car.
+3:06
+We'll discuss the flow chart of exploitation and what actually happened when we tried.
+3:13
+We'll discuss about that.
+3:15
+And the mitigation strategies.
+3:18
+So this is a disclaimer.
+3:20
+So the vulnerability was reported in 2022.
+3:27
+And it was mitigated by the vendor.
+3:31
+Actually we cannot say the vendor but yeah they mitigated it in two days.
+3:36
+And the vendor explicitly asked me to not name them or share the technical details.
+3:43
+But it might give them put them into the battle.
+3:47
+So we'll not name the vendor but we'll have the POC video but the logo of the cars and
+3:56
+everything will be kind of blurred.
+4:00
+So let's talk about the differences between Android Auto and Android Automotive OS.
+4:06
+So Android Auto is nothing.
+4:08
+It's kind of a projection of your phone to your head unit.
+4:14
+And our automotive OS is the whole Android kernel and all those stuff compiled with this.
+4:23
+And you can use it and you can compile your own with AOSP, right?
+4:29
+WOSP, you can compile with it.
+4:32
+So you can integrate your browser in head unit applications and everything in Android
+4:40
+AutoMotive OS.
+4:42
+So this is a difference.
+4:43
+So Android Auto runs in your phone while Android AutoMotive OS runs in your head unit.
+4:49
+So we started with this simple video in the car.
+4:54
+But we end up with the browser in your head unit.
+4:57
+So we had integrated the whole computer in your car.
+5:02
+So this is responsible for making it possible.
+5:06
+This is the hardware, SA-8155P.
+5:11
+And now we have moved to the world where we started the car as a distributed network to
+5:20
+domain base and now we have moved to the zone.
+5:24
+Tesla is trying hard for implementing the zone architecture of Automotive.
+5:30
+There will be only one single MCU.
+5:34
+Now we have moved from MCU to this ARM base processes for handling lot of network,
+5:46
+you can message it and your Ethernet messages on your car.
+5:51
+So for that you require a good processor.
+5:55
+So this is normally found in this head unit.
+5:59
+So how this browser is integrated in your Automotive?
+6:05
+So the bottom layer is the Linux kernel.
+6:09
+On the left side it is your traditional Android and on the right side it's your Android
+6:14
+for your Automotive.
+6:16
+So it has this vehicle hell.
+6:19
+So it's a hardware abstraction layer which provides you and the way it would interact with
+6:26
+your hardware.
+6:27
+It's a vehicle hell.
+6:29
+That is connected with your car services which provide you the libraries for your, you
+6:34
+know, interacting with your vehicle hell and the car managers are the car APIs basically.
+6:41
+And on the top most layer there will you can install your own applications.
+6:49
+Your OEM applications come pre-built with your car, right?
+6:52
+Or third party applications like Spotify or, you know, any other.
+6:58
+Applications.
+6:59
+So how this actually works, right?
+7:03
+When you open, when you run an Android application, it uses a car manager with a car library,
+7:13
+right?
+7:14
+It integrates with a car library, right?
+7:15
+Talked with the car library and there is a binder that is called AIDL interface to
+7:22
+the car service.
+7:24
+And this car service interact with the vehicle hell.
+7:27
+That is AIDL interface and that actually and with a vehicle ECU.
+7:33
+So you may find some applications where you can monitor your, you know, if you had
+7:40
+use your OBD, like if you use your phone connect with your OBD with a Bluetooth and you
+7:48
+can find out your diagnostic message is what is going wrong in my car, right?
+7:54
+That is basically UDS and all those stuff.
+7:57
+So now it can, like you can make up application and you can integrate with your Android
+8:02
+Automotive OS.
+8:03
+So this is how it actually works.
+8:04
+So vehicle ECUs properties can be accessed by vehicle hell and the car service provides
+8:10
+an interface between this vehicle hell as well as a car library.
+8:14
+And this car library gives an API for your, for for making an Android application for
+8:19
+you developing an Android application.
+8:22
+So this is how the again, the browser comes, it's another application in itself, right?
+8:28
+It comes with it.
+8:30
+So what are the attack surface?
+8:32
+What can be target with this particular browser, you know, exploitation stuff?
+8:38
+So we can, we can target this custom OEM browsers because they are not fixed immediately,
+8:44
+okay?
+8:46
+Especially when they, you know, ship the car in the market, it is really pretty hard
+8:53
+for them to mitigate, right?
+8:55
+So the another, you know, attack surface is web view based applications, you know, like
+9:04
+examples are connected cars, you're messaging and social messaging apps, you're music and
+9:09
+streaming apps, your payment gateway apps, right?
+9:12
+So basically it spawns your, you know, web view APIs in the background and the cloud-based
+9:18
+diagnostic apps, right?
+9:20
+So these are the attack surface.
+9:22
+We can target this applications.
+9:26
+So these are the browser APIs.
+9:31
+It has this first web view API which uses, which provide you the, you know, embedding for
+9:36
+the web content, right?
+9:38
+And most of this, like our Chrome based, okay?
+9:42
+We have system service APIs, which provide the system service libraries that you can interface
+9:47
+with, you know, audio or notification or locations of these and everything.
+9:53
+But at the end, it comes from your hardware, right?
+9:56
+Here API gives you, you know, playback features and all those stuff, your media features,
+10:02
+okay?
+10:03
+Vehicle context API provides access to the vehicle specific data such as speed, location,
+10:09
+battery status and all those stuff, connectivity API, it handles the network connectivity,
+10:15
+like, you know, Bluetooth, Wi-Fi, cellular and all those stuff.
+10:19
+Permission APIs.
+10:20
+So these are the common APIs that normally an application will use in an Android Automotive
+10:25
+OS, right?
+10:26
+So permission API and application context API, right?
+10:31
+From managing the settings.
+10:34
+Okay.
+10:35
+What are our targets?
+10:38
+Like what should be our target, right?
+10:39
+What should we try to access?
+10:42
+We should be like, we should try to access this like car services and APIs, right?
+10:48
+The car sensor manager that gives you the data about RPM, fuel level and all those stuff,
+10:54
+audio by the name you can understand, right?
+10:57
+Media manager, it gives you the playback services and features and all those stuff.
+11:02
+Navigation manager gives you location and all.
+11:05
+Car info manager, climate, EBS, right?
+11:09
+Like, e-dversing cameras and all those stuff.
+11:11
+Diagnostic messages.
+11:12
+Okay.
+11:13
+So this is, you know, this car diagnostic manager gives you a lot of data, okay?
+11:19
+It's like if you have been to Automotive, you might know about UDS services in car, right?
+11:25
+So it gives you the, you know, system code and error messages and all those stuff, okay?
+11:33
+We call it as a DTC course, right?
+11:36
+And power manager and package manager.
+11:39
+So these are the APIs that should be our target, okay?
+11:45
+So let's talk about the recon methodology.
+11:48
+So when we first want to exploit, we'll let, so we need to understand what are the VHEL,
+11:58
+or we can say vehicle, health properties that are being enabled by vehicle manufacturer,
+12:05
+right?
+12:06
+So that, that can be your target.
+12:08
+Like, we will try to touch this, we will try to manipulate this VHEL properties, right?
+12:16
+So you can do that with the command LSHEL, okay?
+12:21
+So for this, you need your vehicle, you need to enable your developer option in your vehicle.
+12:31
+And if the scope is white box, take the image of Automotive OS, or we can say this, and
+12:37
+fetch the APK for the browser.
+12:40
+If the black box, turn the developer option and try to pull the APK from the browser.
+12:45
+But in Android Automotive OS, there's pulling that APK is pretty much hard, right?
+12:51
+So for that, you need a root access, okay?
+12:55
+So you might fail in this second and third options.
+13:03
+So you have to figure out the way doing an MITM attack.
+13:11
+Okay.
+13:14
+So once we have the APK for APK file, we have to find this to, you know, particular lines
+13:22
+in this manifest file, that is like Android.Permission.exe underscore vehicle and underscore data.
+13:28
+That actually gives you the, provides access to the vehicle data, right?
+13:34
+As well as bind, car service.
+13:37
+So this manifest file will give you a picture how your Android application, especially browser,
+13:45
+is going to connect with your car services, or which are the vehicle data it is going to
+13:52
+access.
+13:53
+So first thing, check your manifest file from your APK.
+13:57
+Second service is check for the service declared in the manifest.
+14:02
+So again, this service, Android name, it could be a custom and Android permission, check
+14:09
+for that Android permission, colon permission equal to Android.Card.Permission, bind car
+14:15
+service.
+14:18
+Check for any intent filters if it is enabled.
+14:23
+That should have this name Android.Card permission, vehicle data, okay?
+14:29
+And libraries, okay?
+14:31
+libraries, I have still not found in major applications, but you have to place down this,
+14:40
+you know, findings as your recon because you need to know which properties are being
+14:46
+exposed to the, are exposed to the application by vehicle manufacturer.
+14:52
+Because most of this properties can be turned off or we can say disabled by them.
+14:59
+So manufacturer can decide what need to be enabled and what need to be disabled, right?
+15:05
+So from that, pulling your APK file, understanding your APK file, how the APK is going to interact
+15:14
+with your vehicle, right?
+15:18
+With the car service as well as vehicle data.
+15:23
+So acceleration methodology, okay.
+15:26
+Normally what I have seen with this, you know, like this is the biggest mistake I have seen
+15:36
+in this, uh, uh, pan test of vehicle that, uh, they do reverse engineering of, uh, can
+15:43
+messages, like they do list which are, which messages are responsible for which kind of
+15:50
+task, right?
+15:52
+And they think canvas is a different and they think vehicle or Wi-Fi or any other interfaces
+15:59
+is different.
+16:00
+But this is the best practice, uh, that whenever you do any, you know, attack on vehicle,
+16:07
+right?
+16:08
+It might be your Bluetooth or BT, uh, uh, attack, right?
+16:11
+Or it can be your Wi-Fi attack or LT attacks.
+16:14
+Keep monitoring your car, canvas, right?
+16:17
+So always start monitoring your canvas before starting your testing, okay?
+16:23
+And try to eliminate those can IDs which you know are responsible for particular tasks,
+16:32
+right?
+16:33
+Which are repetitive, like your diagnostics, right?
+16:36
+You can ignore this at first, right?
+16:39
+Then enable your developer option more, uh, from the head unit.
+16:45
+So, uh, the debug shell or, uh, and the diagnosis services, uh, by ADB shell, I will provide
+16:53
+the list of this.
+16:55
+I forgot to paste, like the paste bin, I had put it on the paste bin as well.
+16:59
+Uh, enable this V-Hell debug, right?
+17:03
+And V-Hell property is available.
+17:04
+You can list with L-Less, uh, V-Hell, right?
+17:08
+And now collect the log with dumpsys.
+17:12
+Keep looking for the docs.
+17:13
+So one tab, you, you're, you're one, you know, terminal will be looking for your canvas,
+17:18
+messages, one terminal will be looking for your dumpsys.
+17:22
+And another terminal will be fuzzing your vehicle, uh, like particular application or something,
+17:29
+okay?
+17:30
+And the third will be you can, you can again, for your safety, like for more visibility or
+17:38
+we can say, what was, uh, logs, you can keep monitoring your logcat as well, right?
+17:45
+So if you're, uh, like keep looking for the logcat with, you know, uh, car service helper.
+17:51
+So any of this, you know, uh, when, when an application is failing at V-Hell, okay,
+18:01
+when it's trying to interact with V-Hell and it gets failed, it will be logged as car
+18:07
+watch, watchdog killed, okay?
+18:10
+And those files are, those log files are stored in slash data slash a and r, okay?
+18:18
+So keep looking for those, you know, failures with interaction with V-Hell, okay?
+18:25
+And you try to find which PID is responsible for that and you can look for those, you know,
+18:32
+uh, a and r files.
+18:36
+And by that you will, uh, be able to get the trigger for your, you know, uh, which are
+18:43
+the, you know, heat, uh, for your, like, uh, for your fuzzing, right?
+18:49
+So look back again and again, right?
+18:51
+So your, uh, canvas monitoring, your logcat monitoring, your lump sheets monitoring should
+18:59
+be enabled simultaneously along with the fuzzing.
+19:02
+And that is how you will understand which application that you are fuzzing is going to
+19:08
+hit your V-Hell.
+19:11
+Because ultimately your exploit change should be, your target should be like when we are
+19:17
+doing any RC for, you know, uh, for, for driver in the windows, we, we look for LLP, right?
+19:26
+So in the same way, we will look for any heat on the V-Hell, especially.
+19:33
+So this is the exploitation method, methodology we should adopt.
+19:36
+We had use tape.
+19:38
+Okay.
+19:39
+Uh, we'll look at the POC.
+19:41
+Uh, we had, I'm going to show you the POC of POC video of this loss where the airbag control
+19:47
+got failed.
+19:49
+Wiper flew fluid system got failed.
+19:52
+Airbag was disabled, SOS service was disabled and emergency call systems were failed.
+19:58
+Can you play the video?
+20:03
+We are just opening the first file and can see.
+20:27
+Okay.
+20:29
+Uh, if you want to watch it again, then we can play it again.
+20:33
+Okay.
+20:34
+Uh, this was the POC video that we had performing 2022.
+20:39
+Uh, how this flow chart of exploitation worked.
+20:43
+We had this test files that was basically targeting the vulnerability type confusion,
+20:50
+uh, in V8 engine, right?
+20:53
+And it was doing a hip spring, you know, targeting the hip for, you know, understanding the layout
+20:58
+and where we can store our shell code.
+21:02
+Then use after free in that was targeted for inline caching to an RC.
+21:08
+But we are talking about Android automotive OS, right?
+21:14
+Google is not like we cannot consider that Google might not be looking at the security
+21:20
+part.
+21:21
+So what actually happened, right?
+21:24
+We got failed.
+21:26
+Right.
+21:27
+We failed in, uh, especially when you are targeting your browser for connecting with
+21:34
+VHELP, we fail because it normally it is okay.
+21:38
+So why it gets failed because browsers are into the category of part application.
+21:45
+So once you accelerate your car, it won't work.
+21:49
+Okay.
+21:51
+So and second, the point is that standard browsers like Chromium doesn't normally directly
+21:59
+come interact with car service or car APIs.
+22:02
+This, uh, POC, they had, you know, used the Chromium and they had built it on their own
+22:10
+for their like OEM specific browser.
+22:13
+Okay.
+22:14
+And that is where the attack surface became wider, right?
+22:20
+So normal standard browsers like Chrome, Firefox doesn't interact with car service or car
+22:26
+API by default until less enabled by our, you know, rebindled by the OEMs.
+22:36
+And unless we target the web applications, they are not interacting with car service or
+22:41
+car APIs.
+22:42
+Web view based applications can interact with car service or car APIs, right?
+22:46
+Car APIs.
+22:48
+So and browsers are sandboxed, right?
+22:51
+So you will encounter more hurdles, right?
+22:55
+But again, if we, uh, just, just think about exploiting your incase for VA after your
+23:04
+months of hard work and you are not able to touch your V-HELP, right?
+23:11
+So this is going to fail, right?
+23:15
+So browsers have a limitation in Android Automotive OS, but the same methodology can be applied
+23:21
+to any of this application that you are targeting for, uh, for, for the applications in your
+23:27
+head unit, right?
+23:29
+Well vehicle manufacturers just want compliance.
+23:32
+I'm not complaining, but they just want compliance.
+23:35
+They are not focusing on security.
+23:38
+If they are compliant with the organization, like regulations, they are okay with it,
+23:43
+right?
+23:44
+So you may find, so what, what is your primary target should be?
+23:49
+Those OEM customized browsers or web view based applications that are or any of the application
+23:57
+that interact with the V-HELP, but once this cars are, you know, uh, are into the market
+24:06
+because it is pretty expensive for them to update.
+24:10
+Right?
+24:12
+So these are the mitigation strategies.
+24:18
+Always use the code analyzer in CI-CD, uh, use OS dependency check.
+24:25
+Uh, when, uh, so AWS gravitation, uh, gravitation as, uh, like given us, like it is open, like
+24:35
+you can deploy your W-A-O-S-P, like your Android O-Automatically OS on your cloud.
+24:43
+Taste your, uh, you know, applications before deploying it on your head unit.
+24:49
+Okay?
+24:50
+So use that.
+24:51
+Uh, you can incorporate cat box.
+24:54
+Uh, the whole documentation is available on the Android, uh, particular page of, you know,
+25:01
+of that Android page, right?
+25:04
+So you can integrate that cat box.
+25:06
+It gives you the pipeline for your fursing and everything.
+25:09
+So cat box is the standard tool given by Android itself for your, uh, for securing your
+25:16
+applications before you deployed.
+25:19
+And of course, implement V-SOC, vehicle SOC.
+25:23
+So if there is an, you know, uh, you know, exploit being exploited widely on the vehicle,
+25:31
+you get to know from the data.
+25:34
+Uh, we ended up very quickly, I guess so.
+25:40
+So, thank you.
+25:42
+Uh, any questions?
+25:44
+Any questions?
+25:48
+Do we have any questions from the audiences?
+25:52
+You can raise your hand and I can give you a mic.
+25:55
+All right, then, um, oh, yeah.
+26:00
+Um, yeah, this is very interesting.
+26:07
+From your experience, uh, what are the relevance, uh, this scenario or similar advanced technique
+26:14
+in today's ecosystem, where most of the cars are getting digitized.
+26:19
+So if you can share your experience and as, as buyers, what are the things that we should
+26:25
+be aware of?
+26:26
+Okay, so, uh, we are moving towards the world of autonomous vehicles and as I told before,
+26:33
+like I say that if driver is not driving your car, a software is driving your car.
+26:39
+And if software is driving your car, the software can be hacked, right?
+26:44
+So ultimately your car can be hacked.
+26:46
+So, but as an, you know, uh, we cannot do much as a car owner.
+26:53
+It's a definitely, it's a shared responsibility, but the major stack of the responsibility
+26:58
+goes to the car manufacturers.
+27:01
+So they should be because, uh, most of us are aware that a couple of data points are shared
+27:09
+with the car manufacturer to have statistical, like you tool the example of Tesla.
+27:14
+And Tesla shares all the data with its centralized repository.
+27:20
+So is there something that can be done as a regulation from, from government or central
+27:26
+bodies who is keeping a tap on this?
+27:28
+What should be shared?
+27:29
+What should not be shared?
+27:30
+Okay, so, uh, the video POCI, I, I show you, uh, we had worked for that vendor, okay?
+27:39
+And there was an diagnostic application, connected application and they were, they were
+27:45
+connected with their cloud.
+27:47
+I got this, like, it was in our scope to pentease their application, Android application.
+27:56
+We got a hard-go-date credential for the cloud, right?
+28:00
+We were able to log in and we were able to see what are going wrong in particular vehicles,
+28:06
+right?
+28:07
+So this, uh, and, and they had given the right access on the car.
+28:13
+So from the cloud, uh, they were shipped with the ECM, from the cloud, you can run any
+28:20
+diagnostic scan and that scan will particularly run in the vehicle.
+28:26
+So this right access or like your access control should be implemented in that should be regularized
+28:31
+from the government itself that you should, you, you must focus on access control at first.
+28:38
+So the more you make it harder, like, as we discussed, browsers are sandbox, but not every
+28:45
+applications are sandbox, right?
+28:48
+Just think of the scenario, right?
+28:50
+That, like, they, they appreciated my work on that, like, from the cloud, we were able
+28:55
+to run the diagnostic scan on the vehicles.
+28:59
+This was dangerous, right?
+29:01
+Because you can do your, uh, exploitation.
+29:05
+You have to craft a chain and everything, but again, it is possible.
+29:08
+So access control is the first thing that a regular regulatory body should do.
+29:14
+Yeah.
+29:15
+Any more question?
+29:19
+I hope you like it.
+29:21
+And, uh, I'm available on social media anywhere to connect with the name, uh, you will like
+29:27
+the name for a stated researcher.
+29:29
+Okay.
+29:30
+So you can connect me on any of the social media with a frustrated researcher.
+29:35
+All right.
+29:36
+Then, um, thank you very much.
+29:38
+Please give him a big round of applause.
+29:40
+Thank you.

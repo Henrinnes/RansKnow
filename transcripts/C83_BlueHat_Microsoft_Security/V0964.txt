@@ -1,0 +1,268 @@
+0:00
+There we go.
+0:11
+Hi folks, my name is Matt. I'm Chief Security Architect and Distinguished Engineer
+0:15
+for OneDrive and SharePoint. And it seems like for every concept in computer science or software
+0:22
+engineering, there's an appropriate XKCD. And whether you're a builder, a defender, or
+0:28
+a breaker, we're all familiar with just how shaky our digital foundations are.
+0:33
+And unfortunately, even well-meaning or well-chosen dependencies can turn against us.
+0:39
+In 2024, if you were loading the polyfill JavaScript library from the authoritative CDN,
+0:45
+well, the ownership of that changed hands and the new owner abused it to push malware to
+0:51
+websites that were loading it directly from that CDN.
+0:55
+So what do we do about dependencies?
+1:00
+We can't isolate ourselves from them. We're not going to back up a dump truck full of sand,
+1:05
+make our own chips, make our own network devices, make our own compute.
+1:10
+We're not going to avoid the use of any third-party libraries.
+1:13
+But instead, we need to compose real business value out of the dependencies that azure AWS,
+1:21
+GCP, and more provide for us. But each time we take new dependencies, it brings with it more problems.
+1:30
+Every dependency, whether it's a cloud service or not, has some reliability or availability or security guarantees.
+1:37
+And each one introduces new ways for us to fail.
+1:41
+Our job as software engineers is to build services that are more reliable than the sum or the product of our dependencies.
+1:50
+So when we think about high availability or high integrity services, this is a pretty straightforward and well-trodden path.
+1:58
+If I want to make sure that my customer data, when it's given to me, I can give it back.
+2:02
+I can give it back in the same state. I can give it back with fast availability and faster reliability.
+2:08
+Look, it's easy to straightforward or easy to test. Every failure mode at scale happens eventually,
+2:14
+so I get to find out about those and correct them. I get better over time.
+2:18
+I know design patterns that allow me to recover from that inevitable mistake.
+2:23
+I often have to prove that I can do this to my auditors. And best of all, when I do screw up, customers tell me.
+2:30
+They call me on the phone and said, I can't get my data back. Can you fix it for me?
+2:35
+And in industry, we know how to do this. We know how to use load balancers. We know how to store multiple copies of data, geo-distributed around the world.
+2:43
+We know how to do things like delayed delete or integrity checking to make sure that we can recover from a failure.
+2:50
+But what about if I want to maintain confidentiality of data, not just the integrity and availability of it?
+2:56
+Well, I can't measure whether data has stayed confidential.
+3:01
+Just because I've run a service for a long time doesn't mean that all of the risks have been found and ironed out.
+3:07
+Human adversaries are deliberately looking for ways to find and exploit those risks. They aren't just subject to chance.
+3:15
+Customers might never know that their data has leaked. And worst of all, when that decappens, no amount of engineering can unleak the data that's been exposed.
+3:26
+So I have a challenge to solve. In order for me to build a high confidentiality service, one that earns and maintains my customer's trust,
+3:36
+I need to identify the dependencies that put this at risk. I want to minimize the dependencies in that category and then defend and harden the ones that remain.
+3:48
+So we're going to start by enumerating our dependencies. I like to think about this in layers. And I like to start with the customer perspective.
+3:56
+A customer is going to log into my service, so they need to get an identity from somewhere. They're going to present that token to my web application.
+4:05
+It's going to run on some compute. It's going to accept network traffic over some set of devices. It's going to interact with storage, with secrets, with some kind of control planar management system.
+4:15
+And I have source code and deployments that I'm going to push to the system.
+4:20
+And when I think across all of those, well, now that I know which ones they are, I need to imagine that each one came under the control of an adversary.
+4:29
+If an adversary owned that thing, would it impact the confidentiality of data? Could an adversary gain access to it and leak data, either directly, imagine that they got access to storage, for example, and all of your documents are in storage?
+4:43
+Or could they leverage transitive relationships to move laterally from one system to another, from that system to another, and then gain access and leak customer data?
+4:55
+Those dependencies, the set of ones that could directly or indirectly impact the confidentiality of data, we call that the trusted computing base, or the TCB.
+5:06
+And the challenge is that if you want to build a high-confidence-jality service, every single one of those dependencies needs to remain secure in perpetuity for you to deliver on the business outcome that you're trying to achieve.
+5:19
+So some questions you might ask yourself as you look through all of those dependencies. If it's a control plan, it's almost certainly in your TCB because you're trusting it to orchestrate your system.
+5:31
+If it has customer data, obviously, it's in. If it has secrets that grant access to customer data, it's in.
+5:37
+Think about what the worst case impact would be if the entire internet had access to it.
+5:42
+Or if you have a reflexive reaction to that and say, no, no, it's a back-end service, well, what about your engineers?
+5:49
+When they have an admin session on that thing to administer it, to deploy it, to troubleshoot it, if they were a malicious insider, could they use that as a trampoline to get access to customer data?
+6:00
+And then think transitively. Maybe it's a dependency of something else that you trust. You need to follow that all the way down.
+6:09
+And I would rather show rather than tell. So let's take one drive and SharePoint for an example.
+6:15
+When I started at Microsoft in 2004, it was a web application. We put a lot of DVD or we made it available for download, and that was it.
+6:23
+But when I think about this now as a cloud service in M365, that gets a lot bigger. I have customers and their devices that are accessing my service.
+6:32
+I have partner services, both inside and outside of Microsoft, that are interacting with data in SharePoint.
+6:38
+Those requests are authenticated using on-tritocans. Those requests often are proxy through Microsoft Graph, proxy through Azure Front Door for faster connectivity.
+6:49
+And then there's a variety of network hardware in between the customer and my web application.
+6:55
+And because SharePoint is in one drive of our web apps, it's not just HTML, it's also JavaScript and CSS that's loaded from a CDM.
+7:03
+When a customer interacts with SharePoint, they're accessing storage and SQL. We have caches and redis, secrets and key vault.
+7:10
+I've got compute spread across Azure and our own self-hosted VMs on bare metal, physical hardware. That has its own BMC or lights out management system.
+7:19
+There's control planes beneath all of that. Azure has a fleet management system. We have a fleet management system.
+7:25
+We have workflows that elevate and de-elevate engineers for Git access. There's the Azure resource providers and Azure resource manager itself.
+7:34
+That has control over those underlying resources. And then all of this is built on Microsoft's kind of foundational or dial tone services that issue tokens, managed secrets, the PKI for authentication certificates, TLS certificates, code signing.
+7:49
+The infrastructure tenants for all of this stuff runs. And then we need to think about the actual code that makes the whole thing work in the first place.
+7:57
+There's third party dependencies. There's the first party repos that live in Azure DevOps. That stuff gets compiled on build machines using build agents distributed through file shares or through storage accounts.
+8:11
+I run VMs and physical machines that run VHD or disk images. Those are built in a similar pipeline and distributed.
+8:18
+And then if I think about the compute itself, well, I've got agents that I don't own that live there, things like Defender AV or Windows Update.
+8:26
+So it's a lot. And it's a lot more than I would draw on the board if someone was to stop me in the hallway and say, hey, draw me the SharePoint architecture.
+8:35
+I'd have a compute node, storage, SQL, Azure Front Door, that's about it. But from a security perspective, I'm accountable for the whole inch of Lata, transitively, all the way down.
+8:46
+So if you're overwhelmed by the number of dependencies, as you think about your own service, that's pretty natural.
+8:53
+But the goal isn't to remove all of those dependencies so that you build your own service from sand up.
+9:01
+The goal is to stop trusting them. In the same way that if you were building a high availability service, you would want to isolate your customers from the impact of a dependency outage, our goal is to isolate ourselves from a dependency breach.
+9:15
+So the critical question for you to ask about each one of your dependencies is, what are the properties that you're trying to get out of that dependency?
+9:24
+And if you're a business value that caused you to introduce that into your system in the first place. And is there a way that you can leverage that dependency without exposing it to the actual customer data in the system?
+9:37
+If you can do that, when a breach of that dependency no longer impacts your customer data, then it leaves your TCB. And that's the first kind of goal or milestone for you to do as you evaluate your product's architecture.
+9:52
+So we have techniques that we can use for this at each layer. We can do things like confidential compute. We can encrypt things at the application layer before storage.
+10:01
+But again, rather than listing things, why don't we go back to our example and just work through it.
+10:06
+So here's the naive view of SharePoint with its transitive exposure, all blasted out here.
+10:13
+So here's what we can do is look at our caches and our storage and say, you know, when I put things in a blob or I put things in redis and I want it back, I'm not asking redis or storage to do any meaningful transformation on the content that I've given it.
+10:26
+So I'm going to encrypt that content in my application. I'm going to store encrypted content. When I get it back, I'm going to decrypt it.
+10:34
+And that achieves the outcome because if an intruder was to be in Azure storage or gained access to Azure Redis, well, they might be able to delete data.
+10:43
+I'm not solving for integrity and availability. That's a different discussion. But when I'm solving for confidentiality, the business impact of someone having cryptographically random bites, I'm not that worried about it.
+10:54
+But don't have to notify a customer in that case. So that's good news. When I continue on, I can think about my CDN as well. If I use sub-resource integrity and I deliver that through the web application and the HTML that it serves, then if an intruder was to access and modify the bits on the CDN, the hash is won't match.
+11:14
+Their JavaScript won't load. The browser will reject it. And they don't have the ability to steal data from my customers. That's good as well.
+11:22
+I can think about using Azure Confidential Compute. Not because I don't trust Azure, but because minimizing my PCB is an intrinsic good. And if I use Confidential Compute, then I no longer need to consider the security profile of the host or the service management bits underneath it.
+11:39
+In the same way, because our lights out management system for a physical hardware is under first party control, I can modify that firmware to prevent it from doing dangerous actions on the blades or the physical machines that it manages.
+11:53
+I can look at my engineering system as well. I can sign and produce a signed S-bom of the bits that I generate in my build pipelines. And as long as I verify the integrity of that at deployment time, then I don't really care about maintaining the integrity or the confidentiality of the data.
+12:08
+The confidentiality of the bits that are in between points a and b, right, if an adversary was to gain access to those things and tamper with the bits, they would fail checks. They wouldn't deploy. And a threat actor wouldn't be able to get malware into my system.
+12:24
+I can use that same system to isolate myself from the impact of a compromise in the Defender AV signature update service or the Windows update service. Instead, I'll grab those from a trusted source. I'll put them on my deployment pipelines. I'll check the integrity of them at deployment time in the same ways the rest of my bits.
+12:42
+And if I use TLS end to end, and I terminate TLS on my web application rather than on a networking device, then my network hardware only ever seasoned cryptid traffic and an intruder there can't impact the confidentiality of the customer traffic in between me and them.
+13:00
+So that's all good news, but I wasn't able to gray out every box. So what do I do in my stock? No. Some of these dependencies, I can't untrust. So I need to remain accountable for them first off. I need to think of myself as being part of their security team. I need to figure out how to harden those, to understand their risk profile.
+13:23
+Because from the customer's perspective, they're interacting with my product, whether that's one drive or a share point. And if one of my transitive dependencies was to be impacted by a threat actor in a way that leaked customer data, I don't have an out by telling the customer, oh, share point is fine. It's that dependency over there. That was the problem.
+13:44
+They trust me. The buck stops with me. It's my brand, my product's reputation on the line. And this is a place where culture, I think, really starts to matter at the company. At Microsoft, we're really blessed to have a security as a team sport culture. And so when you inject yourself into one of your dependency teams and say, hi, I'm a customer of yours and I have customers of my own, help me understand what I can do to minimize the risk of using your dependency.
+14:11
+I have never seen people react defensively. I've never seen people say, nope, not your business go away. We've got it covered because when we make our dependencies better here at Microsoft, it's good for us. It's good for the third party customers who build on it. It's good for all of the other first party services that build on it. It ends up strengthening everyone all at once.
+14:32
+And so when we think through this here, I've got maybe three techniques that we can use to defend things that remain in my TCB. I can detect, I can partition, and I can harden.
+14:45
+So going back to our example, I'm going to think about deploying agents on all of the compute that is under my controls, that I can detect evidence of threat-activity in Windows or Linux.
+14:59
+I'm going to deploy that same monitoring to look at activity in my service management systems. I'm going to monitor the compute. I'm going to monitor the activities that they're doing across my compute and across all of my resources.
+15:11
+I'm going to extend that into Azure tenants. I'm going to extend that into elevation workflows as well. For Azure resources, I'm going to turn on Azure RM monitoring so I can see control plane activity.
+15:23
+I'm also going to enable data plane monitoring on any Azure resource that I have so that I can see what my application is doing and whether there's any activity accessing my resources that doesn't line up with my expected activity.
+15:36
+In the same way, I'm going to monitor Azure DevOps. I'm going to monitor the updates to dependencies that I take. I'm going to monitor the compute infrastructure where my builds get created and signed.
+15:49
+Then I'm going to think from the customer down, and I'm going to monitor the identities that are accessing me as well. Especially for partners that have privileged access or have more privileges than an individual user would have.
+16:02
+I'm going to look at all of the antrotokens that they send. I'm going to learn what IP ranges they typically come from. In fact, I'm going to look at even antrotokens that are issued for their identities or the certificates that are used to request antrotokens for their identities.
+16:16
+So that I get the earliest possible warning that perhaps one of my partners has suffered a compromise.
+16:25
+But I don't want to just detect, right? Detecting something catastrophic that impacts all of my customers is good in the sense that it shortens the time maybe for that threat actor to leverage their access.
+16:38
+It means I can notify my customers sooner. But the best thing for me to do is to limit the scope of that compromise in addition.
+16:45
+So I'm going to partition my service. I'm going to partition service management to create many different instances of the service with no trust among amongst each other.
+16:54
+I'm going to do a similar level of partitioning at the compute layer so that each capacity unit is split up so that there's no lateral movement between capacity units, no lateral movement upwards from capacity units into service management.
+17:07
+I'm going to do the same for my Azure resources as well so that the compromise of any one of those doesn't impact a large variety or a large number of customer documents or customer tenants.
+17:20
+And then for what remains I'm going to inject myself into those organizations. I'm going to knock on their door and say, hello, welcome. I'm a part of your security team now.
+17:29
+Teach me everything there is to know about your risks. What do you believe your set of risks are? What do you believe your TCB is? What's your roadmap to mitigate those risks?
+17:39
+Here are the ones that I think impact me the most. How can I help you? Can I loan a resource to you? Can I loan an engineer to you? Can I give you a different perspective or connect you with someone else who has solved a similar risk in their organization? Again, culture matters.
+17:57
+Now, that's easy for me to stand here and say, but I know that knowing the destination isn't the same thing as reaching it. It looks like an uphill battle. It might feel like an uphill battle, but just like mountain climbing, it's achievable step by step.
+18:14
+Here's how I think about affecting change or the lessons that I've learned over a couple of decades of doing work like this.
+18:21
+First, the most important thing is for you to do that inventory and actually put that in a durable place in a prioritized way so that you know what your risks are.
+18:31
+Every product team should have a risk register for their product in the same way that the organization as a whole thinks about risks so that they can maintain the integrity of the availability of the ongoing operations of that enterprise.
+18:46
+Next, for each of those risks, think about who is best positioned to solve it. The places where you can't figure out who should solve it are interesting, or their organizational dynamics that that surfaces.
+18:58
+And then consider what the benefit would be beyond security of making the change that would help you minimize that risk or remove it from your TCP.
+19:07
+And I think you might find that often the people who own that component would like to do similar work, but maybe they haven't been able to come up with a compelling enough narrative why they should have 10 of something instead of one of something or why they should re-architect that critical component.
+19:25
+And if you lend your voice and say, oh, not only would that be a reduction in single points of failure, or not only would that allow engineers to automate something that today is done manually with toil, but it would also protect customers better, you might be able to bit more people incentivized to fund that same work that you were going to do anyway or that the team already would like to do.
+19:47
+You security can be an ally rather than a blocker or somebody that's adding debt to the engineering backlog.
+19:54
+Next, if the timing is right and the people are right and the organization is receptive, then advocate for the work that you want to be done.
+20:04
+If you feel stymied there, if you don't feel like you can make forward progress, it is okay to watch and wait because what you'll discover is that in every cloud service, every component ends up getting re-architected or rewritten as a whole.
+20:16
+Those are slipstreaming opportunities. Use your surveillance practices, just like you try to identify changes that are happening in the organization or in the product so that you can do a security review of them.
+20:32
+Use that same system to understand changes happening, maybe that wouldn't be security interesting, but would give you the critical opportunity to sit down with the engineering leader and say, hey, while you're doing X, would you also do Y in that same component?
+20:47
+And then you will have your opportunity to achieve a durable TCB improvement at the same time.
+20:54
+And then the most important thing, every time someone makes a little step forward in the direction you want them to go, celebrate that organization-wide, give it tons of visibility.
+21:05
+After six months, after 12 months, collect all of those, celebrate that again.
+21:11
+And then after you've seen six to 12 months of this, you can credibly say, look, we have a history of making small improvements to protect customer data better, month over month over a month.
+21:23
+And if you can point to something that's been happening consistently, well, I guess you can call a part of your team culture.
+21:30
+And then it becomes a virtuous cycle. It's a flywheel. And now you're changing the culture to one that proactively thinks about how to protect customers better.
+21:40
+So the goal is this. If you can enumerate your TCB, then you know yourself.
+21:46
+If you can reduce your TCB, then you can reduce your exposure to the enemy.
+21:51
+The goal here is to give you confidence in the face of threat.
+21:56
+Thank you.
+21:58
+Thank you so much, Matt.

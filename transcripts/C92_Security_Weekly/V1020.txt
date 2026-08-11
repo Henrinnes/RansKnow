@@ -1,0 +1,3344 @@
+0:00
+This week our technical segment covers a new open source tool written by me and Claude
+0:07
+that helps keep your Linux systems up to date and assess supply chain risks.
+0:12
+It's called FETIL, it's a pure Python implementation that gives you even more features than we've
+0:17
+previously discussed in updating your systems.
+0:20
+Then in the security news, the goddamn ransomware, CMMC is suspended, holy Microsoft Tuesday,
+0:27
+lessons learned.
+0:28
+Without the internet, do we still get water?
+0:31
+The forgotten shims, more than two bios passwords, cracking firmware encryption with Claude,
+0:36
+1999 called and it wants its exploits back.
+0:40
+Prompt injection for defenders, GROC has your repo and you're not going to patch outpatch
+0:45
+AI.
+0:46
+All that and more on this episode, Paul Secure to Eekly.
+0:50
+Broadcasting live from GUnit Studios in Rhode Island, it's the show where exploits
+0:55
+run wild, packets aren't the only things getting sniffed and the cocktails flow steady,
+1:00
+it's Paul Secure to Eekly.
+1:04
+Coming to you from the hacker syndicate studios, this is Paul Secure to Eekly, it is episode
+1:09
+number 935 being recorded on Wednesday, July 15th, 2026.
+1:14
+I am your host Paul Asdoreen joined by Dr. Pesci.
+1:19
+Dr. Pesci is in the house.
+1:22
+Well, you were paging me to the white courtesy phone right before the show.
+1:26
+Yeah, we're getting ready to go on vacation next week so I had to throw some food for the
+1:32
+vacation in the instant pot and I was like, no, I'm running late, gotta go.
+1:37
+No worries, good to see you.
+1:39
+It's stuck, as always.
+1:40
+Mr. Josh Morpeth is here with us, Josh.
+1:43
+Welcome.
+1:44
+With all of the internet craziness going on, Verizon Fios is not acting nicely right now.
+1:50
+So, hey Verizon, if you watch this, it'd be nice if it worked once a while.
+1:55
+Yeah, and we got the right bandwidth.
+1:56
+I have to open a ticket with them.
+1:58
+Mr. Lee Neely is here with us.
+2:00
+I'm here.
+2:01
+I have the reverse problem.
+2:03
+If I were to try and do this on cellular right here, it would be awful.
+2:06
+Right.
+2:07
+Fortunately my spark light is coming through for me.
+2:10
+So that's good.
+2:11
+What the heck?
+2:12
+That's good.
+2:13
+Couple quick announcements.
+2:14
+Before we get started, let's be real.
+2:16
+Your scanners are dumping thousands of vulnerabilities, half of them noise, and you still don't know what's
+2:21
+actually exploitable in your environment.
+2:24
+Patching everything isn't possible and chasing CVSS isn't working.
+2:28
+At the vulnerability management, virtual cybersecurity summit, learn how to prioritize based
+2:33
+on exploitability, reduce faults, positives, and actually fix what matters.
+2:38
+Security Weekly listeners can register for free at securityweekly.com forward slash
+2:42
+voln management using the promo code CSS26-sw.
+2:48
+I believe myself and Adrian Sonarbia will be participating.
+2:52
+And that is, you know, we love to talk about vulnerability management.
+2:55
+So cyber risk TV is proud to be an official media partner of black hat USA 2026.
+3:03
+They'll be broadcasting live from black hat live wire studio with technical interviews
+3:08
+covering offensive security detection, response, infrastructure, and the tools practitioners
+3:13
+use every day.
+3:15
+Our executive interviews and event momentum packages keep your message in front of the
+3:20
+security community long after black hat wraps up fewer than 10 interview opportunities
+3:25
+remain.
+3:26
+So visit securityweekly.com forward slash exec exec today and secure your spot before
+3:34
+they're going.
+3:37
+All righty.
+3:39
+And make sure I click the right things.
+3:44
+And it's more fun when you click the wrong things though.
+3:46
+I know right.
+3:47
+I've done that before.
+3:49
+It happens.
+3:50
+So I did a thing in a I wrote a tool and it's called Fetal and you can get it on my
+3:59
+GitHub.
+4:00
+So excuse me, some of the backstory is this is based on while years of Unix and Linux
+4:09
+administration where I've written many scripts to help me update my systems.
+4:14
+When I switched to man jar old Linux, I kind of noticed that I was doing the same troubleshooting
+4:21
+and entering the same commands over and over again.
+4:25
+So I'm like, I need to have a shell script for that.
+4:28
+And then as I was updating my systems, I would add to this shell script and go, oh,
+4:34
+you know what?
+4:35
+Like before, during an after an update, like I want you to run this command in this way.
+4:39
+I want you to check these things.
+4:41
+I want you to tell me about this during the upgrade.
+4:44
+And then at some point I fed that script to Claude and I said, go make it great.
+4:50
+And it's cloud started maintaining it.
+4:53
+And then on previous technical segment, I talked about how I added indicators of
+4:58
+compromise in a you are package checking to it.
+5:02
+And then I thought, wouldn't it be fun if I took that shell script in addition to my
+5:12
+Linux supply chain checking script, which runs operating system commands, tells you about
+5:16
+your hardware and your supply chain.
+5:18
+What if I convert it all that to Python?
+5:20
+Well, not me.
+5:21
+What if I told Claude to convert all that to Python and build a standalone
+5:28
+Python tool that basically does all of this for you.
+5:33
+Excuse me, the air quality index is like really poor today, some fire or something.
+5:41
+So I did that and I iterated a lot with Claude.
+5:47
+I did manage to keep it pure Python and just the Lewis script inside of this
+5:55
+structure.
+5:56
+I did use Claude code to develop all of it.
+5:59
+And I found that was really good because I had a lot of source material to build
+6:03
+from, right?
+6:04
+I wasn't starting with a clean slate where I was like, hey, Claude, like go around me
+6:08
+a tool that helps me update Linux systems because then it would just hallucinate and
+6:13
+try and make shit up.
+6:15
+I was like, no, we're grounded in the stuff we built before.
+6:18
+And here's my plan of where I want to take it.
+6:22
+And we decided to.
+6:25
+Keep that pure Python.
+6:26
+So there's no pip install anything.
+6:29
+It's just standard Python libraries.
+6:32
+I also used AI to do all my get commits because I hate get.
+6:38
+So did all that for me.
+6:40
+I used it to create a logo for it.
+6:43
+And I used to create all of the documentation.
+6:47
+And something else.
+6:49
+It's all basically AI driven, which is pretty cool.
+6:55
+I then also built in more features now.
+7:00
+So that's largely what I want to focus on is.
+7:05
+There's basically three layers to it, right?
+7:07
+There's the maintenance layer.
+7:09
+I get update packages.
+7:10
+Oh, in the big feature with updating packages and some of the other functionality
+7:15
+is I support arch Linux based distributions in addition to Debian and Ubuntu distributions.
+7:22
+One of the drivers behind that is I have at least four probably more Ubuntu systems
+7:27
+that I need to keep maintained and patched.
+7:29
+And so I needed a utility to help me with that.
+7:32
+So there is the maintenance, right?
+7:34
+It updates packages.
+7:36
+It cleans the caches, which is a very important step.
+7:39
+And I think a lot of folks that struggle with like, hey, I'm updating my Linux system
+7:45
+and things went sideways, right?
+7:47
+A lot of people report that.
+7:49
+And what I found is if you do some of the pre maintenance like every time such as
+7:54
+update your package repository and clean the caches of what was there from previous builds
+8:01
+that you'll get a much cleaner process.
+8:05
+And so rather than like remembering to run all those commands every single time,
+8:10
+they built them into a script.
+8:12
+It checks to see what needs to be rebuilt or services that need to be restarted.
+8:17
+It reviews that config file drift that I talked about.
+8:21
+A new feature that I added, it reports back whether or not you have automatic updates enabled or not.
+8:27
+I'm like, well, we do this for Windows.
+8:29
+We feel very strongly that Windows should be auto updating.
+8:31
+I'm like, Linux has auto update capabilities.
+8:34
+Now in Arch Linux, they recommend that you don't enable that.
+8:38
+In Ubuntu, it's totally fine.
+8:40
+They recommend that you do enable that.
+8:42
+And so my tool just like doesn't pass judgment.
+8:44
+It just tells you whether automatic updates are enabled or not, which I thought was a nice little security check.
+8:51
+What is our.
+8:53
+What's that?
+8:54
+What does our say you shouldn't do that?
+8:56
+Arch says you should review everything before you apply an update that you shouldn't just let it go automatically,
+9:03
+which I'll get to the, the other killer feature along those lines.
+9:08
+Actually, probably a good point to talk about that.
+9:10
+So with respects to maintenance, one of the things that I've been doing is
+9:15
+collecting hardware, firmware and software information using the inksy command on Linux, taking that output.
+9:25
+Then identifying what my package update would be, right?
+9:29
+So sometimes that might just be a link to the announcement of what packages are being updated.
+9:34
+And I feed that into an LLM and I tell it, hey, if I go apply this update,
+9:41
+is it going to be a good time or is it going to be a horrible time?
+9:44
+And what should I do both before and after the update to make sure that I'm going to have a good time?
+9:52
+And LMS will come back and give me a nice little report.
+9:56
+And so then I thought, well, that's a lot of work copying and pasting and all that stuff.
+10:00
+I'm like, why can't I just build an LLM integration into this tool?
+10:04
+And so I did.
+10:05
+So now you can run FETL.
+10:08
+Oh, that's the other part of use AI4 was naming the tool.
+10:11
+Cloud helped me actually name the tool.
+10:13
+So FETL means like in fine FETL in good working order, which I thought was wildly appropriate.
+10:18
+And I don't think taken by anything else amazingly enough.
+10:22
+So if you run FETL space upgrade dash check, it'll use an API key for cloud.
+10:30
+It'll automatically collect your system artifacts.
+10:33
+It will automatically figure out what packages and updates need to be applied.
+10:37
+It will take that information.
+10:39
+It will call the cloud sonnet 5 API.
+10:42
+You can adjust some of these parameters in the configuration file, by the way.
+10:47
+And it'll spit back a report based on how I modified that prompt.
+10:53
+I've used this probably three, maybe four times.
+10:57
+And it has worked amazingly well.
+10:59
+Like the results that it has given me and the advice that it's given me.
+11:02
+I'm like, no, like that actually checks out.
+11:05
+Like I told me to go run this command.
+11:06
+So like I did that and then told me to watch out for this.
+11:09
+And so I did that.
+11:09
+And it's like, this might be a potential issue.
+11:12
+And I have to say in all cases, it nailed it.
+11:14
+Like I actually pretty shocked me that it did that.
+11:18
+I estimate that it costs between 30 and 60 cents per every time you issue the upgrade check command.
+11:27
+You know, let me vary depending on the size of the update.
+11:30
+But I was like, you know what?
+11:33
+I'd pay less than a dollar for it to tell me whether or not my update is going to have a good time or not and tell me how to make it.
+11:40
+Have a good time.
+11:41
+And it worked for me.
+11:43
+I haven't tested it beyond that.
+11:45
+You're probably sick of the word agent.
+11:47
+But here's the problem.
+11:48
+Your dev team is handing every new agent in your cloud way more permissions than it needs.
+11:53
+And when one goes rogue, you've got four minutes before your data is gone.
+11:58
+You need a default deny button that doesn't break every workload.
+12:02
+That's Sunry's cloud permission firewall native I am controls not new fangled AI nonsense.
+12:09
+Default deny on every agent in human identity automatically learn more and security weekly calm forward slash Sunry.
+12:17
+That's so NRAI.
+12:21
+The other thing it does, of course, is that package supply chain.
+12:25
+Right.
+12:26
+So now for both arch Linux or devian based distributions, it does.
+12:32
+It's due diligence to check the supply chain to tell you about orphan packages to tell you about any information about maintainers, any indicators that it has that you might run into some supply chain security issues with your package updates.
+12:48
+It tries to do on both platforms now.
+12:52
+And then I also built in the system supply chain checking, right.
+12:57
+So this is looking at your UEFI secure boot, looking at your BIOS UEFI updates, your TPM CPU microcode and just giving you a general report as to what you have and what you might want to look into.
+13:12
+So those are three major actions of what it does.
+13:18
+I talked about what it does for archer man, jar, it does tries to do some of the equivalent things.
+13:25
+Obviously, AUR is very different from the app repository.
+13:30
+So some of those things don't map.
+13:33
+But like rebuild detector on debu.
+13:35
+Ubuntu, it'll tell you which services need to be restarted after you apply the update.
+13:41
+It'll tell you about config drift.
+13:43
+So I tried to basically match, you know, the functionality.
+13:47
+There is a concept of orphans in debu.
+13:50
+And in Ubuntu and it'll do that as well.
+13:54
+And it'll also support flat pack and snap and give you some insights into those environments as well.
+14:02
+So I've run it again quite a bit with some great success.
+14:11
+It does the installation is not quite where I want it to be.
+14:16
+You do need to get clone it and run it.
+14:20
+You also need to manually copy over this in it.
+14:24
+Lua file if you're using arch based distributions.
+14:28
+And what that will do is run those pre checks, right?
+14:30
+So when I ran it today, there's actually a bug or a misinterpreted design decision.
+14:36
+I should say that was like basically every time I update AUR packages,
+14:42
+I want you to go check and make sure that they're not compromised first.
+14:45
+And run those checks.
+14:46
+And so now it does that through that Lewis script hook inside of yay.
+14:52
+So it does that for you and tells you like, hey, yay or not, yay.
+14:57
+Like you might be installing a package that hasn't been updated for a thousand days.
+15:02
+And the maintainer just, you know, changed or you're installing a package and it's build file
+15:09
+steals all your SSH keys.
+15:11
+I want to know about that before I install it.
+15:14
+Why can't I only hear like a leprechaun, you know, FETIL?
+15:18
+Yay!
+15:19
+Yes! FETIL, yay!
+15:21
+100%.
+15:24
+So I did clean up a lot of the options.
+15:27
+Like it really kind of made a not great user experience.
+15:32
+And so I had to spend some tokens just cleaning up the interface.
+15:36
+So definitely take a look at the Quick Start guide.
+15:38
+And you can run a lot of different options for FETIL.
+15:43
+They'll let you do all the things that we talked about individually.
+15:50
+And also the dash A command is the one I use which runs the default set.
+15:57
+Right? And there's some config options where you can kind of change the default set if you really want to.
+16:03
+But FETIL, space dash A is the one that you want to run.
+16:07
+That'll perform a system update with all the fixings.
+16:12
+Right? It'll excuse me.
+16:17
+It'll clean your caches for you.
+16:19
+Now of course before it removes anything, it will ask you.
+16:23
+It's like, hey, do you want to remove your get like at first?
+16:24
+It was just doing that automatically.
+16:26
+And I was like, you know, you're actually deleting stuff from the user system.
+16:30
+Like we should probably ask them before we delete anything from the user system.
+16:34
+Like so make that a prompt.
+16:35
+That's fine.
+16:37
+There's also a concept of dry run.
+16:39
+So if you do dry run, it'll give you a full report.
+16:41
+Like, hey, this is what I would have done.
+16:44
+Had had it all been enabled, which is nice.
+16:47
+Sometimes you want to use that feature as well.
+16:52
+Then it can do, you know, the package supply chain, again, very heavy on the arch,
+16:56
+which we covered in a previous technical segment.
+16:59
+And again, it will run some checks for apt flat pack and snap.
+17:06
+It'll, you know, determine if a snap has been side loaded, if it's an unverified publisher.
+17:11
+If it has some confinement settings within within that snap, same thing for flat pack.
+17:17
+So kind of tried to mirror as much of the functionality that we built for a or
+17:22
+into both Debian apt and flat pack and snap.
+17:30
+Let's see.
+17:31
+What else?
+17:31
+Oh, and then we have the supply chain audit.
+17:33
+So you can run all of the checks or you can kind of bake them down into different categories.
+17:39
+In this, Tintra was based on an Eclipseium supply chain cheat sheet series that I wrote in the
+17:45
+one for Linux. I used that cheat sheet that I spent a lot of time putting together to develop
+17:52
+a shell script, which then ended up being in FETO as pure Python.
+17:58
+So it will try and run all of these things.
+18:00
+If you don't have the tool installed, it will tell you that you don't have it installed
+18:05
+and recommended. And there is somewhere in here, there is a dependency on what you need to install.
+18:11
+It's in here somewhere. I definitely told Cloud to create that it will tell you, if you want to
+18:17
+satisfy all of the dependencies it gives you stuff to install. I don't know where that went,
+18:24
+but it's in here somewhere. And then a feature that I'm super proud of
+18:30
+in is super useful because I don't want to go install and maintain this tool on all of the
+18:35
+systems that I manage. I'm like, why can't we just run this remotely? And Cloud is like,
+18:41
+yeah, sure, how do you want to do that? I'm like, there's a lot of ways to do that. I'm like,
+18:45
+what if we just kind of zip it up and send it and then delete it when we're done. And since it's
+18:51
+pure Python, as long as Python is installed on the remote host, it should run. It's like,
+18:56
+sure, I got you. And it did that. I did, for a brief moment, like a brief portion of a session,
+19:04
+I enabled Fable 5. And I then told Fable 5, I'm like, go find bugs and performance and security
+19:12
+issues in this code. And it turned for a while and it came up with a list created a plan.
+19:17
+And then it stopped and it said, this is a cybersecurity use case. Piss off. You can't use Fable.
+19:22
+And I was like, we'll screw you. I switched back to Opus and I was like, hey, that plan that we
+19:26
+just created. And I want you to go execute that. It's can weird. But so it did that. And so one of
+19:36
+the things I found was it's like, well, you always put when you upload Fettle, the Python archive to
+19:43
+our remote system, you always put it in slash template. It always has the same name. If someone were
+19:48
+to like, clobber that file, they could potentially run system commands. Like, okay, fine. It's like,
+19:52
+well, Fable recommended that you make a unique file name for it and you upload it into the
+19:57
+user's home directory. So it does that. But you can do this full remote now. And this is a
+20:02
+brand new feature. This isn't a feature I had in any of my update scripts, but I have it in Fettle.
+20:08
+So you can actually this documentation is out of date. I need to have cloud do that. This
+20:12
+syntax is actually slightly different. You say Fettle remote, the remote hostname. And hopefully
+20:19
+that hostname is configured in your SSH config file and you have keys established and all that
+20:24
+stuff. And then any command that you want to run in Fettle, right? So it just kind of let you run
+20:31
+Fettle remotely. I've used this feature successfully to update five systems. One is a mandaro Linux
+20:39
+based on arch and the other four are running a bunch of server. And it worked, it works extremely well.
+20:47
+It worked extremely well, which is awesome. You can even do the upgrade check remotely. And
+20:54
+it will use your local and the topic key to go check a system remotely. So you don't have to copy
+21:00
+your in the topic key in your config file to all of the systems that you manage. You only have it in
+21:05
+one place and you use the remote feature. So I can say Fettle remote, a hostname,
+21:12
+upgrade check. And it will perform that upgrade check on that remote host and actually save
+21:17
+those results locally for me using my same one configured cloud API key. I'm using cloud for it.
+21:24
+If someone wants to extend it to another LLM, like that's cool too. I just I happen to be a big
+21:29
+fan of cloud. So remote, you know, this documentation is right. That snippet above was wrong. But yeah,
+21:37
+the same syntax. And it tried to do that as securely as possible. Again, this is the update checker
+21:46
+functionality that I built in. You can actually change the effort, which is kind of cool. So you can
+21:51
+change the effort of the cloud model. By default, I'm using Sonnet 5. I think that default effort is
+21:58
+high. I don't think the model is configurable, but the effort is certainly this is all open source
+22:05
+MIT license. So if you want us to be pull requests or request features, we can we can talk about that.
+22:11
+That'd be great. Pull requests are great features. You're on your own.
+22:16
+Right. Yeah, you send me all the pull requests you want. I'm like a lot of my role today is
+22:23
+product manager by day. So I know how to say no to features really well.
+22:29
+You want a feature it's open source. You can go write it. You can go write it yourself. It's fine.
+22:34
+Of course, of course, I tease. Yeah. So it does some things to protect proxy.
+22:40
+Because, you know, I think someone's detectors might be going off. They're like, oh, you're collecting
+22:44
+system details and information and you're putting it into an LLM. That could be dangerous.
+22:49
+I do my best to wipe out any hardware serial numbers, MAC addresses, UIDs, anything
+22:56
+identifiable to your machine. So you basically just tell the remote LLM like the most important
+23:02
+things. I'm on this kernel version. I'm on this version of my graphics driver AMD or Nvidia.
+23:09
+I'm using these graphics subsystems, right? Mesa, modern, known, whatever.
+23:18
+And I'm on these versions of those things. I'm doing a full system update.
+23:23
+Is it going to go badly or not? Right? So that's that's kind of the thing with that. This says,
+23:30
+well, so this is 10 cents to 30 cents for a small upgrade, maybe 60 cents for a large upgrade.
+23:36
+I haven't checked my usage credits, but I think that's fairly reasonable.
+23:40
+You could of course implement a local model if you wanted to and attach this to the local model as
+23:45
+well. Nothing wrong with that. And then there is a configuration file, which is nice. And you can
+23:54
+define the fault default actions. You can also define like if there's a foreign package. So as a
+24:03
+package that didn't come from any official package repo. And this fettle will actually check
+24:09
+for foreign packages because those could be suspect. You can actually say, no, like I installed
+24:15
+this one. I know it's foreign. It's fine. And so you can basically white list it. Same thing with
+24:21
+orphans, right? Orphans and foreign packages have a very close relationship. This is like
+24:26
+orphans are like stuff that was installed as a dependency. But now you don't have the packages
+24:33
+that installed it as a dependency. So it's considered an orphan. But sometimes things get labeled as
+24:38
+orphans that you might want to keep. And so I built in white listing functionality. So it doesn't bug
+24:42
+you every time that you run it. Oh, so you can swap out the model. I haven't tested any other models with
+24:49
+it. And so you do have some control over that. And it implements this in url lib. So it maintains
+24:59
+pure Python. So it doesn't pull in a pip dependency to work with the cloud API. We're querying it
+25:05
+directly so that there are no dependencies. That's to protect everyone myself included, right? The more
+25:11
+dependencies you have in your supply chain, the more of your attack surfaces on your own system.
+25:17
+And again, you can do the dry run. I talked about common options. It does elevate to pseudo. But while
+25:25
+it's doing that, it will tell you ask you for your pseudo password. So it does try to be smart
+25:32
+about how it's elevating or only elevate if it needs to. And we'll ask you for your pseudo password.
+25:40
+What else? That's elevation. I was going to say something else and then I lost it.
+25:49
+So I had a question for you. You were talking about orphans. What about
+25:56
+unmaintained packages you still have line around? Yeah. That you would run
+26:00
+the
+26:04
+I tell you find unmaintained. Oh, like something I grabbed a long time ago that's like nobody's touched
+26:10
+the code in 10 years. How long ago?
+26:17
+Okay, 30 years ago. No, no, actually, actually it's two years on working on defining those terms now.
+26:22
+Yeah, no, I'm yeah, I'm just screwing with it. I got you. I gotta remember the command line option.
+26:28
+I'm like, read my own dog because I changed ass cloud to tell you. Right? So I mean,
+26:34
+it's okay. Identify another. Yeah, sorry. Lee, to answer your question, on arch Linux systems,
+26:43
+it is a federal dash capital A will give you this output. And this will list all the form packages.
+26:51
+So packages in the a you are, arch user repository that you haven't sold on your system.
+26:56
+Who the maintainer is? How long ago it was updated out of date? How many votes that it has?
+27:05
+Or no, I'm sorry, that's that that's the age. And then it'll tell you if it's recently changed or not.
+27:12
+It'll also tell you if it's an orphan or if it's been flagged by a user that's out of date. I
+27:17
+covered this. I think I'm one of the previous segments, but now nicely done. This. Thank you. Yeah.
+27:25
+So I don't know what happens if you run that on a remote Ubuntu system.
+27:31
+What? I'm trying to think run that on an NPM. Get up. Yeah. I think I think for Ubuntu,
+27:40
+I don't think it does. What does it do? Yeah, nothing. It's skips it. Yeah, it skips it because it's
+27:46
+not supported because it's a devian backend because a you are exposes a lot of that VN API
+27:54
+that you that you should can query. So I should probably I need to probably iterate on that.
+27:59
+It's probably some things I can do for some flat pack packages. It feels like a
+28:06
+a BT or someplace that has a list of those packages probably does have some list of
+28:12
+maintenance, but it's going to be a third party offsite not local to right to the tool itself.
+28:19
+Yep. Because I was thinking about there's also the how tempting was it to put effectively a
+28:24
+YOLO option such like frickin do it. Don't bother me. Yeah, if you well also if you do dash dash, yes,
+28:34
+it'll go through and and just do everything and not prompt you right right now it it prompt if
+28:39
+the tool you're calling prompts you it will prompt you. Also I got the the interface a little nicer.
+28:50
+It wasn't easy to tell like what Fetal was telling you versus what a tool was telling you.
+28:56
+So like if we run it here if I give you some bigger text.
+29:03
+And so the output's a little nicer. I'm going to say yeah you can clear the cache. I don't think
+29:12
+there's any updates. See it's prompt for me for my password. I clean I cleaned up the system and
+29:18
+updated this morning. So we'll see what happens. But when it does the like checking it gives you
+29:27
+better output. When is the supply chain checking. What does it tell me? Oh, I need to update
+29:32
+Chromium. Okay, let's update Chromium. Let's give you a live demo. So this is just me running
+29:37
+Fetal-A on my system. And there's a Chromium update that comes from the official
+29:46
+see how it says end Pac-Man right there. That's what I was talking about. So that was like Pac-Man
+29:51
+running. And then in between there is like, oh, I'm pre checking five AUR packages.
+29:55
+So it is a compromise. Yeah, it switches back to AUR.
+30:01
+Yeah, so it does the official package updates with Pac-Man. And you can actually change out
+30:06
+some of the tooling that it uses. But it does it with Pac-Man. Then before it does my AUR updates,
+30:14
+it goes, hey, there's five AUR packages in AUR that need updating. Let me check those against
+30:19
+the IOC feeds and let me check their package build files to make sure that there's no back doors
+30:24
+in them. And it goes, hey, you're clean, you're good. So then it runs yay. Now, if it had found
+30:29
+an indicator of compromise, it would have actually stopped and said, do you want to continue
+30:35
+kind of thing. So, and then, you know, yay gives you some output here. And then this is the yay
+30:40
+installer. I've got a bunch of updates that came through. I don't want to exclude any, so I'll just
+30:48
+click enter, hit enter. And then I can install all of them. I can install some of them. Those all look
+30:56
+good. So go ahead and update all my packages and then I'll go do that. That's actually going to take
+31:02
+a little bit of time. Still cool. Yeah, I'm loving this cloud desktop build. I was checking out the
+31:10
+repo though of the person who maintains it. It's really cool. It's a fork of the official beta version
+31:15
+of Claw's desktop. In fact, on title Linux show was talking about this and how they were kind of
+31:21
+excited to have a beta version. I'm like, but there's someone on the internet who is not only
+31:26
+maintaining the beta version, but taking features that only exist in the official builds for Windows
+31:33
+and Mac and getting them working on Linux and including that analytics package. Which is pretty
+31:41
+now. They don't leave now someone out there on the internet will only do the same with the
+31:46
+cloud desktop. Sorry, the chat GPT desktop client for Intel Mac. That would be great.
+31:54
+Oh, check out. Some of us are still using Intel Mac. Check out open, open, hold on, open code,
+32:03
+open code. Okay. Open code is good. So open code is kind of like a clone of cloud code, but you can tie
+32:13
+all kinds of other models to it, including local models. You can look at the cloud, you can
+32:19
+link it to open AI and a bunch of different things. Yeah. So check out open code.
+32:28
+Very cool stuff, man. Seriously, very cool. This is very nice. Yes. Pretty wild. Right. It was a lot
+32:36
+of fun to build. I don't know what's next. I think I want to do like a binary releases distribution
+32:44
+and a Git runner to automatically build something. Failors. That's just a warning. I guess it's a warning.
+32:52
+No, I don't want to stop. Don't let the dark out of demos overtake you. Okay. No, no, it pulled down. It pulled
+32:59
+down a package and wasn't able to build it. I don't know. It's going to tell me what what the deal was
+33:02
+with that because I didn't run my upgrade. Yeah. I do have doing active security is fascinating.
+33:08
+I really like that part. The idea of going, hey, you're using this package. It's done for three
+33:13
+years. Maybe you should rethink using this sucker. That's awesome. I got to say, I'm really
+33:20
+impressed. Yeah. I want a more encompassing tool. Yeah, I know I get out to packages, but like
+33:26
+there's a lot of other things I need to do to make sure that stuff is updated and stuff is secure
+33:30
+and secure boot and all that stuff. So it is good. That will conclude this technical segment.
+33:38
+Please check it out. The tool is on my GitHub GitHub.com, P. Asadorean, forward slash FETL.
+33:44
+Check it out. Give me feedback. Let me know what you want to see next. Let me know if there's any
+33:48
+bugs as well. Let's get them fixed. Test it out. Thanks with that. Well, take a short break.
+33:55
+Come back with the security news. Stay tuned. Zero trust is clearly the future as threats get faster,
+34:01
+quieter and harder to detect, but implementing it shouldn't disrupt the business. Threat locker
+34:06
+enforces default deny at execution in a way that remains enterprise ready, scalable and operationally
+34:12
+clean. Unknown software has stopped cold. Trusted apps stay contained and drift is locked down across
+34:18
+the environment. It's zero trust that works in real enterprises and prepares you for the threats
+34:23
+ahead. CYC so is our adopting it at securityweekly.com, forward slash threat locker.
+34:30
+And we're back with the security news. Where'd you guys want to start? It's a question of the week.
+34:36
+How about at the beginning? Which story? CMMC baby. Yeah, let's call it CMMC.
+34:43
+Okay. So my story number five, I don't know if Josh got any in here, but I story number five.
+34:51
+We'll take it from there. They're all the same. Just on the eve of CMMC not just being implemented
+34:59
+as law already has a pattern has happened, but being able to be enforced, they have now done a 60 day
+35:07
+pause. Josh, for step back a little bit, what is CMMC? The cyber security maturity model certification
+35:15
+or CMMC is the Department of Defense's way to ensure that government contractors of which there
+35:21
+are approximately 300,000 are actually compliant with NIST 800 171. Well, a very customized and
+35:29
+stylized copy of NIST 800 171. By the way, they get their own 871, huh? They did and they did
+35:36
+something so, so smart. They locked it at rev two. Considering rev three is now there, they
+35:44
+just leave me a funny look. They locked it at rev two. Yes, they actually put the controls wholesale
+35:49
+into the standard, which means that to change them, you know, need to change the law.
+35:55
+There is not a reference. Ta-da. Normally you reference the law to the standard. You go, law,
+36:01
+you must follow this standard, whichever is the latest rev, go look over there for the standard.
+36:07
+Cool, works. If you put the control in the law, you now need to change the law to update the
+36:14
+controls that you're locked into doing. This was not smart. No, what could possibly go wrong? Oh,
+36:21
+God. So it's a stylized copy of NIST 800 171. It is also locked to rev two. They can't go to
+36:28
+rev three, which is out and being used. Seemons, Seemons has three levels. Level one, two, and I
+36:37
+know this is really tough, three. Well, they call them phases, right? That was that. No, no,
+36:42
+it's not phases. They're levels. Level one, level two, level three. Level one, like merchants in
+36:47
+PCI levels. Yes, basically, exactly. The almost exactly. Yes.
+36:50
+Correct. Actually, level one is for small government contractors. These people do not have access to
+36:56
+what they call CUI controlled, unclassified information. These are like lands, landscapers.
+37:02
+Literally, that was our friggin test case. Yeah, I remember you talking about that. It's
+37:06
+not with me. Yes, because landscapers get maps of the base and soda machine stockers get maps of
+37:12
+the buildings inside the base. Yeah. But those should never be controlled, unclassified. Those may
+37:19
+have blank spaces that we don't tell the soda machine stocker what's in there. But that's fine.
+37:24
+We don't tell him what's in there. Here's where your machines are. That's where you're allowed to walk.
+37:29
+That's all you get. That's all you need. That's known as FCI, federal contract information,
+37:34
+federal contract information for level one vendors. Remember kids, there's a quiz on this
+37:38
+after class. For level one vendors, federal contract information is all you get. When you start
+37:43
+getting CUI controlled unclassified, you move up to a level two. Okay? Level one is a self-assessment.
+37:50
+That is still the same. As of now, everybody doing level one is still self-assessment.
+37:55
+But level two is where you have to have a certified third-party assessment organization or a C3PIO,
+38:02
+otherwise known as a diplomatic droid that speaks some, how many languages does he speak?
+38:09
+Seven million languages. The C3PO pick. Yeah, and by the way,
+38:14
+now I have to look it up.
+38:22
+But you can talk to a binary load lifter. Do you speak BOTCHI?
+38:30
+So CMMC has just been paused. Now to be clear, the mandate is still there. You're still
+38:37
+required to be compliant with this heavily stylized rev to version of 800-171.
+38:43
+But the certified third-party assessment organizations are no longer going to be doing assessments.
+38:49
+C3PIO is fluent in over 6 million forms of communication.
+38:55
+Seven million is over six. So I'm right.
+38:58
+Technically correct. Which is the best kind of correct.
+39:03
+Sorry. Good news.
+39:07
+So they did a 60-day pause. Nobody expects it to come back as far as I can tell.
+39:12
+So what does the PAUSE actually mean?
+39:17
+Up until now, you could go get a C3PIO to give you an assessment and certify you that you were
+39:25
+actually meeting the compliance. You were compliant with CMMC. You now have that magic gold star
+39:33
+that says, thunk, I'm compliant. You don't need to check. You don't need to ask, I'm done.
+39:39
+Those are not going to happen anymore. Why? Because they said it's too
+39:45
+onerous. It costs too much. It's so bad. Now mind you, half of the problem comes from the
+39:51
+government itself. More than half of the problem. Yeah. Because all these
+39:56
+findings. I've seen this movie. No, go ahead. I'm just saying I've seen that movie. Yeah,
+40:00
+that it is self-inflicted. But that's the way.
+40:03
+And officers were marking every email, every document as CUI, CUI, CUI. What's the lunch
+40:09
+menu? CUI. That's not CUI. What is CUI? Control-Done-Twice-Live-Adversification.
+40:16
+So this kind of information, it's unclassified. So it's not dangerous in and of itself.
+40:22
+It used to be called sensitive, but unclassified SPU.
+40:25
+Yeah, SPU. And the classic example there was, you read in the newspaper,
+40:30
+because it's public information that electric boats just won a contract to build the new
+40:35
+class of submarines for the Navy. And then you read in another section of the Wall Street Journal,
+40:44
+a huge bid for titanium was just one out of Norfolk, Connecticut.
+40:48
+Right. And so there's going to be train loads of titanium going to Norfolk, Connecticut.
+40:52
+You go electric boats in Norfolk. They want a contract for a sub. And titanium's going into
+40:57
+Norfolk. Huh, I wonder if the subs are going to be made out of titanium. So these are pieces of
+41:02
+information that are not dangerous in and of themselves. But if you put them together, they can be.
+41:07
+Yeah. Okay. So that's CUI. All right. Like in this case for for Department of Defense Contractors,
+41:16
+I'm a machinist. I make screws. Okay. Big friggin deal. Right. You make screws.
+41:20
+Oh, these screws go in the F 35. Okay. More of a deal. But still that could be any of a
+41:26
+gazillion different screws. I have the blueprints for the damn place it goes. Oh, now we got a problem.
+41:32
+That's classified. But the level before I make screws for the F 35, that might be CUI. It's controlled,
+41:38
+but not classified. Because I don't know where they go. I don't know if it's like this may be where the
+41:43
+you know, the little flat that for the remove before flight tag goes. I don't know whatever, you know,
+41:48
+big friggin deal. So I know I know a lot of people that work at electric boat and a lot of graduates
+41:56
+that are coming out of high schools in Rhode Island and other places, other states have recruited
+42:06
+a record number of kids to work come to work at electrical. Which I think is great. They have
+42:12
+either here in Rhode Island, Connecticut, like you mentioned. And they just got they just got
+42:16
+contracts to build new submarines that you people to build them. They actually this commercial
+42:20
+device. But so I asked them, right? Because I'm curious. And I'm like, so like, why do people get in
+42:28
+trouble? Well, how do you control information? And they're like a lot of it is cell phone usage.
+42:34
+And because I guess in a lot of things, if it's not a certain level of classified facility,
+42:41
+you don't have to put your cell phone in a locker before you walk in. You can actually keep
+42:45
+your cell phone on you, which I'm kind of depending like, maybe you should just not allow people
+42:50
+to take their cell phones in because if depending on your role, you're doing something cool,
+42:57
+maybe you want to take a selfie or like they're hired a lot of young kids, right? Take a selfie or
+43:02
+take a video of it. And they're like, no, no, no, no, you can't do that. That's not you can't do that.
+43:09
+Then they have to go through your cell phone. But I think what that speaks to what you're
+43:13
+talking about in terms of how information is classified and compartmentalized in these facilities.
+43:20
+That's exactly correct. And so the problem is, is that give me one second. The problem is that
+43:26
+with this pause, you've got all these companies that were ramping up to become and compliant.
+43:33
+Look, let's back up one more step. The reason CMMC came around was because when there was just
+43:38
+self attestation for 20 years, the amount of companies that actually did security was,
+43:45
+yeah, we do security. These are not the droids you're looking for.
+43:49
+Going back to our C3PA, oh, exactly. My personal estimate was that three to five percent of
+43:56
+companies were actually compliant back in the bad days of self attestation, maybe, right? Exactly,
+44:01
+maybe. But now you have to certify. And if you don't certify, you don't get awarded the contracts.
+44:09
+So you better be compliant. So now the companies are winding and complaining, hey, it's expensive.
+44:15
+Well, if you've done it to begin with, it should be fine. Yeah. And I actually, I get it though,
+44:20
+because they're like, if I do security, it costs me money. If it costs me money, I got to have it
+44:27
+paid to me. I got to charge them on it. Right. But I know my opinion, Josh, this is very similar
+44:34
+to PCI. And I'm not saying like, I don't want to throw shade or be cynical about it. But I think
+44:44
+being a more optimistic, if we continue this program and we keep pushing for it and we push for it
+44:49
+to kind of look like PCI, it will have similar benefits to what PCI has done and increasing everyone's
+44:56
+overall security level. Because I think the parallels are good. And it might take time when
+45:02
+we need to pause it, when we need to go back to the drawing board and we may have different
+45:06
+revisions. But if you classify your merchants or your contractors in different levels, then you have
+45:14
+different standards or a standard that they have to abide by in different ways to attest to that
+45:20
+standard. Yes. Right. You can self attest or you have to have an audit and then maybe there's
+45:25
+different levels of auditing. I would like to see similar to PCI. If you're this level merchant
+45:31
+or you're this level contractor, you have to have a pen test. If the tools that are used to
+45:38
+assess the technology are certified much like PCI, I think it puts these 300,000 contractors and
+45:45
+the safety of our nation in a much better place. It's in my mind, I'm going to take time for us to
+45:50
+get there. But if they follow the model, I think they'll have a very similar positive result to what
+45:55
+we have with PCI. So they just threw that out the window. And throughout the window is this 60-day
+46:00
+pause. Because what they've all stated is that the kids of death, a 60-day pause is really
+46:05
+in this case of death because the moment they put the pause in, they also stated they're going to
+46:10
+be looking to re-engineer CMMC using this new set of techniques that are basically to speed it
+46:18
+up and lower the standards a bit. Now they haven't said lower the standards what they said is we
+46:24
+want to make it faster, cheaper, easier. This is just too much of an onerous task on the
+46:31
+government contracting. So how many years have we been working on this now? Just only now decide
+46:37
+it's too onerous. I worked on it. I helped write version one in 2021.
+46:44
+It's going to take about four years since I was talking about when I started the Clipsium
+46:49
+was roughly four years ago. So the problem is, yeah, goodly. I go ahead. I'm just going to say
+46:56
+something silly. So go ahead. Go ahead. It's been in the works for years. It's been trying to get
+47:02
+moving for years at every turn somebody delays it. And now that we were literally this close, it was
+47:09
+months away from being mandatory in both law and regulations, the defires, the defense federal
+47:16
+acquisition regulations. Now that they've paused it, everybody who was screaming at their companies,
+47:22
+we have to be compliant. We have to be compliant. There's a deadline. There's a deadline. They're
+47:27
+never going to be believed again. Yeah. And the funny thing about I'm thinking about this, third party
+47:36
+security is a thing right now. Don't even think about government. I mean, it's like how many
+47:42
+Tommy third party compromise that we've seen. And in government, you remember that set the
+47:46
+way back machine about 10, 11 years ago, that little OPM breach, which was the third party security
+47:52
+problem with government system. It's totally appropriate. And oh, by the way, for DoD, this is,
+48:00
+they're not the only federal agency that needs their contract to take care of their data properly.
+48:04
+But they're doing some stuff that really is at least for intervals very sensitive and even
+48:10
+classified at times. And yes, I remember the old Cisco manual, he talked about separating
+48:16
+classified and classified networks with a firewall rule, which that never happened, particularly
+48:22
+back then. Well, the best part would be any any for that, just to be clear. Yeah, yeah, no,
+48:26
+it's very smooth and non disruptive. Or way way it's got too much latency. Yeah, they're
+48:30
+droshed. Yeah, or the traffic has to pass through a firewall. Remember that one fall? Yeah, right.
+48:35
+Yes, the cable through the shoebox for the cable through it. No, it was an actual Cisco firewall
+48:42
+with a hole drought drill through it. Are you serious? Oh, yeah, that's a famous mic port. Well,
+48:47
+the famous. Yeah, I just couldn't remember whether it was a device or just a shoebox with a hole
+48:53
+through it with the whole. The whole of the Cisco firewall. That's awesome. Yeah, and it passed right
+48:58
+through. Yeah, does the traffic go through a firewall? I think Josh needed that. Yes, it does.
+49:04
+So it's like a network, right, Josh? Oh, I fucking hate you, man.
+49:10
+So I got to tell you that the I went to think early on when they were talking about the right
+49:16
+codifying in law, the security controls. I remember so many regulations when I came through
+49:21
+DOD, they would DOE. They would basically say, here's here's our policy this and O-by and at the
+49:26
+very end, O-by the way and whatever else NIST says. Right. So basically throwing the rest of the NIST
+49:32
+guidance and regulations in disco. Whatever they were at the time, you look them up.
+49:37
+And here they're not doing that. It's like crazy to me.
+49:42
+And so that's I was reacting on that and then cell brought a cell, Paul brought up the cell phone
+49:47
+thing. And there was a time really when we were working at the lab, if folks couldn't have their
+49:54
+cell phones with them, they would not accept the job. Oh, they're not just talking about sensitive
+50:00
+on class. That's a fellow. It's a long class. Yeah. And that and open there's plan, you know, and
+50:07
+believe it or not, for a long time, they weren't. Do you learn a lot of bringing out of the car
+50:14
+or if you got, if you were, you know, whatever you're on a car pull or whatever, there was the locker
+50:18
+that you couldn't even get in the unclassified areas. Then it switched down just the class
+50:22
+fight areas. Even to this day, taking a photo with your cell phone is official use only data.
+50:31
+You're not supposed to. There are agencies that have center punches that they, the official
+50:37
+phone comes pre-starred in the camera lens, you know. Right. So I mean, they have to be careful
+50:43
+about all electronic devices. Right. Yes. Yes. And so like this device, right. And I don't know,
+50:52
+Larry, if you can keep me up with the ESP 32 happenings, I have not. I've been so much disconnected.
+51:02
+Not as much as I should. Yeah. Not as much as I should either. In fact, I don't even know what
+51:08
+firmware this is running. This is running the stock. I haven't even flashed this one yet. But
+51:16
+Praetorian released yet another Bluetooth low energy tool. I saw that. I saw that. We did see that,
+51:23
+right. Yep. And I guess, Larry, I just kind of want to, like when we talk about Bluetooth low
+51:27
+energy, there's so many tools, so many devices, so many projects. Yep. Have you kind of like sifted
+51:33
+through that to pinpoint like I have. And it is, it's kind of a continuous type of thing. And
+51:42
+that's, that's one of the things it's been kind of terrifying and amazing about Bluetooth
+51:49
+low energy and Bluetooth classic in that Bluetooth classic was so complex for so long.
+51:55
+And that there weren't a lot of tools. They were very specialized. They were expensive. Right.
+52:01
+But Bluetooth low energy is one is a protocol simplified it, but two as a at higher layers in the
+52:07
+stack became much more simplified. And the tools and the chipsets became at a low level became
+52:15
+super cheap and readily available that just about anybody can do Bluetooth low energy hacking stuff.
+52:22
+And it's, well, now AI coding tools. Yep. We can create new tools. Totally. Which is great.
+52:31
+But it kind of, it floods the market with all of the air quotes market, right? Like a lot of
+52:37
+the stuff is very inexpensive and the tools are a source. But it's very much one of those like,
+52:43
+this is the sex 1617 problem, you know, for the the the wireless sands course discussing utility tools.
+52:50
+Thanks. Thanks for the AI summary. But when we, when we absolutely started going and when we
+52:57
+first developed the Bluetooth energy module, this was years ago, we wrote it and a typical day
+53:06
+for the wireless class is about 160 slides. We had 120 slides just for Bluetooth because we were
+53:15
+discussing so many of the really cool tools. Yeah. And it was only supposed to be a quarter of the
+53:22
+day. And it was three quarters worth a three quarters of day worth a slide. So we had to we had to
+53:28
+trim the fat. And so it's an ongoing thing to pick some of the best of breeds that better supported
+53:34
+the ones with the arguably best features that are reasonably priced and do the amazing things.
+53:40
+So it's a struggle. It's a struggle. I think today, you know, it's interesting. I think today with AI,
+53:45
+when you have this type of struggle or variance of this, it could be like, there's so many tools.
+53:52
+They all do one thing really well or they're all kind of have feature parity or there's a bunch of
+54:00
+tools and then like a bunch of people didn't maintain them anymore so they don't work in any scenario
+54:07
+where I've had some success is you take all those tools, you clone them, right? Ideally, you do some
+54:15
+kind of security audit to make sure it's not like prompt injection in there, right? It's kind of scary.
+54:19
+But those are that's your body of knowledge that you start with. And then you use AI and you prompt it
+54:27
+and you go, I want to build a tool for me based on my requirements based on all these other tools.
+54:34
+And you create that master tool. For me, that was an internal project. Unfortunately, it's not open source.
+54:42
+Hopefully someday it will be. But that was me when analyzing the CVE data, right? Now anyone can do this,
+54:49
+right? You can recreate what I did very easily. You can spend a few hundred thousand tokens or whatever
+54:56
+and build what I would I build. And the way I built that was, I was like, there are these tools
+55:01
+that are used to analyze the CVE data. I like these features. I like that feature.
+55:07
+Here's the tool I want to build and then just start iterating on that with an AI coding agent
+55:13
+and you can build your own tool that's custom to you. I didn't do anything unique like analyzing
+55:17
+public CVE data. Anyone can do it. What separates the way from the chaff and that arena is,
+55:25
+can you tie it to malware? Can you tie it to thread actors? Do you have your own honey pot
+55:30
+and sensor network to feed that data to collect new malware to collect new threats to
+55:36
+mark things as exploitable that only you are observing? That's where you go pay a company money.
+55:41
+In my opinion, for a much more enriched feed. But if you just want a tool for yourself that does
+55:47
+boot tooth that analyzes public CVE data, I employ you can definitely go create that yourself. I
+55:54
+think we have a question about how to use AI tools. I feel like I'm still learning. In fact,
+56:00
+there's a LinkedIn post by Hal Palmerance that has forgotten more about Linux and Unix than I
+56:06
+will ever know. It still says, like, made a post. When Hal adopts a new technology or tries a
+56:14
+new technology, she's like, I still feel like a new. And I love that. And I think Hal would agree.
+56:19
+He loves that too. And we make mistakes. Hal makes mistakes. I make mistakes. Yeah, we've
+56:25
+got a lot of experience. But this is new to me. So I'm going to make mistakes and do it. Don't let
+56:30
+that put you off. It's a learning process. And I think AI works really well. The point is it works
+56:37
+really well. When you start with kind of an established body of knowledge with some kind of
+56:43
+context or materials that you're not starting from, I think the mistake people make in the way AI
+56:49
+gets a bad reputation is you're starting from a clean slate. So if you just open up a prompt to any
+56:55
+LM today and say, go write me a CVE vulnerability tracker. It would do a terrible job. Yeah, right.
+57:02
+And so you need to have that body of knowledge and context. At the very least, you need to have
+57:08
+a requirements document that you have written that you have researched and pulled together a
+57:14
+bunch of resources and defined which did that that's probably the first. I would I would even argue
+57:21
+prompt the a prompt your agent to help you build that requirements document. Give it a
+57:26
+good. I don't have it. Have it. Have it. Have it. Build it. Interate on the requirements document
+57:30
+a number of times before you start. And then as you're going, you will as is going. It will come
+57:37
+up with new things said you will come up with new things like, oh, that's cool. That's great.
+57:40
+That does that now. Let's add some more of these things to the requirements as we want.
+57:44
+I argue that actually when you when you use an LLM to code to vibe code, it teaches you to understand
+57:54
+and break down and decompose the problem better than when you just throw yourself into code.
+57:59
+The price is better. But at least, at least, at least, at a company. So what I was thinking about is
+58:05
+on the news this morning, they were there was a story where the financial analyst was talking about
+58:09
+the risks of AIs for for managing your finance, by the way. They're they're great at analyzing
+58:13
+numbers. But if you give it a business plan, it'll tell you it's okay, even if it's not. So I'm thinking
+58:18
+what is your model need to not have it approved the worst idea on the planet? If that makes sense.
+58:25
+Yeah. I mean, how do you know that you're good enough so that you can then yes, it's a fantastic
+58:30
+point. You need to understand that AI does not the AI technology we use today to build code,
+58:38
+let's say, or answer questions. It does not like to say I don't know. Correct. And so when I'm
+58:47
+building or prompting AI, I try to build that into my prompts. I don't just say like it's okay
+58:52
+to not know. I'm like, when you ask this question, ask me what what we should do rather than go
+59:02
+hallucinous. So I try to get ahead of it and tell it like don't try not to make assumptions like
+59:09
+when you get to this part, ask me questions. So one of my my favorite prompts, I don't know if
+59:16
+other people do this or how great it is, but my experience, I'll say, look, I want you to go do this.
+59:23
+I want you to build a plan with milestones and I want you to build that on this particular problem.
+59:29
+And I want you to ask me questions so we can make it great. In that kind of triggers AI to
+59:37
+not make as many of those assumptions or hallucinations as we call them and go, oh, like I have a
+59:43
+design decision here. And if you don't get ahead of it, it'll try and make that design decision for
+59:48
+you or answer that question. However, it can, even if it's wrong. But if you kind of prompted it to
+59:54
+go, no, like ask me what we should do. Now, do I always have the answer? Absolutely not. That's why
+60:01
+there's like an other where I can go, let's chat about this or defer that decision for later in
+60:09
+the plan. Like defer this feature, like in Alaska, like if we do this feature later, like, does it
+60:14
+matter? It's fine. You can do it later. Okay, great. Put that later in the plan and we'll come back
+60:18
+to it. Right. So I think not getting ahead of yourself in prompting AI in that way is the way I
+60:26
+at least have had great success with AI. Yeah. I will second that maybe on a little different
+60:32
+different tack that, you know, maybe less on the building stuff. But you know, some of the things
+60:36
+that'll be included at my IITO which talk at Defcon, it is very similar types of things is that,
+60:43
+you know, you're going to, you know, build a plan for your fantastic. You're going to give it a
+60:48
+playbook. You're going to give it some data about the device and it's going to go and effectively
+60:54
+build an assessment plan. And it's going to do a bunch of things. But as a human,
+61:00
+we also know that like, hey, did you think about this thing that may not have, it may have only
+61:06
+been tangentially referenced in the playbook or wasn't in the playbook at this time, that based
+61:13
+on the discoveries that were found, we need to go test this and it can't necessarily always figure
+61:18
+that out. Sometimes it can. But, you know, having an actual brain that can extrapolate and some
+61:26
+of the types of things are important. We think differently. Yes. Yes. AI's LLMs can think
+61:33
+incredibly broadly. They can hold seven books in memory at the same time. I can't.
+61:39
+Unless they're like children's books run spot wrong. But we think over a long periods of time,
+61:46
+I remember something we did that, you know, the LLM in this session has forgotten. And so I
+61:52
+remind them like, oh yeah, let me check the notes. Oh, God, yes. Okay. So we did have for this
+61:56
+already in here's how that happens all the time, all the time, all the time. And my other advice
+62:03
+along those lines, Josh is when you're prompting an LLM, I stop at certain points and I'm like,
+62:10
+this is a good point to stop. I'm like, hey, Claude, I want you to update your memories and what we
+62:17
+just did. I want you to update all the documentation. Then I want you to commit and then I want you
+62:24
+to push it. Yes. I have done the products. Yeah, that's the problem that saves my any
+62:30
+needle still in older sessions. Like I was noticing today. I'm like, I think you guys were seeing
+62:37
+saw me prompt my Claude session. I've got going now for work. And I was like, yay, I like go do
+62:44
+that. But in that it was like, it forgot how to interact with the API for our own product. And
+62:49
+I'm like, it's like, oh, I want to go it's like running this whole thing going to try and test and
+62:55
+fuzz the API. I'm like, I gave you the API documentation. And it forgot about that. I'm like,
+63:02
+can you go read the documentation? And then it found like the actual PDF documentation. And then
+63:08
+it's still charting. I'm like, no, no, no, no, you have a copy of the swagger documentation in
+63:14
+plain text stored locally. And it's like, Oh, yeah, I do, I do have that. I'm like, go read that.
+63:22
+Then do what I asked you. And I was like, oh, yeah, it's like, it forgot. And I'm like, how did
+63:27
+you? Yeah, how it lost that content? I think compacting your conversation. I think sometimes loses
+63:32
+that context and you're not really good about saying. Now here's here's a great question. And like,
+63:36
+we talk about being new and doing those types of things. Would this be something that
+63:43
+creating a skill for that be helpful? Yes. Yes. Here's a skill, create a skill on how to use
+63:50
+the API so that it remembers that it has the skill. And we don't have to telling it. Yeah,
+63:54
+skills are great. But your right-line skills are great point. You can basically
+63:59
+save a bunch of memories permanently and go back and reference that. I don't have
+64:03
+got you experimented recently with I with with skill creating skill. I actually published some
+64:08
+of my first skills internally for our team. And I think they work really, really well. And I still
+64:15
+into iterating on them. But I'm like, oh, this is a problem I have because as part of the
+64:21
+fantastic stuff. And like, you can see a whole bunch of stuff on my desk that building a lab to
+64:27
+do a bunch of testing on devices. That like, oh, we give it a serial port so that we can start
+64:33
+and numerate that. And every time it has to go figure out how to interact with the serial terminal
+64:38
+console. Right. And oh, it's got you boot. Let's break out of you boot and every time it has to
+64:43
+refigure out how to break out of you boot. And sometimes it's multiple times per session. It has
+64:49
+to figure out how to break out of you boot because the session has got compacted. So the amazing
+64:53
+part is you can use cloud to create your skill. Yeah. And have it iterate on that skill. I've got
+64:58
+to answer for you. So it's the amazing. The amazing part is what I learned is that you can just
+65:03
+publish your skill. And if you put it in the GitHub or GitLab repo for your company, you can
+65:12
+enable like a skill menu. You can basically tell cloud all my skills internally for my company
+65:19
+are here. And in the cloud CLI or desktop interface, you can go add this as a skill repository. And
+65:26
+then you can all share and publish skills within the company. My engineers did this give them props
+65:33
+at Eclipseium. I work with an amazing, amazing team of people at Eclipseium. And they shared this
+65:38
+in one of our technical sessions. I'm like, you guys are awesome. Like this is so great. So great.
+65:44
+So I'm going to throw one aspect on that library. There's a combination that I started using,
+65:50
+which is I build a skill for a specific task, right? Like, for example, break out of you.
+65:56
+Okay. But then for a sequence of tasks, I build a runbook. So the runbook is to do these things.
+66:06
+I need this skill. Then do this. Then do this skill. Then do this, this, this, and this. Then do this skill.
+66:12
+So each skill is fairly small. I need that. Is runbooks like a cloud feature? I just told it to
+66:18
+build runbooks and it started doing it. I need that. I need that. So like when we do,
+66:24
+I just build runbooks. It worked. I taught, I tried to give, give,
+66:29
+cloud context on how I write. So I have a, now a skill that writes as me, which is, I'm still iterating
+66:36
+on it. Again, it represents a two years of me working with elements to do that. But there are
+66:40
+certain workflows, such as when we discover a new vulnerability. This is what I'm currently working
+66:48
+with to have it help. I know it's not going to create all the content 100% right the first time.
+66:53
+But oftentimes there's a lot of content we need to create for when we discover a new vulnerability.
+66:59
+And those out there that are working in resource teams, right? You guys know in Gals,
+67:03
+no one I'm talking about, right? Like, there's, I need to do the disclosure document.
+67:08
+I need to do a vulnerability advisory. I need to maybe do media questions. I need to write a blog post.
+67:15
+I need to track the communications and the disclosure with the thing. I need to have proof of concepts
+67:22
+in videos and in other artifacts that are associated with it. So I'm experimenting now with AI
+67:28
+and how it can help us one, create all of that content into automatically track that process.
+67:35
+Because it's a pretty well defined anyone that runs a research organization knows that process is
+67:40
+pretty similar in the way you track it. There's the point in time when you find the vulnerability,
+67:45
+you disclose the vulnerability. There's a set time frame as to when you're going to publicly
+67:50
+disclose the vulnerability. There's a whole series of things that needs to happen once it's public.
+67:54
+There's stuff like a set series of things or runbook, Josh to your point.
+68:00
+Which is why they got me excited. That needs to happen at various points. And that's what I'm
+68:06
+trying to build for us. So it's a lot less work. We get to focus on what's important in the disclosure.
+68:14
+The technical research details is important. The communications are important.
+68:21
+In having AI kind of help augment that process thing is really great.
+68:27
+I do a lot of that at work if you can't tell. Yeah. Yeah. Who do we tell?
+68:31
+I'll be list. Yeah. It's all my lists. Not that any of us use AI extensively.
+68:39
+Trying. It's not perfect. But all those stories that we have. Oh, I want to talk about BIOS
+68:46
+passwords for a moment. Okay. Did you guys read my article? No, it wasn't my co-worker, Staz,
+68:53
+Lyakov and John, John the Katie's. I think both in Manu, one of my guys in Argentina,
+69:03
+all worked on this together. Is this your story number 10? Oh, I thought it was 11.
+69:10
+Yeah. Okay. Okay. And there were others that worked on this with me when I come into that.
+69:16
+I mentioned. But this stem from the yellow key bypass and people started talking about BIOS
+69:22
+passwords. And then internally we started talking about BIOS passwords. And that was a really
+69:28
+amazing conversation because I work with people that have worked on UEFI and BIOS long before.
+69:36
+I even knew what UEFI stood for. They were working on UEFI. So it was an amazing opportunity to
+69:42
+understand this. And one of the things that we uncovered was the perception of your BIOS
+69:49
+password and the implications of setting or not setting it. And then all of the things that
+69:57
+were unraveled after that. So like I want to ask you guys, like, what's your perception in
+70:03
+understanding of BIOS passwords? How do you think of a BIOS password? Well, I usually think of
+70:10
+when you say BIOS password, it's the password that prevents you from updating and changing the
+70:14
+values. Yes. That is most of a boot password, which you have to satisfy that password before
+70:21
+the system will boot. Yes. Those are the two most common BIOS passwords. And then in some
+70:27
+universes, people have a bit locker password or a key or they might just have a bit locker
+70:34
+would be a lot of a car. A far more password. But you know, there's a password you have to enter
+70:38
+for the hard drive to be. Yes. You nailed it. You could have wrote this out. You could have written
+70:42
+this article. Well, nailed it. The system was passed by unlock strange places and had to deal with
+70:49
+all three. Yes. All three. So they're actually using this all hell, which what you're talking about.
+70:53
+Okay. So lead, you could have written this article. You have a command of this subject matter.
+70:57
+You nailed all three, right? The one to change password that you need to change your BIOS settings.
+71:03
+The password need to boot the system and the password to unlock your storage device or three
+71:09
+separate independent passwords. And what we learn is that every major vendor calls this something
+71:16
+different. Absolutely. Of course. Of course. Of course. Of course. Of course. Of course.
+71:20
+Which leads to a lot of questions. I was actually thinking it wasn't vendors. It was humans that
+71:24
+called them different things too. No, it's vendors. So I think it's both. Yeah. But it doesn't help.
+71:29
+So I'll give you the quick rundown, right? So the gate that gate firmware can figure changes,
+71:36
+right? So to get into your BIOS, Lenovo calls that a supervisor password. Del calls it in an
+71:42
+admin password. And HP calls it a BIOS administrator password. Right. The password required to boot the
+71:49
+machine. Lenovo calls that a power on password. So does HP. But Del calls that a system password.
+71:56
+Then to protect the drive itself, Lenovo calls that a hard disk or NVMe password. Del calls that
+72:02
+a hard HDD or hard disk drive password. HP calls that drive lock. So right there, I was like,
+72:10
+oh, this is a blog post because it's so confusing as to how we set these various things. NSA
+72:19
+actually has some pretty good guidance to guide you on that, right? Because we think about this model.
+72:26
+We all know people that are super paranoid about op-sec in their own machines. And Tyler,
+72:33
+they would probably have all three of these passwords on their systems in addition to like a USB
+72:39
+drive that has to be plugged in in order to boot their system that contains the boot like the boot
+72:43
+loaders are even on the system. The bootless on right on the interview bootloader connect to have
+72:48
+another password. Tyler, we all know people like that. Wipes the system and reinstalls it every
+72:55
+three weeks, Tyler? Yeah. So ridiculous. And then I get in certain circumstances, I understand
+73:01
+that. And that's fine. But then like go to an organization that has 200,000 users.
+73:08
+How do you then manage those those passwords in which passwords do you enable and or require
+73:16
+for your users? And how does that impact the operations of your company, operational risk,
+73:23
+operational security, IT operations in general, right? And there are ways to operationalize.
+73:28
+Like a user usually shouldn't have to get into their bios. And there are like enterprise management
+73:34
+ways to manage that password. I believe the NSA guidance does not recommend the boot password
+73:41
+for like a fleet of 200,000 users. Because that would be an operational nightmare.
+73:45
+Also bitch when you're patching. And you have to. Yes. Correct. There's a hundred percent. There's a
+73:51
+lot of it. So yeah. So basically we tried to write up as much as we could about this topic in
+73:59
+this blog post. And then we implemented some rules. So fun fact, I'm actually leading in helping
+74:08
+one of the teams actually more than one team now at Eclipseium in product management. And so helping
+74:15
+them prioritize what they should implement guiding them on what we should implement in our product.
+74:21
+And one of the things we implemented recently was telling you if your bios password was set or not.
+74:27
+Which is pretty awesome. So I am doing that for Eclipseium, which has been a lot of fun.
+74:32
+The teams I work with are absolutely amazing. And it's amazing opportunity for me to go.
+74:37
+I think this is more important than that based on my experience and what I'm observing and what
+74:45
+I think customers would want. So that's been it's been a lot of fun. I think I kind of floated with
+74:52
+that role when I was leaving CRA and went on to take different roles and now we kind of come full
+74:59
+circle and I'm back at it. And it's cool that I got to help us add things like a bios password
+75:06
+not set. There's also you know, article from Dell and vulnerability from Dell as well.
+75:11
+Another pick on Dell because this exists in a lot of different models of different computers from
+75:16
+all of the OEMs. And this is another aspect to your bios passwords plural is how they're stored.
+75:23
+Are they stored in securely? Can I as an attacker, either with physical or not physical access,
+75:29
+recover that password? So where and how you're storing that password matters and greatly differs.
+75:36
+Dell recently had a vulnerability as an example. Again, I'm not picking on Dell,
+75:40
+but they recently had a vulnerability that they fixed that was an insecure method of storage and
+75:46
+or recovery for that password. I think we've talked on the show before. We all kind of know some of
+75:52
+those tried and true methods previously to bypass that that bios password. Sometimes removing your
+75:59
+CMOS battery would bypass that would reset the NVRAM that store the password.
+76:06
+NLI to reset it. That doesn't always work. There's lots of other methods for
+76:11
+recovering that password. One of my favorite methods, my coworker Mickey,
+76:17
+was telling me about this. And I think has done this is if you have one model laptop
+76:22
+and it has a bios password, you go on eBay and you find that exact model laptop and you make sure
+76:30
+your spy flash is the same like part number model number. And if the one you got from eBay
+76:36
+doesn't have a bios password set, you can you can either image it, image the one with no password
+76:43
+and overwrite the one with the password via a physical spy flash programmer or you can pop the chip
+76:49
+out of the one with no password and pop it into the one with the password and that's another way
+76:54
+to bypass it too. Remember to link the chit-chat. That's cool techniques from the awesome people
+77:00
+and Josh's chit-chat. It's very important. Okay, you got to get a link. That's a good biometric
+77:06
+authentication into the left. And if you're uncomfortable looking, get the dog to like it.
+77:12
+Like it's fine. Just be careful with your voltage. Licking or not licking.
+77:18
+To be honest, voltage would be bad. Yeah, when I was most concerned about is making sure that the hard
+77:24
+drive was encrypted and you couldn't trivially bypass the getting at it that way. That was my
+77:29
+focus as opposed to whether we need to have a bios password or a boot password. And I realized that
+77:36
+and a lot of it, you know, Bitlocker took a lot of stuff but doesn't do anything for our Linux users.
+77:42
+I get that. But, you know, there are Bitlocker equivalents in Linux. Yes, there are.
+77:49
+Yeah. But for multi-duel boot systems, the bios password, the password for a hard drive,
+77:58
+the one that's you enter through the prompt there, it works across OSs, but boy,
+78:03
+you wind up with bricking a lot of systems. Yeah. Or not being able to do some type of recovery
+78:09
+in a lot of ways. It's really important. I'm glad you guys mentioning password managers on this
+78:14
+stuff because you know, and if you got it, there are there are I didn't resource them extensively,
+78:20
+but there are ways to like manage like because like you don't want the same password on all of your
+78:25
+bios, you know, passwords for your entire organization. And there are enterprise ways to help manage
+78:33
+that. I didn't dig into a lot of exactly how that works, but there are ways to do it. Hey, it's the
+78:39
+same password as my luggage, right? One, two, three, four, five, six. Or in the Bluetooth example,
+78:46
+zero, zero, zero, zero. Yeah. So six, six, six, zero, six, six, well, Bluetooth, the energy is six,
+78:51
+zeros, six zeros for Bluetooth, space balls, it's five. So any,
+78:57
+baseball, the flamethrower. Okay, I knew. Did you guys see the kids love it?
+79:03
+The uncovering of the Russian state actors that were targeting Cisco devices and building a botnep
+79:11
+and there was an alert issued from, which story of this was yours? So it's my story number eight.
+79:17
+That's every decade for the past 30 years. So there's a couple hilarious things about this,
+79:22
+this article. So my story number eight, finding the writers, the energy bearers looking for,
+79:28
+there was a security boulevard article where both myself and John Strand are quoted in that article,
+79:34
+commenting on this. Ironically, John actually called me this week and we haven't chatted
+79:41
+it in some time. I sent him a text that was so article make dude, you calling me and us being
+79:46
+quoted the same article. I feel closer to you than I have in like a year or two. This is amazing.
+79:52
+I love it. But there was an alert issued based on this July 9th, the NSA in 18 other domestic and
+80:02
+international cybersecurity agencies jointly published, improved router hygiene to protect against
+80:07
+Russian state sponsored targeting. So the technique as Captain obvious would say isn't sophisticated.
+80:22
+They scan the internet for Cisco SNMP services on port 161. Guest the default public community
+80:28
+string and use legitimate config copy functionality to pull the running config,
+80:33
+chance over the credentials, internal addressing routing relationships and the like.
+80:39
+They also targeted Cisco SMI or smart installer, which is the like basically setup mode on your router
+80:50
+that has no or very little authentication and can be exploited very easily. And this is why I came up with
+81:00
+the quote like 1999 called and it wants its air quotes exploits back because these are things
+81:08
+on Cisco routers specifically that we've been talking about since about I think I'm thinking
+81:17
+I was trying to figure how far back we've been saying don't do frickin smart install. I want to say
+81:22
+I was I was in college so it was between 1995 and I was going to say 30 years, when we got the first
+81:33
+Cisco router and there was actually some debate like do we get a Cisco router and we get a router from
+81:39
+someone else and everyone was like well even in the late 90s everyone was like well a lot of people
+81:45
+are trained upon Cisco it's kind of the standard we should just go with Cisco like no it's fired for
+81:49
+buying Cisco. Yes, no one ever gets fired for buying Cisco. So we had a Cisco router and like
+81:56
+even at that time I was like we shouldn't expose SNMP we shouldn't have the fault SNMP string. This
+82:03
+has been like a security issue and control that Cisco has advised against that we've understood
+82:14
+since the 90s which I feel like wasn't a very long time ago for me I still feel like that was
+82:20
+30 years but it was like 30 years ago now and so now in July of 2026 we're still addressing the
+82:32
+same goddamn issues like what's going on. I can't believe this is happening now and we think
+82:41
+although like how do we detect this I'm like hold on like let's back up how about we don't expose
+82:48
+Cisco routers to the internet in configurations that Cisco and all of us in security before there
+82:56
+was even like full time jobs and a lot of full time jobs in security we've been telling people they
+83:02
+should not do on their Cisco routers like this is just on but I can't even believe we're having
+83:09
+this conversation right now. These two features SNMP and SMI are two things like you should
+83:17
+one you used more secure SNMP you shouldn't have SMI you shouldn't expose it to the internet.
+83:24
+Now hold on last thing on my checklist is like if you're initiating a TFTP transfer of your
+83:31
+config file for your Cisco router over the internet. You should not allow that traffic to happen.
+83:39
+You should not compete again like I was working with Josh Wright in the early 2000s to
+83:46
+write hardening Cisco routers. I was working for Brown University at the time. I had a lot of
+83:52
+Cisco gear and I helped them secure all that Cisco gear and this is the early 2000s that we were
+83:57
+advising against doing a stupid stand classes at stands classes back when I could smoke a cigar
+84:04
+in the lobby of a hotel in New Orleans. That's how long ago this was. I was advising people not to
+84:10
+do this shit on their Cisco routers. Back when we were doing TFTP boots that's when we were
+84:19
+using that to boot our disc list workstations and we weren't freaking doing it over the internet
+84:24
+but it would work but also at that time the reliability of those WAN connections wasn't what they
+84:30
+are today. But I saw the solidity with Russian hackers are sipping on vodka eating caviar going
+84:37
+you know what it's almost 30 years old but I bet we scan the internet for SNMP and SM high stuff
+84:44
+we would find stuff to find it and it's people. Boom! The other Russian hackers like nah no I'm
+84:49
+not gonna do a Russian accent because I'm terrible at it but they're like no way no way that still
+84:53
+works and they're like yep it still works. No Yuri no way. Yes. Yes. Yes.
+84:59
+Yuri. I'm not gonna say Yuri. The name of our CEO and co-founder is Yuri. As a matter of fact I think
+85:05
+I'm going to need two wives. Look let's be honest the only thing I have to do is... I have the machine
+85:10
+on all weight that's a different one. The only thing we're missing is Jeff Mann telling us that they
+85:15
+were telling people not to do it in the 50s okay or something like that. This is so old. This is
+85:19
+what Jeff was a pentastor 50 years ago. He was exploiting these vulnerabilities to gain access to
+85:26
+all it not that he was a bit... Why are people exposing us and MP to the internet? SNMP hasn't even been
+85:30
+invented yet. Be careful what you target Reagan. Some things don't work well to us SNMP. Oh god
+85:38
+I like I'm just I'm absolutely even talking with you guys about this in this
+85:44
+and I mean it way which is it's hilarious but also it saddens me that we're having this
+85:50
+conversation now. I mean why do those features even still exist in a Cisco product right?
+85:56
+And I know the two the two word answers backwards compatibility right? Yep legacy.
+86:03
+Legacy yeah one word for the win but sometimes you're still... Is there still a 46 buried in every
+86:13
+64 computer? Uh-oh holy cow that's a frightening thought.
+86:21
+Well hold on I want to go back to Elise comment though. Why is this feature enabled by default?
+86:27
+Why is this feature you're using? But is it? I want to say in my experience Larry it's a great
+86:34
+question. SNMP has been enabled by default on Cisco routers more often than not.
+86:44
+And I'd like in this back to my first experiences with Linux in the same time frame talking late 90s.
+86:52
+Red Hat 5.2 you can go look up when Red Hat 5.2 was released. Red Hat 5.2 I stood up a Red Hat 5.2
+87:01
+box on my cable modem network and it was compromised almost immediately and it was used to
+87:08
+distribute wares and largely because they enabled a whole bunch of services by default.
+87:16
+And very quickly thereafter many Linux distributions Red Hat included stopped enabling all of these
+87:23
+services by default. Why hasn't Cisco followed suit and not enabled SNMP by default?
+87:32
+Because if you're managing a large fleet of routers you're certainly capable of enabling
+87:36
+this service and you should be enabling it securely with SNMP V3 with password hashing and
+87:44
+so on modern Cisco router firmware SNMP is not enabled by default.
+87:59
+So that's good news. So that means two things. In the particular cases of these thousands of
+88:09
+routers with SNMP enabled on the internet that someone has actively enabled it or these are legacy
+88:19
+devices. Right legacy. So Red Hat so just for the record does this how old I am? Red Hat 5.2 was
+88:30
+released October 20th 1998. That's when it first came out and that was my first box that got hacked.
+88:43
+Oh, oh, you'll like this one. Hold on. I got to move something here but I can do this.
+88:50
+Give me a key. Keep talking. Keep talking. Talks to amongst yourselves. This will take me a moment.
+88:54
+Talk amongst yourselves. I think we beat that one to death. I actually had. I have some stories.
+89:04
+Yeah, well, I just thought we might want to take a I have one that I want to poke Josh over but
+89:09
+before we go there. Can we talk about the water flow? That's actually where I was exactly where I was
+89:16
+going. Let's go back to Larry for one moment. Red Hat Enterprise Linux version 2.1.
+89:21
+So what it says? Yep. Oh, way. It's still got the floppy. Where's that CDs? I'm trying to think.
+89:37
+2.1. I don't know CDs. No, it's really we had CDs back then. Did we? We did. 2.1 would have been
+89:47
+90 even better. I can't tell because it's still sealed. Wow. Red Hat Linux 2.1 was really a November
+89:56
+November 1995 with sourced setting. This is specifically this is Red Hat Linux advanced server.
+90:04
+So it's not necessarily that was that was the expensive one. Yep. Red Hat Linux advanced server.
+90:12
+And the CDs are still see there's still see. Wow. Where did you get that? Did you
+90:18
+somebody's passments? No, I think it was at like an old job that they were getting they were
+90:22
+clearing out stuff. And well, you want to see the router I was installing in 1989 look up a Cisco
+90:29
+AGS plus. Oh my god. No. Yes, I stole a pair of them. All right. And then to make it to make it
+90:37
+even older. I'll get it. I think I've looked at what are you going to pull up network 2.17.
+90:44
+I was too far off that boom to my father and lost still sealed. That one appears to be sealed.
+90:51
+Yep. I was too warp very crazy. I read it as my workstation in the 90s when I was in
+90:56
+that was one of the strongest operating systems out there. It was far enough. Freakin awesome.
+91:00
+Why 2k ready? Yes. 100%. CDs. Cisco systems was founded in 1984.
+91:11
+Damn. Okay. Are we ready to get west? Let's get west.
+91:16
+Get way back machine. Oh, will the water still flow? This is our good friend Josh Korman.
+91:22
+And disruptable 27, baby. And I mean, it was it was an awesome experience. They're getting
+91:28
+they're getting all these water utilities to get in a DR testing. And they had to do this in
+91:34
+San Francisco or Vegas or New York or something. I've tried. I read a LinkedIn post about this
+91:40
+Lee, which is how I learned of it. What a undisruptible 27 of Josh Korman was behind this. We should have
+91:51
+had him on the show. Josh is a good friend in the show and a good friend of mine in amazing
+91:57
+individual. But I'm supposed to talk to him this week. Can I invite him on the show? Yeah,
+92:01
+absolutely. He's always welcome. But he got together. So this story isn't loading for me.
+92:08
+So I tell him about it. I can tell you about it. I can tell you about it. I actually sat with him
+92:13
+and he told me through his whole presentation. Yeah. They were in some like major city.
+92:18
+And from what I understand and I read this briefly on LinkedIn, I occasionally try and keep
+92:23
+out with my LinkedIn feed and just see what's happening with my friends. It's amazing. It gives me
+92:27
+information about my friends and what they're doing. I saw posts from Casey Ellis and in Josh Korman,
+92:33
+like all kinds of wonderful people that I'm friends with. But they went to some major city. They brought
+92:42
+water utility companies there and they ran some kind of simulation that was like if the internet
+92:51
+went down, would we still have water? So I'm not sure of any other context around it. But like
+92:57
+the fact that Josh Korman was involved, I was like, well, this is real. We're going to learn
+93:02
+real things from this. And hopefully get better as a result. Josh, you got more context on this?
+93:09
+Yeah. Actually, I talked to Josh Korman about his new initiative. It's called Undisruptible 27.
+93:15
+It's interesting. He's not going after cybersecurity. He's going after engineering. What he's
+93:21
+saying effectively is that if somebody attacks a small water utility, and remember how small these
+93:27
+water utilities are, remember the one that had team viewer where they were raising the starting
+93:31
+of my content because they broke team viewer. These are utilities that don't have any money for
+93:37
+security. And he said, if they were able to hack the pump that pumps the water up to the water
+93:44
+tower for nighttime flow and everything, what if they could turn it on and off 30 times a minute,
+93:50
+every second or two, they'd burn the pump up because you're not supposed to turn them on and off
+93:55
+fast. Right? Right. So he said for 50 bucks, 100 bucks, whatever it was, for a minuscule amount
+94:00
+of money, you can buy a relay that has a timer in it basically. It only allows you to turn it on and
+94:05
+off every five minutes, every seven minutes, whatever it is. Okay, it slows it down. He said,
+94:11
+what about water hammers? Because I don't know if you know water hammers, but water hammers are
+94:14
+evil. It's the pressure of the water when you open a pressure valve. If it hits the water that's
+94:19
+in that pipe already with a lot more pressure, all of a sudden at the other end of the water,
+94:23
+the water is incompressible. This is hydraulics. The other end of the pipe, the next valve gets
+94:29
+and it may not be designed for that. That's physics, right? So it's going to be a great challenge.
+94:33
+It's a great way to use the machine to act upon about some force, right? Right. So he said,
+94:36
+how about if we put $20 valves, $50 valves, minuscule in this game of things, that are pressure
+94:43
+release valves, so the water hammer just gets dissipated, okay? So he's doing an engineering thing.
+94:48
+He says, look, if the Internet goes down, a lot of these things will still work to an extent,
+94:54
+but if the Internet is up and somebody hacks you, you could go down permanently.
+94:58
+Like, as in you'd have to rebuild from scratch.
+95:02
+So he's working on an engineering first methodology to help these small water utilities.
+95:08
+And as a matter of fact, I have a personal stake in this because I'm trying to help him
+95:11
+by building out a set of pieces for small water and electric utilities that have no budget
+95:18
+just as guides.
+95:19
+Here's what you can do.
+95:20
+Like, says it has a free scanner.
+95:22
+They'll do free external vulnerability scanning.
+95:25
+And Drago says a free, if you're under $100 million in revenue, Drago says a free utility
+95:31
+for you that'll scan all of your packets internally and check them, things like that.
+95:35
+So I've built out a guide for all of these small water utilities.
+95:40
+I'm trying to help Josh.
+95:41
+That's the reason I'm supposed to talk to him this week.
+95:43
+So I mean, I mean, this was actually a really cool scenario.
+95:49
+And I like it so they had two options.
+95:51
+They had a tabletop or let's actually cut the connection and go of that.
+95:58
+Well, two sign, only one attempted to do that.
+96:00
+And then a bunch of like three others have said, we'll get to it soon.
+96:04
+But I'm still I was in a DR planning training class once.
+96:10
+And so I remember somebody standing up to me, when do I get to pull the power switch and
+96:15
+see if we can survive was essentially the question, right?
+96:18
+When do I get to start kicking cables?
+96:20
+And the instructors like time out not yet.
+96:22
+But this is, you know, how do we get people where they're ready to tick the cable and see
+96:27
+if they can survive the actual outage?
+96:30
+And also I think given the scope, they're also challenging your assumption on how much supporting
+96:36
+infrastructures online while you're trying to run your shop.
+96:39
+I mean, because they talked about no SMS, no sales service, no internet, you know, can
+96:44
+you run without all those external dependencies?
+96:46
+Oh, by the way, it's bloody hard to do that.
+96:49
+Let alone test to do that.
+96:50
+It can be expensive.
+96:51
+I mean, Josh, you're pointed by the small utility to build a parallel environment to try this
+96:56
+because you don't necessarily want to turn off the water.
+96:59
+Right.
+97:00
+Details details.
+97:01
+Yeah.
+97:02
+Yeah.
+97:03
+A lot of that comes to table.
+97:04
+It's okay.
+97:05
+We'll just plug it in and plug it back in.
+97:06
+Yeah.
+97:07
+And so table tops are important.
+97:08
+And I think Delta White has come on the show and talked about table tops and disaster
+97:13
+recovery.
+97:14
+Yeah.
+97:15
+Emergency response environments are critically important to understanding.
+97:21
+We've used table tops.
+97:23
+I think pretty successfully in enterprises like, okay, great.
+97:28
+Like this thing I hacked and you do this, but like, what if you don't have that?
+97:31
+What if you don't have that?
+97:32
+What if you don't have that?
+97:33
+Yeah.
+97:34
+And it highlights that it bubbles surfaces to the top.
+97:37
+Those areas where you have to have more redundancy, more fail safes.
+97:42
+Or backup communications in things of the life.
+97:45
+Yes.
+97:46
+Yeah.
+97:47
+But it's not the end game.
+97:48
+When I, you know, they all cliche practice like you buy, identify the issues.
+97:52
+Then you have to go fix them.
+97:53
+You're right.
+97:54
+And then you have to actually have a chance to do it.
+97:56
+I mean, when you hand somebody a pile of hardware and a pile of air quotes tapes and tell
+98:02
+them, go re, re build a domain controller or whatever.
+98:06
+Yeah.
+98:07
+That's when it hit.
+98:08
+That's when it gets real.
+98:09
+And I worry that we don't do that very much.
+98:13
+And I remember the first time doing it.
+98:15
+It was freaking hard.
+98:17
+Lee, Lee, Lee.
+98:18
+Okay.
+98:19
+I talked to a lot of different companies.
+98:21
+How many companies do you think have actually done a proper restore test of their backups
+98:27
+in the last year, let's say, not even the last quarter.
+98:30
+Let's say the last year.
+98:31
+Can I, can I count it on less than one hand?
+98:34
+You could count it by, never mind, I'm not going there.
+98:37
+Back up is only as good as the restore process.
+98:40
+Right?
+98:41
+Yeah.
+98:42
+If we're not testing the restore process, you don't really have backups.
+98:45
+We try checking out backups.
+98:46
+That that number is a check box.
+98:49
+That number is greater than negative one and less than one.
+98:54
+Yeah.
+98:55
+And I think part of the issue is, I mean, it used to be, it was a real concern when we
+99:01
+were all in sourcing, right?
+99:02
+But now that we've got things outsourced and the, and the lot in the cloud, I agree.
+99:06
+They just, someone else's problems, right?
+99:08
+I almost think it was, Lee, it's your point.
+99:09
+I almost think it was better when we had, what was the iron company?
+99:16
+What was that called?
+99:17
+Iron mountain?
+99:18
+Iron mountain.
+99:19
+When we had iron mountain, right?
+99:21
+And we physically had to back up the tapes and we physically had to have someone with a truck
+99:26
+to come pick up the tapes.
+99:28
+And if you need to restore from a backup, you had to go file a thing.
+99:32
+I don't know.
+99:33
+Was it paper?
+99:34
+It might have been in 2001, it's time frame for me.
+99:37
+It might have been paper had to go fail out a piece of paper and go, I want to retrieve
+99:43
+this backup from the system from this date.
+99:46
+And Iron mountain will go deliver it back to you.
+99:49
+And then you would have to go restore it.
+99:52
+And you just, you didn't want to test that process because it was a pain in the butt.
+99:56
+But that was the process.
+99:58
+Fun fact.
+99:59
+Well, in fact, for many years at a previous company that I worked for when we were in
+100:02
+healthcare, I was on the authorized list of people that could actually pick up tapes
+100:07
+in person from the Iron Mountain facility.
+100:10
+Nice.
+100:11
+Because I only lived less than a mile from our nearest Iron Mountain facility where all
+100:16
+of our tapes are sent.
+100:17
+So if they did someone to go pick up, it was Larry.
+100:19
+Go pick this up in the morning on the way to work.
+100:21
+This is so nostalgic how things used to work.
+100:26
+Yeah.
+100:27
+I remember it was grandparent, parent, child, tape rotation, schema.
+100:32
+And you had labels and markers.
+100:35
+And somebody's job whoever was the intern would pop tapes out every day.
+100:43
+That was my first job in tech, by the way.
+100:47
+I tell my kids a story all the time.
+100:50
+And I've told them the podcast before.
+100:52
+And now they were talking about it.
+100:53
+It bears repeating because I literally started at the bottom in in containers.
+101:00
+You had $20 in your pocket.
+101:02
+You're going to go pop some tapes.
+101:04
+I was hired.
+101:05
+I was still in college and I was hired as an intern.
+101:09
+But my kind of sub label was called the Bubb.
+101:12
+I was the Bubb.
+101:14
+And the Bubb was short for acronym for Backup Boy.
+101:19
+And your first job was to go around.
+101:21
+My first job was to go around to every developer workstation.
+101:24
+It was about a dozen or so developers.
+101:27
+And each had a physical backup tape.
+101:32
+And this was like, it was before USB.
+101:35
+I don't even remember what the interface was.
+101:37
+It was a serial scousy item.
+101:38
+Scousy backup tape.
+101:40
+It was a physical thing.
+101:43
+And I would have to put a tape in.
+101:46
+And then I would have to turn the mechanism or clip on the front.
+101:51
+And the funniest part is a lot of the plastic levers had broken off.
+101:58
+So I had a pair of vice grips.
+102:00
+And I have to grab the metal knob after the thing broke off and turn with the vice grips.
+102:07
+And then run the commands on the system to physically back up the code that they wrote
+102:12
+for that day and save it to an external backup tape.
+102:18
+And that was my job.
+102:19
+And my job was called a Bubb.
+102:21
+And so when I tell my kids and other people like backup book getting into it and whatever
+102:27
+field it is you're getting into, it has to be technology.
+102:29
+I'm like, don't be afraid to start at the bottom.
+102:34
+I'm like, I literally started at the bottom because some of my kids friends and everything
+102:37
+are like, oh, like you have all these computers and monitors.
+102:41
+And all these computing gadgets and stuff like what I'm like, you don't forget, like
+102:46
+I started at the very bottom in my career.
+102:49
+I think it gives you a great appreciation for everything that happened in your career.
+102:53
+So I was literally the Bubb.
+102:55
+Back up boy.
+102:56
+Score.
+102:57
+Back up boy.
+102:58
+That is hilarious.
+102:59
+So, yep.
+103:00
+So the story I wanted to troll Josh with was my number four.
+103:07
+You take member states to court over unimplemented cybersecurity law?
+103:13
+Oh, I didn't see that one.
+103:15
+Tell me more.
+103:16
+Tell me more.
+103:17
+So, troll the more.
+103:18
+Yeah.
+103:19
+So, a couple of years ago they came up with the NIS-2 directive, which they were supposed
+103:24
+to translate into law.
+103:26
+And as of right now, there are four countries which are more than 20 months late.
+103:32
+It's Spain, France, Ireland and the Netherlands.
+103:38
+And I think they're not alone, but they're the big ones.
+103:41
+They haven't done anything.
+103:43
+So the European Commission is going to try and find them.
+103:49
+The problem is that the European Commission finds have a tradition of not being paid.
+103:58
+So the only one that's close to an implementation in plan is Ireland is about to pass there
+104:03
+I'm looking for the name of it.
+104:06
+They have a set of regulations that are supposed to go and be finished by the end of this calendar year.
+104:12
+They're still 20 months late, but they're going to do something.
+104:17
+So I'm looking at this from a couple perspectives.
+104:19
+I mean, they're trying to create some EU-wide.
+104:21
+And this actually is a foundation that other things are based on.
+104:24
+Yeah, like the EU-CRA, I think is based on NIS-2.
+104:28
+I think that's one of them.
+104:29
+Yeah, yeah.
+104:30
+Yeah, I'll have to check.
+104:31
+So the idea was to, you know, Qual Rock one or whatever, build, right?
+104:36
+Don't start up here, start with the basics and work your way up.
+104:39
+But if the leverage is a fine that doesn't get enforced,
+104:45
+I'm not sure you've got a sufficient stick.
+104:47
+And I don't think there's a carrot out there.
+104:50
+Well, you with me.
+104:51
+So that's a lot of fun.
+104:52
+Oh, Josh has got to eat this up.
+104:55
+I think there is a carrot.
+104:58
+Because the European Union is multiple countries working together
+105:03
+with no taxes, no tariffs, no whatever, in between the countries, right?
+105:06
+Yeah.
+105:07
+And the EU-CRA is a product-based law.
+105:11
+And I work in that space extensively in my work at finite state.
+105:17
+And NIS-2 is organizational law.
+105:19
+In other words, is your company, your enterprise organization, secure and compliant?
+105:23
+Okay.
+105:24
+Yeah, but they're not the same.
+105:26
+But they're definitely kissing cousins, you know?
+105:30
+And if you don't follow NIS-2 for your organization,
+105:36
+then how do I let your organization do business
+105:40
+in other countries inside the EU?
+105:44
+That's the question I would be asking.
+105:48
+I would say, you know, as the European Commission, the EU Commission,
+105:51
+that's the question I would be asking is,
+105:54
+sorry, we're not going to issue you a business license to work in, you know,
+105:57
+if you're a Spanish company, you're not meeting NIS-2
+106:00
+and your country is not meeting NIS-2 or not mandating NIS-2,
+106:03
+you can't do any work in Germany.
+106:06
+You can't sell anything in Germany, you can't, you know, that might not care.
+106:10
+I'm a local bakery.
+106:11
+I'm a whatever.
+106:13
+I don't do anything outside of Spain.
+106:15
+But to any company that does something outside of Spain
+106:17
+or the Netherlands or whatever the four countries are.
+106:19
+Right, right.
+106:19
+I would say that would be the stick.
+106:22
+The carrot would be, you get, you know,
+106:24
+tariff free, tax-free,
+106:27
+options for each trade with all these other countries.
+106:30
+That to me would be the carrot and the stick in one of the same.
+106:33
+But yeah, NIS-2 has been around for ever in a day, man.
+106:36
+Like it's been around for...
+106:39
+The deadline was 20 months ago, right?
+106:41
+Yeah, I think it's been around for like 10 years, roughly.
+106:45
+Yeah, so like I said, this is...
+106:46
+I'm like, what the hell?
+106:48
+I mean, I'm thinking they've been trying to...
+106:51
+We've been talking about, you know,
+106:53
+rescending our ability to do stuff like well before now.
+106:58
+So, but I just...
+107:00
+I said, I found it very interesting.
+107:01
+Oh, it's the...
+107:02
+And Ireland is working on it, but it's like, man,
+107:05
+I got the impression when I was looking at that.
+107:07
+They were...
+107:08
+Those were not the only four that were...
+107:09
+It was like the majority of them.
+107:10
+No, no, there's a lot of countries that don't have it in an official legal sense.
+107:16
+Like you will be an IS-2 compliant.
+107:18
+Yeah.
+107:20
+But it's...
+107:21
+And part of the problem is that NIS-2 has, if I remember correctly,
+107:24
+another 24-hour notification requirement,
+107:27
+similar to UCRA.
+107:29
+So it's basically like, if you have a breach,
+107:31
+you've got 20...
+107:32
+I don't remember the specifics, but...
+107:33
+If you have a breach, you've got 24 hours to notify people.
+107:36
+Which is like, define a breach, define when I find out I have a breach,
+107:40
+define what that means and define 24 hours.
+107:43
+I mean, we know what 24 hours...
+107:44
+Define, define.
+107:46
+Except for...
+107:47
+We give it to us where daylight savings time is now gone,
+107:49
+or it's going to be gone.
+107:50
+We don't know.
+107:51
+It's...
+107:52
+Well, actually...
+107:53
+It's like, well, it starts.
+107:54
+Yeah.
+107:55
+And actually in the US, it's not that daylight savings will be gone,
+107:56
+and we will be...
+107:57
+We won't be switching away from daylight savings time anymore.
+108:01
+My apologies.
+108:02
+Thank you for correcting that.
+108:03
+That's not true.
+108:04
+So the reason I bring that up is because as a state,
+108:07
+you could opt out of daylight savings time and remain in standard time.
+108:12
+No problem.
+108:14
+All states passed regulations where they wanted to opt into daylight saving times only,
+108:20
+and that requires an act of Congress to approve.
+108:23
+Oh my God.
+108:24
+Whereas the other, they could approve locally.
+108:26
+But they said, but we really need that extra hour.
+108:28
+So it was like, so you deliberately picked the hard way to get out of this stupid clock
+108:32
+change thing ever twice a year.
+108:35
+My cynics, as I was showing there, but okay.
+108:38
+So now, there's been enough view in cry.
+108:41
+They're going to try and get legislation to the Senate to that effect.
+108:45
+Trump has already said, if that gets through the Congress, I'll sign it.
+108:50
+This is the important issue of the day.
+108:52
+Okay, fun.
+108:53
+Yeah.
+108:54
+Well, just stop looking over there at that golf and stay in our country, okay?
+109:00
+So anyhow, and never mind the funding they're talking about,
+109:04
+extending to a certain country in that area that's been an ally of ours.
+109:07
+Let's just leave that all alone.
+109:08
+That's not important.
+109:09
+I don't even get me started.
+109:11
+But you know, I mean, I won't be.
+109:13
+So, you know, let's, we, hey, you know what?
+109:15
+I could change the topic and talk about the guy who worked at Digimon.
+109:18
+Go for it.
+109:20
+So they've got a sentence now for what's his name?
+109:25
+Digimon who was the ransomware negotiator, but he was playing both sides against each
+109:29
+other and the, his customers lost like $75 million.
+109:34
+He's been sentenced to seven years, five, two, and the five years and some future property
+109:39
+claims probably less time served.
+109:43
+And I'm like, I was just really going to make these guys that are out 75 million whole.
+109:48
+But that's no, no, no.
+109:49
+And remember, he's probably got 30 million, 10 million, 20 million in crypto hidden.
+109:54
+So he's going to get five years and be like, thank you.
+109:57
+They, they did try and seize his crypto, but he had spent it.
+110:02
+Yeah.
+110:03
+So I want to try, I'd like Pallars take on that one.
+110:05
+Yeah, he told me.
+110:06
+But, so, but what, what the interesting thing to me was, I mean, this is just interesting,
+110:11
+kind of like, oh, that doesn't feel like the crime match.
+110:14
+But the other thing, it turns out this guy was doing nefarious illegal stuff before Digimon
+110:20
+hired him.
+110:21
+In other words, they didn't background check this guy who was going to be in a very sensitive
+110:25
+role.
+110:28
+And shockingly, he did the same thing again.
+110:30
+I'm like, wait a minute.
+110:32
+Background checks, verifying people don't go bad.
+110:38
+I mean, remember HRP programs.
+110:41
+I know that's redundant.
+110:43
+You know, where you regularly make sure, I mean, this is the thing.
+110:46
+But I've got a weird background, right?
+110:48
+I'm used to that kind of stuff.
+110:49
+We all make people don't go bad.
+110:52
+You know, it's interesting because we don't play your background, but no, no, no, no,
+110:56
+I appreciate it.
+110:57
+It's totally cool.
+110:58
+We're background.
+110:59
+I want to, before we conclude, sorry.
+111:01
+Yes.
+111:02
+Microsoft patches.
+111:03
+Microsoft patches.
+111:04
+Oh, Microsoft patches.
+111:05
+Oh, yeah.
+111:06
+Yeah.
+111:07
+Let's have my store number three because it segues nicely into Microsoft patches.
+111:11
+Agreed.
+111:12
+Okay, no key.
+111:13
+AI compresses the vulnerability lifecycle to hours.
+111:16
+Deepak Gupta.
+111:17
+I recognize that name, but I think it's a common Indian name and I might be getting
+111:22
+confused with all the people with the same first or last name, right?
+111:28
+But I think it hits on some really good points here.
+111:31
+And it was interesting when I was prompting Claude to analyze this, this article.
+111:39
+I was like, the first part is stuff that we've talked about in that AI is finding more,
+111:48
+the thing we've talked about a lot.
+111:49
+AI is finding more vulnerabilities.
+111:51
+Companies are patching more vulnerabilities.
+111:53
+They're issuing more patent.
+111:54
+Like I get that and he summarized it nicely.
+111:56
+I thought where it really shines and gives us some nice talking points is the latter
+112:05
+part of the article, which is where I've been trying to focus us on is what do we do
+112:12
+about it?
+112:13
+Right?
+112:14
+Like how do we like we're receiving this in Microsoft patch Tuesday.
+112:19
+And if you notice a lot of other vendors, the vauntry sonic wall, Ford and that, the
+112:25
+list goes on in video, have all released patches in or around or in the same day as Microsoft
+112:32
+patch Tuesday.
+112:34
+We're inundated with patches, yeah, largely because of AI.
+112:39
+But then like what do we do about it?
+112:41
+Right?
+112:42
+And like I love some of the points that were highlighted here.
+112:47
+And you know, Claude, I thought kind of summarized this point really well.
+112:53
+Every system deserves the same ceremony.
+112:56
+I love the word ceremony.
+112:57
+Yeah.
+112:58
+Because it's a very good, awesome English word, right?
+113:05
+Because we talk about ceremonies in agile development, right?
+113:10
+Agile development has a very specific set of meetings that we call ceremonies, which I
+113:16
+love, right?
+113:17
+Like the your sprint review, your sprint planning and your sprint refinement are all like
+113:24
+these ceremonies that have what you talk about, basically what you're working on, what
+113:30
+you should be working on and what you worked on before, right?
+113:34
+And those are ceremonies.
+113:36
+And I think in a patching sense, ceremony is a very good word because you've got all
+113:42
+these different systems.
+113:44
+There are different types of systems, different configurations, different risk postures.
+113:51
+And so the ceremony is different.
+113:54
+If I have a vulnerability in any type of system, it's different.
+113:59
+And we need to treat that differently.
+114:03
+We need to prioritize that differently because the huge takeaway for me on this one was
+114:11
+something that actually clogged pulled out that I agree with, not everything that clogged
+114:15
+rights I agree with, but this part I did, you're never going to outpatch an AI, defines exploits
+114:21
+in hours.
+114:23
+So the honest answer is stop betting everything on the patch race and put more weight on catching
+114:28
+what's compromised, what a compromise system does after the fact that's a strategy that
+114:34
+survives even if it was actually don't keep shrinking, shrinking, right?
+114:39
+Drinking shrinking, we all have to drink based on this too because it's a harsh reality.
+114:48
+We're not going to keep up with patches.
+114:51
+We've never been able to keep up with patches.
+114:56
+Now that we have AI, it's a losing frigging game.
+115:00
+And we need to double down on is my system compromised.
+115:05
+And answering that question is a different ceremony, is a different set of actions, it's
+115:11
+different work than is my system patched and how can I get it patched?
+115:17
+Because you're just not, that window has shrunk to such a small margin.
+115:22
+And I think the M Trends report was just released, basically stating the same thing back
+115:27
+on this up.
+115:29
+You don't have, there's no longer a luxury of time.
+115:31
+Like let alone measuring time, there is no longer time to apply a patch.
+115:38
+Because by the time you get to applying a patch, your system more than likely has already
+115:44
+been compromised.
+115:46
+So the game now turns to prevention and detection and response, right?
+115:55
+Not so much in the prevention stage.
+115:58
+It's detection response now.
+116:00
+So actually, but your clawed summary, aside from tearing things and really didn't get
+116:05
+a nice job of what I have said a bazillion times, not as well, is it also talks about compensating
+116:11
+controls to help the prevention out, things we can do.
+116:15
+Yes.
+116:16
+And it's easy to omit that in this conversation is to make sure you've got compensating
+116:21
+control, to put the RASP and the WAF in there.
+116:24
+I'm not saying they're the beat all to end all, but it's important to remember that.
+116:28
+Yeah, exactly.
+116:29
+We've harped on the since the 90s.
+116:32
+I mean, before you were like wax and soldier again in a lot of this episode, right?
+116:37
+But one of the things we talked about was fixing the harmony.
+116:41
+Like how am I, how am I configuring my system to lessen the probability one that it's exploited
+116:51
+in two, then the attacker is going to be able to do something once they've compromised
+116:58
+the system.
+116:59
+That's what part of the, not just reduces your attack surface, but reduces the attacker
+117:04
+capabilities.
+117:05
+And I'll go to something like fordably as an example in that you had to not only keep
+117:12
+up with patches, but there's a lot of system hardening that you could have done to reduce
+117:18
+that attack surface.
+117:20
+And some of that is limited by the better have done could have.
+117:24
+Hopefully you did like I would like to see the restriction of what commands could be run.
+117:30
+Like can an administrator turn afforded a device into a passive network sniffer?
+117:38
+I would greatly restrict that capability in my system hardening guidelines.
+117:44
+I would also in a detection sense want to know every time an administrator has done that
+117:51
+because it's a very least frequently occurring event only happens in certain troubleshooting
+117:56
+scenarios.
+117:57
+I want to know if that happens.
+117:59
+Even if there's a possibility of a false positive, I think we kind of get to hung up on,
+118:04
+well, there should be no false positives, not necessarily false positives are okay in moderation.
+118:10
+Much like everything else a lot of other things in our life, right?
+118:15
+It's okay in moderation.
+118:17
+Like oh, yeah, we were troubleshooting something and part of that troubleshooting was we had
+118:23
+to do some passive network sniffer.
+118:25
+Like that should be a less frequently occurring event.
+118:29
+And if it throws one false positive in two months, okay, fine, like I look at that and
+118:35
+you know, like Dave on our sis, you know, sis admin team had to troubleshoot this thing
+118:41
+was a big event had to do passive sniffing.
+118:43
+Then he fast forward the next two months and like wait, there was no huge troubleshooting
+118:48
+scenario that happened.
+118:50
+But yet our fortinet firewalls were passively sniffing a list of 13 different protocols
+118:58
+that something that need, no, no, that's exactly what the attackers did.
+119:03
+If you look at the command they ran from fordably, they were passively sniffing 13 different
+119:09
+protocols off of your fortinet firewall.
+119:12
+I want to know when that happens because I can't patch my way out of it.
+119:17
+That was my whole thing when I wrote about fordable.
+119:18
+So you're not going to patch your way out of it.
+119:21
+Your initial access vector may not even rely on an exploitable vulnerability.
+119:26
+It's going to rely on credentials.
+119:29
+By the way, the way they collected those credentials was through passive sniffing.
+119:34
+So we need to flip the script, right?
+119:37
+Like hardening needs to be even more of an emphasis today and detecting attackers living
+119:44
+off the land has to be a priority.
+119:47
+And the only way you do that is living with some false positives in observing behavior
+119:53
+on your systems.
+119:55
+And that's what's going to get us there.
+119:56
+It's not going to, I grew a deep up.
+119:58
+It's not going to be patching.
+120:00
+I think the things that he recommends in his article are pretty sound.
+120:04
+I want to ask a question real quick.
+120:06
+If you think 30 years ago, because we've been talking about that a while, a lot this
+120:10
+session, how much more customization and patching of servers did you do back then versus
+120:16
+what system administrators do today?
+120:19
+Do you think they do the same amounts of customizing and patching of servers as we do as we
+120:23
+did 30 years ago?
+120:25
+Hardening.
+120:26
+Sorry, not just patching.
+120:28
+Hardening of servers, customization and hardening of servers.
+120:34
+I don't know.
+120:35
+It's an interesting study, Josh.
+120:38
+And I don't know the answer, but that's my point.
+120:40
+I think we used to very much customize and harden servers back then.
+120:45
+And damn it, I want one of those.
+120:46
+And I don't know that they do the same amount of hardening as we did.
+120:52
+We still have the CIS benchmarks.
+120:53
+We still have the, the dices takes.
+120:56
+And some places do those, mostly government contracting.
+120:59
+But do they, but if you're not a government contractor required to harden your systems,
+121:03
+do you do any of that these days?
+121:04
+I think it's certain, and certain verticals, I think they do.
+121:08
+Yeah.
+121:09
+And you step outside of those verticals and they don't.
+121:11
+I know particularly in finance, I think a lot of us will agree in the financial sector,
+121:17
+they are super like hyper, not hyper focused, but super enthralled with that hardening
+121:26
+of systems.
+121:27
+Right?
+121:28
+It's sometimes to a detriment that they're focusing on different things.
+121:31
+I think there's a, there's a gauge, there's a level, right, of hardening.
+121:38
+And I think the challenge we all have today, regardless of the vertical we're in, is where
+121:44
+do we focus our efforts?
+121:46
+Where do we focus our hardening efforts?
+121:48
+I think sometimes we get focused on things like your Linux kernel is out of date.
+121:55
+And the Linux system utility that you use to manage your disk has a vulnerability from
+122:02
+three years ago that can be a local privilege escalation.
+122:05
+I'm like, yeah, okay, like I get it, I get it.
+122:10
+Like yes, that is a vulnerability.
+122:12
+But there's 13,000 other things maybe that we should be concerned about, other than that.
+122:19
+So I agree.
+122:20
+I think the challenge today, Josh, to answer your questions focused hardening.
+122:24
+How do we?
+122:25
+We're going to be hardening against the things that are actually being used as attack vectors
+122:30
+in the real world.
+122:31
+And that's in 8,000 things that we need to be concerned about because we only got two minutes
+122:35
+left and we promised Microsoft patches.
+122:38
+Yeah, let's go forward, go forward, go forward.
+122:40
+Yeah.
+122:41
+Is this a record?
+122:42
+Is this a record Larry?
+122:43
+It's got to be.
+122:44
+It's got to be because what is the amount of patches?
+122:49
+Let's see.
+122:50
+Microsoft patch Tuesday from the Sands D-Shield blog here of the AI, the AI apocalypse is
+122:59
+here.
+123:00
+And of course, the 622 vulnerabilities, not including another 427 in Chromium.
+123:08
+Good, Lord.
+123:10
+62 rated critical.
+123:14
+So 10% are critical.
+123:15
+Yep.
+123:17
+Although if you add those two together, it's over 1,000, but still.
+123:21
+Yep.
+123:22
+And my understanding is that while it was 622 vulnerabilities specifically, and I don't
+123:29
+know where I read this number, it was 1,990 patches.
+123:33
+That's just nuts.
+123:37
+I mean, yeah, we can automate a lot of that.
+123:41
+Well, like, for example, when does 11 likes to just consume the patches automatically, but
+123:44
+still, that's a lot.
+123:47
+That's a lot to get down the throw to that snake.
+123:50
+Or if you prefer a big amount of time, that's going to take.
+123:55
+Literally like time.
+123:56
+I mean, I've seen patches take 10 minutes each.
+123:59
+Can you imagine how long it's like, okay, go ahead and patch.
+124:02
+And all 10,000 of your workstations are not doing 7 hours of patches overnight.
+124:06
+Well, and it's got to come back to the model that Claude posed where you have an increasing
+124:13
+number of systems where you're not.
+124:15
+You're just clicking go if you didn't click at all to apply the patches because you have
+124:19
+to focus on the things where the universe will end if you break them.
+124:23
+I mean, there's just no, do you have to have more commodities to up that you just do?
+124:27
+Yeah.
+124:28
+And how are you supposed to read the release notes on like 1100 patches for Christ's sake?
+124:32
+What is this?
+124:33
+You have to use AI to do that.
+124:34
+I think Josh, you stated in this episode that AI is great in understanding that large
+124:39
+body of knowledge that 1100 patches would have an impact on.
+124:49
+We as defenders have to be using AI to protect our systems.
+124:54
+Yeah.
+124:55
+And like I just made a quick pass at this.
+124:58
+So 62 were critical.
+125:01
+There were six that were rated.
+125:03
+This is just from scrolling through this color code and picking on cars.
+125:06
+We're rated moderate.
+125:08
+Everything else was rated important.
+125:11
+So important is somewhere between 7, 8 and 8.
+125:16
+8, 8 and higher is critical.
+125:17
+Now it's important also 6, 1.
+125:19
+Yeah, but you got to patch those on window systems.
+125:22
+You got to patch those.
+125:23
+Yeah.
+125:24
+So arguably 620, 614 of those, 616 of those needed to be patched.
+125:33
+Only 2 or 3 were noted to be exploited currently in the wild.
+125:41
+Until Tuesday.
+125:43
+Right.
+125:44
+Right.
+125:45
+So, yeah.
+125:48
+But the thing is it's like, and then let's add on the fact, okay, let's say I get most
+125:54
+of them.
+125:55
+But then somebody changed together the three I forgot.
+125:59
+Okay, three I forgot, right?
+126:01
+The meeting gets me.
+126:03
+Yeah, you can't do based on CVS score.
+126:07
+No.
+126:08
+CVS score is about is it's a guide.
+126:11
+It is not useful.
+126:12
+It is not a.
+126:13
+It's going to have to come back to.
+126:17
+It's an advisory architecture.
+126:19
+Well, in the one that was in the news a lot that I saw was the Schimp vulnerabilities that
+126:24
+I talked about last week.
+126:27
+There were many vulnerabilities exposed in Schimp bootloaders that were signed with the
+126:34
+Microsoft CA for third party bootloaders.
+126:38
+And those were forks of Schimp that didn't fix the original vulnerability and everyone's
+126:43
+talking about it now.
+126:44
+I'm like, I weren't all listening to this last week that this was an issue.
+126:48
+And now Microsoft is issued a patch for that.
+126:50
+And now now everyone's talking about it.
+126:53
+And they're not critical level vulnerabilities, but quite frankly, they like an attacker to
+126:59
+bypass secure a poop 100%.
+127:01
+What could go wrong?
+127:05
+What could go wrong?
+127:06
+Couple that with certificates that have expired recently, like on June 24th and June 27th.
+127:13
+Microsoft certificates have expired.
+127:15
+Like, there's a lot of stuff happening with secure boot now that you have to keep up
+127:20
+on.
+127:21
+Otherwise, you're going to end up with a boot kit on your systems and you have to patch
+127:25
+and you have to harden against that.
+127:27
+And patching and hardening is making sure you've got the new certificates on all your systems,
+127:33
+making sure you have all the DBX updates that are coming from Microsoft, making sure that
+127:39
+in between there, you're checking for those DBX entries that are not existent.
+127:46
+There's a vulnerable bootloader, but it's not in DBX yet.
+127:50
+How do you check for that?
+127:51
+Then after Microsoft releases the DBX, have I applied the DBX update?
+127:55
+Like, there's a lot of due diligence there.
+127:58
+And that's just one example in Larry, your point, these onslaught of Microsoft patches.
+128:05
+So and actually, your due diligence and this article raises another question.
+128:11
+It's like with this kind of a change and update rate, where what happened to the time
+128:19
+you had to question whether we should be doing things this way.
+128:23
+Should we be hosting exchange anymore?
+128:25
+Should we be, should I have this little server here?
+128:29
+Should I be doing this to myself or should I be outsourcing to someone who does it for
+128:32
+me?
+128:34
+And I know there's other scenarios that are a little different, but it's like, I don't
+128:37
+think the time to have that conversation exists anymore.
+128:41
+Because you should be outsourcing most of it.
+128:43
+Yeah, well, yeah, that quite far out outsource the drudge where it effectively doesn't,
+128:50
+it really doesn't cost anymore, but the full cost is exposed.
+128:53
+And you're not going to get it done by Joe, the janitor, where on his, between his shifts
+128:57
+when he's eating lunch, and you're going to have to pay somebody to do it.
+129:00
+But still, it's, so I, yeah, it's, it's crazy.
+129:07
+I'm hoping we get some innovative tools to help us really keep as, as you were saying,
+129:13
+you know, the monitoring detection, preventing, you know, we need, it's one of the reasons
+129:19
+why I kind of prototyped that feature into the, the federal tool, right?
+129:22
+Yeah, it's like, it's smart.
+129:25
+How do we use AI as defenders to help us apply patches faster, right?
+129:29
+And it's just one small little example that I vibe code to myself, but I hope it serves
+129:35
+as a model, right?
+129:37
+And until Larry's point and rightly pointing out all these patches from Microsoft, if
+129:41
+AI is creating the ability to find more vulnerabilities to create more patches, we also need to use
+129:49
+that same technology to help us as defenders and how do we do that?
+129:54
+And how do we move the needle forward?
+129:56
+And hopefully we're doing proof of concepts and embedding that into tools and aggregating
+130:03
+those tools so we can patch faster so that we can harden faster so that we can detect
+130:09
+and prevent faster.
+130:10
+And that I don't see as much innovation as, oh, AI can find all kinds of zero days and
+130:16
+exploits and vulnerabilities because that's the coolest sexy shit.
+130:19
+Well, the harder stuff that we do in security is on the defense.
+130:24
+And I'm like, I'm living that now.
+130:26
+I argue that this was a defensive action, you know, with some, specifically, um,
+130:33
+that specifically Microsoft warned that this was going to happen because they applied a
+130:41
+new tool in turn, they have the AI.
+130:45
+They're multi-model agentics scanning harness as M-dash, which I find some irony in M-dash
+130:52
+and AI writes with M-dash.
+130:55
+And from my understanding is that we ring between the lines here, M-dash found the greater
+131:03
+majority of these vulnerabilities for them to address to improve the security, overall
+131:09
+security posture.
+131:10
+Bet your money, Mythos, isn't there?
+131:12
+That's great.
+131:13
+And GPT-5-5.
+131:14
+Uh-huh.
+131:15
+Uh-huh.
+131:16
+You know what?
+131:17
+That's a great place.
+131:18
+Why don't you, uh, yeah, let's take us out.
+131:22
+Thanks everyone for listening and watching this edition of Paul Secure to Eekly Larry.
+131:26
+Take us out.
+131:27
+Over and Mythos.
+131:33
+Well done, sir.
+131:34
+Well done.

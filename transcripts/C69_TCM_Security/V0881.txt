@@ -1,0 +1,578 @@
+0:00
+If we start pulling data and interrogating a system for forensic artifacts,
+0:04
+how do we know whether what we find is normal?
+0:06
+Right?
+0:07
+And what does normal mean?
+0:08
+Normal for that specific machine or for the network around it?
+0:12
+That question sits at the core of incident response because evidence means nothing unless we give it context.
+0:18
+And this is why having a baseline is so important for IR.
+0:21
+A baseline provides us a stable reference point that shows us what activity should look like
+0:27
+before we even begin evaluating signs of an intrusion.
+0:31
+It gives us something to compare against so that we can detect meaningful deviations
+0:35
+and ultimately uncover malicious behavior.
+0:38
+A strong baseline can give us direct insight into how systems or users or drivers,
+0:44
+services, basically anything we can think of on the operating system.
+0:48
+How all of this behaves during their normal operations, giving us as investigators
+0:53
+a means to measure and compare with what we're currently seeing against an established
+0:58
+picture of the typical activity.
+1:00
+When an incident occurs, that baseline becomes almost like a guide.
+1:04
+That highlights what is changed to what might stand out or where we should focus on a deeper
+1:10
+investigation.
+1:11
+Because let's face it, our resources are limited and we need to efficiently prioritize what
+1:16
+threads we pull early in our response.
+1:19
+Now ask yourself, is your organization actively maintaining and building up an organizational
+1:24
+baseline?
+1:24
+If not, well now is the time to think about doing so.
+1:28
+Because you're likely already collecting the data anyways in some form.
+1:32
+But even in those scenarios, and I can say as a consultant being brought into environments where
+1:37
+the client hasn't even heard the term baseline before, we can still rely on our built-up and
+1:42
+research knowledge of common Windows processes or services or configurations.
+1:47
+Basically, just these expected behaviors.
+1:50
+Or we can use techniques like comparative analysis across similar or known good machines to focus our
+1:55
+triage. The point is we have options and there's so many ways to build up a baseline that covering
+2:01
+them all would require far more time than you're probably willing to spend listening to me ramble on.
+2:06
+But in this video, we'll focus on how baselines shape our investigative process and walk through
+2:11
+some low-efort solutions to get started with performing very basic differential analysis.
+2:15
+Now, the amount of data that you can collect in baseline in an organization is nothing short of
+2:21
+legion, covering nearly every aspect of the system and its interactions on the network.
+2:26
+All right, this could be which processes or services are normally running on a system. Could be
+2:30
+typical operating system configurations. It could be expected files or file system structures on
+2:36
+a system. Could be patterns of user activity. Could be normal network traffic volumes or protocols
+2:42
+in use. Even information relating to applications or loaded drivers or user agents. So many things,
+2:48
+essentially any part of the environment that can exhibit predictable behavior can be considered
+2:52
+for baseline. By capturing this information preferably on an ongoing process, we create this
+2:57
+reference framework that helps us distinguish normal activity from anomalies that could be a precursor
+3:02
+to identifying a compromise. Really guide us in the most relevant evidence without being overwhelmed
+3:08
+by the noise. For example, running the get service commandlet on a window system can return
+3:12
+hundreds or even thousands of active services. Without a pre-existing baseline for this system,
+3:18
+it becomes really difficult to know which of these services are expected and which might be suspicious.
+3:24
+Now, let's start simple and look at how we can perform differential analysis using a tool that's
+3:29
+already built into pretty much any window system in our environment. And that's PowerShell.
+3:34
+Now differential analysis or comparative analysis, however you want to call it. Again,
+3:39
+this is a technique where we first establish a baseline of activity on a system or on a network.
+3:44
+And then we take a new snapshot of analysis when we're investigating that system and ultimately
+3:50
+compare the two. And so to continue our example from earlier, services are a common point of analysis
+3:56
+for us because there are a lot of services running on a window system. But fortunately,
+4:00
+that abundance can also make them quite predictable in our environments.
+4:04
+Think about it. It's not very common for an end user to install a new service on their system.
+4:09
+Commonly, and if you're using principles of lease privilege on local admin accounts,
+4:14
+that's never going to happen. Maybe if the organization or department rolls out a new tool
+4:19
+or application, and accompanying service might be installed then by maybe a system administrator
+4:25
+when that service is being rolled out. But again, these are documented and known guardrails that
+4:30
+all feed into our baseline. They're all taken into account. The interesting part about services
+4:35
+is that they're also a target for attackers looking to persist or maybe elevate privileges on a
+4:41
+system or in many cases used by various frameworks or utilities to move laterally by installing a
+4:47
+rogue service on an endpoint to execute some kind of command. And so the idea here is by first
+4:53
+capturing a baseline of expected services on a reference system that we create a snapshot of
+4:58
+what normal looks like. And later when investigating this live system that we can take a current snapshot
+5:03
+of services and use PowerShell to compare it against our baseline. But we might be able to quickly
+5:08
+highlight any new additions or removals or just changes to service states that could indicate
+5:14
+malicious activity or some kind of misconfiguration. The beauty of this approach is that it doesn't
+5:19
+require any specialized tools beyond what's already available for us at our fingertips in Windows.
+5:25
+And yet it provides us immediate insight into any deviations that might warrant further investigation.
+5:31
+And so if I run the Get Service commandlet here on my Windows system,
+5:35
+PowerShell is going to return hundreds of different service objects that all map to different
+5:40
+active services running on the system. But which one of these is suspicious, right? If this were
+5:46
+an incident and I was looking at this endpoint, how would I be able to tell? It's almost impossible
+5:50
+to tell just based on a list of service names alone. Even if we could identify something by
+5:56
+visual inspection, it would take a long time to scroll through this list and find an anomaly,
+6:01
+time that we don't always have when we're responding. And so let's expedite our analysis by
+6:06
+building a comparative baseline. And so let's assume that we have a clean system here, right?
+6:12
+We don't currently expect that there's any evil going on. Maybe we just deployed this system
+6:16
+in the network based off of a known good clean image. And we want to take a snapshot of what
+6:21
+its normal service state looks like out of the box, right? What is the normal list of services
+6:27
+on this Windows system? Well, that couldn't be simpler to do in PowerShell, right? So again,
+6:31
+I can call Get Service here and just pipe that output over to a file, you know, maybe I'll call
+6:35
+it services and then today's date just so I have a reference to it, right? And so we could do
+6:40
+something like that or if we wanted to do it in a slightly more automated or maybe script-friendly
+6:45
+format, I could run something like this here where I'm running Get Service. I'm piping that to
+6:50
+select specifically the service name and the status. And then again, sending that out to a file
+6:55
+this time using some clever environment variables here just to grab the computer name and then I'll
+6:59
+call that underscore services and then a final underscore and then I'll just grab the current date
+7:05
+in time in that Unix Epoch format and I'll just save that as a .txt file. Excellent. And so now we have
+7:12
+our known good baseline snapshot of the running services on the system. We can see the name of that
+7:17
+file here. And the contents of that file, if I just run Get Content here against this new file
+7:22
+that we've created, again, it's exactly what we're looking at in the PowerShell context here,
+7:27
+just in a sort of file format. All right, so now all I need to do is infect this machine by installing
+7:34
+a rogue malicious service and then we can take a secondary snapshot and subsequently compare the two.
+7:40
+Before I do that, however, I'm going to get a second example going. Now in our initial example,
+7:45
+we save the standard output over to a text file. Oftentimes when we're collecting this information,
+7:50
+we might be using a PowerShell or a WMI framework that's already built out to output these artifacts,
+7:57
+maybe in a JSON or a CSV format. Fortunately, a better approach here, in my opinion, is that we can
+8:03
+easily export our PowerShell output into either one of those structured formats, again, CSV or JSON.
+8:10
+And later convert that structured output back into proper PowerShell objects for its comparison.
+8:15
+And this gives us a lot more versatility and flexibility when we're collecting artifacts across
+8:20
+different systems or when we're integrating this effort into different automated tools.
+8:25
+And so for the second example, I'm going to create a baseline of all the files currently in my
+8:29
+system's Seacolon slash Windows directory. Maybe I want to monitor certain sensitive
+8:34
+directories on my endpoints that users should never be writing to or modifying. So I can create a
+8:39
+known good baseline of what files or binaries should exist in that system root directory.
+8:44
+And so in this case, I'll run something like Get Child Item. I'll specify the path here of Seacolon
+8:49
+slash Windows. Again, my system root directory where Windows is installed. And then I'm going to
+8:53
+select the full name of that file. I'll grab its length just for good measure and also the last
+8:58
+right time. This time, I'll pipe that over to export CSV, kind of gets cut off there. But I'm
+9:04
+translating the output here into CSV or comma separated format. And then I'm just going to call it,
+9:09
+again, you know, my hostname underscore, Der, DIR for directory. And then again, just grabbing that
+9:15
+Unix epoch time, which is useful to know when exactly this baseline was taken. And then no type
+9:20
+information here is just to sort of clean up our CSV format. And if I hit Enter here, we should
+9:25
+create that new file this time in CSV format. Right. And so if I just run a type here to grab the
+9:32
+contents of the CSV file, we can see we're getting a list of all those files in my SQL and slash
+9:38
+Windows directory. Excellent. And so now with our baselines captured, I'm going to hop over to an
+9:43
+attacker machine and simulate an adversary moving laterally onto our system using impact its PS
+9:49
+exec. And so what this utility is going to do under the hood is connect to the remote host over
+9:53
+SMB protocol. It's going to authenticate with our supplied credentials and then create a temporary
+9:58
+service that delivers and runs a small executable on the target. And so that service starts up a
+10:03
+command shell in the context of our provided account, essentially giving the attacker remote code
+10:08
+execution. Once we run that, we'll take another baseline and look at what traces or artifacts were
+10:13
+left behind. All right. So over on my Cali machine, again, I'm just going to call PS exec.py and
+10:19
+specify that specific system that I want to target here as well as the user account and password.
+10:24
+Again, sort of a post compromised scenario here. Maybe I've extracted Elliott's credentials from
+10:28
+somewhere. And now I want to sort of move laterally onto this desktop using those credentials.
+10:34
+All right. So in doing that, looks like we got a shell, right? If I run a who am I here,
+10:38
+I now have a shell as the root user or the sort of administrative system user. And we can even
+10:43
+get a hint based on the sort of verbose output we get from PS exec here. In terms of what art
+10:48
+effects we might have left over on this system. But all in due time, let me hop back over to our
+10:53
+Windows machine here with our system now compromised. I'm going to simply rerun our snapshot commands
+10:59
+again to effectively take a second baseline at this time, a post compromised baseline for us to
+11:04
+compare with. And so again, I'll call the get service command and pipe that out to a new file.
+11:08
+And I don't need to rename it because again, we're using this sort of dynamic epoch time here. So
+11:13
+we've created a second file here that based on our more recent baseline and same kind of deal
+11:19
+for our file listing baseline in our system root or a C colon slash Windows directory.
+11:23
+All right. So excellence. Now if I run a DIR, we have both our original baselines. Right. So we have
+11:28
+our directory and our services and also our current state that we can now compare to. And so now with
+11:34
+both of our snapshots captured, we can look to the compare object command to essentially specify our
+11:40
+reference object and a difference object. And the compare object command is a really powerful tool
+11:45
+that we can use to find differences between two sets of objects, known as the reference set from
+11:51
+our original capture and the different set or our current capture. We can invoke this in a few
+11:56
+different ways, but just to keep things clean and repeatable, I'm going to set a baseline variable.
+12:01
+Right. And so I'm setting my baseline here over to the content of this first baseline file that we've
+12:06
+created under services here. Right. So make sure you're using the original file that you created,
+12:11
+right. Not your current state. Excellent. And then I'll just do the same thing with a current variable
+12:18
+here, setting that over to the other file, right. Or the most recent snapshot that we've taken.
+12:23
+And once my variables have been set, I can simply compare the two using the compare object
+12:29
+command. And with that, we specify a reference object. We actually don't need to specify this.
+12:33
+It's kind of positional in nature, but again, just to be overbosier, we set the reference object to
+12:38
+our baseline, the difference object to our current state. And that's all we need to do. And once we
+12:43
+run that, we get this nice little diff check style output here that lets us know if any entries
+12:49
+either appear in our baseline, but no longer appear in our current state, or in the case of this
+12:54
+cubic service here, and the arrow that it's pointing in, pointing over to the current object or
+12:59
+over to the right, this lets us know that an entry has been added to the current system that
+13:04
+doesn't exist in our baseline. And so we kind of see some repeat services here because it looks like
+13:10
+this GP service or this group policy client service and this WDI or this diagnostic system host
+13:16
+service was running in the baseline, but since stopped in our current state here. But the one that's
+13:22
+of interest is one that didn't exist in our baseline, but is now running in our current state.
+13:28
+The directionality here kind of plays a big role in terms of what we might want to look into.
+13:33
+And so I might want to get a little bit more information into this cubic service. I'm not sure
+13:37
+what that is. It doesn't ring a bell. It clearly did not exist in our baseline, so it's something
+13:42
+that's net new here. I can even run something like Get Sim instance against the Win32 service class,
+13:49
+specifically filtering for that name. In which case, I can see that the start mode is set to manual,
+13:54
+it's status currently running. And we can see the service binary is pointing over to a strange
+13:59
+executable in our system route or a C Collins-Lash Windows directory. And so we will get to that,
+14:04
+but obviously this appears to be related. And so we successfully use this kind of differential
+14:09
+analysis to find a rogue service on our system. And so let's try doing the same for our file
+14:14
+directory snapshot as well. And so really a very similar process here. I'm just going to do the
+14:19
+exact same thing and rewrite our baseline and current variables over to our new files here.
+14:25
+So I'll just set the baseline and the current variable over to those new files. Again,
+14:29
+make sure you have the most recent one set to the current here. And notice what I've done here
+14:34
+is run the import CSV commandlet on each of these. And this is because when we originally created
+14:40
+our baseline, we saved it out or we exported it out as a CSV file format. And so this gives us
+14:46
+a lot more flexibility and power here at this step. We can use import CSV to create a table-like
+14:52
+custom object structure and rebuild that CSV output back into real power shell objects that we can
+14:58
+use in our pipeline. And because of that, what I can do now when I call compare object is,
+15:03
+again, specify our reference and difference objects here. But I can specifically set a property
+15:08
+or multiple properties that I want to compare. In this case, I'm just going to grab the full name
+15:13
+of that file that's listed under the SQL and slash Windows directory. When I do that,
+15:18
+we only get one result this time. And again, based on the arrow pointing over to the current file
+15:22
+or over to the right, this is letting us know that this strange looking file here,
+15:27
+this strange randomly named executable has since been added to the current system. And so, again,
+15:31
+from here, we've identified a strange indicator and I can start to triage this file now. You know,
+15:36
+I can grab its file hash. I can go ahead and throw it into something like virus total. You know,
+15:40
+I can upload that binary into malware sandbox right now that we've identified a suspicious file,
+15:46
+that we can now work with it as an indicator. We can scope out a potential intrusion. We can look
+15:51
+for this hash or this file name on other systems in the environment, right? Our possibilities are
+15:56
+almost endless here. Now, obviously, that's one way we can go about creating these baselines. But
+16:01
+that's still a little bit too manual to do at scale. It's definitely a good way to do this kind of
+16:05
+analysis in a pinch and it does have the sort of manual use cases. But we can also look to the
+16:11
+plethora of IR frameworks out there that allow us to capture this data in a much quicker way
+16:17
+and to do so remotely at scale. If we head over to the PowerShell Incident Response cheat sheet here,
+16:22
+which you can find over at sock2a1.com slash psir, we'll have it linked in the description as well.
+16:28
+We can scroll down past some of these great commands and pipelines that might be good to keep in
+16:33
+your back pocket here. And eventually, we'll come across this section here that lists out various
+16:39
+PowerShell Incident Response frameworks. The idea here is that many talented researchers over time
+16:44
+have developed PowerShell based IR and forensic frameworks to speed up this kind of evidence collection
+16:50
+and triage for us. And so these frameworks give us pre-built modules and scripts that we can
+16:55
+adapt to our investigation. And among many other useful features, allow us to create ongoing baselines
+17:02
+now we won't have time to walk through each of these. Perhaps we can save that for some future
+17:06
+videos, but some of my favorite examples include Conza, the Conza Framework here, which a very
+17:11
+modular incident response framework for exactly this kind of large scale data collection and analysis.
+17:17
+We have InvokeIR from PowerFrenzix. We have PowerShell Rapid Response, which is a nice set of
+17:22
+WMIScripts for investigators and forensic analysts to collect this kind of very thing. And lastly,
+17:27
+here another good example is PSRecon. Now it's probably a good time to mention that if you've been
+17:31
+enjoying this type of content, be sure to check out the SOC or the Security Operations 201 course
+17:37
+over at the TCM Security Academy, where we really dive into performing this kind of collection
+17:42
+and analysis at scale in both incident response and threat hunting scenarios. Now as another example,
+17:48
+we can take a look at performing this kind of baseline analysis at scale using the AutoRuns utility.
+17:53
+Now AutoRuns is a fantastic program that gives us a look into a number of different auto start
+17:58
+extensibility points or ASEPS on our system that have been configured to run during boot or login.
+18:04
+Now AutoRuns is a Microsoft tool, part of the SIS internal suite, and it's a fantastic utility.
+18:11
+In this case, I want to look at an AutoRuns PowerShell module that'll have linked down below as well.
+18:16
+And this was designed to help do live incident response and enumerate AutoRuns artifacts that
+18:21
+might be used by malware to achieve persistence. And this is a module that I've personally used
+18:26
+in the past and is really coming clutch during these kind of live response scenarios. And of
+18:30
+course, credit to the original contributors here. This is a fantastic extension to AutoRuns that
+18:36
+above anything else allows us to very quickly and easily run baseline and comparative operations
+18:42
+over our AutoRuns data. And so back over in PowerShell here, I'm just going to import that module,
+18:46
+which I've already sourced and placed in my downloads folder here. We can see we've now exported
+18:51
+some of those functions. And if I just run something like Get Module and provide the name of AutoRuns,
+18:57
+we should see in our list here with the version number. Excellent. So I run Get Command on the AutoRuns
+19:02
+module. We can see the different commands that we now have access to, like GetPS AutoRuns or
+19:08
+New AutoRuns baseline or Compare AutoRuns baseline. And these are going to come in clutch when we
+19:13
+want to perform this kind of auto start extensibility point enumeration and differential analysis
+19:19
+in a much more scaled up way. And so let's go ahead and give this a try. If we just run the GetPS
+19:24
+AutoRun command on its own, we're going to list out all of the AutoRuns on our system,
+19:29
+just like we can do with the Sysinternals GUI tool or the command line base tool. And so we want to
+19:33
+provide it some arguments here or different flags to help manipulate the command that we're running.
+19:38
+And so in this case, I'm going to append Verify Digital Signature here, which basically tells GetPS
+19:44
+AutoRun to check each binary's digital signature. And this is going to let us see if the
+19:48
+executable is signed by Microsoft or any other trusted vendor. You know, it can really help us
+19:52
+identify any unsigned or more likely to be suspicious binaries that way. We can see this is
+19:58
+piped over to a wear clause or more fittingly a wear not clause to essentially ignore standard
+20:03
+windows binaries and focus on those third party or those downloaded or potentially suspicious
+20:09
+on a run that aren't baked into the operating system. And then we're taking that output and
+20:13
+piping it into new AutoRuns baseline here in VerboSmode and we're saving it out as baseline.ps1.
+20:20
+And so I'm just going to kick this off because it does take a little bit of time to run and we're
+20:24
+not going to get any output while it does. And so it can just take a little bit of time for the
+20:28
+script to go through all of those AutoRun locations initially. And so I'm just going to give it a
+20:32
+few moments here and with the power of editing we can be there when it finishes. All right,
+20:37
+so now that we've created our baseline here, which we can see based on the VerboSmessage,
+20:42
+I'm going to create some interesting activity and malicious artifacts on my system before I run
+20:47
+my second snapshot and subsequently compare the results. And so I'm just going to open up a command
+20:52
+prompt here. And from here, I'm going to execute a sample piece of malware that I've created
+20:57
+to essentially run a few backdoors and instantiate some persistence mechanisms on our system. All right,
+21:02
+so just let that run there. And with those artifacts and persistence mechanisms created,
+21:07
+I'm just going to go ahead and rerun the same script this time setting a current state file
+21:12
+as the file name here. So again, just creating a very similar snapshot to what we just did now with
+21:17
+a different set of artifacts on the system. All right, and there we go. Our current state snapshot
+21:22
+has been created. And let me just make sure I have both of these files here. And so we have baseline.ps1
+21:27
+and current state.ps1. And now the auto run script is essentially just going to do the magic for us.
+21:33
+We just need to run the compare auto runs baseline commandlet and provide very similar to running
+21:38
+compare object our reference baseline file and our differences baseline file here. And if I kick
+21:44
+that off, we should get some interesting results here. And so let me scroll back to the top.
+21:50
+And what we're looking at here is a few different pieces of persistence or backdoors that have been
+21:55
+created on our system since the time that our baseline was taken. And so in this case, it looks like
+21:59
+we have a run entry created under the current user registry hive specifically called cleanup controller.
+22:05
+We can see it's a log on type auto start entry. And the value is essentially executing this winenit.exe
+22:11
+binary here out of the downloads directory from this TCM user. All right, so there's one as we scroll
+22:17
+down some more, we can see another piece of persistence sort of dropped in as a service, right? So we
+22:23
+can see the registry location pointing over to current control set under services here. We can see
+22:28
+a service called windows active service. And specifically the service binaries pointing over to
+22:33
+this service backdoor.exe under the documents folder. All right. And thirdly here, it looks like we
+22:40
+have a scheduled task based on the location of where this was found, right? We can even see under
+22:44
+category here. This is in fact a scheduled task. And it's calling, well, first of all, it has a very
+22:49
+weird name here, randomized name it looks like. And the value or the executable here that's being
+22:54
+run is called beacon.exe. Right. So obviously some fairly easy to catch indicators here. But when
+23:01
+we're dealing with all of the noise on our system, that can be a ton more difficult to find, right?
+23:07
+If I just call get service for instance, again, we're going to just be inundated with so many
+23:12
+different services on our system. But now that I know a suspicious or a strange service has been
+23:18
+created since our baseline called windows active service, I can now zoom into that much more easily.
+23:23
+Right. I can specify the name of windows active service and get a ton more information about that.
+23:28
+Right. I can start to interrogate this with get sim instance and figure out, you know, where and when
+23:33
+and by whom was this service created on the system. And so hopefully you can start to see just how
+23:38
+powerful this type of analysis can be. And as exactly why we want to baseline and do comparative
+23:44
+operations as much as we can, you know, we can really think of this as a form of threat intelligence.
+23:49
+I like to refer to it as friendly or internal intelligence using what we know about our organization
+23:54
+and our systems and our users and networks to our advantage to outpace the attacker and get ahead
+24:00
+of their steps. And I think that's a good spot to end things for now. But to sum up our foray into
+24:06
+baseline and differential analysis. Again, these are both very powerful methodologies that we can
+24:11
+reach for during instant response because they provide context and they can help us separate normal
+24:16
+behavior from potential indicators of compromise. And so as always, thank you so much for watching.
+24:22
+If you like the video, be sure to leave a like and subscribe to the channel if you haven't already.
+24:27
+If you want to see more of this stuff. And so with that, I will see you next time. Take care.

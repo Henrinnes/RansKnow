@@ -1,0 +1,586 @@
+0:00
+Welcome to 13 cubed.
+0:07
+In this episode we'll continue our exploration of WSL2 by installing Plazo and Log to Timeline
+0:14
+within a Ubuntu 20.04 environment.
+0:17
+We'll first need to add the proper repo as we're doing here.
+0:20
+In fact all the steps we're performing are identical to those covered in the getting
+0:24
+started with Plazo and Log to Timeline episode which I highly recommend watching if you
+0:28
+haven't already.
+0:30
+Now that the repo has been added we'll need to update the available package lists by
+0:34
+running a Sudo apt update.
+0:37
+This will take just a moment.
+0:38
+At this point we're ready to go so all we have to do is type in Sudo apt install Plazo
+0:44
+dash tools.
+0:45
+This is going to install the newest package release which means that all the prerequisites
+0:50
+and all the necessary tools we'll need will be installed with a single command.
+0:54
+Pretty neat.
+0:55
+Now since we've previously covered this I'm going to speed through this section so we
+0:59
+can jump right into the fun stuff.
+1:02
+Fast forward a couple of minutes later and we're done.
+1:05
+Let's go ahead and run Log to Timeline.py and as you can see it seems to work just fine.
+1:10
+So at this point we need some evidence.
+1:13
+Let's go ahead and jump over to another Windows 10 box and run Cape so that we can grab
+1:17
+some evidence that we can then process with these tools.
+1:21
+If you aren't familiar with Cape check out this 13 cubed episode which covers the tool.
+1:26
+Also look in the description below for a link to a fantastic walkthrough created by about
+1:30
+DFIR that covers everything you need to know to get started.
+1:34
+That aside in a nutshell Cape is a forensic triage utility that can be used to acquire
+1:39
+and parse artifacts of interest from a Windows computer system.
+1:43
+The artifacts we'd like the tool to grab are called targets.
+1:47
+We can then optionally specify any number of modules to run against the collected targets
+1:52
+to parse them via any number of forensic tools providing the examiner with actionable output
+1:57
+that he or she can immediately use to investigate a case.
+2:01
+That after all is the entire purpose of triage.
+2:04
+We want to get at the data fast and focus only on what we're most interested in getting
+2:08
+rid of all the other junk.
+2:10
+So again targets collect data and optionally you can use modules to parse that data.
+2:17
+For our purposes we're going to be using Cape solely as an acquisition tool.
+2:21
+So let's go ahead and jump in and get started.
+2:24
+I'm going to connect a USB flash drive to this Windows 10 Pro virtual machine.
+2:30
+On that drive I've placed the newest version of Cape as of the recording of this episode.
+2:35
+The drive will also serve as the destination to which we tell Cape to write our collected
+2:40
+evidence which will be contained within a VHDX file which has been zipped but more on that
+2:45
+in a bit.
+2:46
+So I'll go ahead and physically connect the USB flash drive to this machine.
+2:51
+And as you can see VMware workstation is asking us where we would like the drive to be presented.
+2:55
+I'll choose the virtual machine and then click on OK.
+2:58
+And after a few seconds it has mounted as the eDrive.
+3:02
+Let's head over to this PC so it can browse the contents of the drive.
+3:06
+So I'll double click on E here.
+3:08
+I'll then go into the tools directory and then I'll go into the Cape directory.
+3:14
+You will notice both Cape.exe and G Cape.exe.
+3:18
+Normally you're going to be using Cape.exe which is the CLI version of the tool.
+3:23
+That's what I always use.
+3:24
+But there is a GUI wrapper for Cape.exe called G Cape.exe.
+3:30
+And in this episode I'm actually going to show you that because if you've never seen
+3:33
+Cape before it may make some of the options a bit more easy to explain.
+3:39
+So as expected there's a UAC prompt because Cape and G Cape both require administrative
+3:44
+privileges to run.
+3:46
+So I'll go ahead and click yes.
+3:48
+And we'll give it just a moment to load the GUI window.
+3:51
+I think you'll find the layout to be fairly intuitive.
+3:54
+The left most side of the screen are target options.
+3:58
+That's what we're going to be concerned with.
+4:00
+The right most side are module options.
+4:03
+So I'll go ahead and check use target options.
+4:05
+For the target source I'll click the ellipsis and we'll choose the C drive which of course
+4:10
+is the drive from which our artifacts will be collected.
+4:14
+For the destination as I mentioned before I'm going to write the data to the E drive and
+4:18
+there's already an evidence directory here.
+4:21
+You'll notice that there's a flush option which is checked by default.
+4:25
+That means the contents of that evidence directory will be deleted when the tool is run
+4:29
+to make room for this new evidence.
+4:31
+Keep that in mind.
+4:33
+As we scroll down through this area these are all of the targets that are contained within
+4:38
+Cape by default.
+4:40
+I'm going to choose the top most target which is called basic collection.
+4:44
+This includes all of the standard most commonly referenced windows artifacts like prefetch,
+4:49
+link files, jump lists, windows event logs just about all the typical artifacts she would
+4:54
+normally want to have from a windows box.
+4:58
+It's already there for us.
+4:59
+It's called basic collection and it's one of the many included targets.
+5:03
+You could of course write your own as well.
+5:06
+I'm going to check process VSCs which will process any and all volume shadows present
+5:12
+on this machine and de-duplicate any of the evidence from those locations as well.
+5:17
+That means we'll get possibly prefetch windows event logs and various other artifacts from
+5:23
+the volume shadows as well which is awesome.
+5:26
+For the container I'm going to choose VHDX as I previously mentioned and we are required
+5:31
+to specify a container base name.
+5:33
+It doesn't really matter so much what you put here.
+5:35
+It will end up becoming part of the overall file name as you will see.
+5:40
+But for our purposes I'll just make up something generic like demo and then notice below
+5:45
+that zip container is already checked for us which means the VHDX file once created
+5:51
+will be zipped.
+5:53
+And that will become important.
+5:55
+We'll talk more about that in a bit as well.
+5:58
+So again for the base name I'll just type in something simple like demo.
+6:03
+Alright and at the bottom of the screen you are going to notice a command line that's
+6:09
+been built out for us based on the options that we've chosen within the GUI.
+6:14
+So in other words you could literally copy that and paste it in an admin command prompt
+6:18
+and run cape.exe with those options and it would effectively do the exact same thing.
+6:23
+Again this is just a GUI wrapper for the tool.
+6:25
+But let's break down these options.
+6:28
+We have of course cape.exe which is pretty self explanatory.
+6:32
+Right after that we have dash dash t source.
+6:34
+That is the target source.
+6:36
+C colon.
+6:38
+Dash dash t-dest is the destination where we would like the evidence to be written.
+6:42
+Dash dash t flush corresponds to that flush check box up above.
+6:48
+As I mentioned this means that the destination in this case E colon slash evidence will be
+6:54
+deleted prior to this cape run.
+6:58
+So any previous files that were in that directory are going to be blown away before the new
+7:04
+evidence is written here.
+7:05
+So be careful with that.
+7:06
+That could be very problematic if you choose the wrong path.
+7:10
+Though the tool will warn you in the GUI when you launch it.
+7:13
+So again that's that option right there.
+7:16
+Dash dash target specifies one or more targets.
+7:20
+In this case it's that basic collection which as I mentioned will contain most of the
+7:25
+standard Windows artifacts that you would expect.
+7:28
+Dash dash vss means crawl any and all volume shadows present on the system and parse those
+7:33
+artifacts from those as well and deduplicate them which is by default.
+7:38
+You won't see a flag there present for deduplication because that's assumed unless you tell
+7:42
+it otherwise.
+7:43
+Dash dash vhdx of course tells it to create a vhdx file.
+7:48
+The base container name is after that which is demo again that is required.
+7:53
+And then dash dash GUI is only an option you would find when you run this from gcape.
+7:57
+It just means that the window that's going to open to run cape.exe will pause at the
+8:02
+end instead of just immediately exiting so that you can see all of that console output.
+8:08
+And that's pretty much it.
+8:10
+It's built that command line for us and really once you memorize those various parameters
+8:14
+you're not even going to think twice about it.
+8:16
+You're going to pop open an admin command prompt.
+8:18
+You're going to type cape.exe followed by your parameters you're going to hit enter and
+8:22
+let it do its thing.
+8:24
+But again the GUI is fairly good if you've never used cape before to kind of explain and
+8:30
+show you the various options.
+8:32
+So all we have to do at this point is click that execute button in the bottom right and
+8:37
+let it start running.
+8:39
+It's going to end up taking probably two to three minutes and of course I'm not going
+8:43
+to make you wait on that.
+8:44
+I'll speed through that section and really after a couple of seconds in your time it will
+8:49
+be done and we'll take a look at what we have.
+8:52
+So let's go ahead and launch it now and here we go.
+8:56
+Notice that warning message telling us that we could lose data as a result of that flush
+9:02
+option being checked.
+9:03
+And there's the window and notice the title bar for the window.
+9:07
+Notice the percentage incrementing forward and the current status of what's happening.
+9:12
+That's pretty cool so pay attention to that title bar of that window.
+9:16
+And there's all the console output.
+9:18
+Again I'm going to fast forward through all of this so you don't have to sit there and
+9:21
+wait on it and we'll come back when it's done and take a look at the results.
+9:27
+And as you can see the tool is now done you'll notice the total execution time there in
+9:33
+red and it didn't really take but just a few minutes to grab all of that data automatically
+9:38
+for us which is pretty awesome.
+9:41
+So at this point all we need to do now is take this back to our analysis machine and
+9:46
+start looking at it.
+9:48
+If we go ahead and browse the eDrive here under evidence in case you're wondering what
+9:52
+it looks like there is the console log which is everything you saw in that black window.
+9:58
+Again that's just everything that was on screen there as that was scrolling past.
+10:02
+And then the zip file itself contains the VHDX file within it.
+10:08
+As I had previously mentioned it's important to zipped because when we actually end up
+10:12
+mounting a VHDX which you can do natively in windows just by double clicking on it it
+10:17
+will mount it as read right which means you could modify any of the contents of the files
+10:23
+within the VHDX which is not desirable when you're performing forensics but because
+10:28
+we have that original zip file we can simply re-extract it and be back to our original
+10:32
+unmodified VHDX.
+10:34
+Alright so with all of that done it's time to switch back over to our DFR analysis
+10:40
+station, fire up WSL2 and take a look at just how we can analyze this evidence that we've
+10:46
+collected.
+10:48
+Now let's plug in that same USB flash drive that we used earlier into this analysis machine
+10:54
+and if all goes well it should mount as the next available drive letter which is e
+10:59
+and there it is.
+11:00
+Let's go ahead and open this up and go into that evidence directory and there are the
+11:05
+two files that we saw previously.
+11:07
+I'm going to drag the zip file onto the desktop and now we will go ahead and extract the
+11:12
+contents of that zip file to expose the VHDX file contained within and there it is.
+11:18
+I'm going to re-open this PC and I want you to pay attention because I'm going to double
+11:23
+click on this VHDX file and it should mount and there it is it mounted as the next available
+11:28
+drive letter which is f and there is all the evidence contained within collected by
+11:32
+k.
+11:33
+So we should be done right?
+11:34
+We just go into WSL2, fire up log to timeline, point it at the mount point and we're
+11:39
+good.
+11:40
+Unfortunately no.
+11:42
+As you can see WSL2 only sees the C and D drives not the E USB flash drive or the f
+11:49
+k the HDX.
+11:51
+Neither of those drives are presented.
+11:53
+Even if we use another tool like Arsenal ImageMount or it still will not be presented
+11:57
+within WSL2.
+12:00
+So what do we do?
+12:01
+Well first off let's go ahead and go back to the Windows terminal and go back into
+12:07
+the WSL2 environment.
+12:09
+We'll change into the desktop and we're going to install a suite of utilities called
+12:14
+how do you pronounce it?
+12:16
+I don't know, Kimew, Kimew, something, Qemw dash utils however you want to pronounce it.
+12:22
+I say Kimew.
+12:24
+And once we do this we're going to have access to an image conversion utility.
+12:28
+See where I'm going with this?
+12:30
+We're going to actually type in Qemw dash IMG convert dash capital O to specify the output
+12:38
+which is going to be raw and then we're going to specify the source and destination.
+12:43
+The source will of course be the VHDX image that we want to convert and the destination
+12:48
+will be the file name that we want it to be written to of type raw which is like a
+12:52
+DD image.
+12:54
+So we're simply converting one forensic image file format to another.
+12:58
+And as expected the raw is of course bigger larger than the VHDX.
+13:02
+Okay, that's it.
+13:04
+At this point we now have an image format that is natively supported by log to timeline.
+13:10
+You could try to point log to timeline at the VHDX but as of this recording it won't
+13:15
+parse it.
+13:16
+So we'll do the kitchen sync approach as described in that previous log to timeline episode
+13:21
+I mentioned.
+13:22
+We'll write it to plazo.dump and specify that raw file you see there.
+13:26
+And we're off to the races.
+13:28
+As you can see in the right most file column it's crawling all of the artifacts contained
+13:33
+within that cape image.
+13:35
+So to recap we simply converted the VHDX image file created by cape to a raw image file
+13:44
+which is natively supported by log to timeline and the other associated tools within this
+13:51
+plazo toolkit.
+13:53
+So I'm going to speed this up and let this finish so that we can go ahead and run the
+13:58
+utility that will then convert this raw database into a CSV file that we can finally analyze
+14:05
+with timeline explorer.
+14:07
+So let's go ahead and fast forward through this.
+14:11
+That ended up taking a little more than six minutes to write that plazo.dump file.
+14:17
+So let's go ahead and take a look at the results.
+14:20
+I'll do a directory listing here and you see the plazo.dump file there at the bottom.
+14:25
+Let's run p info dot p y against the dump file to grab some basic metadata.
+14:31
+This will show us the various parsers and the number of events associated with each as
+14:36
+you can see here along with various other metadata about the plazo file.
+14:42
+Next, let's go ahead and run p sort dot p y which is the final utility that will take
+14:47
+that plazo database and write it into a CSV file in our case.
+14:52
+So run p sort dot p y the output will be L2t CSV which is the classic or legacy log the
+14:58
+timeline format.
+14:59
+We'll save it as timeline dot CSV and of course we'll feed it the plazo.dump file.
+15:05
+UTC is the default time zone.
+15:08
+Now this is going to take several minutes to process as well and yes I'll fast forward
+15:12
+through this for you as well so you don't have to wait on it.
+15:15
+But the result of this will be a timeline dot CSV file that is our final product so
+15:21
+to speak.
+15:22
+We can then open that within timeline explorer and get to work analyzing the fruits of
+15:27
+our labor.
+15:29
+That ended up taking about eight minutes so let's go ahead and look at the resulting timeline
+15:33
+dot CSV file.
+15:35
+You'll see it there at the bottom and it is fairly large at like 668 megabytes.
+15:42
+Normally this is not the way we would do things right we would generally have some sort
+15:46
+of time range that our incident would revolve around and we would kind of slice and dice
+15:50
+the data accordingly.
+15:52
+Refer to that getting started with plazo and log the timeline episode if you want to learn
+15:56
+more about how to use these tools but for the purposes of the demo this will work fine.
+16:01
+So here's timeline explorer and all I'm going to do is drag the timeline dot CSV file
+16:06
+from the desktop into timeline explorer.
+16:09
+Be patient again this is a large CSV file and once loads we'll be able to get right
+16:15
+to analyzing the data.
+16:18
+And we're done so let's go ahead and maximize the timeline explorer window here to make
+16:22
+it easier to view the data.
+16:24
+Notice in the bottom left I have a filter applied from a previous investigation I'll click
+16:28
+the X to get rid of that and in the bottom right you'll notice the total lines invisible
+16:32
+lines match at more than 1.2 million.
+16:36
+Remember that we would normally use piece or to specify a date and time range to narrow
+16:42
+the scope of the timeline and not literally look at a timeline of everything on the machine.
+16:46
+That's not efficient at all it would not make for a good investigation.
+16:51
+Let's play around with some of these artifacts and choose a couple of things related to USB
+16:55
+device forensics as an example there you can see the sandisk ultra USB flash drive that
+17:00
+I connected to this machine the one from which we ran Cape.
+17:04
+There are numerous other artifacts we could choose from here as well.
+17:08
+That just you know just gives you an idea of what you can look at this is not an episode
+17:12
+about how to use timeline explorer anything like that you get the general idea though we're
+17:16
+just playing around showing you what data is available.
+17:19
+Let's clear our filters and look at one more thing how about windows pre-fetch which should
+17:24
+be color coded in red this of course shows us program execution this isn't very important
+17:29
+artifact there's an entire deep dive episode covering this if you haven't already seen
+17:34
+it I would encourage you to check that out and there's all of our pre-fetch data.
+17:40
+So to recap everything we've done here let's talk about the purpose of this episode right
+17:47
+we have been experimenting with WSL 2 and using it to run tools that we would normally
+17:54
+run on a dedicated Linux box or Linux VM to parse Windows artifacts but instead of having
+18:01
+to do that we just run them natively within this environment.
+18:05
+You saw in a previous episode volatility 3 and in this episode plazo and log to timeline
+18:10
+and there are plenty of other tools I'd like to cover as well but keep in mind this
+18:14
+is just testing a lot more testing needs to be done to verify that there are not any
+18:19
+issues with these tools again we're experimenting here trying to understand the capabilities
+18:25
+of WSL 2 as it relates to digital forensics.
+18:29
+So what did we do?
+18:31
+We went to a Windows 10 box ran cape grabbed some evidence in a VHDX format which was then
+18:37
+zipped went back to our analysis machine unzipped the zip archive to expose the VHDX we then
+18:45
+saw that we couldn't just mount the VHDX in Windows and point to it directly with WSL
+18:50
+2 that would be too easy but instead we actually ran the key view utilities to convert that
+18:58
+image file format the VHDX into a raw image file format which is supported by log to timeline.
+19:07
+Remember log to timeline can be pointed at a mount point or at certain image files such
+19:12
+as EO1s and RAWs but as of the time this recording not VHDXs so that's the whole reason
+19:18
+we converted it from a VHDX to a raw.
+19:23
+But otherwise that wraps up everything I wanted to cover in this episode if you have suggestions
+19:28
+for future WSL 2 episodes or any kind of future episode drop a comment below and I'll
+19:34
+be sure to check it out and add it to my suggestion list.
+19:38
+As always thank you for watching thank you for subscribing and I will catch you in the
+19:44
+next 13 cubed episode.

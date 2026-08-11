@@ -1,0 +1,318 @@
+0:00
+Welcome to 13Cubed. In this episode, we're going to take a look at Dysect, which is a powerful
+0:11
+IR framework that's now open source as of October 2022. It was actually developed and
+0:17
+used internally by Fox IT, which is part of NCC group, for their own engagements, and
+0:22
+they decided to make it a community available open source project, which is amazing. Here's
+0:27
+the why should I care part? It's actually a collection of multiple tools that you can use
+0:32
+independently, or you can use them together to provide some powerful capabilities. You can also
+0:38
+incorporate parts of Dysect into your own projects, which is amazing. What we're going to do in this
+0:44
+episode is take a look at some background information about the framework. Bear with me, I know
+0:48
+that's the boring part, but it won't take long. Then we'll take a look at how to install it and
+0:53
+get it up and running in WSL 2 on an Ubuntu 22.0 for machine. It's actually super simple, like one
+1:01
+minute or so of work. Then we'll take it for a test drive and actually use it to parse various
+1:06
+artifacts out of a server 2019 disk image. Without further ado, let's get into it. Reading from
+1:14
+the project's official GitHub page, Dysect is an incident response framework built from various
+1:20
+parsers and implementations of file formats. Dysect allows you to work with tools named target
+1:25
+query and target shell, which by the way, will be using extensively during the demo coming up,
+1:31
+to quickly gain access to forensic artifacts, such as runkeys, prefetch files, and Windows
+1:35
+event logs, just to name a few. And here's the really cool part, regardless of the underlying
+1:41
+container, something like an EO1 or a VMDK or QCAL, or the file system, whether it's NTFS,
+1:48
+EXT, FFS, or the operating system, whether it's Windows, Linux, or ESXi, or any combination of those
+1:56
+things. You don't have to bother with manually extracting files from a forensic container or
+2:02
+mounting the container like a VMDK or something, retrieving an artifact like the MFT,
+2:08
+parsing it using a separate tool, and then finally putting everything together into a timeline
+2:13
+for analysis. That's all handled under the hood by Dysect and a user-friendly manner,
+2:17
+and it really is user-friendly, once you see how easy it is to use something like target query,
+2:22
+I think you'll agree. It's also important to note that Dysect was created with a modular
+2:26
+approach in mind, which means that each individual project can be used on its own, or in combination
+2:32
+to create a completely new tool for your engagement or for future use. With all of that out of the
+2:37
+way, let's take a look at how to install and use Dysect. I think you'll be surprised how easy
+2:43
+this part is. We're using Ubuntu 22.04 within WSL2, which currently has Python 3.10.6 installed.
+2:52
+We're going to be using PIP 3, which is the Python 3 version of PIP, which is a Python package manager.
+2:59
+If you don't already have that installed, you can do so with sudo apt install Python 3-PIP.
+3:05
+Once that's there, all you have to do is type one single command, which is PIP 3 install Dysect.
+3:13
+That's it. When we press enter here, it's going to automatically pull down all of the
+3:17
+prereqs that we need to get this framework up and running, and I'm doing this in real time,
+3:20
+by the way. It's already done. Once I clear the screen, if I start typing the word target-dash,
+3:26
+and then hit tab, you can see our available utilities are indeed there.
+3:31
+Now the fun part. Let's take a look at the two most frequently used utilities that come with
+3:37
+Dysect, and that is going to be target-query and target-shel. I'll run target-query without any
+3:43
+options so we can take a look at the available options, and you'll notice that we're greeted with
+3:48
+an error that says that the argument-f or dash-function is required. What's a function? That will be
+3:55
+something like hostname, which as the name implies, would return the hostname from the image that we
+4:01
+point target-query to, which is actually one of the first things that we're going to be doing.
+4:07
+Before we get there, though, let's go ahead and run the argument-dash-list, and I'll pipe it
+4:13
+through more. This is going to show us all of our available plugins, and they're nicely categorized
+4:19
+for you. Here's the apps category, the browsers category, the file system category, with subcategories
+4:26
+underneath there for NTFS and Unix. By the way, remember that Dysect doesn't just work on Windows,
+4:32
+it also supports Unix and Linux systems, and if that's something you'd like to see in a future
+4:36
+episode, leave a comment down below. And here's the OS category, one of the largest with Unix
+4:43
+specific artifacts, and then here's the start of the Windows specific artifacts.
+4:48
+I can pretty much guarantee you that if you can think of a Windows forensic artifact,
+4:52
+there's going to be some sort of function that will parse it listed here.
+4:56
+So let's take a look at some of them, like ActivitiesCache and Amcache, and here's IAS,
+5:02
+LinkFiles, Log-related information, PowerShell, Prefetch, RecycleBen, Registry,
+5:09
+Runkey, ShellBag, ShimCache, USB, UserAssist, and the list goes on and on. So again,
+5:16
+if there's something you're trying to parse from a Windows image, chances are there is a function
+5:21
+in here that will do that for you. So let's go ahead and play with some of these. I obviously can't
+5:26
+demo all of them because that would take hours and hours, but we'll start by running Target-Query,
+5:31
+and let me introduce you to a new argument I'm going to be using, which is optional,
+5:35
+called DashCube. That's quiet mode. It's going to suppress any warnings or extraneous
+5:40
+information that would otherwise be displayed on screen. If you didn't use this, you might see
+5:45
+things like, for example, warnings for any kind of Python dependencies that you didn't have installed
+5:50
+that were necessary for certain plugins. So definitely don't just run this all the time. You
+5:55
+should actually address any warnings you see and kind of clean them up so you can have all the
+6:00
+full functionality of this suite of tools. But in this case, again, I'm going to be using it. It
+6:05
+is optional. Now we just point to the image. In this case, it's going to be on my D drive, and within
+6:11
+WSL, I use the slash M&T or Mount slash D, and then I'll point to that full image path, which is
+6:19
+DFIR images, and then this win 2019 test VM. You can tell by the file extension that this is a
+6:26
+VMware virtual disk, which is one of many different formats that target query can support.
+6:32
+Now we'll use dash F, and then lastly, hostname. And the first part of what you see returned here
+6:39
+is just the target that we specified in the command line. Nothing exciting about that. But here
+6:44
+is the returned result from running the hostname function. That's the actual hostname from that image,
+6:51
+which was immediately returned to us. But check it out though, I can actually provide a comma
+6:56
+separated list of functions here. So I'm going to use a few other ones, one called domain, OS,
+7:02
+version, and IPs. So if I run these with a comma separated list here, you're actually going to see
+7:09
+again, it starts with the target. But after that, these are the results of those functions in the order
+7:15
+in which I specified them. So here is the hostname again. Here is the domain. Here is the broad
+7:22
+category of OS, which just says Windows. Here is the specific version, which is Windows Server 2019
+7:27
+standard in T6.3, build 17763. And then here are the IP addresses or IP address in this case, which is
+7:36
+192 168 10.52. Pretty awesome. Let me introduce you to one other argument you can use here, and that's
+7:43
+dash D for delimiter. And as that implies, you can specify any delimiter. Like for example, a comma,
+7:49
+if I run this, now you'll notice we get a comma separated list of the results, which would be great
+7:55
+if you want to write this out to a CSV or further slice and dice the data. So again, dash D is a
+8:02
+delimiter. Let's play around with another plugin that's pretty frequently used, and that's going to be
+8:09
+run keys, which as the name implies, will return our run keys out of the registry. So you can see
+8:14
+the full paths here, like Microsoft Windows current version run, and you can see exactly what it is
+8:19
+that's being specified by that run key. Like this, for example, or VMware Tools D, for example,
+8:25
+here's Windows Centering Helper.exe, which I use on many different machines to center windows for
+8:31
+the purposes of screen recording and various other things like that. But again, that's just a quick
+8:36
+enumeration of the run keys out of the registry. Let's take a look at another one. How about
+8:42
+EVTX, which of course would be Windows Event Logs? This time, I'm going to introduce you to another
+8:48
+argument called dash dash limit, and you'll never guess what it does. You probably do guess what it
+8:53
+does. It limits the output. In fact, I'm going to give it just a small number like five, so we don't
+8:58
+have all the event logs dumped on screen. But here are the first five being returned, and the
+9:04
+information that you would expect to be here is indeed here, including timestamps, provider names,
+9:10
+channel names, the computer from which the event log is originating, and all the other information
+9:15
+you would expect to see with EVTX, again, a very useful, very commonly run function.
+9:23
+Let's take a look at another one called MFT, which, as the name implies, will dump the MFT,
+9:29
+or at least some part of it. So let's go ahead and limit this to five again. And you can see some
+9:34
+of the information being pulled from the MFT right here, including our timestamps, creation time,
+9:39
+last modification, last change, and last access, the file size, whether or not the file is resident
+9:45
+or not, and other useful information that's being pulled from the MFT. Pretty awesome.
+9:52
+There's a derivation of this plugin called MFT underscore timeline, which will facilitate the
+9:58
+output of the MFT in a way that you could use to build a timeline. Yet, however, will not respect that
+10:04
+dash, dash limit that you see here, because watch what happens when I press enter. It's actually
+10:08
+going to throw up all this stuff on screen. I'm going to press control C, so that's why you see
+10:12
+this trace back with all the Python throw up you see on screen here, so ignore that. That's again,
+10:18
+because I press control C to abort it. But you'll notice that the starting column here is our timestamp,
+10:24
+and then we have the information from the MFT. So this would facilitate creation of an MFT timeline.
+10:31
+And then lastly, let's take a look at one other one, which would be Amcash, and I will also
+10:36
+limit this one to five. And this is the information you would expect to see out of the Amcash,
+10:41
+including our Shah one hashes with the various binaries that we may be interested in,
+10:46
+and various other information from Amcash. Again, just a small sampling of the dozens and dozens
+10:53
+of functions that we can run here. But I think you get the idea of how powerful target query can be.
+11:01
+Now let's take a look at target dash shell. And this one is actually very easy. I'm going to use
+11:07
+dash key again, and all we have to do is point to the image. And again, that's the same image that we
+11:14
+used before, which is right here. So again, that is optional, but otherwise it's target shell,
+11:19
+point to the image press center. And what do you think this is going to do? Well, it returned what
+11:24
+looks like some sort of command prompt. We'll check this out, because this is pretty awesome.
+11:29
+LS dash L, which is the way to get a directory listing on a Linux Unix system. So I've typed
+11:34
+that in, and yeah, you can see right here exactly what's been returned. Let's change into the C
+11:40
+directory here and do another LS dash L. And what are we looking at? The root of the C drive
+11:46
+from the image. It's like we've somehow mounted the image, not actually mounted it, but we're
+11:50
+basically traversing the image in real time right now. So I can change into any of these directories,
+11:55
+like users run an LS dash L. I can change into any of these like administrator. I could go into,
+12:02
+I don't know, app data, how about roaming Microsoft, and then I can go into Windows and recent.
+12:11
+And now you can see the full path users administrator, app data roaming Microsoft Windows recent.
+12:16
+And of course, this is going to be the location of where we will have our link files and jump
+12:19
+lists. That should be familiar to you. And you can see them right here. If you type help,
+12:24
+you can take a look at the available commands in this shell. And you can see them all right here,
+12:29
+some of which I've already used. But that's all the stuff available to you. And if you want specifics
+12:34
+on any one of these, you can type help space and then give it a command like CD. And it will take
+12:40
+exactly what it does, which this one's pretty easy, change directory, obviously. Okay, so as you
+12:46
+can see, this would be super useful, but it gets better. Check this out. If I repeat this command again,
+12:53
+in this time, I use a dash R. This is pretty crazy, because what this is going to do is give us a
+12:59
+virtual representation of the registry at the command prompt. So if I do an LS here, check it out.
+13:07
+Now let's change into H key local machine. Another LS. Yep, just exactly like you would think.
+13:15
+This is the registry. So I can go into software. Let's see if we can go into Microsoft, Windows,
+13:22
+current version, run, the run key, right? Now let's do an LS. And there we go. We actually can get
+13:28
+the information directly out of the registry. And again, if I type help, you can see our available
+13:34
+commands that we have here, which is pretty awesome. Notice that if I use CD dot dot, it's actually
+13:40
+not going to work here. It'll say no such sub key. So if I wanted to reverse upwards, I would use
+13:44
+up. So if I type up, you can see that we're going back up the tree and the registry. But this is
+13:51
+just absolutely amazing. The ability to be able to move through the registry. Also, notice that
+13:56
+certain things like LS dash L, which I used in the other command prompt, basically when we actually
+14:02
+were browsing the files and the image and not the registry specific option with dash R, notice
+14:07
+that doesn't work here. So you just have to use LS as I was doing before. But again, if you type help,
+14:13
+you can see our available commands. And if you type help on any of these like this, you can see that
+14:18
+there are actually no available options here, just a directory listing control L, by the way,
+14:25
+we'll clear the screen just like it would in a Unix or Linux system. All right, so let me type exit
+14:30
+and go back to our command prompt. And that pretty much wraps up a quick look of target query
+14:36
+and target shell. Both are very easy to use. And as I said before, probably the two most frequently
+14:43
+used utilities. Also remember, as we covered before, that you can bake dissect into your own projects
+14:51
+or you can use these to stand alone to facilitate forensic analysis as we just did in this demo.
+14:57
+So either way, you've got lots of options to use this powerful framework. And it's just amazing.
+15:02
+This is now open source and available for the community. So I expect that the community is going
+15:07
+to do great things with it. And I wanted to cover it to peak people's interest in this episode. And
+15:12
+hopefully I've accomplished that. All right, that wraps up everything I wanted to cover. So again,
+15:18
+thank you so much for watching. Thank you for subscribing. And I'll catch you in the next 13 cubed
+15:24
+episode.

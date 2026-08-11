@@ -1,0 +1,424 @@
+0:00
+Okay, well, hello everyone and welcome to Inside Akira Ranzomor's Rust Experiment.
+0:09
+My name is Ben, I'm a security researcher and before we get to today's story I'm going
+0:13
+to start with the prequel.
+0:15
+About two years ago I got interested in the question of what rust binaries actually look
+0:20
+like on the inside so I took basically every feature of the Rust programming language and
+0:25
+ran them all for the compiler and reverse engineered all the assembly code that resulted.
+0:31
+This was nice for understanding how these binaries were built like generally but then what
+0:37
+do you do when you run into an actual malicious rust binary in the wild outside of laboratory
+0:41
+conditions?
+0:43
+It's probably highly optimized, it's probably compiled in release mode and this is
+0:47
+like an notoriously difficult issue and there's been some efforts during the past few
+0:53
+years to improve the automatic tooling on this front but I have to say that currently
+0:57
+in the year 2025 reverse engineering rust binaries is really far from solve problems still.
+1:04
+The reason for this boils down to if I may use an analogy, if you want to build a really
+1:09
+great automatic pizza maker you should first have the manual baking of the pizza down to
+1:14
+a precise science and by analogy if you want to automate away all of the sorrows and difficulties
+1:19
+of reverse engineering rust binaries you should probably have reverse engineering rust binaries
+1:25
+manually down to an exact science first as well.
+1:29
+But how often have you seen this actually done?
+1:32
+I mean someone taking malicious highly optimized rust binary in the wild and just doing an
+1:38
+old school full re of it the way we used to do with C binaries all the time.
+1:45
+Very few people want to do it so we decided we were going to do it and soon enough
+1:49
+opportunity knocked.
+1:51
+A Cura group released a rust version of their encryptor so we took this binary and reverse
+1:57
+engineer the entire thing from beginning to end resulting in a rather exhausting report
+2:01
+which is available in the blog post of the same name as this talk.
+2:06
+We're not going over the whole report today we're just going over three highlights where
+2:09
+an unusual insight was required in order to break through an obstacle and allow the investigation
+2:15
+to continue. But first we can do this without a short word about who these occurra people
+2:20
+are. They are a rust group they've been with us since at least as early as 2023.
+2:25
+They've attacked hundreds of organizations in the US, in the EU, in Australia they've
+2:28
+caused dozens of millions of dollars in damages. They like to attack exposed VPNs using
+2:33
+zero days, one day's in traditional stuffing and they like their cross platform malware which
+2:39
+is presumably part of the reason that made rust language attractive to them.
+2:46
+Sure enough around early 2024 they released the binary I spoke about earlier and we got
+2:51
+our hands on it and the moment we did we several things immediately jumped out at us.
+2:59
+First of all this is clearly an optimized release build. None of the metadata that you
+3:04
+usually see in debug build in even if you run a simple object I'm appeared in this binary.
+3:10
+But more important is that the execution chain for this malware was kind of weird. You
+3:16
+have the main function which called something named default action which calls lock which
+3:22
+I guess makes sense for ransomware which then finally calls something named lock closure.
+3:27
+Okay we are intrigued. Now the thing is usually at this stage of research what we're going
+3:33
+to do is post some very specific research questions. So you would be able to dive into
+3:38
+the binary, fish out the answers you're interested in and then pull back out. But now we were
+3:43
+here in order to reverse engineer the entire binary. So we were reduced to the very new
+3:49
+BS techniques of reverse engineering of going to the main function and starting reading instructions
+3:54
+one by one. And soon enough after starting doing that we became confused. We ran into a bunch
+4:01
+of these opaque function calls and then there was this huge object with tons of fields we
+4:05
+had no idea what any of them were for. And this object was constructed and passed as an argument
+4:10
+to this next function in the execution chain default action. And the thing is that this
+4:16
+malware only has one possible control flow so this isn't a default action it's more of an
+4:21
+only action. We became suspicious so we ran a web search and we found what we suspected
+4:29
+we would find which is that the Acura dev copypasted a bunch of code from the read me of a
+4:33
+third party rascade specifically a rascade named seahorse. This is a framework for creating CLI
+4:40
+applications in raster. And after copypasting this code the Acura devs made as a few modifications
+4:46
+to it as they could possibly get away with so that the result would still kind of perform
+4:51
+the action they wanted it to perform. The result of this workflow was several vestigial remnants
+4:57
+of the original boilerplate inside of the ransom code such as for example this strange string CLI
+5:03
+bracket name and the function name default action which was just some kind of innocent placeholder
+5:08
+which somehow found its way into this ransomware. Now armed with this insight we could go back to
+5:15
+all of those oblique function calls from earlier and realize that actually all of these repeated
+5:21
+calls were just initializing seahorse flag objects and we could go back to the huge object that
+5:27
+we saw before and realize this was just an up object again from the seahorse library and we
+5:32
+could match all the field initializations line for line for assembly from assembly to source
+5:38
+including naming all of the fields and realizing that for example this strange string CLI arcs
+5:44
+it goes in the usage field and you haven't even have a version string ostensibly showing the date
+5:51
+on which this unholy binary was compiled. Now to sum up this warm up we took what could have been
+5:57
+into our three days of really painful reverse engineering and we boiled them down into one educated
+6:02
+guess and I know what you're thinking yes we ended up with all the information we could possibly
+6:06
+want about how this main function operates but nearly no hard work went into achieving that state
+6:13
+of affairs so what kind of reverse engineering is this and my answer to that is that personally it's
+6:18
+my favorite kind of reverse engineering to pull it off so with that in mind we're moving on to
+6:23
+the main course the default action function and at first we thought we were going to have an easy
+6:29
+time with this function because just like with the main function originally the arteriodesk
+6:37
+copy pasted a bunch of boilerplate code from the readme file of a third part to create this time
+6:42
+from the create indicative this is a create for creating a colorful iKandy progress bars in the terminal
+6:52
+and with what we're going to have an easy time just like with the main function we're just going to
+6:56
+look at the boilerplate decopy pasted and match it line for line the source to the assembly and be done
+7:02
+but unfortunately reality was not so accommodating to our fantasy when you look at this function default
+7:08
+action in the assembly level you're going to see the first of all its basic block structure is not
+7:17
+so pretty and second of all if you start at the top and begin reading you're going to very soon see
+7:25
+some stuff like for example direct calls to the cffi which strictly speaking should not be there
+7:31
+and then you're going to encounter what i'd like to call the final boss of basic blocks this thing
+7:36
+is comprised of over 200 instructions all of which operate on xmm words and none of which i can
+7:42
+pronounce now usually at this point this is where we would have squared back and tried some sort
+7:50
+of other approach of walk around such as using a debugger or maybe a sandbox but we are now in the
+7:55
+current era of technology and there is a new thing that we can do brace yourselves you all know
+8:00
+what is coming we delegated the task of understanding what this basic block does to our esteem colleague
+8:06
+open ai03 this was before gpt5 thinking and open ai03 chewed through all of these instructions
+8:13
+and when it was done first of all it hated us and second of all it came up with the correct answer
+8:18
+which is that this basic block was an elaborate dance meant to count the number of cores
+8:24
+available to the current process for the sake of parallel computation this was great except this
+8:30
+functionality was nowhere to be found in the actual sources the cure devs copy-pasted
+8:35
+and at this point we had no choice we had to sit down and go for a bid to do some thinking
+8:41
+and eventually we hit upon a theory if you look at the original boilerplate the the
+8:46
+cure devs copy-pasted there's a piece of logic there that spawns four worker threads exactly for
+8:51
+hard-coded number and we figured that one of the cure devs must have seen this and said okay this
+8:56
+is nice for a readme file but it's not fit for production so they switch out the hard-coded
+9:01
+number four and they replaced it with a value that the user the person in walking the binary was
+9:06
+going to supply via the CLI but now what if the user doesn't supply a number of threads to spawn
+9:13
+now we need the same default so what's the same default in this case well how many cores does
+9:17
+the machine have which you would answer by calling the function available parallelism resulting
+9:24
+in the source code on the bottom now I want to emphasize something about the source code on the
+9:29
+this source code is obviously not inside the acura binary this source code is not in the boiler
+9:35
+place that the acura devs copy-pasted from indicative either we are right now inside the acura devs
+9:40
+head reverse engineering their thoughts and deducing what source they must have written in order to
+9:46
+implement the functionality that we reason they probably wanted to implement so aren't with
+9:55
+this foothold we went to the function available parallelism and began digging down the call stack now
+10:01
+available parallelism calls a function named quota which calls even one of two functions quota v1
+10:06
+or quota v2 which calls the libc function name CPU count which calls another function name CPU count s
+10:12
+which iterates in a loop with each iteration calling some function name count ones which finally
+10:18
+calls pop count 64 which is an lvm intrinsic which kind of sort of performs the logic that we talked
+10:26
+about earlier of counting the number of available cores but there's still some way to go from here to
+10:31
+there how do you get from a short-teach lnvm intrinsic that leaves five levels deep inside library code
+10:37
+to this huge basic block that appeared in the same visual layer as the original dev offered code
+10:42
+and we saw the moment we started reverse engineering the default action function but now when you
+10:47
+pose the question like that the answer is within reach and it breaks down into two components which are
+10:53
+inlining and loop and rolling the rask compiler took every call i just discussed including available
+11:00
+parallelism calls quota calls every one of quota v1 or quota v2 calls CPU count and squished all of them
+11:06
+into the same visual layer as the original dev offered code we've taken the liberty of going through
+11:12
+the entire basic block graph of default action and call recording all of them so you can get this
+11:17
+like christmas tree display of how all of those blocks each belonging to different functions in
+11:21
+different levels of the call hierarchy are just like hanging out chilling next to one another in a
+11:27
+way that they have no logical right to do if you score further down you're going to find the
+11:33
+actual final boss of basic blocks that i discussed earlier which again it comes from the intrinsic
+11:40
+CPU count pushed five levels up from its original position in the call hierarchy and if you'll
+11:47
+recall there were repeated iterated calls to it so the compiler unrolled this loop resulting in
+11:53
+the basic block as we found it and the heartbreaking thing is that the accurate dev road discord didn't
+11:59
+even mean to write anything obfuscated they just needed a feature so they rolled out two words
+12:04
+available parallelism thus setting in motion the series of events that culminating in us and
+12:10
+countering this soup of basic blocks and that unreadable final boss of basic blocks and this
+12:16
+should give you some idea of what maybe makes raster peeling tomorrow developers because apparently
+12:21
+you don't need a pecoron or an obfuscator you just program normally and obfuscation happens on
+12:26
+its own so the final highlight i wanted to talk about today has to do with what happens in the
+12:34
+lock function now despite its name the lock function doesn't actually perform any filing encryption
+12:40
+it delegates that task to a bunch of worker threads but if you go and try to see how the control
+12:45
+flow gets transferred from the lock function to one of the worker threads first of all you're going
+12:51
+to run into the same soup of basic blocks from various levels of the call hierarchy fine we're
+12:55
+already used to that but even at the tail end of the soup of basic blocks you're going to see a
+13:00
+call to some function named thread scope new and as an argument this function takes some oblique
+13:06
+pointer and the original entry point that the thread is supposed to begin its execution at
+13:11
+is not to be found anywhere now as a reverse engineer nothing makes me more nervous than not
+13:16
+being able to understand how the control flow even proceeds from point A to point B so we decided
+13:22
+that we were going to have to understand everything that's going on here including the basic
+13:27
+block soup and the oblique call to threads scope new and the sad thing is that in the same
+13:34
+universe everything i'm about to say right now would have been relegated to some separate course
+13:39
+named rust standard library internals but the compiler has helpfully taken all of those internals
+13:44
+and externalized them for us so that we have to reverse engineer them if you want to understand
+13:49
+what's going on with the control flow here and in order to do that we had to do the unthinkable
+13:54
+we had to read the docs even worse there were some parts where there were no docs and we needed to
+13:59
+read the rust standard library source code directly which i can assure you was very fun
+14:04
+so fortunately we at least have a leg up we know that the a here does copy pasted a bunch of
+14:11
+indicative boilerplate code the specifically the code you see here this code calls a library
+14:15
+function named threads cove spawn this is the function that generates the worker thread and as
+14:21
+an argument this function takes another function which is what the worker thread is going to execute
+14:26
+now in the original boilerplate the thing you see in the yellow rectangle this was just some
+14:31
+harmless code and of course the accuracy of switch that out and replaced it with the
+14:35
+normalicious logic that performs file encryption so originally this function in its harmless form
+14:41
+it was a closure and then it was replaced with something that performs locking so at least that's
+14:47
+one mystery solve the way we got the strange name block closure but that still doesn't answer our
+14:53
+original question about how the control flow works we needed to start our separate investigation
+14:58
+of that matter so we decided to start that investigation at the tail end of the basic blocks
+15:04
+earlier at the call to shred scope new this function takes to parameters one is the stack size and
+15:11
+the other is some object of a type box dine fn1's this isn't intro to rust i'm not going to go over
+15:17
+each one of those words and explain what it means i'm just going to say that a box dine fn1's
+15:21
+is basically some struct with a v table the type of which is only going to be known at runtime
+15:26
+a construction i'm sure you've encountered in your dealings with c++ specifically fn1's is
+15:33
+an interface or as we say in rusted trait that this object has to implement this under the
+15:41
+hood is done by having some function in its v table that is going to call fn1's means there's
+15:46
+a function this object can call so under the hood is going to be a v table with a pointer in it
+15:52
+implementing this function so then the object can say i'm an fn1 so i can be used as an argument
+15:57
+for this function but as i've just explained box dine fn1's is not a concrete type it's more of a
+16:03
+bound or a contract we can't look at this and understand what the actual underlying concrete
+16:08
+type is going to be when it gets past to this function or how it's constructed and where the
+16:14
+original entry point of the thread is going to live and so forth and so on in order to do that we
+16:20
+need to look at the actual concrete type as it gets assembled and in order to do that we had to go
+16:26
+all the way back up to the top of the basic block soup to the copy-pasted call to threads cobspon
+16:32
+now threads cobspon initializes some object named the builder spoiler that's what gets
+16:39
+passed to threadscorp new builder has to fields name and stack size and it has a function
+16:43
+implemented for it named spawn spawn calls spawn unchecked and spawn unchecked call spawn unchecked
+16:50
+underscore now spawn unchecked underscore is what actually constructs that entry in the v table
+16:57
+that allows the v table to be fn1's compliant it constructs the function that the object is going
+17:03
+to call when finally someone comes to that object and says hey you're an fn1's so call your function
+17:09
+this is the source of spawn unchecked underscore basically it takes the original naked entry point
+17:16
+of the thread f and wraps it in a bunch of bookkeeping logic you're welcome to try and look for
+17:23
+original variable f having which contains the entry point if you're so inclined
+17:29
+compile this and you get that this is the version in this assembly again there's a bunch of
+17:35
+bookkeeping around it and highlight it in green there's the naked call to the original entry point
+17:41
+and this is the v table including the distractor finally there's the v table entry which points
+17:48
+to what you just saw previously on this slide so this means that the original entry point the
+17:55
+thread is going to begin its execution at is let's take a deep breath inside of a call instruction
+18:04
+inside of the shim pointed at by a v table entry where the v table is constructed by a library
+18:10
+function which got called by a library function which got invoked by a builder object which was
+18:17
+initialized by the original library function threads code spawn that the acura dev copy-pasted
+18:24
+from the indicative sources or the readme files to be more exact and the rust compiler took
+18:31
+everything that i've just described and inline it all into the same visual layer as the original
+18:38
+dev-offered code in the lock function for us to see and appreciate and have to reverse engineer if
+18:43
+you want to have an op of understanding how the control flow works here which we did so thanks for
+18:49
+the experience rust compiler now in conclusion if you look at the theory you're going to get the idea
+18:57
+that the worst part of dealing with reverse engineering grass minories is dealing with the trade
+19:05
+system and everything downstream from that and that is partially true but if this practical experience
+19:13
+has taught us anything it's that aggressive inlining of library code is no less of a hassle to deal
+19:20
+with now one of these days maybe we're going to get an automatic tool that can look at a function
+19:26
+and basically extract a basic block subgraph from it pointed it and say that's a library function
+19:32
+and i can name it maybe we can even get a tool that can do this recursively five levels deep as was
+19:38
+clearly required here but until that magical day happens it pays off to know about this stuff i
+19:44
+can tell you from personal experience that some months after dealing with a keyra i got
+19:48
+handed another malicious rust binary to reverse engineer this time a random were a binary having to
+19:54
+do with the fangsec ranzomore and i had a much more tolerable time with it because i had already
+20:01
+worked through all of my initial shell shock and confusion when working on a keyra originally so
+20:07
+hopefully i've been able to take that benefit and import at least some of it upon all of you today
+20:14
+thank you very much for listening

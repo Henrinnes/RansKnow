@@ -1,0 +1,178 @@
+0:00
+Okay, welcome back. If you're still with me in this series and you're doing awesome, we've got a lot of great learning here still ahead of us. So let's just jump right in.
+0:14
+Last video left off, we figured out how it was actually taking the name of the DLLs. We found out how it found the name, walking the peb structure, and then passed that to a checksum value, which we call DLL name checksum.
+0:29
+Or pre-computed hash, I don't know, whatever way you'd like to call that. In this video, then you're going to see how it uses that information plus walking the export table in order to start finally resolving these function pointers.
+0:44
+This checksum value is moved into its return in the EAX register, and it's actually stored in the MM1 register. And so you'll notice here with our decompiler or pseudo code, we get syntax like this, you know, MMCVTSI32SI64, that's just indicating this move instruction right here.
+1:06
+And we want to keep track of that because then down here, this is where it's actually used. So we could say that this is the DLL name computed hash value, because it's not really pre-computed at this point, it was just computed.
+1:24
+I don't know why that comment went there, but that's fine. That's just that way, let's fix it then, because it's not as helpful if I don't remember.
+1:32
+So at least get that, like MM1 equals that. That's moved into EAX, and then that's pushed as an argument for this call to sub 401180.
+1:41
+Now we don't necessarily know exactly what this is doing, but when we navigate into this function, you'll see it looks very, very similar to the previous, except it doesn't worry about the case of the name.
+1:53
+It just takes the name as is, it doesn't try to lowercase everything, walks through our, well, this has to be our API name.
+2:02
+So let's rename that to something more relevant. It's a byte pointer, so we could change the type because this is, I guess, well, that is a true statement.
+2:11
+We might get better decompolation if we say it's a char, not really. And then that is an int, yes, because this we know is our DLL seed.
+2:23
+And so it's doing a very similar process here of using a rotate, going through the characters to compute that, that, that, that checks some value, and that's what it's returning.
+2:34
+So we don't have to spend a lot of time here. We are going to rename this compute API.
+2:43
+I'm going to just continue with my names or my naming convention of checksum. Right. And now, we'll go back and analyze all this, but now you can see that it's comparing that return result to arg zero.
+2:58
+And if you go way back to these videos where we started, what is arg zero? Well, arg is the, you know, the computed checksum, or let's, let's call this desired, desired checksum.
+3:15
+Right. Here, let's look at the cross preferences. Let's see here.
+3:22
+Because there's, there's where, there is an instance of where this is called that values moved into ex, it's x or with a constant, that's moved into that global, and then that's pushed onto the stack. So that's the argument.
+3:35
+Okay. So now we're starting to make sense.
+3:40
+And that here we go. Now the comparison can be made. So now we see the sort of two tiered approach in order to compute the checksum for each export based off of its name with the argument to this function.
+3:57
+Okay. But how did we get to the actual API name? And that's where we have to go back just a little bit here.
+4:03
+And now we have to look at, well, what happens after the call to compute the checksum based off of the DLL name? All right. Well,
+4:17
+scroll back a little bit further. You'll see that we have in edx, the pointer to our export directory.
+4:26
+That's an RVA though. So if it exists, this can be added with eBX, and if you recall eBX, it's our DLL base. So that gives us an absolute pointer to an image export directory.
+4:40
+That means that at this point, we can use our structure offset and change that to represent the member that is being accessed right here, which is the number of names.
+4:50
+We've talked a little bit about that already. This also means that if we look at the decompiled results, we can probably, let's see here, V6 is the variable here that is, we can change this to an image export directory pointer.
+5:15
+And now that updates our decomplation here a little bit nicer, right? Because now says this is number of names. So it could update this variable name as well, pointer image export directory. There we go. That's a little bit better.
+5:28
+Okay, number of names, right? So it's moving that or testing that to see if it is non-zero. And then if it is, it's moving this into var4. So we'll just say that this is num export names.
+5:42
+Okay, what happens next is, eBX is our export directory. And so the pseudo code already has this properly typed for us essentially. And that is saying, hey, this is the address and names. And this is the address of name ordnals.
+6:01
+So we could update those if we want just to, again, keep our two code views in somewhat sync here. And why you're seeing these extra steps is recall, I mentioned that these are, this is going to be an RVA.
+6:16
+So this is moved into ESI and then ESI has to be added to eBX in order to get an absolute pointer in ESI. So the decompiler just said, yeah, that's, that's what those instructions are doing, right? You can see it's highlighting both of those for us.
+6:32
+All right, so V7 and V8 also address the names we can update these variables just to make them a little bit easier to read. And we also talked about the importance already of the address and names and the address of ordnals.
+6:48
+That means that now we can move into this final basic block in which, oh, there's our deal, little computed hashes moved into eX, that's pushed onto the stack. Now we're loading a string D word.
+7:03
+And a little tip here, if you ever forget, you can turn on all the comments, even just momentarily. Oh, that doesn't help at all, does it?
+7:17
+And what load string D word will do is it'll load whatever is an ESI into eAX, right? So a load SD, well, ESI, ESI is the pointer now to an array of our VAs for address of name.
+7:32
+So that's moved into Eax, that's an RVA though. So Eax has to be added to the image base, eBX, and moved into Eax.
+7:41
+In which case then it can be pushed on the stack. And so this push should be then a pointer to the first exported function from the DLL that it's currently navigating.
+7:52
+And then that's pushed, and then our compute API checks on this call, which we already talked about.
+7:57
+We can just confirm that this maybe is a good time to do such a thing. Let's just get the last four bytes or the last two bytes here of our address 5BB3.
+8:08
+And I have this debugging somewhere. Let's go ahead and just use X32. I'm going to set that breakpoint, and I'm just going to let it run.
+8:22
+And here we go, right? So there's the call to that compute check some value. You can see that what was in eAX was this value right here, which X32 has resolved as a string.
+8:37
+Pointer to a string and ASCII string, and it is a underscore SHA final.
+8:44
+So we are must be an NTDLL.
+8:49
+Okay, so that's just confirmation. And it never hurts, at least for me, I like to take a look at once I've done a bunch of static analysis, maybe to just do a little dynamic analysis in a debugger.
+9:00
+Make sure that what I think is happening is in fact happening because it's easy, even with the pseudo code to get a little bit lost here.
+9:11
+Okay, so that does the comparison. And then what's what happens next is, so what will happen there's two options really.
+9:21
+One is that because we're ready to walk the next name, and one of the side effects here of the load SD instruction is that it also increments our ESI pointer.
+9:34
+So it doesn't you don't have to see an explicit plus plus on that pointer because the load SD did that for us.
+9:42
+There isn't add to EDI to and again, if you recall from earlier in this video, I said that the address of name ordnals arrays going to be an array of word values or two byte values.
+9:51
+So it's incrementing that just to keep keep up. And then it jumps back around right here in order to well, it checks if the number of exported names value is zero, it decrements it and then checks if it's zero.
+10:04
+If it is, it's going to get ready to exit. If it isn't, it moves back around because then it can go and walk the next export.
+10:13
+If and when the computed checks some matches, well, then this code is what's going to finally resolve that function pointer. So for the sake of sanity, I'm going to leave that for for you as an exercise if you're interested.
+10:27
+But eventually we'll get down to when this function returns mm zero.
+10:34
+And so this is this little chunk of code in particular is responsible for resolving the actual function pointer moving it into the mm zero register moving that ultimately into eax and then returning.
+10:48
+So we could set a break point here at five c one seven. And let's go with x 32.
+11:03
+Okay, yeah, of course we'll hit this one a lot because there's you know a shot in it. So I guess if we just continue to walk through these you'd see a shop date right we're just going to continue to go through the exports. We don't want to do that.
+11:17
+But here is finally this move D so mm zero and eax you can see what's in eax.
+11:28
+Eax now was is the pointer to RTL create heap.
+11:35
+Okay, so where where does that take us well? Let's go back. Let's just go back to the start.
+11:43
+And we know that this is now at a broad level of resolving imports.
+11:49
+And if we step into this function this is where analysis began we just got done analyzing this direct API resolution.
+11:58
+We just want to see what it returns right and so the last couple videos were the long answer that was the deep technical analysis as to what's happening inside of there.
+12:08
+And easier solution would have been just to set a break you know at the call or at this test and see what's in eax.
+12:17
+So let's do that. Let's restart this debug. I'm going to get rid of all of my break points except the address of entry. So that's the default that hits when we select go here.
+12:31
+So when the executable is loaded once we hit the entry point we're going to step over the unpack we're going to step into this and here we go.
+12:40
+Set a setting or break point is just a few instructions you can see eax is RTL create heap.
+12:47
+So that allows us now to look at this result.
+12:52
+So it's a pointer to RTL create heap.
+12:59
+And that's ultimately what's called right here.
+13:02
+You can see it's maybe a little bit easier to understand.
+13:06
+So you can look that up. What that is essentially doing is it's creating a region of memory a heap that can be used for this program.
+13:14
+So this is a pointer the results of this which is this eax in being moving to the side the return value which is right here is essentially a new heap.
+13:29
+And this is going to play a role in the next level of how this is resolving in ultimately calling APIs.
+13:38
+We also have our direct API resolution here and what we want to do then let's just go back to the debugger and let's right here this is where it's after that call.
+13:53
+So let's zip ahead to that and eax is RTL allocate heap.
+14:01
+Okay, so this is now a pointer to RTL allocate heap.
+14:09
+It looks like it's using the same variable.
+14:11
+So that makes it a little bit harder to trace what originally happened.
+14:16
+But in this case it's fine because we captured the result with this variable.
+14:21
+And this now remains a pointer to that for the rest of this function.
+14:28
+So let's see it is returned right here.
+14:35
+And so really I guess all that really matters is the value from that call in eax is moved into edi which is this this right here in our decompiler.
+14:45
+So we can rename that we'll say that's a pointer to RTL allocate heap.
+14:51
+Yeah, it's going to it's going to conflict a little bit that's fine.
+14:54
+Right again the important thing is we see now for this next level function that that's what it is.
+15:02
+Okay, so now we're poised to take the next step in this evolution and figure out what what does sub 405 DA 0 what is that actually doing?
+15:14
+And how is it using those array of pre computed values or check sums?
+15:18
+This array of will become function pointers how it populates those?
+15:22
+Why is it using the new heap and why is it using a pointer to the function RTL allocate heap?
+15:28
+So hope you join me in the next video. We'll continue this journey into our lock bit sample.

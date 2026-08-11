@@ -1,0 +1,650 @@
+0:00
+Good morning Namaste Shabodaya. I'm so excited to be here in India for the first time.
+0:22
+I've worked with many colleagues in India for over 15 years and I'm super excited to
+0:28
+be here learning about the culture, meeting friends for the first time. I've been all around
+0:33
+the world working on security for Microsoft and so even though India is new and exciting
+0:38
+to visit, it also feels friendly and familiar with so many faces. So I want to say first of
+0:44
+all thanks to everyone for such a warm welcome. I think my slides are going to come up here.
+0:51
+All right. So today I'm going to talk to you about two of my favorite things. The first
+0:56
+is AI. Anyone heard of it? AI? Some people may call it A1 but AI. Never heard of it before,
+1:03
+right? And the second thing is Windows. And so I know all of you who are interested in security
+1:10
+are probably peek your interest when you say how are AI and Windows coming together to be secure.
+1:15
+And my goal today is to let you know on the front lines doing new things what we've learned in
+1:22
+Windows and what how we've learned things can help both offensive and defensive practitioners.
+1:29
+So I'm excited to talk to you about this. This is as Tom said, this is fresh off the presses.
+1:34
+So the first thing many of you have noticed is we're in an era where not only is AI pervasive
+1:39
+in every application but it's migrated from just a cloud or web-based service or a small app
+1:45
+talking to the cloud to actually move AI on devices. So if you've used a Samsung or equivalent
+1:52
+Android phone, I'm sure you've seen many of the possibilities around circle to search or even in
+2:00
+some case, a gentick support which is new in Android that's happening with tiny models on the
+2:05
+device. It's also challenging from a security perspective because essentially LLMs are untrusted
+2:11
+data that are now driving applications across the device. And famously Apple has announced
+2:17
+and started to integrate Apple Intelligence which as it progresses will also challenge how the device
+2:23
+itself hosts AI securely and how that operates on the edge. And then finally in Windows we've
+2:30
+done numerous integrations with AI from very basic things like the generative AI and things like
+2:37
+MSPate or summarization in no pad to much more ambitious and security interesting things like
+2:43
+Windows recall which I'll talk to you about in just a second as lessons learned. So the first
+2:49
+question you might have is why would you want AI on the device as opposed to it being integrated
+2:54
+in the cloud. And there's really three key answers to that. First is we have the compute power on
+2:59
+the device which helps with things like efficiency, environmental aspects and sustainability and
+3:08
+numerous other computational savings. Cloud is expensive and a finite resource so more that can
+3:15
+be distributed the more efficient we can get. The second thing is fairly obvious probably to this
+3:21
+room which is privacy. There are many cases where you simply don't want to send information to the
+3:27
+cloud. That could be because the cloud is not a compliant environment and you don't feel comfortable
+3:32
+with that. That could be because certain models, social media models etc. may actually use that to
+3:38
+profile you for ads or you could simply feel emotionally uncomfortable with doing things like
+3:43
+making friends with your AI or having social interactions and that going into a place where you don't
+3:48
+control the data. So we've seen an increasing demand for users to move AI into a place where they
+3:53
+control the data. And then finally more practical things like network latency. For example, I
+3:59
+experienced this as I'm traversing numerous countries. There are different qualities of service
+4:03
+and when AI becomes critical path like it has for me and many others in this room, just simple
+4:09
+access to it becomes important. So those are three key reasons why we've introduced both hardware
+4:15
+support in the form of new PCs that we call co-pilot plus PCs for AI across windows. But it's also
+4:23
+something that we've started to integrate into the software. So let me tell you about what that
+4:26
+means from a security perspective. But first I just want to give a basic sort of overview of how
+4:32
+we leverage hardware to produce this. So as most fundamental form, most generative models operate
+4:39
+on a simple construct or primitive called a tensor. And that fundamental tensor may exist in very
+4:46
+common neural networks software like PyTorch or TensorFlow. Traditional GPUs are excellent at
+4:53
+taking lots of power and providing lots of computation. But they're also arguably more complex than they
+5:01
+need to be to do simply neural networks. For example, an Nvidia GPU like an Ampere Series GPU
+5:09
+is turning complete. It has conditional branching. It has speculative execution. In many ways, it looks
+5:16
+very similar to a CPU, which gives it great flexibility, but also increases its cost and its
+5:22
+power consumption. So when we were thinking about in windows and surface and devices across the
+5:29
+ecosystem, how we would provide compute power, like 50 terapetit compute power, but not impact battery,
+5:37
+we moved into using things like the NPU or neural processing unit, which is a simple ASIC,
+5:43
+which doesn't have as much computation complexity and therefore can compute on tensors do these
+5:48
+matrix operations at a much more efficient way. And so these neural processing units or tensor
+5:56
+processing units, these specialized ASICs have become a commonplace across almost every Android,
+6:01
+ARM, or even X86 chipset. Now, the next thing I want folks to understand is AI itself has been
+6:09
+integrated deeply in the windows operating system. And there's an important reason why. We want
+6:15
+to be able to abstract bring as many existing models into windows without AI engineers having to
+6:23
+rewrite their software. We truly would like to support right once run anywhere. So whether you're
+6:28
+back in this CUDA, an AMD back in like Rock M, or you want to use an onyx model which will
+6:35
+write once run anywhere, we want to support that on the NPU. So windows is used first class run
+6:41
+times to take things, whether it be a web app or a native app, converted into an intermediary
+6:46
+language that can then be supported on NPUs. And this is made it possible to bring many different
+6:53
+generative AI or neural network models on device to leverage the NPU and get that power and
+6:59
+efficiency which really opens up a new world of applications but also a new world of a tax
+7:05
+surface. So let's talk a little bit about what the on device AI threat model is today. And I'm
+7:12
+going to even talk to you by the end of my talk while it may be changing in just a few short
+7:16
+weeks and months. This is exciting and maybe scary because the pace of evolution is breakneck.
+7:22
+As fast as AI threats are moving, so are the security considerations. But there are really
+7:28
+three primary categories for on device specifically AI. The first is data attacks. This was actually
+7:36
+a bit of surprise to me when I was starting to think about how we would do AI securely on device,
+7:41
+I speculated the biggest security challenge would be around model tampering or traditional
+7:46
+attacks like cross prompt injection. What we found pretty soon was one of the bigger threats,
+7:53
+arguably the largest threat is not so much the AI itself but the security of the data that is
+7:59
+necessary to either do inference or train a model. In other words, in the AI world, an
+8:06
+injector operating system, you're encouraged to store data because you now have the computational
+8:12
+power to process it for insights. And so that could be large data catches like screenshots,
+8:17
+text, imagery, video, very sensitive data, both for inference and training. And this becomes a
+8:25
+potential exploitation target. So even though AI itself is not being attacked, the fact that there's
+8:31
+so much data now on mobile devices and laptops is an increasing concern. The second thing is
+8:38
+model attacks like model tampering or even IP threats of model extraction for closed frontier
+8:45
+level models. This is particularly interesting because we're seeing more cases where the model
+8:52
+itself will be in the critical path of security decision. The simplest one I can think of which I'll
+8:57
+talk about in detail in just a second is something like Windows Hello. Windows Hello makes authentication
+9:02
+or authorization decisions. So being able to tamper with that face or fingerprint biometric model,
+9:08
+which is essentially a neural network could end up in a direct security attack. But also we have
+9:14
+companies who have spent hundreds of millions of not billions of dollars training their models
+9:19
+and protecting their intellectual property in the form of model weights becomes important.
+9:24
+And then finally for on device training in some cases inference, poisoning the model instead of
+9:29
+directory tampering with it becomes interesting. And then finally I think this is the area maybe
+9:36
+of the most expanding research, which is there are processing power and capabilities that now exist
+9:43
+on device, which could be game changers for post compromised trade craft. I'll talk about an
+9:50
+example in just a minute, but the ability to search and rapidly extract from information. For
+9:55
+example, using an object extraction text recognition, that means the speed of exfiltration and the
+10:02
+precision of post compromised trade craft increases immensely. A world in which interpreter or any
+10:09
+other C2 framework is integrated into AI for fast searching is a world in which attackers become
+10:14
+more efficient in some cases than defenders. And that's something we want to look for.
+10:19
+I thought this was an ominous but accurate quote from a security researcher at Kaspersky
+10:25
+after they suffered an attack on iOS phones, a full chain zero day exploit that used AI in the C2.
+10:33
+In the future, malware would just have to ask AI when it knows about you. We should prepare for
+10:38
+that. I think that day has come and I'll tell you why. A great example of this in the real world,
+10:44
+and again, I'm not here to market to you. I'm here to share real world information. Happened
+10:49
+over two years ago. And that's something that was called Operation Triangularization. This is
+10:55
+an attack on Kaspersky, the security company in Russia, and it leveraged a full chain iOS exploit
+11:02
+to compromise the devices of Kaspersky employees to do counter surveillance, IP, etc.
+11:09
+More interestingly, this full chain exploit did something for the first time we've seen in public.
+11:15
+It leveraged AI APIs, OpenCL-based APIs that are on iOS to dig through large data caches on phones.
+11:23
+Modern phones have 512 gigs, one terabyte. I have a two terabyte iPhone because I want to keep
+11:29
+everything on my phone. And just a task of compromising a phone, finding what you want, and then
+11:36
+exfiltrating it over a cellular network is an incredible challenge for attackers. You can't just
+11:43
+download 512 terabytes off a phone after you compromise it. You've got to find things.
+11:48
+And what we found in Operation Triangularization is the attackers leveraged the AI APIs on iOS
+11:57
+to figure out what they were looking for. In this case, they were looking for documents and text.
+12:02
+So they were able to query against the photo apps once they had full access to the device,
+12:08
+full privileges, to say, show me which documents are in the photo spool. Show me this text if it
+12:14
+exists in the photo spool. Show me this person's face in the photo cache. That is an incredibly
+12:21
+precise and game-changing capability for attackers. If you think about this, without AI, they might have
+12:27
+had to exfilt hundreds of gigabytes of data. Maybe they ended up with a bunch of cat memes instead of
+12:32
+what they wanted. With this capability, as an attacker, you can very quickly target what you want.
+12:38
+I think this will become a very interesting post-compromised vector.
+12:45
+Now I want to give you another example of real-world model tampering and what that might look like.
+12:49
+I mentioned previously that Windows Hello is a good example of AI in the critical path of decision
+12:55
+making. Passkeys, multi-factor authentication are all leveraging Windows Hello to make decisions.
+13:02
+If that can no longer be trusted or it's undermined, the security of the entire device is undermined,
+13:07
+and this is a real-world AI attack. Windows Hello, attack surface traditionally is actually in what
+13:13
+we call the normal world operating system, which means it's susceptible to tampering from administrative
+13:19
+attacks. Administrators can modify the binary on disk, they can do code injection, they can
+13:24
+modify the fingerprint or face matching data models, they're numerous attacks for them.
+13:31
+And if we work through this with things like virtualization-based security, we can actually take
+13:36
+a lot of those models and move them across the security boundary. So a hypervisor in the context
+13:42
+of areas like Azure actually provide multi-tenancy. What that means is an admin level attacker in one
+13:49
+tenant cannot cross over. And so by taking the models and moving them out of normal world and into
+13:57
+this secure virtual environment, we're protecting the model from tampering, which is an incredibly
+14:03
+important approach. So what that might look like in the normal world is, if I can just go back,
+14:09
+is you might have the ability to do leaking or injection against the sensor itself, you might be
+14:14
+able to sniff information as it traverses normal world, especially if you're an administrative
+14:19
+level attacker, you could modify the matching code, etc. But in the virtualization-based world,
+14:25
+we create this boundary and we also take the sensors in Windows, this is called enhanced single
+14:32
+sign-on, we take the sensors and we route them directly to the secure virtual machine or
+14:36
+trusted execution environment. This means traversal attacks over user, over normal world,
+14:42
+are no longer possible to be sniffed or tampered with, even from administrative level attackers.
+14:47
+So this is a great example of taking an existing sort of attack surface, moving it across a
+14:54
+trusted boundary by making architectural changes and then making hardware modifications to really
+14:59
+complete the scenario. And I'll touch on just a moment why it's so important for Windows hello and
+15:06
+other similar AI models to become more secure because we're going to leverage them more often.
+15:13
+So runtime authorization has become a much more critical capability on Windows.
+15:20
+There are two things we're doing at the architectural level that are very important.
+15:25
+The first is we're moving from a world and Windows are running as, Windows users are running as
+15:30
+admins all the time to what we call an adminless world where users are running as standard users
+15:36
+and authorize specific operations that require privileges. This is in comparative terms,
+15:45
+pretty similar to pseudo on Linux or on Mac using their authorization framework. So when you
+15:52
+want to do something like loader driver or change your firewall rule, this year in Windows you will
+15:57
+be required to use Windows hello, face or fingerprint. This is one of the reasons that we want to make
+16:03
+sure that the neural networks that power this biometric matching are secure. This is similar to
+16:08
+what you do with face ID or touch ID on a phone. In a regular course of doing things whether you're
+16:13
+auto filling a credit card, releasing cookies, etc, it's much more common to do runtime authorization.
+16:20
+And this will become more important in a second. So with the Windows hello sign on security
+16:26
+architecture, we're able to make runtime authorization significantly more secure. And this is going
+16:32
+to help us when we get into the data attack space. So data threats from AI are again, just to reiterate,
+16:40
+these large level data caches that exist for inference. There are two real strategy for securing
+16:46
+this data. The first is the strategy taken by iOS. Things like spotlight or the AI object extraction
+16:54
+and matching capabilities which we just talked about are secured not by armoring the data cache,
+17:01
+but by instead putting in front of attackers multiple rings of protection. So for example on an
+17:06
+iOS device, you've got a first find an exploit, you've got a bi plus exploit mitigations, you have to
+17:12
+get a kernel exploit which will allow you to disable iOS integrity frameworks, you have to disable,
+17:18
+for example, file system persistence. And once you get all that, then the data is accessible to you.
+17:24
+It's not protected at runtime. On Windows, we have an open platform that's much more extensible.
+17:30
+So we don't have code signing all of the time, we don't have as much privilege restriction in terms
+17:35
+of mandatory sandboxing. So our approach needs to be more rearward in protecting AI-based data caches.
+17:42
+We have to find a place that's secure from the admin. We've taken this ladder so that we can
+17:46
+maintain parity in security with iOS while having a more open platform. And I want to talk to you about
+17:52
+the feature that leverages this. So Windows Recall is a very interesting feature that takes screenshots
+18:00
+and saves context into a database as you use your machine. The idea is that you can have perfect
+18:06
+recall of anything using simple semantic searching, which is very interesting. So for example, I could
+18:12
+say show me the team's meeting where Tom was wearing the blue shirt or where someone was wearing a
+18:18
+t-shirt that said blue hat. And I can type this into Windows Recall. It will take me to the exact
+18:23
+image that has this. That image will be processed and have object extraction. So you could even
+18:29
+more abstract, you could say, we're someone sort of look like a cat. I don't remember maybe some other
+18:34
+type of small mammal. You can get very, very loose in your searches. And not only will you get a perfect
+18:40
+screenshot of that through this sort of semantic capability, you'll also get context, which means you
+18:45
+can click on that image and have it open teams exactly to that meeting. So you can see this is
+18:51
+incredibly powerful for being able to multitask and move along and collect data without having to
+18:58
+sort of reason or have another data cache. The challenge with this is also an incredibly
+19:03
+sensitive data cache that we need to protect. So obviously having a set of screenshots is something
+19:08
+we need to make sure we secure, but it's not just that. One of the things we do in Windows Recall is
+19:14
+we give you a lot of optionality over where we store screenshots. This is for privacy reasons.
+19:18
+So you might want to say things like, I only store things for a day because that's what I'm comfortable
+19:23
+with. Or I only store things for sensitive apps. In the case of an admin level attacker, they might
+19:29
+seek to use Recall as a data collection or monitoring system. And so we've got to make sure that
+19:35
+this configuration of security options is also protected. And then finally, there's a concept of
+19:41
+right along. So even if we allow access to this data through runtime authorization, attackers might
+19:48
+use that window when this data access has been allowed to sort of right along and access it. So these
+19:53
+are all intrinsic threats to something like Windows Recall. And let's talk about some of the techniques
+19:58
+we use to solve it. So our approach for Windows Recall was to encrypt all important data elements.
+20:05
+So all of the data cache, all of the databases related to that search terms, they're all encrypted
+20:12
+at rest and at runtime through segmentation into this separate trusted execution environment,
+20:18
+which we call virtualization-based security. In addition, it's not sufficient to just encrypt
+20:23
+things. We need to make sure the keys themselves, the private keys, are stored securely. So we not only
+20:31
+store securely the keys themselves, but we also isolate the encryption algorithms and run times
+20:37
+at doing encryption decryption. Additionally, we want to make sure that the user themselves who
+20:44
+configured Recall and decided to set it up on the machine is the user who has login privileges.
+20:50
+This would prevent someone from snooping on your password, coming to your device when you're not
+20:55
+there, and then turning on Recall as a surveillance mechanism. That's a real concern that we want to
+21:00
+address. So having proof of presence with things like biometrics where we can rely on this enhanced
+21:07
+biometric path that we talked about with Windows Hello is key to this strategy here. Finally,
+21:13
+we have a very difficult problem to solve in the context of Windows Recall. We want to protect the
+21:19
+data from the user who has the right to access it. I'll say that again. We want to protect the
+21:25
+data from the user who has the right to access it. What do we mean by that? We want to confuse
+21:30
+deputy attack like when malware takes over your machine, an APR endpoint doesn't know whether the
+21:36
+user is actually attempting to authorize something or if it's malware running in the context of the
+21:41
+user requesting to access that. So we have a couple of ways in which we protect against this.
+21:47
+The first is we make sure that there is biometric runtime authorization, and then there's a time
+21:52
+out window for that. This is pretty similar to what you might see in like a password manager or
+21:57
+the like. In addition, we want to make sure that a malware attacker can't simply continue to query
+22:03
+and hammer the API from the normal world into the trusted execution environment. So think something
+22:10
+like Cloudflare. So we need to implement an anti-hammering against the API endpoints to make sure
+22:16
+someone can say I want all cats, I want all dogs, I want all documents over and over again until they
+22:21
+slurp the entire database. So these are very interesting problems that hadn't had to be solved before
+22:26
+AI pushed us into direction to have more data on the device. So the end architecture is something like
+22:32
+this. All snapshots are processed in a virtualization based enclave or trusted execution environment.
+22:39
+Right after a screenshot is taken, it's encrypted with the public key of the user and the private
+22:45
+key is stored in the TPM and only released during biometric mapping. And all cryptographic operations
+22:50
+encryption and decryption happen across this boundary. The second thing is in order to authorize
+22:55
+data for a short period of time, a user needs to do a biometric authorization and I talk to you about
+23:00
+why that's secure from administrative level attackers. We require proof of presence to set up for the
+23:06
+first place to mitigate any potential monitoring or surveillance concerns. And then finally we have
+23:14
+tampering and tamper proof settings to make sure people that get to administrative levels can't
+23:19
+undermine this. And while we develop this in the context of recall, this entire design pattern
+23:25
+is reusable for future first and third party AI on device that will have similar security concerns.
+23:34
+So given that, let's talk about the future because the future is bold and very interesting.
+23:40
+The first thing is we have challenges in defense and we need to modify our architecture to move
+23:45
+towards what we're calling an agente.js where agents are first class citizens and highly secure.
+23:52
+And that means we need to make sure that the MPU and GPUs are available directly from trusted
+23:57
+execution environments where they're not there. We also need to consider whether Microsoft should have
+24:03
+the ability from an insider attack or through even legally compelled orders to have access to this
+24:11
+data. In Azure we have something called confidential compute where Microsoft is entirely out of the
+24:16
+trusted computing base and outside of the trust model altogether and we aspire to get to the same
+24:21
+thing on the device. So if you think about our architecture today for both hello and recall,
+24:29
+things would get significantly better if we could offer hardware-based confidentiality
+24:34
+for the VMs segmenting this data. So confidential VMs are completely isolated from the hypervisor
+24:40
+and hostOS and they run in what's called a pair of eyes which is supported directly by the silicon
+24:45
+vendor. Every CVM is encrypted in memory during use and those encryption keys are stored in hardware
+24:51
+registers and inaccessible even directly to the Microsoft produced hypervisor. The underlying OS
+24:57
+disks which in many cases could be a virtual hard disk are encrypted at rest and the ability to
+25:03
+manage these operating systems disks today are predicated on what we call BYOK or bring your own
+25:09
+key to an HSM. This is how it works in Azure today. What we'd like to do is combine the usage on
+25:17
+device of confidential computing for cloud and move it on to device and there's a few ways we can
+25:26
+do that. Primarily we need hardware support in the next generation of client CPUs for these
+25:33
+parapisers and as well as the CVM firmware that is authored directly by the CPU vendor. We want to
+25:41
+make sure that the hardware-based T's have access to TPMs, MPUs and GPUs and that all of the guest
+25:47
+operating systems are measured and can be attested separately. The reason this is important is we'd
+25:53
+like third-party vendors to be able to say I only run my AI system that's highly sensitive in
+25:59
+this confidential-based system that even Microsoft can't undermine and that requires the ability to
+26:04
+do measurements essentially from the earliest forms of boot and do that independently in a high
+26:09
+integrity cryptographic protocol. The confidential computing threat model today is very strong
+26:16
+with the exception of one area and I salute AMD as being one of the only CPU vendors that is very
+26:21
+transparent in their attack surfaces. But if you look very closely you'll see there's really one
+26:27
+area in which the latest generation of confidential compute is not highly secure and that's against
+26:34
+physical access. So again confidential VMs are great at protecting your hands software attacks,
+26:41
+they are out of scope or do not offer protection against hardware-based attacks.
+26:47
+So are we going to get confidential VM hardware on consumer CPUs? Today we do not have that and we're
+26:54
+only able to approximate the closest we can do is use the 10,000 lines a hypervisor code to
+27:01
+isolate keys. That in a nutshell means we cannot distrust Microsoft, Microsoft is still in the trust
+27:07
+boundary but we're working diligently with CPU vendors to bring this Azure level hardware-based
+27:14
+confidential compute onto software. But today the best we can do is what we call virtualization-based
+27:20
+CVM where the keys themselves are held in a small trusted computing base of the hypervisor and not
+27:26
+in hardware registers. The last missing component into completing a perfectly confidential AI
+27:32
+system on device is confidential GPU. Today a good example of that is Nvidia's ampere protected
+27:39
+memory system that exists on A100 and H100 tensor GPUs. That uses a combination of shared keys
+27:48
+and mutual authentication to create a secure channel between encrypted memory and multi-tenant
+27:54
+support on a GPU and CPU. This means you can have end to end encryption for both at rest and at
+28:00
+runtime even across AI model weights which is super important for tampering attacks etc.
+28:07
+If you're curious or just for a second here's what that architecture looks like in Azure and there's
+28:13
+significant challenges to bring that to client but it's something we're working through.
+28:18
+We're not the only ones pioneering in this space. Apple is known for being a very privacy-centric
+28:23
+company and one of the things that they're claiming is instead of doing as much model and data
+28:29
+processing on the client they're doing it in the cloud with the equivalent privacy because they've
+28:34
+designed a proprietary system for confidential compute which looks very interesting. They publish
+28:39
+a white paper on this and I salute Apple for using some of these new technological constructs
+28:45
+these primitives to push privacy and AI forward. The last thing I want to touch on is something brand
+28:51
+new that we're thinking about. Many of you probably seen blog posts, LinkedIn posts etc. on MCP or
+28:58
+model context protocol. In short this is a discovery in IPC mechanism for exposing tools to LLMT.
+29:07
+So you can expose calculators by wrapping an MCP server interface around calculator. You can
+29:13
+do this for any arbitrary win 32 application. Most of the communication in IPC is done either
+29:20
+over standard IO or even local loopback HTTP and usually the transport mechanism is JSON RFPC.
+29:28
+There are numerous security risks with exposing MCP directly to a Windows operating system.
+29:34
+That includes the fact that MCP standards are for auth or immature. We're just in the process to
+29:39
+defining things like OAuth to make sure that IPC mechanism is safe. MCP servers on Windows today
+29:46
+could run without any limitations which means cross prompt injection becomes RCE which you can
+29:52
+imagine how interesting that is. And then from the registries we've seen out on the internet for
+29:57
+example on GitHub there's lots of low quality MCP servers and finally untrustworthy servers
+30:03
+can snoop on data or even trojan devices and changing their implementation all the time and
+30:08
+they're very hard to detect. Kool-as are computer using agents are very similar. Microsoft recently
+30:15
+announced in co-pilot studio for UI that we support computer using agents which do screen processing
+30:22
+and drive input through mouse and keyboard to mimic human operations on a machine. There's also
+30:27
+things like open AI's operator. They have numerous security risks as well. They're taking screenshots,
+30:32
+they're processing, they're taking that information back and then they're driving input all of which
+30:38
+have significant attack surface and need to be very precisely secured. Things like prompt injection
+30:44
+which today could go from passing a simple URL and poisoning things like model memory to generate
+30:53
+arbitrary operations. Tomorrow with things like Kua or MCP that becomes remote code execution.
+31:00
+Windows Kua has numerous challenges around this. For example we would like to do asynchronous
+31:08
+processing which is allow a user to describe via a prompt automated operations to be completed
+31:15
+through via Kua. We need to account for being able to do this asynchronously. Windows has one UI
+31:21
+thread which means a separate session when you need to be spawned for this and that session would
+31:26
+need to be strongly audited and human in the loop decision making would need to be present for all
+31:32
+secure operations. This is something we are looking at deeply to make windows the first
+31:37
+agent to OS and there are numerous challenges along the way for that. So those prompt injections
+31:43
+could become again arbitrary operations that can be done by a computer user agent which is the
+31:49
+executor in this model. As an example using a benchmark called OS world open AI's operator model
+31:56
+which takes screenshots and does operation is accurate about 30% of the time. So you can imagine
+32:03
+with influence over the prompt and absence of perfect accuracy Kua will become a very interesting
+32:10
+attack surface. So stay tuned. This is something we are looking at deeply in windows. And finally I
+32:17
+want to leave you with this the security implications for on device AI. Ultimately there are some
+32:23
+opportunities for attackers to increase the capabilities of on device trade craft using AI
+32:29
+capabilities like those exemplified in the attacks on the iOS phone. Hypervisor bypasses will
+32:36
+become significantly more impactful on clients. Today they are already impactful in the cloud but
+32:42
+they will be impactful on clients as they become more critical path for things like authentication
+32:47
+operations. And we expect to see increasing the attacks against the UI and T interaction as AI
+32:53
+becomes more of an interesting attack surface for post compromised trade craft. In defense we need
+32:59
+to make CVMs and GPUs ubiquitous across all devices. We need to leverage software CVM until those
+33:06
+hardware capabilities are available. And we need to provide greater transparency about what's
+33:10
+happening in the T through ledgers and attestation. And then finally you should look for more in the
+33:16
+near future about how windows are actually changing to make MTP and Kua usage secure. And with that
+33:26
+I thank you so much for having me today. This doesn't like me but thank you very much. I appreciate it.

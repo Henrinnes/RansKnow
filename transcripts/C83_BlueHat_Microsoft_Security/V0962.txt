@@ -1,0 +1,694 @@
+0:00
+Hello everyone.
+0:08
+Hope you all having a good blue hat today.
+0:12
+Yeah, I'm sure this is the last talk for today and I'll keep it simple and short so you
+0:19
+all can have the drinks.
+0:20
+I'll be talking about some of the DC realization vulnerabilities that we discovered in our
+0:28
+PENTEST invariant hands and I'll be sharing some of the vulnerable code patterns and
+0:33
+insect your code patterns that we came across in our PENTEST so you can look for them in
+0:38
+your source code and services that way you can avoid any of the potential attacks or
+0:43
+data breaches that can or avoid any big headlines in the end.
+0:49
+I'm Gautam.
+0:50
+I'm a senior software security engineer at Microsoft and I like discovering critical vulnerabilities
+0:56
+in source code.
+0:57
+DC realization has been an area of interest for me and I've been discovering some interesting
+1:02
+code patterns over the years and I thought I'll share the knowledge with wider community
+1:07
+here.
+1:12
+As we look at the DC realization vulnerability category, the insect care DC realization
+1:18
+has been there for quite some time.
+1:20
+It's been there for more than a decade now but yet we see a lot of critical remote code
+1:25
+executions.
+1:28
+According to MITRE, they were about 237 CVs that were reported just in 2024 and that number
+1:36
+is rising in 2025 and 2026 and there were some very cool DC realization vulnerabilities
+1:43
+that were discovered in recent times.
+1:46
+One of them being the WSUS like Windows Server update server RCE which was using a deprecated
+1:53
+binary formator and the server that was supposed to only issue patches was vulnerable.
+1:58
+Imagine what could happen if that kind of critical systems have this DC realization vulnerability
+2:03
+in them.
+2:04
+And similarly, we had this SharePoint remote code execution was released quite recently
+2:11
+and this was also known to be exploited in the wild.
+2:15
+So those are the kind of vulnerabilities that really intrigue me as a researcher and start
+2:22
+looking at why these are critical vulnerabilities that we are encountering in day-to-day engagements.
+2:29
+So just to answer some of those questions, I'm going to walk you through some of our
+2:34
+case studies that we encountered and share some of the lessons that we've learned as part
+2:41
+of our engagements.
+2:43
+So for today, I'll be talking you through three case studies, one, an insect care code sample,
+2:50
+two, weak civilization binder and that how that gives a false sense of safety, three,
+2:57
+some of the global configuration risks.
+3:01
+I also want to call out that these three case studies are primarily grounded in dotnet
+3:08
+like meaning the DC realization that we are using, examples here are based on dotnet
+3:14
+text stack but the lessons can be applied broadly across different frameworks and different
+3:19
+languages.
+3:23
+That said, before we dive into our case studies, I want to give a quick overview of what serialization
+3:30
+and DC realization are.
+3:32
+Essentially, when we have an application object in memory and we want to transport it over
+3:38
+to another machine or another process, we need to have it converted into a certain format.
+3:46
+It can be a JSON, it can be an XML, it can be binary, so there are different ways that
+3:50
+we can transfer it over.
+3:52
+The process of converting that one application object into a certain format is called DC realization.
+3:59
+Then the same process of reconstructing the object back into reconstructing the object
+4:06
+from the format as DC realization.
+4:10
+In a nutshell, an application object converting into a specified format like JSON, XML, serialization
+4:16
+and reconstructing the same object back into from this format as DC realization.
+4:23
+There are some known serializers and DC layers for us like in dotnet world, it's binary
+4:30
+formatted, JSON.net, data contact, DC realization and stuff like that.
+4:33
+There are a lot of them and we might be aware of pickle like the reason in Python.
+4:39
+Those are some examples but where do we see the insecure DC realization coming to play?
+4:45
+When we look at insecure DC realization, it's the untrusted input that's sent to an
+4:52
+insecure DC realization that leads to a remote code execution.
+4:58
+We have an attacker controlled input that is sent to an insecure DC realization that
+5:04
+leads to remote code execution.
+5:06
+Why is that attacker controlled input leads to a remote code execution?
+5:10
+Because the attacker can control the type of the object that can be instantiated.
+5:16
+When the attacker can control the type, the DC realization is going to use that type information
+5:22
+and without any knowledge, it's going to reconstruct that object there by controlling
+5:27
+the execution flow on the back end.
+5:31
+That's how it leads to a remote code execution.
+5:33
+So essentially whoever controls that type of the input is going to control the behavior
+5:37
+of the execution and thereby getting an arbitrary command execution.
+5:44
+So those are the two slides about serialization and insecure DC realization, how that all
+5:49
+works together with that knowledge.
+5:52
+Let's look at some of our case studies and see what went wrong in some of these case studies.
+5:59
+The first case study which is an insecure code sample, I'm going to show a one
+6:07
+normal code sample.
+6:09
+Here in this case we came across this code sample.
+6:13
+It says auth code auth2 code readme or middleware.
+6:17
+And it was a middleware that was wired into one of our production services and it was using
+6:26
+an insecure DC laser here which is binary formatter.
+6:30
+And why is binary formatter insecure?
+6:33
+In being it has unrestricted type resolution and it's not safe to be used with untrusted
+6:39
+data.
+6:40
+And more importantly Microsoft has deprecated binary formatter in in in number 2020, meaning
+6:48
+it's been more than five years that the binary formatter has been deprecated.
+6:53
+But yet we still see those implementation like WSES1.
+6:59
+The bottom line here is that when we have an untrusted input with binary formatter, it
+7:03
+leads to remote code execution.
+7:05
+And that's the exact same recipe what we found in this code pattern.
+7:09
+We have an untrusted input which is a query string coming from the URL and that is sent
+7:16
+to an insecure DC laser which is a binary formatter and that's a straightforward RCE.
+7:22
+And in our in our pentece we obtain remote code execution and then we file a critical
+7:26
+bug and we were in a very privileged position.
+7:28
+We got we took full advantage of that.
+7:31
+But there was some spider sense in me that led me to search across our code base.
+7:38
+What we did was we did a code search across our services and we found there were multiple
+7:42
+services that were using the similar code pattern.
+7:47
+And that that's where we realized that this is not just a one bug issue but this is an
+7:53
+across the board issue.
+7:55
+That's when we went back to our code code logs and looked at all the code code logs and
+7:57
+we figured out okay there is a code code detection and then we need to review them and
+8:04
+file bugs against all these services.
+8:06
+But that wasn't enough either.
+8:09
+And that's when we started our variant journey.
+8:13
+We realized that there's some gap in our, we realized there was some gap in the, in the
+8:23
+process and then we wanted to fix that one.
+8:33
+So essentially we discovered our first bug.
+8:35
+We looked at code code code logs and we discovered multiple services were using that.
+8:40
+And then we researched about this code pattern and then we traced it back to a public GitHub
+8:47
+code sample.
+8:48
+So essentially all these services who acquired this code was coming from a public GitHub code
+8:54
+sample.
+8:55
+That meaning there was a vulnerable code sample that was out there and all the production
+8:59
+services that we found these code patterns were coming from that one particular public
+9:02
+code pattern.
+9:04
+And when we looked at the public code pattern we realized it was using a secure DC laser
+9:11
+like data contract laser.
+9:14
+But what we did was we went and checked the commit history and it turns out the, the fix
+9:18
+was silent.
+9:19
+Like meaning they fixed it but there was no advisory or there was no communication.
+9:22
+There's nothing happening.
+9:23
+And that's when we realized okay there's something, there's a big hole here and and what we did
+9:28
+was we worked with MSRC.
+9:30
+We filed about 20 MSRC cases and then we also filed for an advisory.
+9:37
+So in the end we also, we detected the vulnerability in multiple services and we also filed an MSRC
+9:43
+so that our customers or any of our partners who are using this code sample also aware of
+9:49
+this insecure code sample.
+9:55
+So that's about our very interesting journey.
+9:56
+How we went about finding one vulnerable code sample and then finding it across the board
+10:03
+and eventually filing an advisory with MSRC.
+10:09
+So what are some of the lessons that we've learned in this process?
+10:12
+The first one, the vulnerabilities arise from unexpected places.
+10:16
+Like I haven't seen a place like a code sample being vulnerable.
+10:20
+That was eye opening for me.
+10:24
+And the second is that one vulnerable code sample is way more dangerous and it has cascading
+10:29
+effects into all our production services.
+10:31
+So we have to be very careful when we are publishing code samples.
+10:35
+And most importantly we have to treat them as production code and follow all best practices
+10:40
+like SDL and run SAS scans and make sure we are using secure defaults and safe DC
+10:45
+realizes before releasing to the public GitHub.
+10:50
+So that's our first case study where we discovered an insecure code sample and filed an advisory
+10:56
+and those are some of the lessons that we've learned.
+10:59
+And if you have any public GitHub samples that you published online then make sure to check
+11:05
+for any of these vulnerabilities and try to fix them and publish an advisory in case.
+11:14
+And that brings us to our second case study which is on a weak serialization binder.
+11:20
+And before I dive into the weak serialization binder I want to give a quick run through
+11:25
+on the JSON.NET library.
+11:27
+We saw a binary form header but now let's look at JSON.NET.
+11:32
+So in this case study I'm going to show some code samples about JSON.NET.
+11:37
+And by default JSON.NET is a safe DC laser meaning the JSON.NET has secure defaults and
+11:47
+it uses something not as type name handling.NET as the default setting.
+11:52
+So what that means is we are informing the DC realizer that don't use the type information
+12:02
+that is present in the JSON to DC realize.
+12:06
+And use that just use the default setting when we are setting it run.
+12:12
+But there are cases when we need to override the default and set it to an insecure setting.
+12:17
+Like here in this case setting it to something like type name handling dot all.
+12:21
+What that means is it uses the type information that is present in the JSON to DC realize.
+12:27
+And that brings us some problems.
+12:30
+So how do we fix that?
+12:32
+We cannot have type name handling dot all but we need that functionality.
+12:36
+We need to resolve types that are present in the JSON.
+12:40
+So that's when there's something called as a serialization binder.
+12:44
+The serialization binder it acts as a gatekeeper when resolving their types.
+12:51
+So whenever there's an untrusted input that's going to a DC laser like JSON.NET we can add
+12:56
+something known as a serialization binder.
+12:58
+And it validates the request and it looks for the specific set of types.
+13:05
+And it only allows certain allow listed types to resolve.
+13:11
+And then if the type is not matching or it's not present in the yellow list it's going
+13:15
+to deny.
+13:17
+So that way the mitigation is on the type resolution.
+13:21
+Like let's say if an attacker has control of the type the serialization binder looks
+13:24
+at hey this type is not present in the yellow list and it's going to stop the attack.
+13:30
+So essentially it intercepts the type request type instantiation call.
+13:34
+It validates if it's present in the existing set of allow listed types are not.
+13:39
+And then it's going to decide whether to allow the type instantiation or not.
+13:48
+But most of the cases we see there are some gaps in serialization binder implementation.
+13:54
+And I'm going to talk about some of them.
+13:56
+And more importantly the serialization binders were initially designed to be versioning
+14:04
+or namespace remapping kind of functionality where they were not created with security
+14:10
+in mind.
+14:12
+So serialization binders were traditionally used in legacy to modern conversions and namespace
+14:19
+remapping stuff.
+14:20
+And here's a quick example of how a serialization binder would look like.
+14:25
+And here you can see there's an allow list binder that only allows certain set of types
+14:29
+and it doesn't do any unrestricted type resolution.
+14:35
+And when we talk about some of the unsafe serialization binder examples there are numerous ways
+14:40
+that one can set up a serialization binder and they could have you know broad allow list
+14:46
+or deny list where we can have only block certain set of types but they're still room
+14:51
+for other types to be resolved.
+14:55
+And there are some missing validations and there are there are different ways that serialization
+14:59
+binder can be messed up.
+15:02
+And I'll be walking you through some of the examples that we came across in a real
+15:05
+pentes and show how those serialization binders would look like.
+15:12
+And here's our first example and this was found in one of our pentes and we saw a serialized
+15:21
+binder even though it was doing some type validation but the first thing it was doing was
+15:27
+routed to a default serialization binder.
+15:31
+Like meaning when we routed to a default serialization binder the default binder will just
+15:37
+allow all the types to resolve and it doesn't prevent any of those types that are coming
+15:43
+from the attack or controlled input.
+15:45
+So essentially this is like a pass through serialization binder not performing any of the
+15:52
+validation that it should be doing.
+15:55
+And we found this exact same code pattern one of our pentes and we got a remote code execution
+16:00
+on one of the critical services and we were able to perform some privileged operations
+16:04
+as well.
+16:08
+And I'm going to show you another example where here in this case the serialization binder
+16:14
+was just remapping the namespaces.
+16:19
+It isn't doing any type validation but it's just saying hey do we have a type that contains
+16:25
+so and so and then if yes okay if not then replace it with something else but it's not
+16:30
+allow listing to a certain set of types.
+16:33
+And that's another avenue that we got an unrestricted type resolution.
+16:40
+So that was another example where we got a remote code execution and we did all the
+16:44
+fun stuff we went all the way into the service and we were able to do some extremely privileged
+16:49
+operations.
+16:51
+So I'm going to show a demo of the exact same code pattern and see how that translates
+16:56
+into an application.
+17:00
+Here's a vulnerable app that's using a weak seedlessization binder and with an insecure
+17:04
+type name handling setting.
+17:07
+Yeah, there we go.
+17:12
+So this is an app, a condo so marketplace and all it does is submit some products and
+17:19
+you can see there's a JSON request that is sent and now I'm going to show you on the
+17:23
+source code.
+17:24
+It's using an insecure type name handling with a seedlessization binder in place and it
+17:28
+is accepting a submission or to submit a product in the backend and it's using that
+17:35
+insecure settings.
+17:37
+And this is the exact same code pattern that I showed in the earlier slide where it's
+17:40
+just doing a namespace remapping and returning the type with the resolution.
+17:47
+And lastly you can see that the type or the DCLays object call using the insecure type
+17:54
+resolution.
+17:56
+And here's a quick burp request that crafted using WISO serial and with the type information
+18:01
+in the request.
+18:04
+You can see the request went through and we got a pop, CalGuard popped.
+18:09
+So there's a quick example on how a weak seedlessization binder even though it was in place to mitigate
+18:15
+the type resolution but led to a full remote code execution.
+18:20
+And this is not just one like the earlier one also had the same issue.
+18:25
+So we could get remote code execution on that one as well.
+18:29
+So that brings us to some of the key takeaways from the seedlessization binder case study.
+18:36
+One whenever we find a seedlessization binder we need to make sure that the floss or the
+18:44
+implementation in the seedlessization binder is tight and it's doing only a laulist approach
+18:50
+because in our pen test we came across binders that have custom logic floss in place and
+18:56
+that can cause that can have huge security implications.
+19:02
+And we also saw some default seedlessization binder fallbacks where even though they have
+19:09
+type validation which is coming afterwards the default seedlessization binder is going
+19:15
+to resolve the types that the attacker can control and gives them a remote code execution.
+19:21
+And lastly we also came across some services that were using seedlessization binders.
+19:28
+In our pen test we were looking at two different services and one of them was using the same
+19:35
+seedlessization binder was not vulnerable but the other one was vulnerable because the
+19:38
+untrusted input was sent to the DC laser and it was using the same seedlessization binder.
+19:45
+So here the context really matters.
+19:47
+So whenever there's untrusted input and the seedlessization binder in place make sure that
+19:50
+the seedlessization binder is doing all sorts of type checks and only allow listing the
+19:55
+types that they expect.
+20:00
+And we also worked with CodeQL team to implement some code keywords or come up with author
+20:06
+new code keywords that can detect weak seedlessization bind implementations.
+20:12
+That said we'll move on to our last case study.
+20:17
+Here in this this was another interesting case study that we are in one of our pen test
+20:22
+we came across this interesting code pattern and that was that really blew my mind.
+20:30
+And in this in this specific case study we will be talking about an insecure setting that
+20:36
+was set on a global configuration.
+20:39
+So whenever we have an insecure setting that's set on a global configuration.
+20:43
+So here in this case we have type time handling dot all and that's set on a global configuration
+20:48
+which is happening on global.sx which is the very first thing that's set on when the
+20:53
+application is drawn in dot net world.
+20:56
+When we have an insecure setting that's happening on the global configuration level here
+20:59
+in this case the JSON formata is using that insecure setting.
+21:03
+And the entire framework uses that insecure setting to decrylize.
+21:10
+What that means is all incoming HTTP requests are going to use this insecure setting to
+21:18
+decrylize.
+21:20
+Like meaning any any HTTP request with with JSON payload in the body is going to use
+21:26
+this insecure setting.
+21:28
+This was a novel pattern that that kind of blew my mind and we also took advantage of
+21:34
+this insecure call pattern and got remote code execution.
+21:37
+I'm going to show how we got to that point.
+21:40
+But basically if you have an insecure setting on the global configuration level that's going
+21:46
+to influence the entire application.
+21:49
+And there's no DCLize object or there's no method that you can check.
+21:54
+It's the framework that decrylizes the incoming HTTP request body.
+22:00
+And whenever it does the model binding it's going to use that insecure setting.
+22:04
+And if the attacker can control the type they can get remote code execution.
+22:12
+So just one setting in the global configuration is going to change the entire apps configuration.
+22:23
+So let's look at how this translates into an attack.
+22:28
+Assuming there's an insecure setting on the application.
+22:31
+Now an attacker can send a request with attack a control types.
+22:37
+And when the application receives the incoming request it's going to use the insecure setting
+22:44
+to decrylize.
+22:45
+We know JSON.net with type name handling not all or objects.
+22:48
+Anything other than none is insecure and it's going to use that insecure setting to decrylize.
+22:53
+And they get remote code execution.
+22:56
+So simply it's not just one endpoint.
+22:58
+It's the all endpoints and the application are going to be vulnerable.
+23:01
+And it's going to be a wide attack surface for an application.
+23:06
+Having just one insecure setting in the global configuration.
+23:12
+With that I'm going to show a quick demo of having that one insecure setting.
+23:17
+And here is a vulnerable application.
+23:21
+Contoso airlines and it's going to create a flight booking.
+23:31
+There we go.
+23:32
+So it's going to make a request and with the JSON payload.
+23:38
+And as you can see the request went through and the booking got confirmed.
+23:41
+Here you can see there's a type name handling that all set.
+23:44
+And I know the demo is quite fast.
+23:47
+But basically the insecure setting was set and then we just sent a request to the
+23:52
+bookings endpoint and it gets a remote code execution.
+23:56
+So the JSON body in the request is used to is decrylize using that insecure setting
+24:03
+and we get a remote code execution.
+24:04
+There's a calc.
+24:05
+That got popped.
+24:08
+So that was one of our interesting findings that we came across.
+24:13
+And that brings us to the lessons that we've learned from this just one one
+24:16
+finding.
+24:19
+When we have an insecure setting on the global configuration it's going to it's an
+24:24
+invisible invisible configuration that allows the decilizer to decilize the incoming
+24:29
+request and that leads to an app wide, app wide blast radius where one setting can
+24:36
+rule all the endpoints with vulnerable settings.
+24:40
+This was one of our interesting findings and we also partnered with our code
+24:44
+SQL team to author new codec rules to detect this code pattern.
+24:51
+And that brings us to our quick summary of what we what case studies we discussed
+24:57
+today.
+24:58
+One we saw the insecure code samples and we looked at our variant and journey and and
+25:05
+and found different services were using the insecure code pattern and we discovered.
+25:11
+We got remote code executions on them and we we filed an MSRC advisory to weak
+25:18
+civilization binders are dangerous and if you are using them in untrusted
+25:23
+context then that's another avenue for remote code executions and three having
+25:30
+insecure settings global configurations are quite risky and they can turn the
+25:35
+entire application into an app wide decilization vectors.
+25:40
+But you all might have some questions like how do we detect them in our code
+25:43
+basis. Well, I have some good news for you.
+25:46
+We partnered with our codecule team and then the rules that we authored are now
+25:50
+currently available in public GitHub codecule repository.
+25:53
+So you all can clone those rules and then run them on your code base and
+25:57
+services that way you can detect them in your services and in your environments.
+26:03
+And with that come to the conclusions where we discovered vulnerable insecure code patterns
+26:13
+and we noticed that the one insecure code pattern is way too dangerous.
+26:19
+So vulnerabilities come from various different places code samples are one of them.
+26:23
+And then always when you are using always use safe BC realises with and secure
+26:31
+settings with untrusted input.
+26:33
+And if if at all if you have to use an insecure setting make sure to have a
+26:40
+serialization binder that really logs down to an allocid set of types and make sure to
+26:48
+evaluate the serialization binder implementations and not have any logic flaws in them and run
+26:56
+some sast tooling like semgrep or codecule on all these serialization binder logic and
+27:03
+all the code repositories and discover them ahead so that you can prevent an
+27:08
+potential attack.
+27:09
+And lastly audit all the global configurations that are set on an application that way
+27:15
+we are not exposing any insecure settings and making an application fully vulnerable
+27:23
+to DC-Lization attacks.
+27:24
+With that I will quickly wrap up today's talk and these are some of the references.
+27:29
+Thanks for joining and hope you all had a good blue hat session.
+27:36
+And here is a quick QR code we have a we have a Pentes booth at Pentes Village so you can
+27:42
+scan the QR code in join our CTF.
+27:45
+Thanks everyone.
+27:46
+Thank you so much.
+27:49
+Thank you so much.
+27:50
+Thank you.

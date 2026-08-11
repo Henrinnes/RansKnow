@@ -1,0 +1,188 @@
+0:00
+Alright everyone, welcome to what I believe will be the last video in the series.
+0:11
+So part 9, I think it's time to wrap things up.
+0:15
+I hopefully have done a good job of giving you an understanding of the anti-analysis,
+0:20
+certainly the runtime linking.
+0:22
+And if you want to continue then you're I think in a pretty good position to do that, continue
+0:27
+your analysis that is.
+0:28
+Of course if anyone has any requests please leave them in the comments or send me a message
+0:32
+and maybe we can continue the series.
+0:34
+But I think I've had enough.
+0:36
+Hopefully you have as well but learned a lot along the way.
+0:39
+This video then we're just going to look at this last function because it's kind of got
+0:42
+an interesting technique as well.
+0:45
+Navigating into here, just to help speed things up a little bit, you've hopefully got a pretty
+0:50
+good understanding of a flow here of just you know, you know, renaming variables and functions
+0:56
+and how to now resolve the function pointers to understand what this block of code is doing.
+1:02
+First thing that it does, we have a call to our direct API resolution so that's going
+1:05
+to return a function pointer and that function pointer is for debug UI remote break in.
+1:12
+Now this can be used in order to attach a debugger.
+1:16
+And so essentially what this function is doing is if you think about this in context here,
+1:22
+we've had anti analysis to detach debuggers and now we're going to have some anti analysis
+1:26
+to make sure that no debuggers can no debuggers can attach.
+1:30
+And so we need to figure out the additional function calls.
+1:35
+The first one is to ZW protect virtual memory and this is going to take then as the second
+1:41
+argument, the location of memory to change protections to change permissions.
+1:47
+This is going to be the size.
+1:48
+So 32 bytes.
+1:50
+And then these are the permissions itself and a hex 40.
+1:53
+You can look it up.
+1:54
+It's for read, write and execute.
+1:57
+You've got some documentation here on anti API undocumented and you can look at virtual
+2:03
+protect, which is just the sort of the higher level implementation out of kernel 32 to
+2:08
+see.
+2:09
+Let's see here the third argument new protections and there actually is a link here to memory
+2:15
+protection constants.
+2:16
+And if we jump to that link, you'll see hex 40 there you go.
+2:19
+Page execute read, write.
+2:20
+That's one of those that you just tend to recognize if you haven't seen it before and
+2:24
+you continue to do reversing, you certainly will.
+2:28
+And and then the last argument really doesn't matter here.
+2:31
+So it's changing the protections of that region of memory.
+2:33
+Now this that means that it's pointing to this function debugg you I remote break in and
+2:39
+it's making it writable.
+2:42
+That's the main protection that it needs because before that I didn't look it up but I would
+2:46
+suspect that it's only execute and readable because it's code.
+2:49
+It doesn't just doesn't typically need to be writable.
+2:53
+Once it's done doing that, then it calls the system function 40, which is a little bit
+2:59
+of a I don't know, misdirection, but essentially it is RTL encrypt memory and you'll see here
+3:06
+on MSDN there's actually a little note that says, hey, you can also call system function
+3:10
+40 from 80 V API 32.
+3:13
+And what's relevant here is the first two arguments.
+3:17
+So this is going to be the location of memory to point to and then the size and then it
+3:22
+will encrypt that memory.
+3:24
+And so you can see this is a pointer to the beginning of that function gets shuffled
+3:30
+around just a little bit and then the first 32 bytes, which aligns with the change in
+3:35
+memory permissions.
+3:37
+So it just scrambles essentially scrambles the beginning of that function so that if it's
+3:41
+called, it won't operate properly and therefore debuggers can't attach.
+3:46
+So we can kind of see this here in our debugger.
+3:49
+I've already zipped ahead and so here's our call.
+3:52
+This is going to be that call to system function 40 or the call to RTL crypt memory.
+4:00
+You'll see that up in the register here just happened to still be a pointer to the function
+4:05
+debug UI remote breaking.
+4:07
+So I just went ahead and did a right click, follow and dump.
+4:11
+That's what you're seeing down here, C70.
+4:13
+So there's our first address.
+4:14
+So there's the first bits of bytes there.
+4:18
+You can also look at the disassembly so we can compare that in just a moment.
+4:24
+Instead of tracing into this call, well, it's here.
+4:25
+I'm going to set a break point after we can trace in just to see jump to eax.
+4:31
+There it is system function 40.
+4:34
+Here's our arguments.
+4:35
+So there's the pointer to debug UI remote breaking and then there's the constant value
+4:40
+hex 20 or 32 bytes.
+4:42
+Let's go back to dump one.
+4:44
+I'm going to just run, hit the break after and you can see now that disassembly, all
+4:50
+of those bytes have been encrypted.
+4:52
+So they're scrambled and let's see we can look at the disassembly and as you might expect,
+4:57
+it's no longer sensical.
+4:58
+So any any time a debugger tries to attach now, it won't be able to do that.
+5:03
+So there you have it.
+5:04
+Scramble of debug UI remote breaking.
+5:07
+And again, this was the last video of the series.
+5:10
+There certainly is a ton more that we could cover in this binary as we can now move into,
+5:15
+well, there's there is still more in analysis, but we can also move into figuring out what
+5:21
+the binary is doing and how is it actually performing its encryption?
+5:25
+Where does it hide its strings?
+5:27
+All sorts of good things.
+5:29
+But that's all that I've prepped so far.
+5:31
+So if you'd like to see more, please let me know.
+5:34
+Just leave some comments in the video here or reach out to me direct and social media
+5:38
+on Discord.
+5:39
+Otherwise, hope you enjoyed the series, hope you learned a lot and I look forward to
+5:43
+coming up with something new.
+5:44
+Until then, keep exploring.

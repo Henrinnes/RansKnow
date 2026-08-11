@@ -1,0 +1,640 @@
+0:00
+All right, welcome to part four.
+0:08
+So we're going to continue digging deeper and deeper
+0:11
+into the API resolution here, peeling back
+0:14
+those layers of that onion.
+0:17
+OK, so where we left off then is we essentially just
+0:20
+talked real basic here.
+0:22
+Beginning of this function, there's
+0:23
+a little bit of recursion in order to load two APIs
+0:26
+that it needs for later functionality, later capability.
+0:29
+One is LDR load DLL.
+0:31
+The other is LDR get procedure address.
+0:34
+So it makes sense that we're looking at a chunk of code
+0:37
+that is going to resolve imports and load libraries.
+0:39
+That's what it needs to do.
+0:41
+Now, after these initial checks, we'll
+0:45
+enter into this first basic block.
+0:48
+And there's a couple of things that happen here
+0:50
+that maybe aren't directly obvious.
+0:52
+Some of you that are familiar with the PEP,
+0:54
+the process environment block, well, you might be thinking,
+0:57
+yeah, that's at the FS register at an offset of 30 Hex.
+1:01
+And that's true.
+1:02
+But when you look at this code, you look at EAX,
+1:04
+you don't see 30 Hex directly reference.
+1:07
+And the reason that that is is because it's computed.
+1:12
+And this is a technique just to throw off
+1:14
+a little bit of detection, right?
+1:16
+Yara rules and other things that can say, hey,
+1:18
+it looks like the PEPs being accessed,
+1:20
+therefore you can expect maybe some anti-analysis
+1:23
+because there are structures in the PEP
+1:24
+that can be used for anti-analysis.
+1:26
+Or in this context, it's being used for runtime linking.
+1:30
+Now, you could try to figure this out if you wanted to.
+1:35
+EAX is X-word with itself, so zeroed out, it's incremented,
+1:39
+it's shifted, that's like multiplying by two.
+1:42
+LEA is used in order to not load an effective address,
+1:47
+but it can also be used for basic arithmetic.
+1:50
+So whatever the value in EAX is plus 10 Hex,
+1:53
+that finally results in 30 Hex.
+1:56
+I also already have a debugger open.
+1:59
+And if we want to, here is our next or the sequence
+2:04
+of instructions that we're just talking about,
+2:07
+we can see after that last LEA instruction,
+2:11
+EAX is now contains a value of 30 Hex, right?
+2:16
+I point this out just because you're
+2:17
+going to see this technique used throughout the program here.
+2:22
+That is to compute an offset or compute some constant value,
+2:26
+instead of just using it, it computes it
+2:29
+to make it a little bit harder to identify.
+2:32
+Now, what happens next is that the process environment block
+2:36
+or the PEP structure is moved into the EAX register.
+2:39
+And this happens to be one of those structures
+2:42
+that you will start to recognize the offsets being used,
+2:47
+very similar to when we talk about this basic block here.
+2:50
+You'll recognize the offsets being used,
+2:52
+and you'll be able to go, oh, plus Hex plus Hex,
+2:55
+well, I know that that probably means that at an EAX
+2:59
+and in context with the FS register,
+3:02
+that we're dealing with the PEP structure.
+3:04
+And maybe even more importantly, you
+3:06
+can start to recognize exactly what those structures are.
+3:10
+Now, if you look over in the pseudo code view,
+3:14
+you'll see that Ida has already said that, hey,
+3:18
+this thing right here, this value that now is an EAX
+3:23
+is the PEP structure.
+3:26
+And in addition to that, navigating,
+3:31
+we see that after this is moved into EAX, EAX plus Hex,
+3:36
+that's going to be an offset from the base of that structure.
+3:39
+So it's going to access another member.
+3:40
+That's moved into EAX.
+3:42
+And then from there, EAX plus another offset
+3:47
+from that structure of C Hex is the address of that
+3:51
+is moved into ECX.
+3:54
+So what this is showing then is that from that PEP,
+3:57
+we are navigating a couple of structures here.
+3:59
+And so in the pseudo code view,
+4:01
+it's I think a little bit easier to maybe understand.
+4:05
+It doesn't, though, by default update here in our dissassembly.
+4:09
+And sometimes in the dissassembly view,
+4:12
+it can be equally important to be able to annotate
+4:14
+or to analyze those.
+4:17
+So there's a number of ways in which you can start
+4:19
+to explore those structures.
+4:22
+One way that I do it, and oftentimes why I end up
+4:24
+just debugging in windy bug, is there is a DT command.
+4:28
+And then Microsoft has all of the symbols loaded for us already.
+4:34
+So DT and then underscore PEP.
+4:37
+And you can see that'll give us the structure definition
+4:39
+for the PEP.
+4:41
+And so add an offset of C.
+4:43
+Because if we go back and look at our code,
+4:46
+this is now going to move into EX,
+4:49
+the base of the PEP structure.
+4:51
+This is saying at the base of that structure,
+4:53
+add an offset of C hex, move that into EX.
+4:56
+So we're walking that structure.
+4:59
+And at an offset of C hex, is this structure right here,
+5:02
+PEP loader data.
+5:05
+That's where I had to came up with this LDR.
+5:11
+Okay, if we want to see that next structure,
+5:13
+we can say PEP LDR data.
+5:16
+And the reason that we would do that,
+5:20
+is because now at this offset, EX,
+5:22
+now we're at the base of that PEP loader data structure.
+5:24
+We're moving at an offset of C.
+5:27
+We're actually moving the address,
+5:29
+because this is going to provide the address,
+5:32
+LEA, load effective address of that member.
+5:35
+So that's going to get moved into ECX.
+5:38
+You'll also notice that this right here, EX,
+5:42
+same base of that structure,
+5:44
+add an offset of C hex,
+5:46
+but it's a move into ECX instead of an LEA.
+5:50
+So this is going to give us a pointer.
+5:52
+This is going to give us the actual value
+5:54
+that that member contains.
+5:56
+So if we go back to look at our symbols,
+5:59
+you'll see that as an offset of C hex.
+6:02
+So what you'll see then here is that this,
+6:05
+is the head of a doubly linked list.
+6:07
+And we can actually explore that as well,
+6:09
+by looking at list entry items.
+6:12
+See the forward link and the backward link.
+6:14
+And what that's going to point to,
+6:17
+it's a little hard to see here,
+6:19
+but that's going to point to an LDR data table entry item.
+6:27
+And this is the important structure,
+6:29
+because this will contain, amongst other things,
+6:33
+the next links to walk this doubly linked list
+6:38
+of LDR data table structures,
+6:40
+that contain information about the DLL's loaded in memory,
+6:43
+such as the base address, the entry point,
+6:46
+the base DLL name, and the full DLL name.
+6:50
+Right, so this is what's allowing the code then,
+6:53
+using this internal structure
+6:54
+to find those DLL's loaded in memory,
+6:56
+such as NTDLL or kernel32,
+6:59
+and begin to look for and resolve the functionality
+7:02
+that it desires.
+7:03
+It has the ability to find the base,
+7:05
+and once it finds the base address,
+7:07
+that is the address that it's at in memory,
+7:09
+it can walk the export table
+7:11
+and digger out the names of those exports
+7:14
+to compute the checks and values.
+7:17
+One of the things that's kind of handy with Windabug
+7:20
+is that as we're stepping through this code,
+7:23
+okay, so you can see we're at the yellow highlighted line,
+7:26
+that's the base of the peb structure,
+7:29
+that gets moved into EAX.
+7:32
+Okay, that gives us our scroll back here,
+7:36
+because it should be in history.
+7:38
+That should give us our peb loader data,
+7:41
+and then if we step over one more time,
+7:45
+you see this LEA into ECX, that's going to be
+7:48
+the first pointer
+7:52
+to one of these structures right here,
+7:54
+LDR data table entry.
+7:57
+Now, I don't wanna get this video to be too long,
+7:59
+but something to keep in mind is that you'll notice
+8:03
+this inload order module list, right?
+8:05
+At an offset of C, it access the forward link
+8:09
+based off of this list entry item.
+8:12
+That means that this member right here is eight bytes,
+8:15
+that's why if you added C to eight, you'd get 14 hex.
+8:18
+And if we de-reference the first four bytes,
+8:21
+we actually get the forward link, right?
+8:25
+These members are these, these, you know,
+8:29
+link list structures, there's inload order,
+8:32
+there's in-memory order,
+8:33
+and there's in-initialization order.
+8:35
+And if you look at the LDR data table entry,
+8:39
+they are in that same order.
+8:43
+Now, in load order is going to point two in load order,
+8:48
+right? So if you're following the forward links
+8:50
+from these, you're always gonna land
+8:51
+at the base of this structure.
+8:54
+If you're following the forward links from in-memory order,
+8:58
+you're gonna land at this structure,
+9:01
+eight bytes from the base, at an offset of plus eight.
+9:05
+If you follow the in-initialization order, very similar,
+9:08
+you're gonna land at this very important structure,
+9:11
+but an offset of 10 hex.
+9:13
+And so when in-load order is used,
+9:17
+you don't really have to think much about it, right?
+9:19
+The forward link will take you to the base of the structure,
+9:21
+and then everything that is anything important,
+9:24
+like the base or the name is all relevant to the base.
+9:29
+If we come here, though, from something like in-memory order,
+9:33
+we're at an offset of eight, which means that from this location
+9:38
+to get to, say, the DLL base, it isn't at an offset of 18 anymore.
+9:43
+It's at an offset of 10, 10 hex, right?
+9:45
+Because we're already eight bytes into the structure.
+9:48
+So not all your malware will use the same lists here
+9:52
+in order to navigate these structures
+9:54
+and depending on if they use the second or third of the eight,
+9:57
+they use the second or third of the in-memory order
+10:00
+or in-initialization order, that will throw off
+10:03
+where you're referencing this LDR data table entry,
+10:06
+therefore throwing off your offsets, okay?
+10:08
+So just need to be very, very aware of that.
+10:14
+Okay, so now what that allows us to do,
+10:16
+to look at is ECX is essentially now a pointer
+10:21
+to the beginning of that list entry structure.
+10:26
+So it's gonna be a pointer that will then contain
+10:30
+the address to the first LDR data table structure.
+10:34
+So if we wanna look at that first LDR data table structure
+10:37
+properly populated, we could dereference ECX
+10:42
+or because the value is going to be moved into ECX here.
+10:46
+As we talked about just a few minutes ago,
+10:49
+we can just see what's in ECX.
+10:52
+And now we can use the DT command to say LDR data table entry
+11:00
+and the ECX register.
+11:03
+And now all of the content is actually mapped
+11:07
+in-memory into the structure for us.
+11:10
+So it's not only gonna show us,
+11:11
+the forward links and backward links for these W link lists,
+11:15
+but also the DLL base and the base name
+11:18
+and the full name, for example,
+11:20
+base name being the rename of our binary right now,
+11:23
+full DLL name, the full path,
+11:25
+and of course this DLL base does, in fact,
+11:28
+match with the DLL base or the image base here
+11:31
+for this current execution.
+11:34
+So the decompile or the pseudo code results here
+11:37
+are looked very good, right?
+11:38
+This is a pointer to the in-load order module list.
+11:41
+Yes, that's true.
+11:42
+And this is the actual forward link from that list.
+11:46
+As you highlight now, you can see the code
+11:49
+that we just analyzed matches up.
+11:52
+If we want to also do this in the disassembly listing,
+11:58
+though, then what we can do is go to view
+12:01
+and open our structures view.
+12:04
+And now we want to add a struct type.
+12:08
+We'll add a standard structure.
+12:11
+And we can just add these in order.
+12:13
+So I'm just gonna start typing.
+12:16
+You see there's the peb, so we can add that.
+12:19
+And then we want to add struct type,
+12:21
+add standard structure, peb, LDR.
+12:26
+There's that one.
+12:28
+Okay, add struct type, add standard structure, LDR data.
+12:36
+Okay, there we go.
+12:38
+They haven't shown up here, but I have added them.
+12:41
+And now what you can do is you go back
+12:43
+to the disassembly listing and you can right click.
+12:47
+I'm sorry about that.
+12:48
+You can right click and go to structure offset.
+12:51
+Okay, and we know that that is the LDR structure from the peb.
+12:56
+Okay, from here, same thing.
+12:59
+That is the from the peb LDR data structure.
+13:02
+It is the inload order module list
+13:05
+and it is the forward link.
+13:08
+Which means we can also update var eight
+13:10
+to say that this is a pointer to the inload order.
+13:16
+Module list, keep name, similar convention here
+13:19
+to the pseudo code.
+13:21
+And then this,
+13:27
+this is the same structure, except this now contains the value.
+13:34
+Okay, what happens next is that we want to look at ECX.
+13:39
+We know what ECX is.
+13:40
+ECX is the peb LDR data table structure.
+13:44
+We're at the base of the structure
+13:45
+because it used the inload order module list forward link.
+13:49
+Now we can go ahead and structure offset.
+13:55
+And our last option here is the LDR data table entry,
+14:01
+DLL base.
+14:03
+Okay, so now we move into EBX, the DLL base.
+14:07
+And you'll notice that that's used quite a bit here
+14:11
+throughout the rest of this function.
+14:16
+Sometimes changing things in Ida has unexpected results.
+14:19
+And just before this, this was kind of a wrong value here.
+14:26
+But yet now I can't undo to get it back to what it was.
+14:29
+So what I wanted to show you is that now you see
+14:32
+that the forward link it understands,
+14:35
+I mean, we've called this flink,
+14:37
+but it understands actually the structure type
+14:39
+that this is referring to.
+14:40
+So it knows that it is in fact the DLL base.
+14:44
+And so what you can also do,
+14:46
+particularly with the pseudo code,
+14:48
+is if you go to this variable,
+14:51
+or any variable for that matter,
+14:52
+we can set the type.
+14:54
+And oftentimes as we're kind of grooming
+14:56
+and refining our database,
+14:57
+we want to reset those types appropriately.
+15:01
+So here we can say set LVAR type.
+15:05
+And you'll notice that in this case, it is correct.
+15:08
+This is in fact a pointer
+15:11
+to an LDR data table entry item.
+15:14
+So that's why when that is correct,
+15:17
+Ida understands the structure that it's pointing to
+15:21
+and that that member that we updated here
+15:23
+is in fact the DLL base.
+15:28
+Very similar with some of these others.
+15:31
+This inload order module list, for example.
+15:35
+We could look at that and see,
+15:38
+well, yeah, that is in fact pointing to a list entry item.
+15:42
+And so that is correct.
+15:44
+And by making sure that the types are correct,
+15:47
+as we're working either in the pseudo code
+15:50
+or the disassembly or both,
+15:51
+that can significantly improve the output
+15:55
+of the code they're analyzing.
+16:00
+Okay.
+16:02
+So we've gotten through the PEP,
+16:03
+the process environment block,
+16:05
+quite a bit there to digest.
+16:06
+If you want to spend some time analyzing the code,
+16:09
+just to help make things concrete,
+16:11
+definitely recommend that.
+16:12
+I'm gonna pause this,
+16:13
+I will actually stop this video
+16:15
+and then we're going to pick up here in the next video
+16:18
+and talk about why that's so jumpy.
+16:22
+Talk about now, what do we do
+16:24
+once we resolve the base of a DLL?

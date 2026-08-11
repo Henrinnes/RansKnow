@@ -1,0 +1,376 @@
+0:00
+Okay, we're going to continue to dig a little bit deeper here.
+0:10
+In this video, we're going to take a look at, now we have the base of a DLL.
+0:14
+We're going to go ahead and figure out what do we do with the base of the DLL?
+0:18
+Well, the short answer is we're going to go ahead and parse the export table in order
+0:22
+to just start walking those exports.
+0:24
+So let's continue on here with our exploration.
+0:28
+Let's see, where we left off, we have our DLL base.
+0:30
+That's moved into EBX.
+0:32
+And so as a reminder, as you can see here, EBX is going to contain that image base.
+0:37
+And I might sprinkle in, let's see here, a few notes to myself, because it's easy
+0:44
+to forget, especially as we kind of move further and further along and kind of deeper into
+0:49
+the code, especially as we're also going back and forth between the disassembly and the
+0:53
+decompiler of the pseudo code.
+0:56
+Let's see, we have the base, and that's moved into EBX.
+0:58
+And now you'll see that this is the next region of memory where that image base is used.
+1:05
+So this is another sequence of instructions that's used to calculate this value that is
+1:13
+used, you know, EBX plus whatever this EAX value is minus one, and that is moved into
+1:20
+EAX.
+1:21
+Well, we know that this is the base of a PE file.
+1:26
+And if you, you know, just to refresh real quick on the, you know, the beginning 64 bytes
+1:33
+of a PE file, it's the image dos header.
+1:36
+And the last four bytes is the address of new.
+1:39
+So out an offset of three CX, that's this value right here.
+1:44
+And this, this is an offset, whether on disk or in memory, that if you add this value
+1:50
+to the base, you'll get the next section.
+1:53
+So as you can see here, 8, 0, added to the beginning of this file, it takes us right here,
+2:01
+and the bytes 5, 0, 4, 5, 0, 0, 0, 0, that's the image NT headers, the PE signature, and
+2:08
+that denotes the beginning of the image NT headers themselves.
+2:12
+And so if we wanted to, we could step through with our debugger, right, sometimes and oftentimes
+2:18
+if I just don't want to try to figure out the math of something, I'll just step through.
+2:23
+Here's the instruction where we have ebx plus eax minus 1.
+2:28
+And so if we step ahead, I could have just set a break point, right, but eax, eax is
+2:35
+3D, right there.
+2:38
+If we subtract 1, that's 3C, that's the offset for LFA new, right.
+2:43
+And so again, it's just a method that has been built into this binary as a way to try to
+2:48
+throw off our ability to observe or detect that key offset.
+2:54
+This is another one of those though that even if you didn't recognize it, this offset
+2:58
+a 78 hex, especially in context of a DLL base, that's a pretty, pretty well known one as
+3:05
+well, that represents the image export directory.
+3:11
+Remember, we're in code that is trying to identify exports of the DLL in order to resolve
+3:16
+functionality.
+3:17
+So it makes sense that it's looking for that export directory structure.
+3:22
+We can go back here to 010.
+3:24
+I am looking at the lock bit binary in order to explore the structure.
+3:29
+It will be the same.
+3:30
+The only difference is that with this executable, there will be no exports.
+3:34
+So where do we find the exports?
+3:36
+I'm going to close the DOS header.
+3:38
+We'll expand the image entity headers because in code, this is now where we've navigated
+3:42
+to.
+3:44
+And if you expand the optional header, image optional header, and scroll down to these data
+3:50
+directories, the export directory will be first.
+3:55
+And you'll see that there is going to be a virtual address and RVA and a size for each,
+4:01
+well, most of the, all of these will have an RVA and size.
+4:04
+Not all of these are RVA's though.
+4:06
+That's irrelevant for this discussion.
+4:08
+All we care about is the export table.
+4:12
+How do you get an offset, go back to Ida, how do you get an offset of 78 hex?
+4:19
+Well, this one's actually quite easy because of where this image entity header falls.
+4:24
+But from the base of this structure, offset of 78 hex will always be the export directory.
+4:31
+And in particular, the RVA for the export directory.
+4:35
+So this is at an offset of F8 from the beginning of the file.
+4:41
+And if we take F8 and we subtract the offset to the image entity headers, which is 8.0,
+4:49
+you'll see we get an offset of 78.
+4:51
+Right, so that's where that sort of magic offset comes into play.
+4:56
+Okay, so this is the image export directory.
+5:01
+That is another structure that we can add.
+5:03
+So we can add struct type.
+5:04
+I might have already added it here, but it's fine.
+5:09
+Just start typing and there we go.
+5:10
+There's the image export directory.
+5:13
+Now this is one of those structures that you'll see here.
+5:18
+It's not going to be found by Windabug.
+5:21
+There's many, many times that I'm too lazy to try to figure out exactly why that symbol
+5:25
+isn't there.
+5:26
+If in doubt, you can always go look at, because likely you'll have the Windows SDK installed.
+5:32
+All right, so here's the path, program files, Windows kits version.
+5:39
+You might have to, that might vary for you, include, that might vary for you, UM, and then
+5:43
+WinNT.H.
+5:44
+And you'll see here's the image export directory.
+5:47
+Okay, and I just went ahead and annotated these for the video here.
+5:50
+What are these offsets are going to be located just to make it a little bit easier to see
+5:55
+the mapping here when we look at this in Ida.
+5:57
+But the most relevant, typically when you're doing this kind of analysis, is the, let's
+6:03
+see the number of functions and the number of names.
+6:05
+Those will be the offsets 14 and 18.
+6:08
+And then we have the address of functions, the address of names, and the address of name
+6:11
+ordnals.
+6:12
+So, why a difference here between functions and names?
+6:16
+Well, some functions will be exported by ordinal only.
+6:18
+That is just a numeric value.
+6:20
+Not every export has to have a name.
+6:24
+This malware is contingent upon looking up the APIs by name.
+6:29
+So it's going to use here.
+6:30
+You'll see in just a moment the number of names.
+6:32
+That way it only iterates through the amount of names that are exported from the DLL.
+6:38
+Then we have address of functions, address of names, and address of name ordnals.
+6:43
+Now in this structure, these are actually RVAs that are going to point to arrays, and
+6:48
+those arrays are going to contain elements that are going to also be RVAs that point to,
+6:54
+the actual function address, pointer to the strings, which are the names of the APIs,
+7:01
+and then this array of word values that are actually indexes.
+7:05
+And how you have to put all these three things together is that you're going to find that
+7:10
+it's going to walk sequentially this array of names.
+7:14
+And when it finds an API that it wants to resolve, it'll use whatever index that name
+7:20
+is at.
+7:21
+So if it's like the fifth API name, that's the fifth index.
+7:24
+It's going to index into the name of ordnals, and that value becomes the index into this
+7:30
+array address of functions.
+7:33
+So you're going to see all three of these come together here as we analyze this code,
+7:37
+if not in this video here in one of these upcoming.
+7:43
+So this then moves into edx, the image export directory.
+7:50
+And what it's testing is it's actually testing to say, okay, does this particular thing I
+7:55
+found in memory because it can find the executable, if it has no value, as you can see here,
+8:03
+this is our executable in 0 1 0, the virtual address for the export directory is empty.
+8:11
+If it doesn't have an export directory, skip it, right, it's going to move on to the
+8:14
+next item in this doubly lig list, that is the next image or DLL that's loaded in memory.
+8:21
+Okay, if we get past that, so there is an export directory, then the next thing that happens
+8:26
+is there's this LA and edx plus two.
+8:31
+And it's part of this much longer and maybe slightly more complex statement.
+8:35
+But we can real quickly kind of pull this apart.
+8:38
+ECX, well, we weren't talking about ECX.
+8:40
+We were talking about the export directory, but if we go back to what ECX contains, ECX
+8:47
+is the base of our LDR data table structure.
+8:52
+So that means because fortunately we have all of our structures mapped in, we can go in
+9:00
+here and we can find the LDR data table entry, base DLL name.
+9:06
+Right, now you notice this base DLL name dot length.
+9:10
+And I think if we just spend a moment here in windy bug, we can make a little bit more
+9:14
+sense of that LDR data table entry.
+9:21
+And you'll see, scroll back in the structure.
+9:27
+Base DLL name is actually of type unicode string.
+9:31
+Right, and this is another one of those important.
+9:34
+This means that if we look at that structure, because it's not just simply a pointer
+9:41
+to the full name or the base name, it's a pointer to this structure.
+9:47
+It actually begins with a length, a maximum length, and then finally at an offset of four
+9:54
+hex, a pointer to the string or the buffer that contains the actual API name.
+10:01
+Right.
+10:04
+So that's why this is moved into EDI and you'll see this EDI plus four.
+10:10
+Right.
+10:11
+Well, that's pointing to the unicode string structure.
+10:17
+It's skipping the length and the maximum length and it's getting the buffer.
+10:21
+So that way it is essentially a pointer to the string of the DLL name.
+10:26
+So right, before we continue to walk the export table, what's actually happening here is
+10:32
+the base of the DLL is pushed onto the stack and then this value zero is pushed onto the
+10:38
+stack for this function call right here.
+10:43
+So what is this function doing?
+10:45
+Well, if we navigate into here, we can see that these types are wrong.
+10:52
+So let's set the type.
+10:55
+We have this is actually a char pointer.
+10:58
+So we can update that to be a character pointer.
+11:01
+This is in fact an int or a D word, I guess, because it's just a value.
+11:10
+And this is computing essentially a check sum based off of the DLL name.
+11:16
+So let's update this further and say this is the DLL name and this happens to be actually
+11:23
+a seed value.
+11:25
+But in this case, it's zero.
+11:27
+So it's not really used.
+11:29
+And so we won't need to go through all of this because if we went through every single
+11:33
+instruction and function, this video series would turn into a weeks long worth of college
+11:39
+level coursework.
+11:41
+But the DLL, this is a very common pattern here.
+11:46
+I think it's actually a little bit easier to recognize inside of the disassembly, but
+11:50
+it's comparing AX to 41 hex and 5A.
+11:54
+And what it's saying is that if the characters are uppercase, this will lowercase them.
+12:00
+That way it normalizes the DLL name and then it goes ahead and it uses this logic here
+12:07
+to do a rotate using the seed and the actual character value.
+12:14
+This is then how it computes a check sum for the DLL name and returns that as the return
+12:20
+result.
+12:22
+We could call this something like DLL name check sum.
+12:28
+And if we go back to where that was called, that's what this value is going to contain.
+12:34
+So we'll say that this is the DLL name computed check sum just to differentiate it from the
+12:41
+function a little bit better.
+12:45
+And you'll notice here in the decompiler, it's V5.
+12:49
+So we'll do this a good name as well.
+12:52
+I'll just see if it'll take both.
+12:54
+We'll just add a suffix to it.
+12:57
+And you'll notice now that that value right here over in the pseudo code, that's used
+13:03
+for this call a little bit later on right here.
+13:08
+All right, so as you can see the deeper we get, the more we unravel.
+13:13
+And now what we are looking at is sort of another twist to this sort of classic API resolution
+13:21
+technique.
+13:22
+And that is that instead of just simply using the value of the DLL or using the value of
+13:30
+the API, computing the check sum and then comparing, it's going to actually create a check
+13:36
+sum based off of that the DLL name.
+13:42
+And then this method here, it's going to then also use that as a seed value in order to
+13:53
+seed the calculation with the name of the DLL and the API.
+13:57
+All right, so this is just another kind of twist on that classic technique.
+14:02
+So how does that all exactly work?
+14:04
+Well, to keep these videos somewhat reasonable, we'll tackle that in the next one.
+14:09
+So hope to see you then.

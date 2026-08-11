@@ -1,0 +1,554 @@
+0:00
+Let's talk about cyber triage.
+0:09
+Just a quick note before we begin, this is not a sponsored episode.
+0:13
+I was provided with a license so that I could evaluate this software, but I was under no
+0:17
+obligation to create a 13 cubed episode covering this content.
+0:21
+I chose to do so because I think it's actually going to be very beneficial to many of you
+0:25
+watching this.
+0:26
+So with that out of the way, what does cyber triage even do?
+0:31
+Well it provides automated incident response capability.
+0:35
+It runs on all versions of Windows, XP, and Neur.
+0:39
+It utilizes a collection tool that can be pushed to endpoints or it can be manually run
+0:43
+on an endpoint from a USB drive or other removable media.
+0:48
+Doing either requires no installation on the target.
+0:52
+But it can also just process an E01 or RAW disk image or a memory capture utilizing
+0:57
+volatility on the back end.
+1:00
+These last two points, the disk images and memory captures are what we're actually
+1:04
+going to take a look at in the live demo coming up next.
+1:08
+It was created by Brian Carrier, author of File System Forensic Analysis, and of course
+1:13
+Autopsy and TSK.
+1:15
+So plenty of street cred here.
+1:17
+This is not created by some sort of fly-by-night forensics company.
+1:22
+What does it collect?
+1:24
+Well it collects volatile data including running processes, open ports, logged in users,
+1:29
+active network connection, DNS cache, also malware persistence mechanisms including startup
+1:34
+items and scheduled tasks, user activity including what programs were run, web activity,
+1:40
+logins, file metadata from all files on the system, and even file content from suspicious
+1:46
+files.
+1:47
+So maybe I should have said what does it not collect, right?
+1:51
+How does it work?
+1:52
+Well, if you actually use the option to push it to an endpoint or run the tool from a USB
+1:57
+drive on an endpoint, then you have this collection tool that flags any suspicious data, and
+2:04
+you have an automated analysis process that goes through and just basically looks for things
+2:08
+that are known evil or possibly evil, and then it's up to you as the analyst to determine
+2:13
+whether or not those things warrant further investigation.
+2:16
+How much does it cost?
+2:18
+Well here's the cool thing, there's actually a light version that's completely free, and
+2:22
+as you can see from the capabilities, it allows you to collect volatile and file system
+2:27
+data.
+2:28
+You can even collect data to a USB drive, analyze memory images, pivot through the collected
+2:33
+data to determine scope, view timelines, and generate reports, so a lot of stuff for
+2:38
+free.
+2:39
+Now of course there are some commercial versions like standard and team that you see here.
+2:44
+I'm evaluating the standard version, but again the light free version still provides
+2:49
+plenty of forensic value.
+2:52
+So with that out of the way, let's talk about the demo.
+2:56
+We're going to analyze an E01 image from a Windows 10 box and then check out the results.
+3:01
+Then, we'll analyze a memory capture from a Windows 10 box and review those results.
+3:08
+So let's go ahead and hop over to a Windows 10 Analysis workstation and get started.
+3:15
+Alright, we're in our Windows 10 Analysis VM and we'll go ahead and launch CyberTriage
+3:21
+and take a look at the options available to us.
+3:24
+First off though, you'll notice this warning saying that no NSRL file has been configured.
+3:29
+We'll come back to that in a minute, let's go ahead and choose no for now.
+3:32
+We can choose new session, open session, or open incident, but first let's check out
+3:38
+the options option.
+3:40
+This will provide a list of options used by the software, the first being the National
+3:44
+Software Reference Library or NSRL, which is a national database of software.
+3:50
+Now of course we're going to leave that unset for now and then the PSXX settings is what
+3:57
+will allow CyberTriage to push itself to remote host.
+4:00
+We'll leave that link as well.
+4:01
+We are going to change the timezone to UTC however, because that is the only timezone you
+4:06
+should be using for forensic analysis.
+4:09
+Under Network Settings we can set up Proxy, under Malware Settings we can clear cache and
+4:14
+save results from previous scans.
+4:17
+Deployment mode is just single user basic deployment for this demo.
+4:21
+White list of course is a list of known good, black list is a list of known bad stuff.
+4:26
+Dynamic DNS is a list of the DDS providers the software knows about and the license info
+4:31
+contains information about the license.
+4:34
+Go figure.
+4:35
+Let's go ahead and choose OK and we're going to choose the new session option.
+4:41
+Now we have 5 options.
+4:44
+Live automatic means that CyberTriage will push the collection tool to a remote host.
+4:49
+Live manual means the collection tool is manually run from a network or USB drive on the
+4:54
+remote host and then Live File means the same except the data saved to the USB drive or
+5:00
+to a network share and manually imported.
+5:02
+We're going to be taking a look at the last two, Disk Image and Memory Image.
+5:07
+First up though, Disk Image.
+5:09
+This will allow us to point to an EO1 or RAW Disk Image.
+5:12
+Let's go ahead and choose Demo for our incident name.
+5:15
+We'll type in Local Hosts for the host name and now let's browse for an EO1 file we're
+5:20
+going to use for this first part of the demo.
+5:23
+I happen to have a Windows 10 full disk image that's about 15 gigs in size and there you
+5:29
+see it.
+5:30
+So let's go ahead and choose that.
+5:33
+When we do it, populate to the source file in the field and now we'll simply click Continue.
+5:39
+For the full scan which is what we're going to be using, you'll notice everything is
+5:42
+checked except some of the volatile data which is used in the memory portion and then we
+5:47
+can also choose a custom scan or skip file scan.
+5:51
+Again, we're going to use a full scan, find all the things that you can find in other
+5:55
+words.
+5:56
+Let's go ahead and choose Continue and at this point we have the option to query external
+6:01
+services to get malware results.
+6:04
+Now the Radio button is set to Upload the file so it can be analyzed but for opsec purposes
+6:10
+you may want to go ahead and just tell it to mark the file as suspicious but not uploaded
+6:15
+which I would recommend in most cases.
+6:18
+So having selected that, I click Start Collection, we can expand the status here but after a few
+6:23
+seconds what's going to happen is you're going to see the full screen window appear.
+6:29
+Of course it tells us the NSRL database was not specified so we'll click OK and now we're
+6:34
+off to the races.
+6:35
+Of course I have greatly sped this up.
+6:37
+It's going to take a variable amount of time.
+6:40
+We do see the Windows Defender Firewall prompt.
+6:43
+Let's go ahead and tell it to allow access so that CyberTriage can go ahead and do its
+6:47
+thing and run some queries to determine whether or not it finds any evil and you'll notice
+6:52
+the suspicious item count is growing fairly rapidly.
+6:57
+So we have at the end of the scan 47 suspicious items and as you can see all 10 steps have
+7:03
+completed and no tasks are currently running.
+7:07
+We have zero high threats in this case and again 47 suspicious.
+7:12
+So let's go ahead and take a look at the left column here.
+7:15
+Under Bad Items again we have None but we have 47 suspicious items and it's very self-explanatory
+7:22
+you can see them there on the left what it thinks are threats and in this case some of
+7:27
+these are indeed blacklisted password dumping tools as you can see and other that it may
+7:33
+have flagged as interesting or possibly suspicious because they're running out of app data
+7:38
+local.
+7:39
+Here we see the users present within this disk image which is handy.
+7:43
+We see some login information with a couple of IP addresses here.
+7:47
+If we click on one of these you'll notice more information.
+7:50
+You can see that this is an outgoing connection.
+7:53
+You'll notice the local user involved the remote host IP address, remote user and various
+7:58
+other information.
+7:59
+This is from the intuser.dat registry key under Terminal Server Client Servers.
+8:05
+We have network shares here which are enumerated from the image again very useful.
+8:10
+Programs run so think things like pre-fetch or we can determine exactly what has executed
+8:15
+on the system.
+8:17
+And if you notice that scroll bar on the right side there's a lot of stuff here as you
+8:21
+would expect as we scroll down through here we can kind of get an idea of exactly what
+8:25
+was being run on this Windows 10 system.
+8:29
+So quite a bit of useful information under Programs Run.
+8:34
+Under Web Artifacts we don't really have anything to show in this demo.
+8:38
+Under startup items we do have quite a few things though.
+8:41
+This is going to of course enumerate the good ol' run key and numerous other locations
+8:46
+from which programs can start automatically on our Windows systems.
+8:51
+Quite a few things here we would need to look at but according to this there's only one
+8:55
+suspicious item.
+8:56
+Under Triggered Tasks again quite a few things one of which is flagged because of the location
+9:02
+from which it's running.
+9:03
+No processes because that's going to come from memory right.
+9:06
+We don't have that information here same with active connections not connected or not
+9:12
+rather from a disk image.
+9:14
+Listening ports same.
+9:16
+DNS cache, nothing here, registry keys, no suspicious entries found.
+9:21
+Under Files we do have a few things that it did flag for whatever reason it flagged USB
+9:26
+detective which is absolutely not evil.
+9:29
+Under Timeline it's actually built a rudimentary timeline for us showing us timestamps in
+9:34
+UTC and under System Configuration we get some information about the system configuration
+9:40
+from that particular system from which this disk image was acquired.
+9:45
+So again I just breeze through that because it's very self explanatory.
+9:48
+I'm not going to insult your intelligence by explaining what each of those things are
+9:52
+because I think you'll agree it's very easy to figure out what's going on here.
+9:56
+It's almost at the point of click a button and find evil.
+10:00
+So obviously you do have to perform some analysis but still very easy.
+10:04
+Now let's go ahead and make another new session this time though for the memory image.
+10:10
+So for our incident name let's choose Demo 2 because I can't think of anything better
+10:15
+to type here.
+10:17
+Under Hostname we'll go ahead and type in Local Host again and for our Source file we're
+10:22
+going to go ahead and browse to a memory capture I haven't have which is named after the
+10:28
+correct profile that we're going to be using.
+10:30
+In this case you'll notice the name actually is from Windows 10 build 17134.
+10:37
+So under the volatility profile drop down I'm going to go ahead and choose Windows 10
+10:42
+X64 build 17134.
+10:46
+So that'll save us some time we won't have to run image info or KDBG scan on the back
+10:50
+end to try to determine which profile volatility should use.
+10:55
+We'll click continue here and as you can see some things are unchecked because they're
+11:00
+not really applicable to a memory image but we can choose a custom scan here.
+11:05
+Again a lot of things are great out because they're not applicable.
+11:09
+We could choose Network Processes, Programs Run, Startup Items and that's really about
+11:15
+it.
+11:16
+If we go back however to the skip file scan you'll notice it's pretty much exactly what's
+11:21
+been chosen there.
+11:22
+So I'm going to go ahead and just use skip file scan and just stick with the default
+11:26
+options really.
+11:28
+And click Start Collection and as you might imagine this tool is simply running volatility
+11:32
+on the back end automatically and aggregating the results force.
+11:36
+I'll go ahead and click pass this dialog as before and again I'm going to greatly speed
+11:42
+this up.
+11:43
+You'll notice here though it's running PS list, get SIDS, Malfind, various other volatility
+11:48
+plugins we've talked about numerous times and other introduction to memory forensics
+11:53
+episodes.
+11:54
+So at this point it is complete and this time you'll notice we have a critical error
+11:58
+message where a requested registry key that volatility tried to enumerate user assist
+12:03
+in this case was not found.
+12:06
+That's okay.
+12:07
+Remember there's no guarantees in memory forensics.
+12:09
+Some stuff may be there, it may not be there so don't freak out if you see an error message
+12:14
+here and there as the memory images trying to be enumerated.
+12:18
+Notice the rudimentary timeline on the right side for a suspicious bunch of SVC host
+12:23
+processes.
+12:25
+And notice we have a bunch of bad items this time, eight in total, whereas we had none
+12:29
+in the disk image.
+12:31
+And you'll notice it flagged explorer and SVChost.exe which is always a favorite for malware
+12:40
+authors.
+12:41
+So clicking on any one of these will provide more detail as always.
+12:46
+But particularly I would focus in on the SVC host.exe and I can tell you in this memory
+12:51
+image there's definitely some wonky stuff going on with SVC host.
+12:56
+Check out that path below the highlighted area there you'll notice windows SVC host.exe.
+13:02
+That's not the right path for SVC host.exe for sure.
+13:06
+We can click on all these other tabs though to get additional information and as before
+13:11
+it's very self explanatory.
+13:13
+You'll notice user account related information and details just pretty much anything that
+13:18
+was able to be enumerated from the various volatility plugins that were run.
+13:24
+We have execution history, we have information about startup items, various things like
+13:29
+that.
+13:30
+Of course I can expand any of the columns here so it fits.
+13:33
+But again, startup items, nothing here, sessions, nothing here, and our analysis results.
+13:38
+As you can see, the score is bad, the confidence is high, and the software is correct, this
+13:44
+is evil.
+13:45
+Again, clearly evil, especially because of the name and path of that SVC host.exe and
+13:51
+posture process.
+13:54
+But clicking on any one of these will give us more details below and we can scroll through
+13:59
+and click on any of these.
+14:01
+Very self explanatory, very easy and user friendly.
+14:05
+So for suspicious items we have 10 things here that were flagged for various reasons.
+14:10
+Again some of these are in fact evil.
+14:13
+So looking at this one we have notepad, we have smart screen.exe which is interesting
+14:18
+because it's often flagged by malfind as it was in the description as you can see here.
+14:24
+And that is actually a false positive that malfind reports on every time.
+14:28
+So interesting there, you can ignore that one.
+14:31
+For users we have the users that was able to enumerate from the memory image, CTF being
+14:37
+one of the main users.
+14:39
+If we scroll down through here and start clicking on all of these various things, here's some
+14:43
+network share related information which could be potentially useful to us.
+14:48
+And as you can see we have a C colon path here under Windows system 32 WBM.
+14:54
+We have programs run, again program execution artifacts that were able to be derived from
+14:59
+memory which is very cool, things we've talked about in previous memory friends
+15:04
+episodes.
+15:06
+No web artifacts, a few startup items, one of which is flagged as suspicious, no triggered
+15:11
+tasks.
+15:13
+Here is an awesome output of a tree based list of our processes which I really really like
+15:18
+this.
+15:19
+So very, very easy kind of like PS tree if you will but we have a gooey version of it where
+15:24
+we can go in and look at the parent child relationships and find anything that might be suspicious
+15:29
+or bad.
+15:30
+You'll notice the icons like this one for example says bad.
+15:35
+And again that's another one of our evil sbchost.exe processes in this image.
+15:40
+And as we continue to scroll down through this you'll notice again the yellow and the
+15:44
+red icons which represent the suspicious or bad items respectively.
+15:51
+For active connections we actually do have some things here that we can expand.
+15:55
+See a bunch of remote IP addresses here that we might want to take a look at all on 80
+15:59
+and 443.
+16:01
+Some of these could for example be C2.
+16:04
+Listening ports might be of interest to us.
+16:06
+You can see a bunch of sbchost.exe with the dash k options here which are probably legit
+16:12
+but again we would want to look through this stuff and verify.
+16:15
+DNS cache registry entries nothing here of interest same with files.
+16:19
+Here's a timeline that it built for us based on time based artifacts out of our memory
+16:24
+image all in new TC.
+16:27
+Very cool that it makes a timeline for us.
+16:30
+And very useful information here about process creation ports that are opened.
+16:35
+Is it a run active connections?
+16:39
+Very useful information.
+16:41
+And for system configuration as before it's pulled some things out of the memory image
+16:45
+most of which we already knew.
+16:47
+But still very interesting information overall.
+16:50
+So that's Cybertriosh we looked at a disk image and we looked at a memory image.
+16:59
+And as you can see it's almost the point of point and click forensics.
+17:03
+You guys have heard me say this over and over and over again.
+17:06
+I am not one to believe that you should just put software in front of a person with no
+17:11
+forensics knowledge and have them click buttons and make assumptions about what has happened
+17:17
+on a particular system.
+17:18
+In other words I saw this thing called prefetch and it says here that that means something
+17:23
+ran so clearly something ran on this system at this time.
+17:26
+Well while that may be true if the analyst looking at it doesn't really understand the underlying
+17:32
+meaning of any of these artifacts that may not be so good.
+17:35
+So I would recommend at least a basic understanding of what these forensic artifacts are before
+17:41
+you go just click a button and have a tool output a much stuff for you that you're expected
+17:45
+to know what it is.
+17:47
+You can't just click the solve case button and expect everything to be happy.
+17:51
+That said this software goes a long way to provide what I like to call a 30,000 foot
+17:56
+view. It's basically a very high level view that we can derive very quickly by simply
+18:02
+opening a beautifully designed and really pretty gooey clicking the browse button, clicking
+18:08
+on a disk image or a memory image as we just saw and basically saying show me some stuff
+18:13
+here that may be evil and let me figure it out.
+18:17
+There are different flavors of the tool available and you can certainly download a free
+18:21
+version and actually play around with it.
+18:23
+And even the commercial versions are very competitively priced compared to other commercial
+18:28
+tools that I've seen in this space.
+18:32
+So I hope you found this information useful and I hope you will check this out.
+18:37
+But that's it for now so as always thank you for watching, thank you for subscribing
+18:43
+and I will catch you in the next episode.

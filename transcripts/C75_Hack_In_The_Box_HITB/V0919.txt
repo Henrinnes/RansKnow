@@ -1,0 +1,1218 @@
+0:00
+So this is why you only call me when you're an SMM, exploiting UEFI SMM vulnerabilities
+0:13
+for persistent firmware implants.
+0:17
+Brief disclaimer.
+0:18
+If you've used Express, then this presentation are my own and do not reflect the opinions
+0:22
+of my past, present, or future employers if your discretion is advised.
+0:28
+So who am I?
+0:34
+Who am I?
+0:36
+I'm a security consultant at Leviathan Security Group.
+0:40
+I primarily focus on hardware and firmware testing.
+0:45
+Specifically, I do a lot of work with UEFI reverse engineering and exploit development
+0:51
+for work.
+0:53
+And then I also do a lot of personal projects outside of work that are focused on UEFI.
+0:59
+The overview is that UEFI is my favorite.
+1:02
+So I can't get enough of it.
+1:05
+And I have a lot of projects that are dedicated to that.
+1:07
+So this talk is going to be combining some of my personal research projects as well as
+1:12
+my work from my actual job at Leviathan.
+1:18
+Other things that I am involved with and that I participate in in the community.
+1:23
+I'm an instructor for an upcoming class for OSD2 for ARM Assembly, a writer for Tempo.
+1:31
+I'm a writer for VX Underground Black Mass.
+1:35
+I just published, they just published an article in the most recent version of the Volume
+1:42
+3, which was an article about EBC, a different UEFI focused paper.
+1:51
+And I am a staff editor and contributing artist at Frack.
+1:57
+Greets to all of the following and thank you to out of the box for having me here.
+2:08
+So overview.
+2:11
+Why do you only call me when you're in SMM?
+2:15
+What are the goals for this talk?
+2:17
+So my goals with presenting this work were to look at different SMM vectors, different
+2:23
+SMM attack chains, and different SMM attack techniques that I hadn't worked on as much
+2:30
+or that I wanted to further refine my skills in.
+2:34
+So this project was essentially me looking to further refine my skillset in UEFI, RE,
+2:41
+and XDEF, exploring bypass techniques for existing SMM exploit mitigations, and also
+2:49
+share my knowledge with the community.
+2:51
+UEFI is a pretty small niche field within security.
+2:58
+There's not a ton of people who are working on it, but there's a lot of really, really
+3:02
+great research out there already from the folks who are involved in that.
+3:07
+And I'm always happy to talk to people who are also interested in diving into it and learning
+3:14
+more.
+3:15
+So maybe this will inspire you to dig into UEFI RE next step.
+3:21
+And if nothing else, it'll give you reason to keep your firmware patched.
+3:28
+So like I said, this talk is combining my work from my job at Leviathan, as well as
+3:36
+my personal projects.
+3:38
+So format of this talk.
+3:43
+So in part one, I'm going to be providing an overview of UEFI and SMM, including SMM
+3:49
+indication, calling conventions, protection technologies, and exploit mitigations.
+3:55
+Part two, I'll cover different SMM vulnerabilities.
+3:59
+And then part three, I'm going to go over my RE and XDEF process for explaining those vulnerabilities
+4:05
+for a couple different examples.
+4:11
+This is a snapshot of some of my recent work in UEFI, RE and XDEF.
+4:17
+So those are some more resources.
+4:20
+If you want to check any of those out, and then there's going to be more resources at
+4:24
+the end of the slide deck.
+4:26
+So part one, UEFI and SMM fundamentals.
+4:36
+So what is UEFI?
+4:38
+Well, in the beginning, there was legacy bios.
+4:44
+Legacy bios was essentially a non-standardized standard for booting your computer at BIOS,
+4:53
+is basically input output software.
+4:55
+It's the software that's responsible for initializing a platform, setting up everything for interfaces
+5:02
+between hardware and software, configuring things with peripherals, and essentially getting
+5:08
+everything ready so that when you're computer boots, it's sort of the behind the scenes
+5:15
+magic that takes place in the few seconds when your computer is turning on.
+5:21
+And the UEFI component of this is a bit confusing, but when I refer to UEFI, it's not different
+5:32
+from BIOS.
+5:33
+UEFI is just the new standard in a lot of places in the industry to describe a way of implementing
+5:40
+a BIOS.
+5:42
+So previously, legacy bios were 16-bit, ran in Braille mode, very vendor-specific, were
+5:51
+not documented because they were proprietary vendor-specific code, very difficult to reverse
+5:56
+engineer.
+5:59
+But now, in the last 20 or so years with the push for UEFI as the standard, UEFI is now
+6:07
+pretty much...
+6:09
+Well, it's a lot of places.
+6:11
+It's not every machine that uses UEFI for their BIOS, but a lot of BIOS.
+6:17
+So in the beginning, there was legacy bios, and now we have UEFI, and that must mean that
+6:24
+everything's fine and security is perfect, right?
+6:28
+Just kidding.
+6:30
+This is just an overview image of the UEFI PI Bootflow.
+6:37
+These are the different phases of the UEFI PI Bootflow.
+6:41
+When people refer to UEFI, they're actually talking about specifically UEFI starts in
+6:47
+the Dixie phase, which is the DXE driver execution environment.
+6:51
+So everything from Dixie onward is UEFI, everything prior, so SEC and PI are actually part
+6:58
+of the PI or platform initialization spec.
+7:02
+So this is technically the UEFI PI Bootflow.
+7:09
+OK.
+7:10
+So S&M.
+7:12
+Where does S&M come in here?
+7:14
+So S&M is the most privileged X86 processor mode.
+7:18
+It runs in Ring-N-2.
+7:21
+Technically, if you're aware of management engine, yes, that runs in Ring-N-3, so that is
+7:28
+slightly more privileged from a numerical standpoint, but permissions-wise, they're essentially
+7:33
+equivalent.
+7:35
+And the focus of this talk, obviously, is S&M.
+7:41
+S&M is meant to act as a privileged and separate, meaning isolated processor mode for handling
+7:47
+critical system functionality.
+7:49
+So a lot of it is related to power management, handling sensitive data, sensitive variables,
+8:00
+et cetera, et cetera.
+8:02
+The processor enters S&M.
+8:03
+Only when a system management interrupts or an S&M is invoked.
+8:09
+S&M has the highest priority of all interrupts.
+8:12
+They're higher priority than N&M, which are non-maskable interrupts and maskable interrupts.
+8:18
+S&M code and data reside in S&M RAM.
+8:23
+This is just an overview to compare to the previous slide showing the UFI-PI bootflow.
+8:31
+This is where S&M comes in.
+8:36
+Now to clarify, just in case anyone is confused about what is S&M in relation to UFI-PI,
+8:44
+technically S&M is, like I said, specific to X86 processors, X86 architectures.
+8:50
+It's not a part of the UFI spec because UFI defines a platform-agnostic implementation
+8:59
+for platform for more initialization.
+9:03
+So it's meant to be architecture-agnostic, but S&M obviously is not architecture-agnostic.
+9:09
+It's specific to X86.
+9:13
+But the UFI and PI specs know that this type of processor execution mode is pretty much
+9:21
+standard across the industry for different processors.
+9:25
+So ARM will have things like Trust Zone, X86 has S&M, etc.
+9:32
+But the specs refer to all of these platform management technologies for the generic term
+9:37
+of MM.
+9:40
+So if you look at the UFI and PI specs and you are looking for S&M specifications,
+9:45
+you're going to find more info under MM, but not S&M.
+9:50
+For S&M, refer to Intel docs, just for clarity.
+9:59
+So what is the UFI attack surface?
+10:03
+Well, I like to consider UFI as its own ecosystem between the OS and the onboard, meaning
+10:11
+the spy flash resident platform for more.
+10:15
+It operates essentially like an intermediary OS in and of itself.
+10:20
+There's a complete networking stack in UFI.
+10:23
+UFI sports more complex graphics operations than legacy BIOS, which is something I know
+10:29
+because that was one of the things I was most interested in writing exploits for when
+10:34
+I started doing UFI RE next step.
+10:38
+But there's lots of new features in UFI firmware, but list goes on.
+10:44
+But the TLDR here is the UFI attack surface is really, really expansive.
+10:49
+Because there's all these new features, there's all these new things that you can do with
+10:52
+UFI, there's a lot more areas where things can go wrong and developers can introduce errors.
+10:59
+So obviously I won't have time to cover all of the history of UFI exploits and attacks in
+11:08
+the last 20 years, but if you're interested in a more comprehensive overview of that,
+11:15
+there's a really good low level PC attack and defense timeline from the dark mentor,
+11:21
+run by ZenoCoba.
+11:23
+So that's a really good resource to check out.
+11:28
+So overview is in order to write effective UFI targeting exploits, knowing that there's
+11:33
+a really expansive attack surface, we have to understand how to manipulate data structures
+11:39
+within UFI.
+11:43
+So these are a few of the highlights to reference the previous image of the SMM architecture
+11:51
+in relation to UFI, PI bootflow, PI vulnerabilities, SMM callouts, SMM memory corruption, I'll cover
+12:00
+all of these.
+12:02
+But when I say what is the attack surface for UFI look like, pretty much just look at
+12:06
+the diagram, like it's everywhere, there's lots and lots of areas where you can find vulnerabilities
+12:12
+and write exploits.
+12:16
+Okay, very, very quick overview of platform for more security technologies.
+12:26
+UFI secure boot and Intel boot guard are the two I'm going to highlight here.
+12:30
+There's others.
+12:31
+I have a blog on the Leviathan blog that I wrote for work.
+12:36
+It's part of an ongoing blog series.
+12:37
+You can check that out.
+12:38
+You can also check out more resources.
+12:41
+But to highlight two relevant platform for more security technologies, if UFI secure
+12:47
+boot, which is essentially an image verification mechanism that starts very late in the boot
+12:53
+process or relatively late in the boot process, it starts at the Dixie phase.
+12:59
+So remember when I showed thought distinction between the PI part of the UFI PI bootflow
+13:05
+and the, yeah, I'll just go back.
+13:09
+The distinction between this and this UFI secure boot starts in the Dixie phase.
+13:16
+Now this isn't terrible.
+13:18
+This is better than nothing.
+13:20
+It provides image verification, ensures that anything loaded at or after the Dixie phase
+13:27
+is verified using a database of signatures.
+13:30
+I'm not going to go too in depth here.
+13:34
+But it doesn't cover the previous portion.
+13:37
+So what happens if there's a vulnerability in, say, a PEI driver?
+13:42
+Well, secure boot won't catch it.
+13:45
+Which means that a PEI vulnerability could be a vector for bypassing secure boot and
+13:51
+essentially installing a firmware and plan or bypassing a lot of security protections
+13:59
+and getting around that.
+14:01
+So what is the solution or what's one of the possible solutions for protecting that
+14:07
+area?
+14:09
+Well, Intel Boot Guard is one of those options.
+14:15
+It forms an encapsulating layer of firmware integrity protection and verification.
+14:21
+It extends the root of trust to cover all stages of the bootflow.
+14:26
+And it tends to use a hardware root of trust.
+14:34
+So it's like I said, encapsulating layer of protection around UFI secure boot.
+14:45
+So those are the two main ones.
+14:48
+Okay.
+14:49
+Awesome, Ram.
+14:51
+So those are our platform for more security technologies to keep in the back of our
+14:56
+head.
+14:57
+SM Ram to return to SMM.
+15:00
+What is SM Ram?
+15:01
+So like I mentioned, SM Ram is a protected region of a processor's address space.
+15:07
+It's dedicated to storing SM M code and data.
+15:10
+So it's locked or it should be during platform initialization.
+15:16
+So code and data in SM Ram are not accessible by code outside of SM Ram.
+15:22
+It shouldn't be reachable by code running in user space or in kernel space.
+15:26
+It should be locked down.
+15:28
+And entering SMM is triggered by invoking an SMI, which also includes saving the execution
+15:35
+context of code running outside of SM Ram.
+15:39
+And then after the SMI handler code runs and RSM instruction triggers the restoration
+15:44
+of that save state.
+15:46
+So we go over this briefly.
+15:50
+SMM entry.
+15:51
+It's entered by invoking an SMI.
+15:55
+The processor will save the execution context of code running outside of SM Ram.
+16:00
+So the state of all the registers to a designated area of SM Ram called the SM Ram save state,
+16:06
+which you can see picture at the top there.
+16:10
+Also important to know about SMM for SMM entry.
+16:13
+There's something called an SMI rendezvous.
+16:16
+Essentially meaning on multi-core systems, none of the cores will start to execute SMI handler
+16:22
+code until all other cores have also entered SMM.
+16:26
+So the processor must coordinate and ensure that all cores are in SMM before it begins
+16:33
+executing SMI handler code.
+16:36
+This is probably pretty intuitive because otherwise there would be risk conditions.
+16:42
+Things would go about.
+16:43
+So exit is handled when there's an RSM instruction that is made.
+16:52
+It triggers the restoration of that saved initial state state.
+16:59
+And then to highlight some areas of SMM that are relevant to RE next step, the SMI handler
+17:07
+entry point is always at SM base plus hex 8000.
+17:18
+The SMM save state, again also always at a known location.
+17:24
+And the SM base is the starting address or the base address of SMM.
+17:30
+It's stored in a private CPU internal register.
+17:34
+Each process or core has its own SM base.
+17:37
+And the SM base is also found as a field stored in the SMM save state area.
+17:43
+So this is a snippet of the SMM save state area, but there's a field slightly higher up,
+17:52
+which is FEF8, the offset, which lists the SM base.
+18:00
+So the only way to change the SM base is to change the SMM save state, the value containing
+18:09
+the SMM save state, and then do an RSM.
+18:12
+Why is this important to know?
+18:13
+Well, first of all, it's important to know because SMM will do typically there will be
+18:19
+an SMM relocation on initialization on the first time you boot SMM will be relocated,
+18:26
+and then we mapped the process for remapping it uses the same technique of using the SM base
+18:34
+saved in the SMM save state.
+18:39
+But if this is something that you can do, you can change the SM base, you can change where
+18:43
+SMM is supposed to be located by modifying this value in SMM save state, is that something
+18:48
+that can also be leveraged for XF?
+18:51
+Yes, it is.
+18:53
+So we'll talk about that in a bit.
+18:57
+So there's the recap.
+19:00
+Gone over SMM fundamentals, SMM fundamentals.
+19:07
+And finally, so we have an understanding of how SMM works, but how do we invoke an SMI
+19:15
+if the SMI handler code is in SMM and SMM is theoretically a protected region of memory.
+19:22
+So how can we invoke an SMI if the necessary arguments with the necessary arguments for
+19:28
+outside of SMM?
+19:29
+Well, there's a few different ways we can do this.
+19:32
+So SMM communication to highlight a few different techniques for communicating between
+19:38
+non-SMM and SMM code.
+19:41
+There is the communication buffer, which is held in the SMM core private data structure.
+19:47
+You can also communicate with SMM code via the ACPI SMM table.
+19:54
+And there's other ways you can do this, such as predefined locations that are set up with
+20:00
+ASL code that initializes things like ACPI tables.
+20:06
+This is the technique or this is one of the techniques that's used one.
+20:10
+For example, you're invoking a DSM, sort of device-specific method.
+20:14
+For example, for a peripheral or a component on the board, SMD dims are an example of this.
+20:20
+They use DSMs, typically not always, but pretty much.
+20:28
+Example SMI invocation, essentially it's you trigger an SMI using the identified SMI.
+20:34
+SWSM I number, set up a communication buffer with your arguments.
+20:39
+You make a call to this EFI SMM communicate protocol.
+20:43
+You write to the IO ports, SMI is triggered.
+20:48
+Like I said, there's other ways to invoke it.
+20:49
+There's other ways to trigger an SMI, but this is sort of the base template we're going
+20:54
+to work from.
+20:58
+And just to highlight what those data structures look like in terms of the communication
+21:02
+buffer.
+21:03
+So the SMM core private data structure is used as a shared buffer for data during communication
+21:09
+between SMRAM and non-SMRAM.
+21:12
+If identifiable by an SMMC signature in memory, so if you launch the UEFI shell and use
+21:21
+one of the built-in EFI shell commands such as DMAM or DEMM, you can write that to a file,
+21:32
+you can find the data structure in memory with the signature.
+21:39
+And then from that, where the SMM core private data structure is for loading your communication
+21:47
+buffer with the right arguments to make the right call to the SMI handler that you're
+21:52
+targeting.
+21:55
+Those are just the components of the SMM communicate buffer that are required to be
+22:03
+filled in if you're using this method.
+22:05
+So if you would, the size of data being sent in the data.
+22:11
+Another way to perform SMM communication is with the SMM ACPI table.
+22:17
+It's again another way to share code between SMM and non-SMM, code or data between non-SMM
+22:24
+and SMM holds the address of the communicate buffer.
+22:30
+So just different ways to do the same thing.
+22:34
+So recap, there's myriad ways to communicate between SMM and non-SMM, communicate buffer,
+22:44
+the ACPI SMM table, ASL code with PCPI tables for DSMs.
+22:51
+All of these communication methods pass data between non-secure, such as non-secure locations,
+22:57
+meaning attacker controlled locations, and secure SMM RAM.
+23:04
+But since all of those provide ways to communicate from a non-secure to a secure address space,
+23:12
+can any of those be leveraged for perhaps injecting code?
+23:16
+Yes.
+23:17
+Yes.
+23:19
+So part two, SMM vulnerabilities.
+23:23
+So I'm going to be talking about three main types of SMM vulnerabilities.
+23:29
+There's a bunch of others, but these are pretty common ones.
+23:33
+And the ones that I've highlighted with the examples I'm going to show.
+23:37
+So those vulnerabilities are SMM callouts.
+23:40
+SMM can use confused deputy attacks and SMM memory corruption vulnerabilities.
+23:48
+What is the impact of a successful SMM exploit?
+23:55
+So I've been talking a lot about SMM, what it is, how it relates to UEFI.
+24:01
+But why do we care?
+24:03
+What can you achieve with an SMM exploit?
+24:06
+Well, it depends on the vulnerability, but the impact can range from SMM read write
+24:13
+primitives to SMM code execution.
+24:17
+The real impact here is that an exploit running in ring negative two with SMM privileges
+24:23
+has nearly unfettered access to the entire system.
+24:27
+And it's virtually undetectable by every protection technology.
+24:33
+There are some cases where it can be caught by a specific platform from our security technologies,
+24:38
+but not always.
+24:39
+So it's a really, really, really great target for attackers looking for a way to inject
+24:46
+code, run it with the highest level of privileges, and essentially never be detected.
+24:53
+Also importantly, SMM code typically has read write access to the spy flash.
+24:58
+So gaining SMM code execution can be a way to install a persistent for more implant directly
+25:04
+to the spy flash chip.
+25:06
+So then it would persist and persist and persist and tell someone audits the spy flash or
+25:13
+the UEFI for more.
+25:18
+Okay.
+25:19
+So the first vulnerability I'm going to talk about is an SMM call out.
+25:26
+Here's an SMM call out to send anyone to see it.
+25:30
+That's okay.
+25:31
+I'll go over what this is and what you're going to look for.
+25:36
+And SMM call out as the name implies, it's when there is a call made outside of SMM from
+25:43
+code running in SMM.
+25:44
+So that's my handler code reaches out to a data structure outside of SMM, meaning in
+25:52
+an area that could be can attack or control.
+25:56
+And because of this, there is something that is running with SMM privileges reaching
+26:03
+out executing code or fetching data from a nonsecure non SM RAM space.
+26:11
+And potentially this can be a vector to redirect code execution and gain SMM code execution.
+26:21
+Two common targets for this, two common ways that SMM call out to rise are when code running
+26:27
+in SMM specifically SMM handler code reaches out to functions in the EFI boot services table
+26:33
+or the EFI runtime services table.
+26:37
+These are two tables that are used all over the place in UEFI code.
+26:42
+They contain very, very critical functionality for UEFI for more and they are located outside
+26:48
+of SMM RAM.
+26:52
+So why should I care?
+26:54
+We already went over this, but successful SMM exploit can allow an attacker arbitrary
+27:00
+code execution in ring native to you.
+27:03
+Okay, so to highlight where this is in this example, this is directly in a SWS my handler.
+27:15
+It's a child SWS my handler, but this doesn't happen super often in my experience.
+27:23
+I don't find these as much anymore, but this is perhaps the simplest case of an SMM call out.
+27:28
+So you have the SWS my handler code executing code in SMM RAM.
+27:34
+You have a couple of checks initially at the beginning of the SMM handler code.
+27:40
+So you have your necessary conditions for your call out.
+27:43
+So you can't have your con buffer cannot be equal to null and your combo of size cannot
+27:48
+be equal to null and the first keyword of the con buffer has to be equal to one.
+27:53
+If all of these conditions are not, then you go to this next call, which is a call to
+28:00
+a function in the EFI boot services table to the locate handle buffer function.
+28:07
+This is great.
+28:08
+This is so great.
+28:09
+So you have SMM code that is running, reaching out to non SMM code, calling a function with
+28:20
+SMM privileges and then returning.
+28:23
+The great thing about this is that the boot services table can be attacker controlled.
+28:27
+You can overwrite this function pointer and redirect code execution.
+28:33
+That's a very very simple path to get there.
+28:37
+So, party, next vulnerability, confused deputy and SMM corruption.
+28:51
+So I mentioned that there are different ways to pass data between SMM and non SMM.
+28:59
+Like I said, there's the communication buffer, also called the con buffer, ACPI tables, etc.
+29:06
+Another way to pass data is sometimes SMM handler code will check and retrieve data from
+29:13
+the save state registers.
+29:14
+So it might retrieve something from RBX.
+29:18
+If SMM handler code doesn't check that values contain and registers that it uses, if
+29:24
+it doesn't check that these values overlap with SMM RAM, this can lead to SMM RAM memory
+29:29
+corruption.
+29:31
+And then finally, this is a different kind of memory corruption.
+29:39
+The one I'm going to highlight here is an SMM double get variable buffer overflow.
+29:45
+This is just a classic buffer overflow that is occurring within an SMM driver.
+29:52
+So here there's two calls being made to get variable.
+29:58
+Two calls being made to the EFI runtime services table get variable function.
+30:04
+Subsequent calls made where they are not checking that the data size is the same between both
+30:10
+calls.
+30:12
+So there's no bounds checking.
+30:15
+It's implicitly trusting that whatever data size was retrieved from the first call is
+30:19
+going to be equivalent to the second call.
+30:23
+But this isn't necessarily true.
+30:26
+So if you rewrite the value that's containing that variable, you can overflow the buffer gain
+30:32
+code execution.
+30:33
+It's pretty like classic, simple 90s era buffer overflow stuff.
+30:44
+SMM vulnerabilities, mitigations.
+30:47
+There are a bunch.
+30:48
+There's two that I'm going to highlight because they're the most relevant for the examples
+30:53
+I'm going to walk through.
+30:57
+But additional mitigations are shown on the right.
+31:00
+You can also check out that resource and other resources at the end of the slide deck.
+31:05
+But two mitigations I'm going to highlight here are SMM code check EN, which is a feature
+31:11
+that started in Haswell CPUs and later.
+31:15
+It's a bit set in an MSR, the MSR SMM feature control.
+31:20
+You set it to one and then it prevents code execution in SMR from code executing outside
+31:27
+of SMR or code executing outside of address ranges defined by SMRs.
+31:35
+It prevents simple exploitation of SMM callouts.
+31:40
+But as I'll show later, there's a way to get around this.
+31:45
+And then the second one is, SMM is buffer outside SMM valid.
+31:51
+This checks for pointers for SMR overlap.
+31:54
+So this addresses the simple case of this confused deputy attack.
+31:59
+However, this check doesn't explicitly check nested pointers.
+32:07
+So if there is code, say you have an SMI handler that uses this function to check that
+32:15
+pointers being passed to SMI handler code, don't overlap with SMRAM.
+32:20
+But if you have nested pointers, this doesn't explicitly check that.
+32:24
+So you have to make multiple multiple multiple calls to ensure that your nested pointers
+32:30
+are also validated.
+32:31
+A lot of the times nested pointers are not validated.
+32:35
+So looking for nested pointers and checking that nested pointers are validated can be a
+32:40
+way to bypass this and perform a confused deputy attack.
+32:53
+So part three, SMM RE and X Dev.
+32:59
+So I'm going to walk through my methodology, my general methodology for finding SMM vulnerabilities
+33:07
+or UEFI vulnerabilities.
+33:09
+And then I'm going to talk through a couple examples of SMM vulnerabilities and exploits.
+33:16
+So the first stage for this for SMM RE and UEFI RE is you need a target, you need a target
+33:25
+UEFI bias for more image.
+33:27
+Typically, what I do is I just use chipsec, which is a platform security testing suite developed
+33:36
+by Intel.
+33:37
+It's open source.
+33:38
+You can get it from GitHub.
+33:41
+But extracted spy flash from a target machine.
+33:43
+There's other ways to do this, obviously, but chipsec is a really easy one.
+33:49
+Step two is analyze and extract the UEFI modules and drivers from a spy flash dump.
+33:56
+So for this, I like using UEFI tool, UEFI extract.
+34:00
+And also the firmware hunt scan analyzer from binary.
+34:05
+I typically prefer the firmware hunt scan analyzer just because of the way it renames
+34:10
+the extract components, but they all perform similar functionality.
+34:16
+Step three, I like doing initial scans of UEFI drivers or UEFI firmware images.
+34:22
+Again, with this firmware hunt scan analyzer tool, it's essentially using signature database
+34:30
+for checking a target image.
+34:34
+And it can help identify easy, well not easy, and help identify vulnerabilities right
+34:43
+up the gate.
+34:46
+The fourth step is analyze UEFI drivers with custom tooling.
+34:52
+So for this, my RE tool of choice for UEFI RE and Xdev typically is Ida Pro.
+35:01
+And this is almost entirely because the EFI Explorer Ida plugin is, in my opinion, the best
+35:08
+one out there for this specific type of work.
+35:12
+You can do UEFI RE and Guidra.
+35:14
+There's tools for doing that I've done that before.
+35:17
+Binary Ninja is also, has been expanding their UEFI functionality so that's an option.
+35:25
+But EFI Explorer plugin is only for Ida.
+35:29
+And it is excellent.
+35:30
+It's developed by the folks at Binary.
+35:33
+And using that plugin, leveraging it with my own custom tooling is what I've been developing
+35:41
+and working on for the last year or so.
+35:45
+So that's my preference.
+35:46
+But there are other options for this.
+35:51
+And then step five is to review the automation tool output, verify findings, real-up false
+35:58
+positives, typical RE, well-reserved stuff.
+36:04
+Again using Ida Pro and EFI Explorer.
+36:08
+And then step six, manual RE.
+36:10
+So reversing functions, resolving types.
+36:16
+Part of this is for UEFI specifically, it's developing your own custom type libraries.
+36:25
+So just to highlight some of these steps, so this is the UEFI tool output of an extracted
+36:34
+spy flash firmware dump.
+36:36
+And highlighting different areas that are covered by different protection technologies.
+36:41
+I forget what he is exactly.
+36:44
+I think yellow is for a secure boot and red is for boot card, but I'm not 100%.
+36:50
+But I knew, UEFI tool, like I said, it's a really, really great tool for getting an overview
+36:56
+of an entire spy flash dump and for performing simple tasks like extracting specific drivers
+37:03
+or for more volumes, etc.
+37:05
+This is a screenshot of scan results from running need for more hunt scan analyzer against
+37:16
+an extracted spy flash dump.
+37:18
+So you can see at the bottom there are three highlights where a vulnerability was detected.
+37:27
+Two of those are for the RSB stuffing vulnerability, which I won't get into, but I find
+37:35
+a lot.
+37:36
+It's a speculative, speculative execution attack.
+37:40
+So it's outside the scope of this talk.
+37:44
+The third one, it detected that it's vulnerable to S3 resume to PEI, which is a PI driver vulnerability
+37:53
+that can also be leveraged in SNMX voice.
+37:59
+And then the last reverse engineering of vulnerable driver, this is just highlighting
+38:06
+the resolving type definitions and IDEPRO.
+38:09
+So here is the initial one.
+38:13
+And I would do it not.
+38:18
+Okay.
+38:19
+Okay, the screenshot didn't show.
+38:25
+Whatever.
+38:26
+This is an example of me resolving type definitions and IDEPRO.
+38:34
+So from that base, from this base of UFI RE, having an understanding and a general overview
+38:42
+of the spy flash potential vulnerabilities detected with for more hunt scan analyzer,
+38:49
+and then additionally potential vulnerabilities highlighted by running the EFI Explorer plugin.
+38:56
+From that point, I tend to focus on, like I said, manual reversing of specific drivers of
+39:05
+interest, running EFI Explorer, checking the output for that, verifying the pulse positives.
+39:13
+And then once I have identified a vulnerability with that's exploitable, that I've confirmed
+39:22
+that's exploitable, this is my general methodology for a simple SNM call out exploit.
+39:33
+So I'm going to flip back.
+39:41
+Okay.
+39:48
+So, all right.
+39:56
+So recall earlier how I highlighted this is an example of a really simple SNM call out.
+40:04
+So probably one of the most simple SNM call out examples you can find because it's running
+40:10
+the executing code, reaching out, making that call out to a function in the boot services
+40:16
+table at the bottom here directly from the SWSMI handler code.
+40:22
+So what is the process for that?
+40:31
+So the first thing is you have to identify what the SWSMI number is in order to trigger
+40:38
+the SMI.
+40:40
+This is found from, you can do it by reing the driver itself, looking at the register function
+40:49
+when it's registering the SMI handler.
+40:51
+But you can also check the UFI ACPI table for the SMI number that's associated with the
+40:57
+specific SMI handler.
+41:00
+Once you've found that, sorry, I'm going to flip all the way back to this.
+41:08
+There we go.
+41:10
+So once you've found the SWSMI number, the next part is to identify the location of the
+41:15
+EFI boot services table in memory or the data structure that is being called out to
+41:23
+with the SMM call out.
+41:24
+So if it's the EFI runtime services table, identify the location of that.
+41:28
+If it's a different, if it's a different data structure in memory, identify that.
+41:34
+These memory offsets can be found very easily with the UFI shell using the built-in commands
+41:40
+like DMM or MAMAP.
+41:44
+Two, I already mentioned, you figure out the SWSMI number in order to be able to invoke
+41:51
+the SMI and trigger the right function in the SMI handler code later.
+41:57
+Three, you allocate space for your shell code in memory.
+42:01
+You copy its address for use in step four.
+42:05
+Step four, you set the address of your target function.
+42:10
+In this case, I'm operating under the assumption that's the EFI boot services table making
+42:14
+a call to the locate protocol function.
+42:18
+You set the address of that locate protocol function to your, to the address of your shell
+42:23
+code, which is essentially just overwriting a function pointer.
+42:29
+Step five, you trigger the SWSMI with yet identified SWSMI number.
+42:36
+Step six, attacker shell code is executed and ring negative two.
+42:40
+Cool.
+42:43
+So this is the, like I said, the simple case.
+42:46
+And the simple case here to clarify, implies or operates under the assumption that there
+42:54
+are no SMM exploit mitigation present.
+42:57
+So like I mentioned earlier, the exploit mitigation is like SMM code check in, is buffer outside
+43:04
+SMM bud.
+43:07
+If those are not used and you have a simple SMM call out like this, this is the methodology
+43:13
+overview that I use.
+43:15
+However, if you have exploit mitigations in place specifically, if you have the SMM
+43:21
+code check in, bit set, which prevents the exploitation of very simple SMM callouts,
+43:30
+then you have to adjust your strategy.
+43:33
+So leveling up, dropping in SMM RAM.
+43:39
+So to recap, SMM callouts, simple case for no exploit mitigations.
+43:46
+You have this call out to a location outside of SMM RAM.
+43:50
+You rewrite the function pointer to the address of shell code that you've allocated written
+43:57
+to address, overwriting a function pointer to gain code execution.
+44:02
+Okay, simple case, cool.
+44:06
+Without mitigations, it's so easy, it's so simple.
+44:09
+But if you have mitigations including this SMM code check in, then if you try to do that,
+44:15
+if you try to make a call out of SMM RAM from this vulnerable call out, it will trigger
+44:24
+an exception, the device will shut down.
+44:28
+So you can't exploit it with this very simple strategy.
+44:31
+So what do you do?
+44:33
+You have to bypass it.
+44:37
+There, like SMM code check again, to recap for folks who are just coming in, SMM code
+44:43
+check in is like SMMP for SMM, if code from outside of SMM RAM is executed, it'll crash.
+44:51
+So the bypass is to leverage the SMM RAM save state.
+44:55
+So remember earlier how I highlighted, you have this SMM save state, which is an area
+45:01
+that is set up, it's reserved, it's in SMM, it's used for saving the context prior to invoking
+45:08
+this SMI, it saves the values of all the registers, it's restored after the, after
+45:16
+resuming from SMM with this RSM instruction.
+45:20
+You can leverage this SMM save state as a region for saving your shell code, as a region
+45:26
+for inputting malicious function pointers that are retrieved as seen in confused deputy
+45:35
+attacks.
+45:36
+But to your ears, SMM save state is an area that has a lot of use and can be leveraged
+45:45
+very interesting ways for lots of exploit, but exploit mitigation bypasses.
+45:51
+And the overview of this SMM code check and bypass is to use a Robber job chain comprised
+45:59
+of gadgets from the SMM driver, store those in the SMM save state and then jump to those.
+46:06
+So, to highlight a portion of the save state that can be used that's more easily used, these
+46:18
+are registers, registers a lot for up to 80 bytes of shell code.
+46:23
+So you can store up to 80 bytes of shell code in registers before you invoke the SMI.
+46:29
+And so this is an area where you can save your, you can store essentially your Rob chain,
+46:36
+which is what I'm going to do in a second.
+46:40
+Okay.
+46:41
+So the overview, similar to the simpler case, you're going to, it's a, you're rewriting a function
+46:49
+pointer, you're overwriting a function pointer, but this time instead of overwriting a function
+46:54
+pointer with an address that's outside of SMM RAM, we have to overwrite it with an address
+47:00
+that's in SMM so we can bypass this SMM code check and not trigger this machine exception.
+47:07
+So rewriting the address of the target function with the calculated SMM save state address
+47:14
+of the start of your Rob chain, write your shell code, which is a Rob chain of Rob gadgets
+47:20
+from your target driver to the SMM save state.
+47:25
+You set up all the requirements or the required parameters to trigger the vulnerable function
+47:31
+in your SMI handler.
+47:33
+You trigger the SMI handler with again this identified SWS my number.
+47:40
+The SWS my is called it reaches the vulnerable sub function because you've loaded it up with
+47:48
+your required parameters to reach the vulnerable function.
+47:51
+The SWS my handler code parses all those values, jumps to the vulnerable function, vulnerable
+47:58
+function makes the SMM call out, SMM call out, then jumps to the over and shell code address
+48:06
+which is in the SMM save state, then you get shell code executed in SMM.
+48:13
+Cool.
+48:14
+So conclusion. So yeah, that was just an overview of like two different ways of exploiting
+48:29
+the same type of vulnerability. So that vulnerability being an SMM call out.
+48:35
+There's lots of other techniques but those are the two that I wanted to highlight for this.
+48:42
+And then I just wanted to highlight some tips and tricks for SMM exploit dev and RE and
+48:50
+UEFI exploits dev in general. So like I said at the beginning, it's helpful to think about
+48:56
+UEFI as a separate ecosystem between the OS and the onboard spy flash resident firmware.
+49:05
+It operates like an intermediary OS in and of itself. So in order to write UEFI targeting
+49:10
+exploits, we have to understand how to manipulate data structures within UEFI.
+49:16
+It's basically like if you want to learn how to write Windows exploits, you have to learn
+49:21
+about the Windows kernel. So you want to learn how to write UEFI exploits, you have to dig
+49:27
+into the UEFI spec which is in my opinion like pretty well documented. It's not terrible.
+49:37
+It's understandable. Other exploits dev tips and tricks, offsets of data structures in UEFI are
+49:44
+pretty consistent. There's typically no ASLR but it depends on the platform. Arm does have ASLR
+49:53
+by default but a lot of offsets even with ASLR offsets are consistent and addresses are
+50:05
+typically very consistent. So if we know the data structure and protocol we want to target,
+50:11
+we can write test programs to find those offsets, to find them with macros, just simplify the whole
+50:17
+process. So that's an example but handle protocols at offset 98 and bootstrips is table.
+50:27
+The other thing to know about UEFI calling inventions is certain data structures are always
+50:34
+passed in in certain registers so using that you can just sort of chain from there to find the
+50:41
+protocol or the data structure you want to target. And then you can also target other data structures
+50:47
+in UEFI. Like I said the UEFI environment is really expansive. There's a ton of functionality
+50:54
+and there's different places to hook or inject payloads. And for the most part binary protections
+51:02
+that we've come to expect in operating systems and kernel space and user space binary exploitation,
+51:12
+a lot of those stock well known binary protections are either not used in UEFI or not used consistently
+51:20
+in UEFI. So writing exploits is much more straightforward in some respects than other types of
+51:26
+binary exploitation. And where to from here? So I've talked about SMM exploits in this talk,
+51:39
+talking about using Rob or Jop to bypass comment SMM exploit code mitigations and leveraging
+51:48
+the save state as a region for holding UEFI shell code. But how could you take that even further?
+51:55
+So one way is typically in my exploits I'll write a chipset script for the exploit. It's like
+52:04
+yes a comparable comparison could be like pone tools for binary exploitation. It's kind of like
+52:13
+that just because of the functionality it provides. But typically I'll start with a chipset script
+52:19
+and then if I have more time or I want to refine things further I'll just write UEFI shell code rather
+52:25
+than having to rely on this framework. But another thing that you can do to take it further is
+52:32
+write so you move from your platform specific UEFI shell code. So for example x86 shell code
+52:40
+you can move from that to ebc shell code which is a new technique developed and presented this year by
+52:49
+me in like a recon and there's a paper in vx underground black mass that talks about that. But that's
+52:57
+platform agnostic shell code for UEFI. So you can use that. And yeah and there's like I said
+53:05
+there's a lot of attack service in UEFI generally and us as well. So continue exploring new
+53:12
+attack vectors, continue reading the docs, continue poking at things and finding new ways to
+53:18
+write plus points. Yeah, posting thoughts. Like I said, exploit mitigations common on modern
+53:27
+OSs are always implemented if they're applied. Bipast techniques aren't unfamiliar. So like I
+53:35
+said, using Robchains for bypassing as a mom code check in. UEFI is a complex ecosystem which means
+53:44
+that it's error prone and there's incomplete coverage of applied protections. And it's so
+53:49
+expensive and unexplored that there's a lot of room for creativity and research, a lot of area to
+53:56
+discover novel techniques like this year with my ebc work. And generally I think UEFI exploit
+54:06
+dev is really great. It's my favorite. I think everyone should try it if you're interested.
+54:12
+It combines a lot of cool things with firmware hardware, low level exploit dev and potentially
+54:19
+cross architecture exploits which is always cool. And last note for everyone,
+54:25
+a true UEFI firmware. Okay, that's it. Thanks so much.
+54:35
+Thank you very much Nika. Any questions from the floor?
+54:39
+Oh, yes.
+54:45
+Hi, Ode. Sounds better than a question. Any others?
+54:56
+I'll be around. Feel free to come up and ask me about UEFI stuff later.
+55:00
+Yep, off stage. Well then, thank you very much. Please join me to thank Nika from the
+55:05
+Leviathan Security Group for joining us.

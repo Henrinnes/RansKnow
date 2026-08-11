@@ -1,0 +1,388 @@
+0:00
+My name is Matthew Nunes and I'll be talking about instrumenting compilers to deobfascate
+0:11
+malware.
+0:14
+So the agenda for this talk is that I'll start by providing a basic introduction to
+0:21
+compilers and how they function and then go on to the main content of this talk which is
+0:28
+using the compiler known as Babel to deobfascate JavaScript.
+0:36
+So a bit about me to begin with, so some of you may have noticed the picture on the title
+0:42
+slide was off the capital of Wales which is Cardiff and that is where I'm based.
+0:49
+I am immensely privileged to be working for PWC's global threat intelligence team as a
+0:57
+reverse engineer and if you haven't met the incredible people in this team, I'd love
+1:03
+to introduce you.
+1:06
+So currently my main focus is on crime and financially motivated threat actors but before
+1:12
+this role I worked as a vulnerability researcher slash exploit dev prior to that I worked in software
+1:21
+dev prior to that I was a child.
+1:26
+So before covering the main content of this talk we need to cover some basics about compilers.
+1:35
+Now if there are any compiler devs in the audience I do apologize for some massive oversimplifications.
+1:45
+So we can roughly break down what a compiler does into three stages for the purposes of
+1:53
+this talk and the stages are parsing transformation and code generation.
+2:01
+Parsing takes the source code and converts it into a more abstract representation and it
+2:08
+can actually roughly be broken down into two stages, lexical analysis and syntactic analysis.
+2:16
+In lexical analysis the code is transformed into tokens that are essentially an array
+2:22
+of objects representing the code.
+2:26
+In syntactic analysis these tokens are then transformed into an abstract representation
+2:33
+that shows the relations between them and this is referred to as an abstract syntax tree
+2:38
+or AST for short.
+2:42
+In transformation the compiler walks down the abstract syntax tree to transform the tokens
+2:49
+or nodes into a new language or a different form of the same language as we will see later.
+2:58
+And this is actually the phase that most of this talk is going to be about.
+3:02
+Finally in code generation the tree is then written out into new code or basically stringified.
+3:12
+So let's see this as an example.
+3:15
+So we're going to look under the hood of a compiler that doesn't change code from one
+3:20
+language to another but just replaces every addition symbol in your code with multiplication.
+3:29
+And as an example assume that the program we're compiling is a single line of code that
+3:36
+is the line two plus three.
+3:39
+So in the first stage the code is transformed into an array of tokens as seen on the slide
+3:46
+between the curly braces.
+3:48
+So we have the plus symbol which is of type operation.
+3:53
+We have the values two and three which are literals.
+3:58
+The next stage is to transform this into an abstract syntax tree.
+4:05
+So this is the abstract syntax tree and it shows the parent child relationship between
+4:12
+each of the tokens.
+4:14
+And as you can see they've been embellished with a bit more information.
+4:18
+So we have a program which is composed of an expression statement which is formed of
+4:24
+a binary expression and notice it's got the property operator and the value of that is
+4:31
+the plus symbol.
+4:32
+It then has two children which are the literals with values two and three.
+4:42
+So the next thing we need to do is actually transform that to replace the plus symbol.
+4:52
+And we're going to assume that there's an inbuilt traverse function that takes two arguments.
+4:59
+The tree you wanted to walk and an object containing the transformation functions you
+5:07
+wanted to apply.
+5:09
+So in this case this is the method to change plus symbols to multiplication.
+5:16
+Now transformation functions are often referred to as visitors or visitor functions and
+5:23
+they're actually called that because as the tree is traversed if the node type that function
+5:28
+is looking for is encountered the function is called and the relevant node is passed
+5:34
+as an argument.
+5:36
+So in this case we're looking for a binary expression.
+5:40
+The function within this object imagine it's similar to an event listener as the function
+5:47
+will be called when the node of type binary expression is encountered.
+5:53
+Now you'll notice by default the first argument pass function is not just the matching node
+6:00
+but the path to it as it allows you to refer to the node's parent as well if you need to.
+6:07
+Now all this function does is when it encounters a binary expression with a plus symbol it
+6:15
+changes it to multiplication.
+6:18
+To refer to the node pointed to by the path we access it using dot node and then access
+6:24
+any relevant properties of the node using dot and the property name.
+6:29
+So in this case operator.
+6:33
+So as the tree on the right is traversed when it encounters the node we're looking for
+6:39
+it calls a visitor function which changes the node and visitor functions is actually what
+6:46
+we're going to focus on for our deobfuscation.
+6:51
+Finally as I imagine we all expected drawing code generation the abstract syntax tree is
+6:58
+recursively traversed and written out into code in this case the plus symbol has been replaced
+7:04
+from multiplication.
+7:07
+Now just to say that a lot of my knowledge around this comes from an educational compiler
+7:13
+known as the super tiny compiler and I would highly recommend you check it out.
+7:20
+So that's compilers and now that you're all expert compiler developers let's talk more
+7:26
+specifically about the compiler I used babble.
+7:31
+So babble is a JavaScript to JavaScript compiler otherwise known as a transpiler and it was
+7:40
+originally conceived by its creator as he was quite excited about all the new features
+7:46
+that ECMA script 6 offered.
+7:49
+Now for those that don't know ECMA script 6 is the sixth version of the JavaScript standard
+7:57
+that released a bunch of new features back in 2015.
+8:01
+The problem was that not all browsers supported it when it first came out.
+8:07
+So rather than wait for them to add support babble was created to transform ES6 code into
+8:14
+older backwards compatible JavaScript allowing its authors to start using the features immediately.
+8:22
+Personally so I've never been that excited by the release of a new standard but last
+8:28
+just me.
+8:30
+Now obviously it can also be used to deobfuscate JavaScript and one of the main blogs
+8:36
+that I learned a lot from was by stake enthusiasts not the real name and I would definitely recommend
+8:44
+checking that out.
+8:48
+So onto the main content of this talk how do we use babble to deobfuscate JavaScript.
+8:54
+So a bit of context on the file will be analyzing.
+8:59
+So we first encountered it during an incident response and the campaign seemed to be targeting
+9:06
+users in Germany which is ideal if you're looking for ideas for a conference talk in Germany
+9:14
+but admittedly less than ideal probably on every other front.
+9:19
+Now the way the infection worked is that the victim received an email with an SVG
+9:28
+yeah, with an SVG attachment which when opened in a browser downloaded a script that essentially
+9:35
+displayed a download button and if that button was clicked a zip was downloaded which contained
+9:41
+the obfuscated JavaScript that we see. Now we didn't observe the final payload but when we
+9:48
+cross-checked our IOCs with other open source reports it was quite evident that next payload would
+9:56
+almost certainly have been Strelastila and the picture on the left is, oh my right, is
+10:05
+off the obfuscated and unbutified JavaScript and yeah as you can see it is not beautiful.
+10:13
+So I'll just provide a quick introduction to Strelastila itself prior to continuing
+10:20
+with the main content of this talk. So it was actually first reported on in November of 2022
+10:27
+by DCSOCITEC and it's an infostiler but unlike your average infostiler it targets only two applications
+10:38
+Outlook and Thunderbird and for both of them it's trying to capture login data. Another unique feature
+10:47
+of Strelastila is that its fishing campaigns seem to primarily target users in a handful of
+10:54
+countries so namely Spain, Italy, Germany and Ukraine and the actual Stila binary that is
+11:02
+distributed is typically a DLL and interestingly actually not a lot has changed in its Stila
+11:10
+functionality between 2022 and now. So that's Strelastila but let's get back to analyzing the
+11:19
+JavaScript loader. So the first thing we do for any JavaScript malware is we beautify the code
+11:26
+as that will just make it look a little bit nicer and the other thing is my manager frequently
+11:34
+reminds me that reverse engineers are just glorified pattern matching algorithms so we need to
+11:41
+constantly be on the lookout for patterns. The first pattern we see is that several variables
+11:48
+are initialized over and over again so the same variable is often repeatedly initialized.
+11:55
+Now obviously only the last value that the variable is initialized to actually matters.
+12:02
+So as you can see in the picture, IK is initialized to R, to B, to I, V obviously I realized in
+12:12
+German IK means I but they immediately overwrite that with V, which is adding insult to entry.
+12:21
+But sadly we only care about what it's assigned to last which is the letter V as that overrides
+12:29
+all the previous assignments. The second thing to note is that the last two lines contain the
+12:36
+actual functionality using the variables and we see that those letters are concatenated to
+12:42
+produce commands but before we get to that let's clean up the variables. So when using Babel
+12:51
+to transform your code the first thing you should do is put in ASDexplore.net. That is an open source
+12:59
+project that takes your code and prints out the abstract syntax tree on the right.
+13:06
+Now on the left we have one line of code from the malicious sample, the variable Ilko being
+13:14
+assigned the letter F. On the right is a small portion of the subsequent tree.
+13:20
+The thing to notice is the assignment expression which has the operator whose value is the equals sign.
+13:32
+That expression then has a left and a right property. If we expand those in the left property
+13:43
+we have a node whose type is identifier. That is the name Ilko which is with the variable name.
+13:53
+On the right we have a node whose type is string literal with the value F and that is the
+14:02
+variable value. So what do we do? Well to begin with there are some common setup operations that
+14:09
+we need to perform. And as you see later the first thing we'll probably need to do is read from
+14:15
+the file system so we need the FS package obviously. But then there are also several Babel packages we
+14:22
+need. So the types package let's us check the types of the nodes in the abstract syntax tree
+14:30
+amongst other things. The parser takes our malicious code and produces an abstract syntax tree.
+14:39
+The traverse function takes our abstract syntax tree and a visitor function and modifies it
+14:47
+accordingly. And finally generate takes our modified abstract syntax tree and produces raw code
+14:55
+output. That's all our imports. We read the source code file after that. We parse it to generate
+15:04
+our abstract syntax tree and in this case we're also going to create a global variable that is
+15:12
+essentially a hash map or a dictionary to store a mapping from variables to value. So let's actually
+15:20
+traverse the tree. Now we need to traverse the abstract syntax tree matching on assignment
+15:29
+expressions. Every time we encounter one we'll store the variable name and the value in our map.
+15:39
+And though it'll encounter the same variable multiple times it'll just keep overwriting it.
+15:47
+Well keep overwriting the value with the new one and eventually the map will contain the
+15:53
+mappings of variable name to its last assigned value. So that's the first stage and that won't
+16:01
+actually change the code. It's just going to populate our map which will be useful in a minute.
+16:07
+So we now traverse the tree again. Again we match on assignment expression and store the variable name
+16:16
+and value but this time when we encounter a variable assignment if it doesn't have the same
+16:24
+value as the one stored in our hash map we delete it using path.remove since it's not going to be
+16:33
+used later. When we look at the code now each variable is assigned once and instead of thousands of
+16:43
+lines of code we have 64. So the next thing for us to do is to work on those last two lines
+16:53
+and see if we can replace the variables with their actual values. So if we take a small portion of
+17:04
+line 63 the way it's represented in AST format is by a left heavy tree of nested binary expressions.
+17:17
+Each binary expression represents a plus symbol and then the variable itself is stored on the right
+17:25
+in reverse order. So we have rhp, fyia, and that's because the tree is traversed in a depth first
+17:35
+manner. So yeah as I said, rhp is the first identifier then fyia. You'll notice I've stopped trying
+17:43
+to pronounce the variable names that is intentional. Now just to say this obviously isn't the whole tree
+17:50
+it's all I could fit. So that image looks like this in text form. So based on the representation
+18:01
+on the right what we're looking for is identifiers as they represent the variable stored on the right
+18:13
+and we want to replace them by string literals containing the values. But to ensure that we only
+18:21
+edit the identifiers that we want to replace we check that the parent is a binary expression
+18:30
+using the types package we imported earlier from Babel. As I mentioned previously it lets us
+18:37
+verify the types of nodes in an AST. And as long as the conditions match we perform the replacement.
+18:48
+Now you'll notice that for the sake of brevity from now on I haven't listed the traverse
+18:54
+function at the bottom but know that it is called after each function. So now when we look at it
+19:03
+we can see actual commands. We have eval and quit and after eval we have a long line of code that
+19:12
+is represented as a string so we need to extract that and beautify it. But before we do that
+19:20
+it would be nice to have eval as a continuous string without the plus symbols in between each letter.
+19:27
+So how do we go about that? Well I won't actually spend too long on this but what we do is call
+19:35
+Babel's inbuilt evaluate function on the binary expression. Basically if the value can be determined
+19:44
+at compile time evaluate will do it and not only does it return the value but it returns whether
+19:53
+it's confident in its return value. If it's not confident we don't want to replace the value
+20:01
+and we want to log an informative error message. If it is confident and the value returned is a string
+20:10
+we again use the types package from Babel but this time to create a string literal that we replace
+20:18
+it with. Now notice that we've done path.replace with not path.node.replace with and that's because path
+20:28
+nodes were referring to the node it's pointing to and therefore it will replace it safely whilst
+20:33
+fixing the references metadata etc. So now we can see the characters have been concatenated into a
+20:42
+single string which just looks much nicer. Let's now extract the string that comes after the eval
+20:50
+statement. So as you can see on the right we want a call expression but in order to ensure we get
+21:03
+the right one we only want it if it has one argument and the argument is a type of string literal.
+21:15
+And if we do have that we'll store that in a global variable that I defined outside this
+21:22
+presentation called new script and then we'll take the output of new script
+21:28
+and extract the string from it, beautify it and we get that. So what we have here is all the variables
+21:40
+we defined earlier concatenated to create commands. So what do we do? Well we do what we've done before.
+21:48
+We replace all the variables by the values as we've done previously then combine the individual
+21:53
+characters using a value it into like a single string and we get this.
+22:02
+So finally we have the C2 registry keys file parts amongst many other IOCs. Essentially what
+22:14
+this script does is it copies itself to the app data folder it contacts its C2 and it sets
+22:22
+up persistence using the registry so that it's run if the machine is rebooted and then it just
+22:29
+sits and waits in a loop for further data from its C2. So this here actually ends our summary of how
+22:38
+you could go about using Babel to deal for Skate JavaScript and using this technique we were able
+22:47
+to automate the extraction of the C2 address from just over 6,400 samples which as you can imagine
+22:56
+allows us to provide a much more complete picture to SOC analysts and incident responders.
+23:04
+A major benefit of this technique is that unlike with other techniques it actually it didn't fall
+23:10
+apart when we encountered variations in the code and we're still exploring the breadth of this
+23:18
+technique but we are finding we can use it on malware from other threat actors. So as we say in
+23:24
+Wales Diachan Vaurion and Randolph thank you very much for listening.

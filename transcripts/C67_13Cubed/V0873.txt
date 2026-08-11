@@ -1,0 +1,442 @@
+0:00
+Welcome back to 13Cube. In this episode we're going to take a look at a powerful, power
+0:13
+shell-based incident response framework written by Dave Hull called CONSA. First let's
+0:19
+cover the basics. So what does CONSA do?
+0:24
+Following from the project's official GitHub Rebme, which is displayed on screen now, it uses
+0:29
+PowerShell remoteing to run user-contributed modules across hosts in an enterprise to collect
+0:34
+data for use during incident response, breach hunts, or for building an environmental baseline.
+0:41
+This framework can be run across a single host or even tens of thousands of hosts across
+0:46
+an enterprise. So yeah, it scales, largely. Before we jump into the next section and take
+0:53
+a look at the tool in action, there is one important caveat you should keep in mind. All
+0:58
+of the modules utilized by CONSA depend upon the Windows API. So that means that an advanced
+1:04
+adversary could potentially hide from this framework. Think root kits, for example. With
+1:09
+that in mind, let's hop over to a Windows 10 VM and take a look at how to use the tool.
+1:15
+We'll first look at all of the included modules that come with CONSA, and then we'll
+1:20
+manually run some of those modules to get an idea as to how and what data is collected.
+1:26
+Then we'll run the CONSA front end and let the tool perform the collection for us. Lastly,
+1:31
+we'll wrap up the episode by taking a look at the output. So let's get started.
+1:37
+Okay, the first thing we need to do is visit the GitHub page for the CONSA project. Here
+1:47
+we can either download the entire project as a zip file or grab the URL so that we can
+1:52
+clone the project. We're going to be doing the latter. And in fact, I'm going to be using
+1:57
+the Windows subsystem for Linux, specifically Ubuntu for Windows, because it already has
+2:03
+Git included and it makes it very, very easy to just go in and clone the entire repo. So
+2:08
+we'll click the green button and then we'll click this icon to copy this URL to the clipboard.
+2:14
+At this point, we're going to switch over to the new Windows terminal, which by the way,
+2:18
+if you're not familiar with this software, click the card in the top right to watch a 13-cubed
+2:23
+shorts episode in which I cover the new Windows terminal. So let's go ahead and change
+2:29
+into the current user's desktop directory. So to do that, we'll simply go into slash
+2:36
+mount slash c slash users slash Davis RG slash desktop. Now all we have to do is get clone and
+2:44
+then paste in that URL. And within just a few seconds, we'll have the entire project cloned
+2:50
+into the CONSA directory on our desktop. Now from this point forward, we'll be living in the
+2:56
+PowerShell environment. So with the new Windows terminal, all we have to do is click the plus
+3:01
+in the top right to launch the default shell, which happens to be PowerShell. And there we go.
+3:07
+Now we are good to go. So let's go ahead and change into the desktop directory. And here you will
+3:13
+find the CONSA directory, which was just created when we did the get clone. And if we take a look
+3:19
+at what's inside, you'll notice quite a few files and directories. The modules directory that you see
+3:24
+on screen is where most of the real content of CONSA lives. That's where we'll find the PowerShell
+3:31
+scripts that do that collection. But before we actually start looking at those individual PowerShell
+3:36
+scripts, let's take a look at the modules dot comp file, which will actually dictate which of those
+3:42
+modules is run when we run CONSA. So we'll fire up no pad and look at modules dot comp. Let's go
+3:49
+ahead and maximize this. And you'll notice that anything with a hash mark in front of it is
+3:55
+commented out or not going to be run when we run the CONSA PowerShell script itself.
+4:01
+So pretty self explanatory. If you want to enable any of those, simply remove the hash mark.
+4:06
+And it will be enabled or if you want to disable any, simply include the hash mark. So no big deal
+4:12
+there. Very straightforward. So let's go ahead and close this. And there's one other file. I'll go
+4:17
+ahead and show you, which is that default dash template dot PS1. Now this is a little beyond the
+4:23
+scope of this episode. But this is a template for creating your own CONSA modules or collectors as
+4:30
+they are known. And you can see that there's quite a bit of instruction in here that will actually
+4:35
+show you how to build one yourself. Again, not really within the scope of this episode. But if
+4:41
+there's interest, I may create a follow up episode. All right, with that out of the way, let's start
+4:46
+taking a look at these various directories. You'll notice ASCP, config, disk, IOC, so on and so forth.
+4:53
+Let's go into ASCP, which is our auto start extensibility points. And you'll notice quite a few
+4:58
+power shell scripts located here. So let's go ahead and look at, for example, get SVC all, which as
+5:05
+the name implies, we'll get all of the services present on a system. Obviously, this is something
+5:11
+that would be very important when we're performing forensics on a system. We want to know which
+5:15
+services are installed. And this provides that information for us. You'll notice it's in a nice
+5:21
+human readable format. But of course, when we actually run the consa script itself, it's going to
+5:27
+generate CSV output for us and not exactly what you see on screen in this format, but rather the same
+5:33
+data in CSV format. But as you can see, everything is very readable here and all the services are being
+5:41
+enumerated. So pretty straightforward. And you'll notice all of these names are named in a way that
+5:45
+you can pretty much figure out what it does by looking at the file name. How about get sketch tasks?
+5:51
+Well, as you might imagine, that gets all of the scheduled tasks present on a system.
+5:56
+Here you see the Adobe Acrobat Update Task. And as we scroll down through here, you'll notice
+6:01
+numerous other scheduled tasks present on this system. Obviously, this could be used as a persistence
+6:07
+mechanism, as could the services we just looked at. So again, it's very common to look at these kinds
+6:12
+of things when we're friends locating a system. And this just provides a collection script to get
+6:17
+that data for us. Again, pretty self explanatory. But it's also in a nice, easy to read format.
+6:24
+Keep in mind, as I mentioned with the other, it will be in CSV format when we run the consa script
+6:29
+itself. Right now, we're simply running the individual modules, which is perfectly acceptable and
+6:35
+perfectly a common use case, just so we can get an idea of the kind of data that is being collected.
+6:42
+So if we look at the remaining things in this directory, let's take a look at one more. How about
+6:47
+our WMI FLT CON bind? So a WMI event filter is the trigger, for example, do something every 30 seconds
+6:58
+or something like that. The event consumer is the script or executable that will be run. And then
+7:04
+the binding that we're looking at is the combination of both of those together. Again, for persistence
+7:09
+mechanisms, this kind of thing could be present. Of course, what we just saw there was a normal built-in
+7:14
+Windows function and nothing else. So what about these that say get auto runs? Well, let me go ahead and
+7:21
+run this and show you what happens because these actually rely on a separate Sisson Ternel's utility.
+7:26
+And if we try to run it, you'll notice it says auto run C not found in SQL and slash Windows.
+7:32
+So we got an error message. And this is expected because it does rely on a third-party binary that
+7:37
+we would need to copy there before that actually works. Let's go ahead and take a look at the
+7:42
+config directory next. Just as with the ASCP directory, the config directory also contains several
+7:49
+different PowerShell scripts that are named in a way that makes it fairly easy to understand what
+7:53
+type of data they may collect. We'll take a look at two of them, including get-local admins
+7:59
+and get-smb share. Get-local admins simply shows us the local administrative accounts on this box
+8:06
+of which there are two and get-smb share shows us that in this case only the three default admin
+8:12
+dollars C dollar and IPC dollars shares are present on this system. And as you saw previously, there are
+8:20
+numerous other scripts available in the config directory. We won't run the rest of them,
+8:25
+but you can get a good idea as to the type of data that they collect. Next up is our disc directory.
+8:33
+So let's go ahead and change into that. And here we will find PowerShell scripts associated with
+8:37
+the collection of disk-based artifacts. We're going to take a look at get-timp-dur listing,
+8:43
+which as you might imagine, will show us the contents of various temporary directories that may be
+8:48
+present on a given system. Malware could, of course, stage itself here, and there may be other files
+8:53
+of interest here as well. You will notice we see the full path and file name of the files located
+8:59
+along with some file system timestamps, barely self-explanatory. And if we look at the
+9:05
+remaining files that were left here in the disk directory, of course we have several other options
+9:10
+that we could choose from. Very self-explanatory. So let's go ahead and go into our next directory,
+9:17
+which in this case is going to be the IOC directory. There's a single script here called get-looky,
+9:25
+which does require a third-party looky IOC scanner. So we're going to go ahead and skip that and
+9:29
+go into our next directory, which is called log. And inside of the log directory, you'll notice
+9:35
+several different PowerShell scripts, but we're going to be taking a look at get-log user assist.
+9:41
+User assist lives in the intouser.dat file, so in the registry associated with each individual
+9:48
+user, and it will show us evidence of GUI-based program execution per user. Among the data
+9:55
+display will be of course the name of the binary itself that was executed, the total number of times
+10:01
+it was executed, and the last time it was executed. Again, this is a per user artifact because it is
+10:07
+stored within each user's intouser.dat-have, and it's one of the core program execution artifacts
+10:15
+that we talk about in the premiere episode of introduction to Windows forensics. Click the
+10:19
+card above in the top right if you'd like to learn more about this, pre-fetch, and other
+10:25
+evidence of program execution artifacts that we commonly use in forensics. But as I continue
+10:30
+to scroll down through this data, you'll notice there's quite a bit of information here. We can
+10:34
+see things like Excel.exe in the number of times it was executed, AMCache parser, network miner,
+10:41
+and various other pieces of information that would be quite useful.
+10:45
+So next up, let's take a look at the contents of the memory directory. As with the IOC directory,
+10:51
+we're going to skip over the single power shell script located here called get-memory because it
+10:56
+doesn't work with Windows 10 and actually requires an older third-party piece of software called
+11:01
+memorize, which was developed by Mandiant. Next up is the net directory, and here we're going to be
+11:07
+taking a look at get-arp and get-dnscache. So first up, get-arp is the equivalent of running
+11:15
+ARP-A on the system. You'll notice the layer 3 layer 2 mappings for our IP addresses and MAC addresses
+11:22
+just as you would expect to see in a very easy to read format. So this is indeed our ARP table.
+11:29
+So next up, let's take a look at that DNS cache script. If we run this, you'll notice that we have
+11:36
+no output. So let's go ahead and ping something like 13cube.com and that should cache the DNS
+11:43
+entry. And if we run it again, sure enough, we notice two DNS entries for 13cube.com. We have the
+11:49
+A record itself and of course one of the name servers that's authoritative for that domain.
+11:55
+So very self-explanatory there, and there are several other scripts in the net directory that are
+12:00
+fairly self-explanatory as well. We won't actually run them here. And instead, we'll go ahead and
+12:05
+change back up a level and go into our next directory. And this also happens to be our final
+12:11
+directory, which is called process. So let's change into it and take a look at the scripts available
+12:16
+here. And we're specifically going to look at get-prefetch listing, which as the name implies,
+12:23
+we'll show us the contents of the Windows Prefetch directory on a given computer system. Prefetch,
+12:29
+if you're not familiar, is another evidence of execution artifact. Only unlike user assist,
+12:35
+it is not stored in the registry, is not user-specific and will show us evidence of non-goo-e-based
+12:40
+program execution in addition to GUI-based. Just based upon the presence of a .pf file and the
+12:48
+creation and modification time, we can determine if something executed, the first time it executed,
+12:54
+and the last time it executed. This is an extremely powerful artifact, and of course,
+12:58
+these individual .pf files can be parsed as well. But we're simply looking at file system data here,
+13:04
+just the full path and file name of the pf file and some timestamps. And of course, there are
+13:11
+quite a few other files located here. We're not going to take a look at the rest, but you get the idea.
+13:16
+At this point, we are ready to move on to actually looking at Conza itself, the actual head-in
+13:23
+script that we're running, instead of running the individual modules. And that script is called
+13:29
+Conza.ps1, as you see here, and it's located in the root of that cloned repo, which is in this case
+13:36
+the Conza directory. Before we get started though, let me show you this. In order to enable power
+13:42
+shell remoting, you need to make sure that your network interfaces are set to private for the firewall
+13:48
+configuration. Then you enable .ps remoting. But in this case, I am not using this in a domain
+13:55
+environment. This is a standalone workgroup virtual machine. So for this particular example,
+14:01
+I have enabled basic authentication instead of Kerberos, which is the default, but we can't use
+14:06
+that because we're not in a domain environment. And I've also allowed unencrypted communication,
+14:12
+again, for the purposes of this lab. Do not do this in production. This is a very, very bad idea.
+14:19
+But again, for the purposes of learning this and running this on a single machine in our lab,
+14:24
+I have done this. Normally, of course, we would run Conza in a one-to-many kind of scenario,
+14:30
+where we can run it from a particular system to a target system and not running it on the system
+14:36
+itself, like we're doing here. But we're just learning and understanding how the different pieces
+14:40
+fit together and how this actually works. So again, what you see in blue is not a good idea,
+14:46
+and it's just there for this particular lab environment. And yes, I will include this in this
+14:52
+episode's description so you don't have to type all that in. All right, so without out of the way,
+14:57
+to run this, we're going to run Conza.ps1. We're going to specify the target, which in this case is
+15:03
+localhost, this VM. We're going to specify the module path, which is where we just were,
+15:09
+which is dot slash modules. We're going to turn on verbose mode. We're going to specify the
+15:15
+authentication as basic instead of curboros, so non-default. And then we're going to specify the
+15:22
+Git credential for credentials. So it'll actually pop up and ask us to enter the credentials for
+15:27
+this to work. So again, this is the entire command line to run Conza. And this will run all of the
+15:35
+enabled scripts that we saw in that modules.conf file in the beginning of the episode. So anything that
+15:41
+wasn't commented out with that hashmark is going to be run and collected as part of running this
+15:47
+Conza.ps1 script. It will do all the work for us and create all the output. And so if we run it,
+15:54
+let's go ahead and enter our credentials here. And then we'll let this do its thing.
+16:01
+All right, and there we go. Now you will notice that there is one job that failed,
+16:06
+a particular WMI collection that failed, which isn't uncommon that some of these would fail,
+16:12
+just depending on what exactly it is that you're running. In this case, it is expected and okay.
+16:17
+But you can see as these various jobs kick off and run, you'll notice the state and various other
+16:24
+metadata associated with this information. So we'll give this just a second to finish running,
+16:29
+and then we'll take a look at our output. All right, so at this point, it's already finished. And now
+16:35
+we can go ahead and look at the output that Conza has created for us, which it has placed in an
+16:42
+output underscore timestamp directory. So you can see the timestamp here that was dynamically
+16:48
+created. And if we look inside, you'll notice various subdirectories there in associated with
+16:53
+the various PowerShell collection scripts that ran. If we take a look at one of them, I don't know,
+16:59
+how about local admins? Well, there you go. There's local host, which is the name of the machine.
+17:04
+Well, at least the name that we specified on the command line. And if we go ahead and cat that,
+17:09
+which by the way, cat does work in PowerShell, it's just an alias. And there we go. So we can see
+17:15
+the output. And remember, I told you it would be in CSV format. So very easy to understand how that
+17:22
+works. And they're all nicely organized for us. But that brings up an interesting point. If these
+17:28
+are in CSV format, of course, we would want to use a tool like Excel or even better, we could use
+17:34
+air examinerman's timeline explorer to actually parse this data. So that's exactly what we're going
+17:40
+to do. We're going to use timeline explorer. And I will open up a few of these and show you just
+17:46
+how powerful this tool is. We've used it in several other 13 cubed episodes. So you may already
+17:51
+be familiar with it. But using this will actually be able to very, very quickly parse all of the data.
+17:58
+And here it is. Here is timeline explorer. And here are three files that I've opened. As you can see,
+18:06
+NetStat pre-fetch listing and sketch tasks. So these are based upon the collection of those PowerShell
+18:12
+scripts, some of which we looked at in the previous section. So as you can see here, this is just
+18:19
+straight up output for NetStat. And it's nice and easy to read. It's created the columns for us.
+18:24
+And as we scroll around, again, very easy to interpret what's going on here. But what's really
+18:30
+cool is that we can drag a column header up to this area and now check that out. We have actually
+18:36
+grouped them by IP address. So now we can simply go through and click on these little disclosure
+18:41
+arrows here and actually start looking through all of this data. So it's very, very clean and organized
+18:47
+and easy to parse using timeline explorer. And of course up here, I can type in something like
+18:52
+Chrome. And it will automatically filter on chrome.exe in this case and show us any NetStat output
+18:59
+associated with that. So next up, let's look at pre-fetch listing. So as you can see, this is what
+19:06
+we saw in the previous section when we looked at the individual pre-fetch files. So if I go over here
+19:11
+and simply type in something like CMD.exe, boom, there you go. There's the pre-fetch file for CMD.exe.
+19:19
+And there are our timestamps so we can derive the first and last time of execution and various other
+19:25
+pieces of information. So extremely easy to use and all I did was simply type CMD.exe.
+19:31
+And then last up, we have sketchtasks.cs.cs as we scroll down through here. We can see all of those
+19:37
+numerous scheduled tasks that were present on the system. If I type in something like Adobe,
+19:42
+there you go. Those are the Adobe Acrobat update tasks that we saw when we looked at the output
+19:48
+in the previous section. And you can see things like the next runtime, the logon mode, the last runtime.
+19:54
+And various other pieces of information that I won't bother to read out to you because you're
+19:59
+fully capable of seeing it on screen here. But you get the idea. So using Timeline Explorer,
+20:06
+it's very easy to parse this Conza output. So that wraps up everything I wanted to show you.
+20:13
+At least everything I wanted to show you in this introduction to Conza episode. There will be
+20:18
+hopefully follow-up episodes if there's interest. Just let me know in the comments below.
+20:23
+But this is enough to at least get you started. And I hope that you can see how powerful this tool is.
+20:29
+So in a lab environment, I encourage you to play around with this. And if you're using PowerShell
+20:33
+Remoting in your corporate environment, which I hope that you are because that is the preferred
+20:38
+and new way to manage things, hopefully you're not still using PSXEC and whatnot to
+20:44
+execute things across your systems. But if you have PowerShell Remoting enabled,
+20:49
+then I would encourage you to take a look at Conza. It is a very, very powerful incident response
+20:54
+framework that can help you go through and enumerate one to many and gather data on numerous
+21:00
+systems at once. As I mentioned before, the caveat is this does rely on the Windows API. So if you
+21:07
+have advanced malware or something that is trying to hide from you, it's not going to show up here.
+21:12
+So remember, this is using standard Windows API calls to bring back the data to you.
+21:18
+But still, quite a bit of useful information can be gained from using this Conza framework.
+21:23
+And it's very extensible and expandable. You saw that you could write your own modules and
+21:28
+really extend it in any way that you see fit. And we've only scratched the surface here.
+21:33
+So I hope this has been informative and useful. And as always, I'd like to thank you for taking
+21:39
+the time out of your day to watch this 13 cubed episode. I look forward to the next one and I
+21:45
+will see you then. Take care.

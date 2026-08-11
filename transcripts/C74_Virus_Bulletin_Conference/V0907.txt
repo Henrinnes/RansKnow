@@ -1,0 +1,362 @@
+0:00
+Hi everyone, I'm Albert, I'm from VMray. I'm really glad to be on stage for virus bulletin.
+0:10
+This is my second time already, but the very first one was during the COVID era, so I
+0:16
+had to do the remote online version, so I'm really glad to be finally here physically.
+0:22
+So today's talk is about let's redactose loader. It's a malware loader, and I want to give
+0:29
+you all around introduction to this malware family. I'll give you some details about it, the
+0:35
+insights and the inside out of the full malware. So let's start. Let's redactose was first seen
+0:43
+in October 2023, caught by researchers. You could classify this malware family as a loader,
+0:50
+downloader, and partially a backdoor as well due to some of its functionalities. The final payload
+0:58
+of let's redactose is a DLR based payload. Usually with four exports all pointing to the same
+1:04
+export address, which is an interesting technique. The threat actors that basically use this
+1:11
+malware family first were TA577 and TA578. These are the guys that are known for the
+1:18
+quackbot and also the iced ID malware. Basically let's redactose is sort of a substitute for iced ID
+1:26
+since research suggests that there are some strong ties in the infrastructure of let's redactose
+1:35
+and between iced ID. The malware loader has similar functionalities and similar modularity to
+1:42
+pick-up. I need to introduce some interesting deviation and anti-analysis techniques like there
+1:48
+was this inclusion of a self-deletion POC script. It leveraged heft APIs and also it featured
+1:57
+encrypted strings. Before all the gritty details I want to give you a high level overview of
+2:07
+its versions. The very first one, version 1.1A, we named internally, was featuring a XOR
+2:15
+encryption with a PRNG function. The next iteration of let's redactose was basically introducing
+2:23
+a DANGRADE where it removed the PRNG function and simply switched to an incrementer.
+2:30
+And now it's using a rolling XOR for encryption. And soon after that it was releasing new sub-versions
+2:39
+then came July 2024 where it introduced another encryption scheme change. The rolling XOR
+2:46
+was changed to AES encryption in CTR mode and also this version, the one version 1.4,
+2:52
+introduced new CTR commands as well. And so that redactose was still seeing being developed
+2:59
+and we get to 2025 where it's now version 2.x. Again new CTR commands were introduced.
+3:08
+Let's look at some of the delivery techniques that this malware loader uses. The very first one
+3:14
+and the early versions of redactose was first seen being distributed via phishing emails,
+3:20
+often leveraging a docosigned themed loads where basically the victims were enticed to click on,
+3:27
+for example, this review document button and then it would take the user to a malicious
+3:33
+sophisticated JavaScript with tons of tons of tons of commented lines. And here and there you
+3:40
+would see actual codes like here there's a slice operation or this sub-SDR function and these
+3:48
+are basically assembling the final plain text JavaScript which is pulling an MSI file from a
+3:56
+remote server. Mostly these MSI files are legitimate installers of very well-known programs
+4:03
+but they are sort of backdoored in a way that the LATREDEC to SPAY load the DLL is embedded
+4:09
+inside of this MSI and the custom action lunch file parameter is used to execute the DLL once
+4:18
+the MSI is also getting executed. Now recently there's been a change in delivery. We've seen this
+4:27
+interesting new technique where vulnerable websites were injected with JavaScript and this
+4:34
+JavaScript is basically displaying a iFrame overlay over the legitimate website. Now this iFrame
+4:42
+consisted of a cloud flare capture and the technique we all know as click fix and once the user
+4:50
+basically copypaste is this commands and executes it, it downloads a JavaScript file again and
+4:56
+this JavaScript file is connecting back to a telegram channel where a bot is sitting and receiving
+5:05
+instructions and also sending instructions and in this JavaScript we found a constant
+5:12
+which is pulling the LATREDEC to SPAY load itself. I want to cycle through the evasion techniques
+5:21
+that we captured with this family. The very first one is the process count check which is I believe
+5:28
+is aimed at sandboxes and automation. The family is using RTL get version and get version exwAPI
+5:37
+cost to grab the Windows operating systems version and based on that deciding, for example if it's
+5:44
+a Windows 7, 8 or 8.1 version then LATREDEC just needs at least 50 processes to be running in the
+5:52
+background. If it's Windows 10 or 11 it needs 75 active processes so this is mostly aimed at sandboxes.
+6:01
+The second interesting evasion technique it's using the get adapters info api call in Windows
+6:10
+and just walking the IP adapter info structure finding the address length of the MAC address
+6:18
+which is again here in this case comparing it to 6. We all know Ethernet has been standardized
+6:24
+for ages and it's a 6 bytes length of a MAC address so we believe and I also believe that this
+6:32
+is aimed at some really edge case scenarios where the MAC address is really not 6 bytes long
+6:38
+or even doesn't even exist. The third one I would say this is pretty much a standard technique nowadays.
+6:46
+The LATREDEC is simply trying to walk the process environment block, find the being debugged,
+6:53
+flag whether it's switched on or not. Usually it's considered a smarter approach than using the
+7:00
+IS debugger present api call but I believe EDRs and AVs are now also detecting this kind of standard
+7:07
+technique now. And the fourth very last evasion technique it's using get current process api call
+7:16
+which is basically trying to ascertain whether the process is running as a 32-bit process within a
+7:23
+64-bit Windows OS. Again this is a questionable technique since all LATREDEC
+7:29
+payloads are 64-bit BLAs and they would almost certainly would always run a 64-bit process
+7:37
+but again I believe this is also trying to counter some some emulation scenarios maybe even some
+7:44
+sandboxes. All right let's look at some of the anti-analysis techniques. The very first one
+7:52
+it's using runtime api resolving. Again I would say nowadays this is pretty much standard.
+7:59
+The LATREDEC to payload is walking the process environment block trying to find the base
+8:05
+address of kernel 32. That DLL and the DLL that DLL and basically using load library W2
+8:13
+those libraries. There's also api hashing and basically LATREDEC to see is walking the system 32
+8:23
+folder finding specific filenames DLL filenames and comparing the filenames against the CRC32
+8:31
+hash values. The same goes for the actual exported functions of those DLLs and libraries so it's
+8:38
+a basic comparison check and this is how it gets resolved. Now the very last technique
+8:45
+the string encryption which used to be the most interesting part. So until version that one
+8:50
+four there was a distinct technique or let's call it algorithm how it was using a string encryption
+8:59
+and to get into the details so all strings that were encrypted within the malware payload
+9:05
+were stored in the data section and the first four bytes of each chunk or each string were used
+9:13
+as the XOR encryption key but also served as a delimiter bytes. The fifth and the sixth
+9:21
+bytes are used as the size of the actual chunk over the string and whatever is left after that
+9:26
+is basically the encrypted strings. So with that algorithm in mind we could create a short
+9:32
+Python script iterate through the data section of each LATREDEC to payload and get the final plain
+9:39
+text strings. Up from version one that four the XOR encryption was changed and basically switched
+9:48
+over to AES encryption there was also a hard coded key inside each LATREDEC to payload and
+9:58
+doing the encryption in CTR mode. I wanted to basically compile a master table with all the changes
+10:08
+so this is how it goes I just want to go through it quickly. The very first one XOR encryption
+10:16
+first four bytes serves as key. Next two bytes are the data length and whatever is left after that
+10:22
+it's the data all seeded or actually yeah mutate the seed via the PRNG function. The next versions
+10:31
+were switching to rolling XOR and downgrading from the PRNG using just an incrementer but the
+10:38
+same algorithm and finally we get to more recent versions of this family where the encryption
+10:44
+scheme was changed to AES to 56 in CTR mode and here the algorithm changed a little bit
+10:52
+basically the hard coded key was used as the key. First two bytes of each chunks served as the data
+10:59
+length. The next 16 bytes were used as the IV and whatever is left after that's the data that we
+11:04
+need to get. Okay some of the smaller details so whenever LATREDEC to C is active it sends out the
+11:12
+first very first network request to the remote server it contains a GUID. This is basically a serial
+11:20
+volume ID multiplied via a hard coded value. This also serves as a very good detection point because
+11:28
+this has not been changed ever and this is consistent across all LATREDEC to samples.
+11:35
+The next thing it also sends out a group ID in the network request which is basically a FMV1
+11:46
+a hash and yeah you can find it in the code. The campaign name is stored as a encrypted
+11:56
+string in the config and that gets decrypted and then the hashing function applied to it then
+12:02
+we get the decimal value and that's being transmitted to the remote server.
+12:08
+So now I had lots of LATREDEC speak apps and traffic network traffic and so it occurred to me that
+12:17
+if I don't have the decryption and the algorithm yet maybe I can find some different ways to get
+12:24
+the campaign names. So I thought okay let's brute force this let's try to create a word list
+12:30
+with the English alphabet and basically apply the FMV1 a hashing function to all the generated
+12:38
+words and yes we can find easily brute force this via a Python script for example. Do you mind that
+12:46
+FMV1A is a 32 bit space so there might be collisions but for this more research I think it's this is
+12:54
+perfectly acceptable risk. All right so I have the brute force campaign names IDs I could
+13:06
+basically come up with some statistics and it turns out there was this specific campaign called
+13:11
+mini cast which came out on top this was the most distributed LATREDEC to campaign.
+13:18
+Now comes the self deletion and so yeah I also and my colleagues at VMRave are very eager when
+13:29
+we get ourselves some new malware family that we did not discover before and we're always trying
+13:35
+to find interesting features of that malware trying to create new detections for those specific
+13:41
+features and so LATREDEC to introduce this interesting self deletion technique which we've
+13:48
+investigated and analyzed and created detections for and after some time it was clear that this
+13:54
+was coming from a open source GitHub project from Lloyd Labs and the technique is very simple it's
+14:02
+been known for some time basically you open a handle to the process that you want to delete or
+14:08
+the file that you want to delete with delete access then use the set file information by handle
+14:13
+API call to just rename the main data stream close the handle open another handle to the process
+14:21
+and set the delete file flag of this class you close the handle and the file of the current running
+14:29
+process magically just disappears from the from the disk this technique was working until windows 11
+14:36
+24 h2 where there was a patch from Microsoft which sort of broke this technique but a simple fix
+14:42
+is available you just need to include a new flag into the code this flag po6 semantics flag
+14:52
+all right as I mentioned before LATREDEC is partially also works as a backdoor since when
+14:58
+it's executed it stays dormant and silent for some time but it can also receive commands from
+15:05
+the C2 server there are almost like 20 C2 commands with different IDs I will probably group
+15:14
+all these into three chunks the very first one is the two three four commands which are
+15:20
+sort of functioning like an enumeration reconnaissance commands getting some information from the
+15:25
+victim's host the second batch is more like maintenance commands like updating the bots
+15:32
+terminate in killing the process and the third branch is for downloading next stage payloads
+15:40
+getting new shell codes or DLS to be executed on the on the host itself
+15:49
+and now we are getting to a point where we know all the small details about this matter family
+15:54
+basically we can create a python script get all this information and nicely present it
+16:01
+we can get the C2 address the version ID mission ID campaign names keys ASK the RC4 key which is used
+16:10
+for sort of encrypting the network traffic as well so again we can do some small investigation
+16:18
+with the C2 addresses so as you see in there's endpoints at the end of each C2 server and the early
+16:27
+versions of latoed actives were using slash lives slash tests slash drive as endpoints but more
+16:33
+recent versions are all using this slash work endpoints and as I've mentioned on the previous slides
+16:40
+in the C2 command section that latoed actives can pull next stage payloads and next stage shell codes
+16:48
+and these are the top three shackles that we've seen being pulled down from C2 servers the very
+16:53
+first one is the system for that bin which is again functioning as a the reconnaissance module
+17:02
+executing commands like net user and similar getting more information from the host basically
+17:09
+the next one is a stiller module the stpm that bin shackled which is getting browser cookies
+17:16
+safe credentials logging credentials and the third one is very surprising to me because I
+17:24
+did not see web injects being that active nowadays so this was again an interesting observation
+17:30
+that retroactive scan puller shell code which is basically a web injects targeting specific
+17:36
+banks and pulling the credentials from the browser now with all the C2 addresses we can also
+17:43
+do some investigation into the ASNs and the distributions the biggest chunk of the C2 servers were
+17:51
+inside cloud flare net but this might be a bit misleading because it's not actually cloud
+17:57
+flare it's the network behind that but if we look at the second biggest branch which is the meta
+18:04
+spinner ASN this tells a different story you can look it up on for example URL house they collect
+18:12
+information on this ASN you can see in the past it served almost not almost but over 2000
+18:19
+malware sites in the past of which 250 is still online and yes spam house also provides information
+18:29
+that this ASN should not be paired with or routed with because it's under cyber criminal control
+18:37
+I've looked at looked up their websites and again this tells another story that it's some shady
+18:43
+business they promise some some very high SLAs 200 plus networks paired with which is a lie
+18:51
+because I've looked up the actual pairing information for this ASN they only have one peer to an
+18:57
+upstream ASN so this is just a shady shady ASN or a business and finally I want to give you some
+19:08
+some takeaways and some conclusion the first one is detection opportunities so this is very
+19:15
+contradictory for me always with a malware especially with retroductors because they go to your
+19:21
+length where they implement like such advanced techniques like walking the process environment block
+19:27
+implementing some evasion techniques but on the other side there are still static values in
+19:34
+latch reductives which serve all serve as good detection points like the mutex or even the user
+19:39
+agents these are all fixed in all samples of latch reductives still serving as good detection points
+19:47
+the other thing is there's the hard coded ASK which is again static and has been consistent in all
+19:54
+versions of new retroductive samples and there's also specific part in the codes where the exact
+20:01
+version is marked so again with the yard detection or our signature you can easily anchor on that
+20:07
+and use it as a good detection rule let's talk about a little bit on activity and survival so
+20:18
+I'm sure you've seen the news in May 2025 where low enforcement came out and basically they've
+20:26
+taken down around 300 something servers all malicious infrastructure and I've tried to basically
+20:33
+match that against our own telemetry and it tells the situation in the picture perfectly that in
+20:41
+May or after May there was a clear drop in activity of latch reductives but right after that some
+20:50
+weeks and a month later we see a small spike and again some some increasing trajectory of distribution
+20:58
+so we can say latch reductives has survived the take down and still being developed
+21:07
+the takeaways I want to give you three points very first one there's a new delivery technique now so
+21:15
+we know latch reductives is experimenting with with trying different methods different delivery
+21:20
+techniques the second one quick version so there's lots of new versions nowadays small changes
+21:29
+across these sub versions but it's clear and tells the story that latch reductives is actively being
+21:35
+developed nowadays even after the take down and the third one as I detailed it previously still
+21:41
+very contradictory for me there are lots of good detection anchor points to detect this
+21:47
+maver family so send this information to your SOC or third they still provide good detection
+21:55
+so for me the only question is will we get to version three that's oh I'm sure we will in a couple
+22:02
+of months so I'm gonna keep a half an eye on this maver family in the next year as well
+22:11
+and with that I want to thank you for listening to my talk happy to take any questions here now
+22:17
+or in person later on the on the floor

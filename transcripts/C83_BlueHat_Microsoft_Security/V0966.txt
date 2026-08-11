@@ -1,0 +1,412 @@
+0:00
+Let's start with a small story before we jump on to the session.
+0:07
+So a bank teller in late 1980s slides a crisp hundred dollar bill in ultraviolet lamp.
+0:15
+Everything about the bill looks perfect.
+0:17
+The texture is right, ink shines as it should and micro printing is flawless.
+0:24
+But something feels off about it.
+0:26
+There's a little engraving at the back of that note that feels awkward.
+0:32
+And that single note almost identical to the real thing became the first clue
+0:38
+in what would become one of the most sophisticated investigations in the counterfeiting industry.
+0:45
+Experts from US Secret Service studied it under microscopes.
+0:49
+So they found tiny differences about that note.
+0:52
+The ink was slightly misaligned and the serial numbers they were printed with some unusual fonts.
+1:00
+And those anomalies they became the pattern.
+1:04
+Soon investigators they found multiple variants of it.
+1:07
+Dwiilts that had similar DNAs but had different refinements and they popped up across the country and the world.
+1:15
+Now by 2006 there were at least 19 generations of these super dollars that were found.
+1:22
+The chase, it's banned continents and world and linked to organized crime as well as suspected nation state actors.
+1:30
+This will lead to redesign of hundred dollar bill in 2013.
+1:35
+But why am I telling you about this story?
+1:38
+Why does this counterfeet story matter to us?
+1:41
+So just as that one counterfeet note led to uncovering a sophisticated evolving global fraudulent network,
+1:50
+one security bug can lead to uncovering multiple related vulnerabilities.
+1:55
+Variant hunting is about identifying that pattern, tracking its mutation and shutting down path every path that attacker can take.
+2:05
+Hi, I am Parul Gurg leading Azure security variant hunting team at Microsoft.
+2:12
+Hi, I am Sviha Pellekonda, I am a senior security engineer at Microsoft, securing Azure through variant hunting.
+2:19
+And in this talk we are going to talk through the journey of identifying and addressing software security anti-patterns through variant hunting
+2:28
+and how we can transform persistent problems into the ones that are both solvable and measurable.
+2:34
+We are going to share the processes that we have developed internally, leading to successful variant hunting program with a real case study of token legacy.
+2:41
+You don't want to miss it.
+2:42
+And so that you can systematically handle security vulnerabilities at your organization and build an impactful variant hunting program.
+2:51
+Right.
+2:51
+So throughout our journey in the world of security, we hear various terms such as threat hunting, pen testing, threat model review and now variant hunting.
+3:01
+Though they may sound similar, it's important to understand the difference and how certainly the variant hunting is different from others.
+3:10
+Now let's look into that.
+3:12
+Variant hunting is not threat hunting.
+3:15
+So threat hunting focuses on a particular threat actor, whereas variant hunting focuses on the software security anti-patterns across the code, across the configurations and so on.
+3:28
+And variant hunting is not pen testing.
+3:31
+Pen testing is again is focused on a particular finding vulnerabilities in a particular product, whereas variant hunting is about finding the anti-patterns which are of scope, different classes across various products across multiple products.
+3:47
+And it is the breadth versus the depth that differentiates them.
+3:51
+If you have thought of finding an access with a new payload that you just discovered and to try it out across all different endpoints that over that Microsoft maintains or any other target, you can say that you have found a pattern and you just got started with variant hunting.
+4:11
+And variant hunting is not a threat model review.
+4:14
+A threat model review is again focuses on a particular component or a product, but variant hunting is about revealing bigger patterns across multiple products.
+4:24
+So what is variant hunting then?
+4:26
+And as we're talking about what it is, variant hunting is about patterns.
+4:31
+To understand why variant hunting or why pattern is at the core of variant hunting, let's first define what a pattern is.
+4:41
+So what is a pattern?
+4:43
+So pattern can be termed as a recurring structural or behavioral phenomenon in a software systems.
+4:50
+And a pattern that leads to multiple related vulnerabilities can be termed as anti-pattern.
+4:56
+For the ease of this talk, we are using pattern and anti-pattern a little interchangeably today.
+5:02
+Now, why is this pattern identification crucial?
+5:05
+And by abstracting and converting these patterns, what you can do is you can transform the isolated bugs into systemic insights.
+5:14
+You can drive horizontal detection across services as well as you can drive durable fixes across multiple services.
+5:23
+Now, let's take an example, like as we are talking about pattern to simplify it, let's take an example.
+5:28
+So if you ever come across unauthenticated endpoints exposed over internet, we can term that as one of the patterns for the simplicity.
+5:37
+So we're going to refer this as a pattern unauthenticated endpoints.
+5:41
+Now, what does variant hunting do in this?
+5:45
+So variant hunting takes this a little step further.
+5:48
+It is not just about identifying that pattern.
+5:51
+Once you identified that there are these unauthenticated endpoints, it's important to understand how they are going to emerge in this real world.
+5:57
+So if you have to put a definition to it, you can say variant hunting is about identifying new patterns.
+6:04
+It's about identifying new variants of these known patterns.
+6:09
+And it's about identifying new instances of known variants of known patterns.
+6:16
+Sounds a little complicated, so let's take some example.
+6:19
+So we already talked about the pattern unauthenticated endpoints.
+6:24
+So let's say the first time you came across the unauthenticated end point, which is an Azure Function app.
+6:31
+So you came across contoso.azurebsides.net slash api slash hello world.
+6:36
+So when you look at that, that's an instance, right?
+6:39
+It's a one off that you found.
+6:41
+Now if you have to categorize it further, you say, okay, this is an unauthenticated function app, and we call it as a variant of the unauthenticated endpoints pattern.
+6:51
+Next time you come across another unauthenticated end point, and that is nothing to do with function apps.
+6:56
+It is still an unauthenticated end point, but not function app, and you categorize it separately as a different variant.
+7:03
+You call it as an unauthenticated Cuban at its API server variant, right?
+7:08
+The reason why we have to differentiate is because when it comes to the fixes, right?
+7:13
+When it comes to remediation and fixes, every service or every variant might have a different fix altogether,
+7:20
+might have a different remediation design strategy around it, and that's why we differentiate between these variants.
+7:26
+And next time when you come across an unauthenticated end point, as I said, you wouldn't have found a new pattern, or maybe there'll be a sub pattern,
+7:33
+but you would definitely have found either a new variant, or you would have found a new instance of a known variant.
+7:40
+And what does this give us, right? By cataloging these all the patterns and variants and instances together,
+7:47
+now you can proactively search for and remediate these similar issues across services, and move from reactive buck fixing to more scalable, durable assurance.
+7:58
+Now, it's a whole journey. The first thing you do is you come across a vulnerability.
+8:04
+The last thing you do is you talk about variant hunting, but it's a journey. So, let's end during this course,
+8:09
+we're going to take one of the examples to walk you through this journey of how we do this within our team.
+8:14
+So, the first step in that journey is understanding the vulnerability, and we'll talk about that case today.
+8:19
+Well, let's take a case study of a simple yet super impactful vulnerability pattern that we have researched internally and got great success.
+8:28
+So, let's take the example of bearer token leaks in Azure Portal.
+8:33
+So, it is a simple one click attack leading to exfiltration of victim users bearer token.
+8:39
+So, all it takes is the victim user needs to click on the link, and it exfiltrates the bearer token of the Relator service to the end point that an attacker maintains.
+8:53
+So, Abilasha in the morning touched about bearer tokens and the effects of that.
+8:58
+So, what it is super impactful because bearer tokens all it needs is that you just process them,
+9:04
+and whoever process that they can just replay and get access to whatever resources that the original user has.
+9:11
+So, same in this case, the impact is critical here because these bearer tokens give the attacker access to all the resources that the victim user has.
+9:22
+And then all it takes is just a simple click, like which is the link as shown on the screen, and the likelihood of the exploit actually is super high because the link itself is pointed to portal.azure.com, which is the friend door to all the Azure services.
+9:41
+And it's quite predictive that a victim user or a targeted victim user will click on this malicious link.
+9:50
+Now, suppose if the malicious, if the victim user clicks on this link, the link loads in the browser, and in the UI, all it looks nice and beautiful, maybe with some error message or so, but nothing leads to the hints of there is some exploitation going on in the background.
+10:09
+So, as you can see in the browser network trace, there's a request going to malicious.evil.net in the background, and it's from the front end, and you can see the request contains authorization header.
+10:24
+So, the authorization header contains the bearer token, and that's where it is being stolen from the user and ultimately lands up with the attackers domain.
+10:35
+So, the attackers happily steal those tokens, and then just replay later on.
+10:42
+Now, as we understand the vulnerability, so once you get the vulnerability, the next step is to understand what are the contributing factors that led to vulnerability.
+10:52
+And to connect it to real well, I tell when I was a new mother, every time my kid would cry, someone would come back and tell me that the kid is hungry.
+11:00
+That is definitely one of the reasons kid cries, but that's not the only reason. There are multiple other contributing causes that lead to it, and similarly in our vulnerability space that's true as well.
+11:12
+So, let's understand what do we mean by contributing causes analysis. As the name suggests, it is about identifying all underlying factors that led to the vulnerability and their effect or impact on the vulnerability.
+11:27
+Now, there are several established methods that you can use to perform this. Ishikawa analysis, which are these fishbone diagrams, as you see on the screen, is one of the ways you can do it.
+11:39
+The most common one that you do in any of your PIRs that you do, the post-incident reviews, the five-wise technique where you keep asking, the underlying goal is to continuously probe into the vulnerability till you get the complete understanding of what led to the vulnerability.
+11:56
+To demonstrate the contributing causes analysis, in this case, let's take the same example of the Baratokhan Leaks in Azure Portal. This is the same URL that you have seen earlier where we are injecting our payload.
+12:11
+So, let's break down this URL. So, if you break down the URL by forward slashes, the first segment is domain, which is pointed to portal.isg.com, and then the URL fragment starts, and from now on, nothing goes to the server, to the backend server, and all the processing happens right in the JavaScript code in the front end.
+12:33
+Now, after the next forward slash, the next segment is the service name. Here, the service is Microsoft Azure Data Lake Store. There are hundreds of services that are onboarded to Azure Portal, similar to Data Lake Store, and each service can have multiple pages.
+12:49
+Here, we are looking at the page name called WebHDFS Access Blade V3, and similarly, there can be multiple pages associated with a particular service. And each page, again, can have multiple parameters that they accept.
+13:05
+So, here, in this case, there are three different parameters, and the one that we are most interested in is the end point parameter, where we are injecting our payload in red, which is malicious.evil.net.
+13:18
+And that's on the dynamic or the URL part, which the victim user clicks. But once you get into the code part, the JavaScript code, this is the JavaScript code, where the injected point or the injected point is the same.
+13:35
+So, here, a URL is being constructed with string concatenation, and you see there, the input parameter, the end point parameter, ends up in this string concatenation, which is used to create the host name in the final URL that it looks like this.
+13:55
+So, the HissityPS, colon, double slash, malicious.evil.net, which is what we have injected in page parameters earlier. And this is the final URL that looks like after the string concatenation.
+14:08
+And to summarize, this is the, on the left side, right? Yeah, on the left side, you have the URL, where the attacker creates, crafts, sends it to the victim user, on the right side, you have the code, where the payload ends up in the URL to form a malicious final URL to which the authenticated request is sent, which has bearer token in it.
+14:38
+And to put those points in the tabular structure, this is what we have come up with. Under contributing causes, we have lack of input validation, which is through page parameters. And the source is the attacker control page parameter, as we have seen.
+14:53
+And the sink is a URL, which is constructed via string concatenation, which is used for an authenticated request later on.
+15:05
+Right, now we have got good understanding of the contributing cause. Now the next step is like, as a security engineer, we have this natural thought that this can't be one off. There can be more to it. There can be more such instances. How else can this come up?
+15:22
+So, there are many questions running around the mind. And these questions bring us to the next step called pattern extraction.
+15:30
+Now, when we did contributing causes analysis, we have already started with a little bit of pattern extraction. So, now, when we talk about pattern extraction, as I said, we talked about contributing causes analysis already.
+15:45
+So, contributing causes analysis becomes the starting point. The next thing that we do here again is impact analysis. And what that helps us is achieving again, gaining further comprehensive understanding of the vulnerability.
+15:59
+Some of the core steps when we are looking at impact analysis is establishing the attack chain, which kind of means understanding all components, understanding all interactions that each component is having with each other.
+16:11
+And then the second one is we try to talk about or represent the vulnerability in a precondition, postcondition, and impact framework. What that gives us is ensuring that we have a very complete understanding of the vulnerability from an attacker viewpoint of what is the prereg, they actually need.
+16:27
+What happens when they execute the vulnerability and what is the worst case impact of that vulnerability? And the last but not the least, the core of the pattern extraction is to think of possibilities.
+16:40
+What are the other reasons that could have or has led to in the past to the same vulnerability?
+16:50
+Let's take the same example and apply the pattern extraction to the baritokin leaks in azure portal case.
+17:01
+So, in the contributing causes analysis, we saw that untrusted page parameters are injected into URL, and then the URL is used to, as a final URL to which the unauthenticated request is sent, which contains baritokins.
+17:16
+And this is a peculiar attack where the entire processing happens on the client side and it also a URL injection vulnerability. So, we named it as client side URL injection.
+17:28
+And we also applied the pre-post conditions and impact to better illustrate the real world practicality of this attack.
+17:37
+So, this makes it easy not just for us, but for everyone to understand the nature of the vulnerability pattern. And this is what we have come up with as a pre-post conditions and impact.
+17:47
+So, in pre-condition to go over quickly, the victim user must open a specially crafted azure portal URL, which contains the malicious parameters and they need to open that in the browser.
+17:58
+So, all that does the pre-condition and then the post-condition is what the attacker gets once the attack happens or the exploitation is successful.
+18:08
+Is the attacker captures the victim users baritokins for different services like azure resource manager, azure key wall, there are several services and all of those baritokins can be captured.
+18:22
+And the impact here is what attacker really gets out of it is the attackers can impersonate users and gain full access to their azure resources.
+18:32
+So, they can replay those tokens, they can get access to all the resources. For example, key walled or any secret store that the users may have stored all the secrets.
+18:44
+And in some cases, if the victim user is a tenant admin, attacker can get access to all the resources in the entire tenant itself.
+18:55
+Right, so now the real question is comes about the other possible scenarios that can lead to the same impact.
+19:04
+So, previously we saw that page parameters are where the attacker injected the malicious or tainted payload and then what are the other places where we can inject such payloads that can carry out a similar impact if exploited.
+19:23
+So, in this case it is not so tough to guess, it is query parameters. Query parameter is another simple or common place where JavaScript code reads something from the user and then they can do the similar processing.
+19:40
+So, it is at this stage it is about guessing game where things can go wrong and we have come up with some example like there can be a sour host query parameter where we can pass on similar payload that can lead to similar effect.
+19:57
+Now, thinking about further possibilities there can be again nuances in how the URL injection itself can occur. Earlier in the example we saw that attacker passes the entire payload of the host name which ends up as the final domain name to which an authenticated request is sent and how the exploitation is carried.
+20:18
+So, the same place instead of the entire domain name the attackers input can also end up as a substring in the final domain or the host name to which the same authenticated request can be sent.
+20:33
+So, it can be there as a prefix or a suffix or in the middle of the string in the host name. So, in the prefix case instead of just giving the host name we will just add a slash at the end so that we break the URL concatenation and control the final domain or the final host name of the URL to which again the baritok is sent.
+20:56
+And in case of suffix we will add an iterate character or a dot character at the start of our payload so that if you add a dot character it becomes a sub domain or if you add an iterate character it becomes the entire domain that you control as an attacker and you can capture those exfiltrated tokens.
+21:16
+So, with these learnings as a final result of the pattern extraction we have updated the previous table that we saw in contributed causes analysis with the new potential entry about missing validation and query parameters and also updated the syncs with various variations of possibilities of URL injection.
+21:37
+So, this is our final artifact after pattern extraction phase.
+21:42
+Now, moving on to the final step in the journey that we have been taking is variant hunting. So, variant hunting throughout this presentation we have been continuously talking about what is a pattern, what is pattern extraction touched on what is variant hunting, what is not variant hunting.
+21:58
+But it is essential to understand that variant hunting goes beyond fixing and finding individual vulnerability. What we are trying to target here are emerging root causes from those vulnerabilities as well as any of the recurring patterns that are hiding behind these causes.
+22:15
+So, before we go so we are going to tell a little about how we do this in the framework but why did we design this in the first place. So, when we started this team couple of years back our variant hunting journey was very smooth.
+22:27
+We started with one pattern couple of people we knew what we were doing we were able to talk through the progress of it and it went smooth.
+22:34
+But as people grew and as we worked on multiple patterns together we found it really hard.
+22:40
+Number one to talk about where in what what are we doing with the pattern where in the journey of the pattern are we.
+22:47
+Second we were found it very difficult to share successful strategies from one security engineer to another but worked for Srihar Shah we were not able to communicate to another engineer in the team and say why don't you go try it because we were not documenting we had no clue what we were doing.
+23:00
+We achieved success but we didn't know how to replicate the success and what we missed was we had no way to communicate to our leadership on where we are what are we doing because there was a lack of unified language that they and we talked about in terms of pattern.
+23:15
+And with that is what we realized that to achieve meaningful success what we need is a disciplined mindset and a consistent framework that we can apply which will help us to monitor our pattern.
+23:29
+Monitor our patterns through their life cycle and that's when we designed what we call as apex model apex in itself stands for entire pattern evaluation and execution.
+23:40
+So what apex model actually does is it systemizes variant hunting because it defines the life cycle of a pattern from discovery of the pattern to its continuous assurance.
+23:51
+It breaks the pattern into life cycles and maturity levels and that helps us again track the pattern through the journey instead of relying on again stressing the fact instead of relying on ad hoc fixes it helps that our security processes are repeatable scalable and durable.
+24:10
+I think Tom and his keynote in the morning mentioned right security is all about culture you need to know what you are doing you need to document you need to have that thinking apply to what you are doing to actually achieve it and that's what this document helps us do.
+24:23
+Now how many here know what S.D.L. is security development life cycle I would expect a little more hands how many here know how or have done threat modeling and know what strides right.
+24:37
+So what S.D.L. did to security was it embedded it into every life cycle and what stride did to threat modeling was that it provided a structured categorization and a repeatable analysis so next time you are doing threat modeling there's a new engineer doing threat modeling they don't have to look at the diagram in front of them and think how do I start where do I start from right it's all that problem and that's what apex does when you track patterns through it phases and life cycles you know where to start you know what's going to happen.
+25:06
+So apex brings S.D.L. like life cycle rigor to variant hunting along with strides structured formatting for systemic risk reduction.
+25:18
+Now so each pattern in apex model basically progresses in its life cycle of discovery to continuous assurance and they are divided into phases as well as maturity levels like for example the first phase being exploration and as part of exploration what you do is you do the discovery as well as the
+25:35
+risk evaluation. So if I tell you go fix an authenticated endpoint space as a problem you cannot fix it unless you know how big the problem is right.
+25:46
+We have to first understand we have to first understand how big the problem is what what there's a spacing clue what are the variants associated with it and that's what we do in exploration phase we get to know more about it all the pattern extraction stuff becomes a part of it that you understand the contributing causes you understand what are the probable causes.
+26:04
+That can happen in the future right and then you establish the defect density of the problem like how frequent is the problem that's happening.
+26:14
+Then it moves on to risk reduction so now you know how big the problem is what do you do about the problem once you know right so you you can't just write as soon as you know what the problem is you can't just jump on to solving the problem you have to
+26:29
+strategize you have to think about what are the immediate fixes we need as well as what are the durable fixes that we need what are the continuous assurance models that we need right so you document all of that together strategize document get sign or if needed to ensure that you're covering all your dotting your eyes and crossing your teeth together and then again you can't wait for everything to put together before we kind of calm down the fire so you also work on tactical risk reduction in path.
+26:58
+And then the last two phases are about mitigation and closure which is durability and continuous assurance so you did the risk reduction the image your risk reduction you have a strategy put in place now you work with engineering stakeholders to put the durable controls in place as well as not everything can be solved by durable control again touching on the problem of unauthenticated endpoints I I can put a secure by default control saying you will be able to do that.
+27:27
+And through all saying you by default you will be protected and you will not be exposed to internet but someone can still go and turn it off right because there are there needs to do that as well so to capture any of those regressions any of those measures you still need continuous assurance where you go build these controls in the life cycle you check for regressions and things like that.
+27:50
+Well we have seen all the pattern phases earlier and now let's apply those phases into the real world patterns and we'll see how these apply phases that are applied to real world patterns and how we're tracking progress through each stage drive durable and organization wide security improvements.
+28:11
+So taking the same example that we have discussed earlier which is better token leaks in Azure portal we did till the pattern extraction phase and then applying those phases that Parallel just mentioned in the exploration phase we got started with the pattern extraction and then we try to discover the the patterns that we have written in those table structure through parameter analysis through dynamics scanning and through static analysis with curtql we try to find as many as possible.
+28:41
+So that led us to a very big bunch of vulnerabilities or vulnerable instances across all different services in Azure portal.
+28:52
+Now moving on to the risk reduction stage where in this stage we started filing bugs or work items for those instances that we found in the in the previous phase of exploration and we did all the spot fixing for those vulnerabilities and we got good success.
+29:10
+It was a lot of effort trust me and we also started designing the short term and long term remediation and we had a plan on how to go forward.
+29:21
+Next going on to the next phase is the mitigation or the durability phase where we started working with Azure portal team thanks to Azure portal team for the great work they introduced SDK level updates that can be consumed by all the services.
+29:37
+So we had to work with all downstream services that are working on top of Azure portal to consume those SDKs and to make them secure by default and we also introduced central control at the Azure portal level so that even in any case of vulnerable code written by individual services or service teams that should not lead to token expiltration.
+30:04
+So we have a central control that blocks the exploitation by stopping the request being sent to the evil domain and we also worked with them to improve the telemetry for robust detection of in case of any new vulnerability or the new attack.
+30:23
+And in the next we went into the continuous assurance phase where we built a custom dynamics scanner because we knew all different variations from all our research.
+30:34
+We built a scanner and for continuous monitoring where we'll get alerted whenever there is a regression in the code or whenever there's a new attack technique around this.
+30:48
+And then we also introduced secure defaults for all existing and new services so that we are covered for the longer term.
+30:58
+And at the end we have achieved a great success with nearly close to zero new token link vulnerabilities in Azure portal in the past few months.
+31:10
+And one common question that we face from time to time is how to perform pattern discovery across various services during the exploration phase.
+31:19
+How to find the variant hunting instances across different services.
+31:25
+So we also get that question and we try to answer that question a lot but here are some of the avenues that you can leverage.
+31:33
+So to start with either you can go with static analysis or runtime analysis or both.
+31:38
+So in static analysis if you have high confidence strings you can rely on rejects search in the code that gives you instant results which is cheap and easy to do.
+31:49
+And if you have well known source and sink you can go rely you can rely on static analysis tools like code QL for proper source to sink a taint analysis.
+32:02
+And in runtime analysis we all know the dynamic analysis part where you send your first payloads across API endpoints or to figure out the runtime behavior of the system with dynamic analysis.
+32:16
+And so in the log analysis if you have if you have a framework where several services depend on on the central component or central framework.
+32:27
+You can perform or you can improvise that central component to make sure you capture all the laws that you require and perform log analysis on that component.
+32:37
+And for runtime misconfiguration you can do configuration analysis.
+32:42
+So these are all various techniques I am sure there can be more and not to say leverage AI across all these techniques as and when required.
+32:53
+And one thing that I always or we always say to answer this question is one size doesn't fit all.
+32:59
+So the pattern discovery strategy that depends on the underlying cause so we need to come up with new strategies and adjust based on the attack pattern.
+33:12
+Now when it comes to scalable security assurance right right metrics are very crucial for driving effective action.
+33:19
+We are sure talk about data and metrics and how important it is to know what we are doing how important it is to plot it correctly and how important it is to understand it correctly.
+33:30
+So based on that in the interest of time I will go a little quick on this the same example around sensitive data exposure through unauthenticated Azure functions.
+33:41
+Where is the problem there right it is a chronic unmeasurable risk.
+33:45
+We also talked about prioritization in the talk before where it is about how do you prioritize if you have a chronic problem and you don't know how big the problem is you can't prioritize it.
+33:54
+And what helps there is like when you follow the model when you do the discovery right when you establish the metrics right you do the risk evaluation you come up with bunch of metrics.
+34:04
+For example in case of Azure functions we were able to create injection rate which is what is the frequency with which these new anonymous Azure functions are spinning up right prevalence.
+34:14
+But the percentage that existing Azure functions currently leak the sensitive data like the probability right what is if we can forecast that we can definitely talk about prioritization a probability that a new Azure function that a developer is going to deploy tomorrow it is going to be unauthenticated or it is going to leak sensitive data.
+34:35
+And then we have cumulative flow diagram that talks about what visualizes the risk state over a bit of time I'll skip this in the interest of time but.
+34:45
+And yeah coming to the impact on the leadership decision making quantification of the risk enables the prioritization so it's it's it's it makes it easier for targeted invent interventions and allocate resources by the leadership.
+35:03
+And then metrics like injection rate and secretly probability also helps the and the progress is sustained over time and moreover the data bag insights helps a lot maintaining the credibility with the stakeholders and for any cross organizational initiatives ultimately these metrics are important and most useful for empowering leaders to make informed decisions that strengthen security across the board.
+35:32
+Now coming to the key takeaways this is this is a culmination of all this talk and then the learning from us so we're in handing targets contributing causes and not just the individual bugs and cross service thinking is critical and basically patterns or span across multiple products and services so we're in
+35:52
+handing requires a holistic approach and cross service approach and you structured models like apex that we've just introduced in this talk so this ensures variant hunting is repeatable and not ad hoc so that drives consistency in remediation efforts across multiple.
+36:11
+And then quantifiable metrics enable informed decisions so that makes that empower teams to make informed decisions and prioritize resources effectively later on and combining these techniques allow you to systematically handle security vulnerabilities at your organization and build an impactful variant hunting program.
+36:36
+I have to add one last key takeaway those who were there at Zach's talk yesterday right he mentioned that follow that one lead from a variant hunting perspective follow that one lead find out its brothers sisters friends family colleagues and follow all those leads as well and you will find out your probable causes you will find out the actual causes related to the vulnerability and lastly thank you so much for listening in and I'm also grateful there were a lot of people that contributed in this journey former colleagues current colleagues so thank you for everyone thank you so much.

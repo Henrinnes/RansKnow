@@ -1,0 +1,500 @@
+0:00
+Have you heard of Yara?
+0:10
+Borrowing from Wikipedia's description, because I can't seem to write a better one myself,
+0:15
+the tool provides a rule-based approach to create descriptions of malware families based
+0:20
+on textual or binary patterns.
+0:24
+In fact, maybe you've seen indicators of compromise or IOCs, distributed as Yara files.
+0:30
+Here's an example of what one might look like.
+0:33
+Using a simple command, we can direct the tool to use that set of logic to search for
+0:37
+those strings and sets of conditions across any arbitrary data.
+0:42
+So imagine you suspect a particular piece of malware has infected a system, and you want
+0:47
+to quickly look for those IOCs to verify your suspicions.
+0:51
+How would you accomplish that?
+0:53
+Would you recursively grip every file on disk looking for a particular string, assuming
+0:58
+you even had access to Grap to begin with?
+1:00
+And if so, what if the string was represented in hex or binary?
+1:04
+What then?
+1:05
+Or what if you needed to do this on a large number of endpoints running a variety of operating
+1:09
+systems, including Windows, Mac OS, and Linux?
+1:13
+Well, that's exactly where Yara can help.
+1:16
+Yara can run against everything from a single file to terabytes of files.
+1:22
+In fact, you can leverage the power of Yara alongside volatility to analyze a memory
+1:27
+image.
+1:28
+That's right, Yara can actually be utilized via a volatility plugin to automatically identify
+1:34
+specific patterns and conditions in the memory image that could help facilitate malware
+1:39
+identification.
+1:40
+How awesome is that?
+1:41
+As an example, remember the recent episode within the introduction to memory forensic
+1:46
+series in which we analyzed the system infected with the cut well Trojan?
+1:51
+Well, rulesets are widely available for that malware family, and we could use volatility's
+1:55
+built in Yara scan plugin, as seen here, to search for that malware.
+2:02
+So in the next section, we'll actually see Yara in action, both for on disk artifacts,
+2:08
+as well as for memory friends, excuse me, this plugin.
+2:12
+So sit back, relax, and by the end of this episode, I guarantee you, you'll be ready
+2:17
+to leverage this awesome pattern matching tool in your environment.
+2:22
+So let's check it out.
+2:24
+Alright, the first thing we need to understand is the basic anatomy of a Yara rule.
+2:32
+Let's start by taking a look at three examples that don't do much.
+2:36
+You're looking at the first of these now.
+2:38
+Pause the video for a second and see if you can understand the syntax before we discuss
+2:42
+it.
+2:44
+Ready?
+2:46
+So this is pretty basic.
+2:47
+You'll notice the rule is defined by the rule keyword at the top, followed by an identifier
+2:54
+that can contain any alpha numeric character and the underscore character, but the first
+2:58
+character cannot be a digit.
+3:00
+In this case, it's example one with a capital E. And then we have an open brace as we
+3:05
+would have at the beginning of a C function, and you'll notice the corresponding close
+3:09
+brace at the bottom defining the end of the rule.
+3:13
+In fact, much of the Yara syntax follows the same lexical conventions as C. You can even
+3:19
+include C-style comments, both single line and multi line in your Yara rules.
+3:25
+The first section is entitled meta.
+3:28
+And as you might guess, this is arbitrary meta data.
+3:31
+We can put anything here, but most commonly you'll find a description, an author name,
+3:36
+and a date.
+3:38
+This section is optional and not required for a functional Yara rule.
+3:42
+The second section is entitled strings.
+3:45
+And as you can see, we've defined three strings named domain 1, domain 2, and domain 3, each
+3:51
+specifying a value of a particular domain name that we might want to flag for an IOC.
+3:56
+The third section is entitled condition, and as you would expect, this defines the conditions
+4:01
+upon which the rule will trigger.
+4:04
+In this case, a match of any of the three domain names defined above will satisfy the condition.
+4:09
+Pretty easy, right?
+4:11
+Just about every rule you look at is going to be structured in a similar way.
+4:15
+Next, let's take a look at a slight variation of this example.
+4:19
+Here we see a rule named example 2.
+4:22
+So how is this different than the first?
+4:25
+Well for starters, we've added the no case modifier.
+4:30
+A modifier is that text that you see at the end there.
+4:34
+In fact, we'll look at a couple of other modifiers shortly.
+4:37
+This means that any case variation of badsite1.com, badsite2.com, or badsite3.com will match,
+4:45
+whereas the previous rule would only match the literal string which was lowercase.
+4:51
+This is a pretty common modifier.
+4:54
+And then under condition, notice that we have 2 of.
+4:58
+Followed by 3 domain strings specified in Perin.
+5:03
+This means that any 2 must match before the rule is triggered.
+5:07
+For example, badsite1 and badsite2, badsite1 and badsite3, and so on.
+5:13
+Of course this number could be anything you like, and this kind of logic is also frequently
+5:17
+used when defining conditions.
+5:20
+Next, let's look at our third example once again building on the same logic.
+5:24
+We've added an IP string that garbled reg X at the end should look pretty familiar
+5:30
+to you.
+5:31
+It's a regular expression that in this case matches the format of an IPv4 address.
+5:36
+Granted this would match what I like to call CSI cyber IP addresses like 325.281.56.1,
+5:44
+but you get the idea.
+5:46
+Notice the wide and asky modifiers at the end.
+5:52
+The wide modifier can be used to search for strings included with 2 bytes per character.
+5:56
+The asky modifier can be used by itself, but it's unnecessary as the string is already
+6:01
+assumed to be asky unless otherwise specified.
+6:05
+However, with wide we'll need to specify it because we want to search for asky only strings
+6:10
+with 2 bytes per character.
+6:13
+After condition we still have our 2 of, but notice that at the end of the line we have
+6:18
+an AND specifying an additional condition.
+6:22
+On the next line we specify that the IP string must match.
+6:26
+So in other words, our IP address reg X must be present and must have a match.
+6:33
+This is followed by another AND and then we have file size less than 1kB, which means
+6:39
+that the file size must be less than 1kB.
+6:42
+Again, very easy to read, right?
+6:44
+I'm willing to bet that had I not explained any of that to you, you could have read it and
+6:48
+told me exactly what was happening, especially if you have any coding experience.
+6:54
+Now let's look at something more real world.
+6:56
+This is a real YAR rule that one might actually use.
+6:59
+It searches for packed executables, in this case specifically those packed with UPX, which
+7:05
+is one of the most common packers available.
+7:07
+Look the card above to watch the sum assembly required episode within the introduction to
+7:12
+malware analysis series if you'd like to learn more about this.
+7:15
+For our strings we're defining MZ to match the MZ header and a PE32 executable.
+7:21
+And following that we have 2 UPX strings in hexadecimal, matching UPX0 and UPX1.
+7:31
+UPX compresses sections stored within the section table of a PE file.
+7:35
+And the renaming of header names to these values is a strong indication of UPX usage,
+7:41
+which is why we're searching for this.
+7:43
+Lastly we have another string that defines the capital UPX exclamation point.
+7:49
+Note that none of these have no case specified at the end, so the uppercase string must match.
+7:56
+For our conditions we're looking for the MZ header at the beginning of the file by
+8:01
+0 and UPX0 and UPX1 within the first 1024 bytes and the UPX signature within the first
+8:10
+1024 bytes.
+8:12
+So all of those conditions must be true to match this rule.
+8:16
+Makes sense right?
+8:17
+We're going to see this live in the next section of the video because this is one of the
+8:21
+rules we'll actually be using.
+8:24
+Next let's take a look at our most complex rule.
+8:27
+This matches one variant of the WannaCry ransomware.
+8:31
+I'm not going to bore you by reading every line here, but you'll notice multiple strings
+8:35
+defined along with a new modifier we haven't seen before called full word.
+8:40
+This ensures that the string will match only if it appears in the file, delimited by non-alpha
+8:46
+numeric characters.
+8:48
+To borrow an example from the official Yara documentation, the string domain, if defined
+8:54
+as full word, would not match www.mydomain.com.
+8:59
+And it would match www.my-domain.com and www.domain.com because in both of those cases the
+9:09
+string is surrounded by those non-alpha numeric characters.
+9:12
+We'll also look at this signature or rule in the next section.
+9:17
+Of course you should read the official documentation as this is just the tip of the iceberg as far
+9:22
+as what's possible with Yara.
+9:24
+But now you're at least familiar with the basics.
+9:27
+And at this point, you know enough to begin writing your own Yara rules that you can leverage
+9:31
+in your environment.
+9:33
+Keep in mind that while we'll be using the rules with the Yara tool itself, as well as with
+9:37
+a volatility plugin, there are many products that also support Yara rule files, including
+9:43
+products from Alien Vaults, CrowdStrike, FireI, and Taniam just to name a few.
+9:49
+Alright, so enough theory, let's jump over to our sift workstation and take a look at this
+9:54
+in action.
+9:59
+You'll notice that I have a couple of directories here, one of which is called binaries, which
+10:02
+contains some files that we'll be using for our demo, and one called rules, which contains
+10:07
+those same five Yara rules that we looked at in the previous section.
+10:12
+We're actually going to be using the bottom two in the demo.
+10:16
+Those would be UPX underscore packed dot Yara and want to cry dot Yara.
+10:21
+Before we do anything though, let's go ahead and run Yara with the dash H flag to take
+10:26
+a look at our available options.
+10:29
+And as you can see, there are quite a few, but we're going to focus only on two.
+10:33
+The first of which is dash S, which will print matching strings.
+10:37
+Without this, if a Yara rule matches, you'll simply get the rule identifier returned, and
+10:43
+that's it.
+10:44
+But if we use this option, we'll actually see the specific strings within the Yara rule
+10:48
+that match.
+10:50
+So this can provide some added context and it's quite useful.
+10:53
+And then we have the dash R option for recursively searching directories or a mount point or
+10:59
+something like that so that we can run Yara in bulk against multiple files.
+11:04
+We won't be doing this in the demo, but I want you to know that it exists and that
+11:08
+it's quite commonly used.
+11:11
+Let's go ahead and run Yara specifying our UPX rule, and we'll run it against our sample
+11:16
+GUI binary.
+11:18
+And notice that we got back nothing, a blank line, no errors, no output, no nothing.
+11:23
+Well, that's because nothing matched because this is not UPX packed.
+11:27
+So let's fix that.
+11:29
+Let's go ahead and pack this with UPX, and we'll just call it sample underscore GUI underscore
+11:34
+packed, and you'll notice that we have one packed file at this point.
+11:39
+So now let's change up one directory and try again, and hopefully this time we'll actually
+11:44
+get a match because we know it is packed with the UPX.
+11:49
+So let's go ahead and change this to sample GUI packed.
+11:53
+And sure enough, we get UPX underscore packed, which is the rule identifier that matched
+11:57
+within that Yara rule file.
+12:00
+But that doesn't provide us a lot of additional information, so let's go ahead and tack on that
+12:04
+dash S option.
+12:06
+And now we see the four strings that matched, which if you remember from the previous section,
+12:12
+those are indeed all required for a conditional match.
+12:16
+And there they are, the MZ header, the two UPX sections, and the UPX signature.
+12:21
+Just exactly like we expected when we reviewed the rule file.
+12:25
+So now let's go ahead and take a look at our second Yara rule, which is going to be for
+12:30
+WannaCry.
+12:31
+And I just happen to have a WannaCry binary here, so once again, we'll run Yara specifying
+12:36
+the rule, and then the WannaCry.exe binary.
+12:40
+And there you go, WannaCry underscore ransomware is the rule identifier that matched.
+12:45
+So let's go ahead and tack on that dash S option.
+12:49
+And we'll see the specific strings that match.
+12:52
+And we can highlight them here, but there are quite a few, as you can see, all of which
+12:57
+are indicative of WannaCry.
+13:00
+And if we went back and looked at that rule file, we would see the specific conditions that
+13:03
+needed to be met to have this rule match.
+13:08
+So that's pretty much it for the basic usage of Yara.
+13:12
+Again, we specify Yara, followed by the Yara rule file that we want to use, followed by
+13:19
+files that we want Yara to process.
+13:22
+Again, we can use the dash R option to recursively search through an entire directory or a
+13:27
+mount point, or we can leave that off and just specify a single file as we have here.
+13:32
+We also use the dash S option to show the matching strings, because without that we didn't
+13:38
+get a whole lot of information, just the fact that it matched.
+13:42
+So as you can see, Yara is quite easy to use, and it's an extremely powerful tool.
+13:48
+Coming up in our final section of this episode, let's take a look at how we can leverage
+13:52
+a Yara rule in conjunction with volatility for memory forensics.
+13:57
+I think you'll be surprised at just how easy it is.
+14:01
+Oh good, you're still here.
+14:06
+It's because you made it to the last section of the video.
+14:09
+So let's talk about what you're looking at on screen.
+14:12
+This is cutwheel.yara, which you have not seen before, at least not in this episode.
+14:18
+You'll notice this is a little different because we have multiple rule statements.
+14:22
+But there are no surprises here.
+14:24
+It works just like you would expect.
+14:26
+Each rule statement has its own unique identifier, starting with cutwheel underscore 2016.
+14:32
+And each of these rule statements contains its own set of strings and conditions that
+14:36
+must be met.
+14:38
+So we're going to be using this cutwheel.yara file in conjunction with the built-in Yara
+14:44
+scan plugin that comes with a standard volatility package.
+14:48
+So this is not a third party plugin that you need to go download from a GitHub repo or
+14:51
+anything like that.
+14:52
+It's just built-in to the standard package.
+14:56
+Let's go ahead and fire up the command prompt and then launch volatility and see how it
+15:01
+can use this plugin.
+15:03
+So for our memory image, this is going to be the infected.raw file.
+15:08
+We happen to be using Windows 10X64 build 17763.
+15:14
+We're going to specify the Yara scan plugin and then we're going to use a dash lower
+15:19
+case y followed by the Yara rule file that we wish to use.
+15:24
+We could also use a dash upper case y and specify a string in line on this command line that
+15:31
+we want volatility to search for as opposed to the rule file.
+15:35
+I just wanted you to know that that is an option.
+15:38
+And that's pretty much it.
+15:39
+Now this ended up taking several minutes to run, but in the interest of time and keeping
+15:45
+your attention, I decided to go ahead and fast forward through this section and here are
+15:49
+the results.
+15:51
+So notice that we have a single rule that is matched multiple times.
+15:55
+That rule is cut will underscore 2016 underscore three.
+16:00
+And if you remember the memory forensics baselines episode within the introduction to memory
+16:05
+forensics series, it turns out that PID 8988 was indeed one of those three evil pids that
+16:11
+we immediately identified as a result of our memory analysis.
+16:16
+And that's pretty cool because we immediately see that same PID being found with the cut
+16:21
+will Yara rule.
+16:22
+And of course, you can see the hex and ASCII representations of each of those matches
+16:27
+off to the right.
+16:28
+You see things referring to SVC host.exe, one of which we found in this image to be not
+16:34
+legit.
+16:36
+And you see other things, including what looks like a Mozilla user agent string.
+16:41
+And if we scroll down, you'll notice numerous other matches as well.
+16:45
+All of them are again the cut will underscore 2016 underscore three rule as well as the
+16:50
+same PID 8988.
+16:54
+And that's pretty much it.
+16:56
+That's how easy it is to use Yara scan in conjunction with a Yara rule file.
+17:02
+So both the Yara tool itself and Yara scan, I would say, are equally easy to use.
+17:09
+That wraps up this episode.
+17:12
+If you've made it to the end, thank you so much for watching.
+17:15
+If you haven't yet subscribed to 13 cubed and you're enjoying these videos and this content,
+17:20
+please do so because it really does help me out and I would greatly appreciate it.
+17:24
+Also check out the Patreon page for 13 cubed for some additional perks and early access
+17:29
+to new material.
+17:32
+As always, thanks for watching and I'll catch you in the next episode.

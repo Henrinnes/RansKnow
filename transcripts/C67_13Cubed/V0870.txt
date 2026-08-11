@@ -1,0 +1,430 @@
+0:00
+Welcome to 13 cubed.
+0:08
+In this special collaborative episode with Nosec.us, we're going to do something a little
+0:13
+different.
+0:14
+But first, it's time for a backstory.
+0:16
+I've recently worked on two different incidents in which RDP, remote desktop protocol, was exposed
+0:22
+to the internet, resulting in a compromise of the exposed system and the systems to which
+0:28
+those systems were connected.
+0:30
+Shocking, I know.
+0:31
+To be clear, I don't mean that an RDG remote desktop gateway was exposed.
+0:36
+I mean RDP, as in TCP-3389, was exposed directly to the internet.
+0:42
+Why would you do that?
+0:44
+Well, set that aside for a moment and realize that while it may seem incredibly obvious
+0:48
+that that is a very bad idea, it happens.
+0:51
+In fact, at any given time, there are large volumes of computers around the world with
+0:56
+exactly the same configuration, probably now more than ever with so many people working
+1:00
+remotely.
+1:01
+In my example, it was a quick matter to look back through logs and determine the user
+1:05
+names associated with the compromise.
+1:07
+Let's pick on HelpDesk and Admin, which tend to be pretty prominent in many environments.
+1:13
+The question that popped into my mind was, what passwords were associated with those local
+1:19
+accounts?
+1:20
+My assumption was that they were weak or otherwise reused elsewhere and disclosed in a previous
+1:25
+breach.
+1:26
+There were hundreds, in some cases thousands of brute force attempts until the attackers
+1:29
+finally got the correct combination of username and password and successfully established
+1:34
+a connection.
+1:35
+Bottom line though, is that sometimes it will be useful to know what password is associated
+1:41
+with a given account.
+1:42
+Would you agree?
+1:43
+It's not like you can just right click, go to properties and view the password.
+1:46
+It obviously doesn't work that way.
+1:48
+Well, Windows uses a relatively, what's the word, legacy algorithm to cryptographically
+1:54
+protect those credentials?
+1:56
+And that enables us to use a tool like HashGat, coupled with a modern GPU, think RTX 20 or
+2:02
+30 series, and attempt to match a plain text password with the associated hash.
+2:07
+To do so for local accounts, all we need is a copy of the SAM and system registry
+2:13
+hives from the computer in question.
+2:16
+As you may have guessed, this is the system from which we're going to crack those local
+2:20
+account credentials.
+2:21
+Let's run a WMIC user account, get name, comma, said, to take a quick peek at those accounts
+2:26
+and their associated SIDS and RIDs.
+2:28
+So now we're going to be using Cape as we've done in several previous episodes to collect
+2:33
+our evidence.
+2:34
+There's actually a pre-built target called registry hives that ships with Cape, so that
+2:39
+will make things easy for us.
+2:41
+So we'll run Cape.exe, dash dash T source is of course C colon.
+2:47
+Dash dash target will be registry hives with a capital R and a capital H, no space.
+2:54
+For the target destination or Tdest, we'll simply place this on the desktop.
+3:00
+We're also going to be using dash dash VHDX.
+3:04
+This will tell Cape to create a VHDX container in which to store our collected registry
+3:09
+hives.
+3:10
+And that's it.
+3:11
+Notice I did have to specify an identifier, in this case hashcat, after the dash dash VHDX
+3:17
+that is required, doesn't really matter what you put there.
+3:20
+But Cape is now running and what it's doing is it's going through in a forensically
+3:25
+sound manner and grabbing all the registry hives from the system.
+3:29
+As a reminder, we only care about SAM and system.
+3:34
+Once those files have been placed within the VHDX container, Cape will, by default, zip
+3:39
+that container and the end result will be a zip file and associated console log conveniently
+3:45
+placed on our desktop.
+3:47
+We'll give that just a few more seconds and as you can see, it's already done the collection
+3:51
+and at this point it's simply creating that zip file which again will contain the VHDX
+3:57
+file inside of it.
+4:00
+And the total execution time as you can see was just 46 seconds to do all of that.
+4:05
+There's the full path to the file that was created by Cape and that's pretty much it.
+4:11
+Again just 46 seconds.
+4:13
+So at this point we're finished with Windows Terminal, we can go ahead and type exit and
+4:17
+on our desktop we should have those two files.
+4:20
+So there's that zip file and then the console log will show everything that was in that
+4:25
+black Windows Terminal window that's scrolled by.
+4:28
+So that's it.
+4:29
+All we have to do is carry that over to our analysis station and continue with our mission.
+4:33
+So let's do that.
+4:36
+And here we are on that analysis workstation.
+4:38
+On the desktop I've created a folder called registry.
+4:42
+And within that folder I have placed the two files that I've copied from the previous
+4:46
+machine, the zip file and the console log.
+4:48
+Of course the only thing that's important to us at this point is that zip file.
+4:52
+Let's go ahead and extract it.
+4:53
+So I'll right click go to 7 zip and choose extract here and after a couple of seconds we
+4:58
+will have our VHDX file.
+5:00
+To mount a VHDX file in Windows 10 is trivial.
+5:04
+Simply double click on it and Windows will assign a drive letter and show you the contents.
+5:09
+In this case it's been mounted as the eDrive and now if we go into see Windows system 32
+5:15
+config we have our registry hives as you can see right here.
+5:20
+All we need are Sam and system.
+5:23
+So we'll go ahead and select both of those and we'll just drag them to the desktop.
+5:28
+That's it.
+5:29
+It'll just copy it right out of the mounted VHDX and onto our desktop.
+5:33
+We could go ahead and unmount the VHDX if we wanted to at this point because we are
+5:37
+done with it.
+5:38
+So now what?
+5:39
+How do we go from these two registry hives to hashes?
+5:42
+Well it turns out the hashes are stored within the Sam registry hive but they are encrypted
+5:47
+and to decrypt them we need the system registry hive.
+5:52
+Along with a third party utility.
+5:54
+That's where impact comes into play.
+5:57
+As you can see it is a collection of Python classes for working with various network protocols.
+6:02
+We care about in T hash and in T L M for example.
+6:06
+So what we're going to be using is a single utility within the impact suite to go ahead
+6:13
+and extract those plain text hashes.
+6:16
+Let's go over here and copy the URL to the clipboard so that we can perform a get clone
+6:21
+of this repo.
+6:23
+So I'll switch over to Windows terminal and as you can see I am in the desktop directory.
+6:29
+So I'll do a get clone and paste in the URL here.
+6:32
+We'll give that a couple of seconds and when it's done we should have a directory
+6:36
+called impact it located on our desktop.
+6:40
+And once we change into that we can then start exploring those utilities.
+6:44
+And as you can see there's impact it and now we have those utilities.
+6:50
+We do need to install some prerequisites and to do that we're going to use PIP which
+6:54
+is a Python package manager.
+6:56
+I actually already have it installed within this Ubuntu machine within the WSL2 environment.
+7:02
+But if you didn't already you would just do a sudo apt install Python 3 dash PIP which
+7:08
+as the name implies will install the Python 3 version of PIP.
+7:13
+You'll see here that it is already installed but again if you don't have it installed you
+7:17
+need to do so.
+7:19
+Now it's a simple matter of invoking PIP 3 so we'll do a sudo PIP 3 and we're going to
+7:25
+specify the install keyword followed by a period which means this location and this will
+7:31
+install those prerequisite packages such things as flask and some various other things
+7:38
+for LDAP 3 and crypto libraries things like that that are necessary for some of those
+7:44
+impact utilities.
+7:46
+Notice there's an error complaining about a requirement for LDAP 3.
+7:51
+I don't really care about this at this point because I'm only going to be using a single
+7:55
+utility within this large suite of utilities and it doesn't have any effect on that particular
+8:01
+package.
+8:02
+So let's go ahead and change into the examples directory and within that location you are
+8:07
+going to find quite a few Python scripts.
+8:11
+The only one we need to worry about is called secretstump.py.
+8:17
+That's what's going to take those hashes and extract them presenting them to us in
+8:23
+plain text.
+8:25
+Secretstump.py.
+8:26
+To run it we'll simply type Python 3 space secrets and up dot py and if I don't specify
+8:32
+any parameters you will as expected get the help for using this utility at the very top
+8:38
+you can see the version and as you can see there are quite a few parameters we can specify
+8:43
+here it can do a lot of stuff lucky for us though the syntax is very simple think about
+8:50
+what we've collected so far a Sam hive and a system hive right all we need to do is
+8:56
+feed in those two hives to this utility along with one additional keyword and that's
+9:01
+it.
+9:02
+So we'll repeat the last command and simply append a dash Sam and then guess what we
+9:07
+simply specify the full path to the Sam registry hive which in my case is under mount c users
+9:16
+and then miser on this particular box is called Davis RG desktop and then Sam because
+9:22
+that's where we copied and pasted it from the VHDX if you remember and then for system
+9:27
+same deal dash system and then the full path to that hive which is again mount c users
+9:34
+Davis RG desktop and then system and then we just need one other keyword at the end which
+9:40
+is local so if I hit enter here let's take a look at what we have first let's look at
+9:47
+the format we have the user or user name the red a land man hash which is a very very
+9:55
+old hash in an nt hash the land man hash that I'm highlighting here starts with a a and
+10:01
+ends with e e across the board that is the value of an unset or empty land man hash which
+10:08
+is a good thing because we're certainly not using land man on a modern windows 10 system
+10:13
+unless you explicitly enable that for some terrible reason so it's the second hash that
+10:17
+we're after all we need to do now is simply copy what you see on the screen and paste it
+10:23
+into something like pastes dot text which is what I'm going to end up creating and that
+10:28
+will carry us to our final part of this episode.
+10:33
+Okay we're in the home stretch now and as I previously alluded to you'll see a hashes
+10:37
+dot text file that I've placed on the desktop if we open that up I simply copied and pasted
+10:43
+the output from the secrets dump utility into this file and this is what we're going to
+10:49
+be feeding to hash cat let's go ahead and open windows terminal and at this point if you
+10:54
+want to follow along go ahead and download hash cat and the rock you word list that we're
+10:59
+going to be using you'll find links in the description below and if you haven't already
+11:03
+you may also want to watch introduction to hash cat parts one and two check the top right
+11:08
+corner and the description for links to that the word list I'm referring to is pretty
+11:14
+basic by most standards but rock you was one of the first large plain text breaches and in
+11:20
+general passwords that fall to this are the weakest of the lot.
+11:24
+So let's run hash cat dot exc dash a zero for the dictionary attack mode dash m 1000
+11:33
+to specify in T hash which is the type of hash we're trying to crack the full path to
+11:38
+that hashes dot text file and then the path to the rock you word list which I've placed
+11:43
+in the word list directory and that's it.
+11:46
+So when I hit enter here I want you to pay attention because I am not editing this
+11:50
+or speeding this up in any way this is real time and as you'll see from the started
+11:55
+and stopped times this took three seconds.
+12:00
+So let's scroll up to the top and try to unpack some of this.
+12:04
+First off you can ignore those warning messages in yellow for now for reference this computer
+12:09
+is running an RTX 2080 super for what it's worth I have an RTX 3090 on order but it
+12:16
+would certainly not be necessary for this particular exercise.
+12:20
+So check this out right away we see about half a dozen of these fall and as I said we
+12:25
+can tell that these are all pretty weak one in particular jumps out as a concern because
+12:30
+it's literally admin.
+12:32
+So one of these accounts has a password of admin which is pretty terrible.
+12:37
+Let's see who that belongs to by using some additional hash cat options to do that will
+12:43
+clear the screen and rerun hash cat dot exc with a couple of additional parameters.
+12:49
+So we're going to use dash dash show dash dash username once again dash m 1000 for the
+12:58
+int hash and then we'll point to that hashes dot text file.
+13:02
+This will allow us to see username colon hash colon plain text password and check that out.
+13:10
+It is unfortunately the admin user that has a password of admin that's pretty terrible
+13:16
+right also check out carol help desk mic Peter all of those seem to have fallen as well
+13:23
+and at the very top demo which has a password of temp temp.
+13:28
+So there are at least two more hashes in here that will fall with the help of the rock
+13:33
+you dictionary and rule based attacks one additional one may require a larger dictionary
+13:38
+and the last two will likely not be cracked but we'll leave the remainder of the passwords
+13:44
+as an exercise for the viewer in the meantime we have additional evidence to add to our
+13:49
+investigation.
+13:51
+So in our fictitious but based on a true story episode it was admin admin combined with
+13:58
+the fact that RDP was exposed to the internet in the first place that led to the compromise
+14:03
+of our environment.
+14:05
+Let's recap what we've covered here.
+14:08
+We first defined our problem which was that we wanted to determine the passwords associated
+14:13
+with local user accounts on a compromised system.
+14:17
+We used Cape and the registry hives target to grab the registry hives from that system.
+14:23
+We then copied the Sam and system hives from the Cape poll onto our analysis workstation
+14:30
+and used a tool within the in packet suite called secrets dump to decrypt the hashes within
+14:36
+the Sam hive based on key material from the system hive.
+14:41
+As a side note windows used to use the RC4 encryption algorithm for that purpose but in
+14:47
+windows 10 anniversary update Microsoft switched to a yes 128 cbc with an IV or initialization
+14:55
+vector.
+14:56
+That isn't the legacy crypto I referred to in the intro.
+15:00
+Once decrypted though the in t hash is actually the password encoded in utf16 little indian
+15:07
+and hashed with md4.
+15:10
+That's right md4 not even md5 so that's why hashcat was able to fly through those
+15:16
+from a computational standpoint.
+15:19
+I hope you found this information useful and maybe it's something you can put to use at
+15:23
+some point during your investigations.
+15:25
+A special thanks to nolsec.us.
+15:29
+Be sure to check out his website for plenty more info set content.
+15:33
+And as always thank you for watching, thank you for subscribing and I'll catch you in the
+15:38
+next 13 cubed episode.

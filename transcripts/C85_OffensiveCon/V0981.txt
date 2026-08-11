@@ -1,0 +1,1574 @@
+0:00
+I'm going to be here.
+0:05
+How's it going everybody?
+0:06
+Thanks for having us out here at OffensiveCon.
+0:07
+We're excited to be here.
+0:09
+It's our second year of the con and our second year of presenting.
+0:12
+So we're excited to share with you some new stuff about exactly how hard it is.
+0:16
+Our talk is bugs so nice.
+0:18
+They patched them twice, a continuing story of failed patches.
+0:22
+And specifically, we're going to be looking at what is going on in Adobe Reader and Adobe
+0:27
+Acrobat.
+0:28
+One of our new favorite products we've been following now for a good amount of time,
+0:33
+trying to understand exactly why we're receiving bugs twice from researchers out there in the
+0:39
+world and kind of getting an understanding of how well Adobe is actually patching their
+0:43
+software and how much time and effort they're actually looking at the actual root cause
+0:47
+of the bug itself.
+0:49
+So we're going to be talking across the architecture of the application itself, looking specifically
+0:54
+now at the JavaScript API.
+0:56
+We'll be looking at the XSLT engine.
+0:58
+We'll be looking at indexing and we'll be looking at file parsing.
+1:01
+So we're not talking about just one specific area in the application, but the actual like,
+1:05
+what seems to be widespread misses as it relates to patching vulnerabilities.
+1:11
+So a quick first introduction.
+1:12
+My name is Brian Gorns.
+1:14
+I'm the director of vulnerability research inside of Trend Micro.
+1:17
+My primary responsibility is running the Zero Day Initiative program, which is the world's
+1:21
+largest vendor agnostic bug bounty program.
+1:23
+So there's probably quite a few people in this room that we've purchased bugs from before,
+1:26
+but we work with researchers when they find Zero Days.
+1:29
+We've purchased them and worked with the vendors to get them fixed.
+1:32
+And we release protections for those bugs while we do it.
+1:34
+I also organized the Pondo and hacking contest, which is happening here in March.
+1:40
+Working with here, Jaisal.
+1:41
+All right.
+1:42
+I'm Jaisal Spelman or Wondering Glitch and I've been part of ZDI for just shy of seven
+1:46
+years.
+1:47
+I very much like static analysis and that's generally what I try and focus on.
+1:51
+And I'm going to pass over to the tool.
+1:53
+But one thing about him that he probably won't like to admit is internally because he
+1:57
+spends so much time on Adobe, we usually refer to him as a doble.
+2:01
+Yeah, that's true.
+2:03
+So I'm going to do a lot of work with the ZDI for the past six years.
+2:09
+I'm also the case lead.
+2:10
+So basically any case that gets in the program, I dispatch it to the analysts and I end up
+2:16
+pricing the case.
+2:18
+I also do a lot of root cause analysis, research and stuff like that.
+2:22
+So if you guys have any questions on the pricing, which probably a lot of you do, so you guys
+2:27
+can write me outside.
+2:28
+I can probably fix that.
+2:29
+I didn't hear that.
+2:31
+I didn't hear that.
+2:32
+All right.
+2:33
+So just kind of quick overview.
+2:35
+The level set everybody, if you haven't spent a lot of time looking at Adobe products before,
+2:40
+this whole presentation is about Adobe Acrobat and Adobe Reader.
+2:43
+It's been around since 1993.
+2:45
+And it's very widely deployed.
+2:46
+In fact, I get to talk to customers here deploying security solutions for our company.
+2:51
+And routinely that is the software of choice for PDF stuff.
+2:57
+If they're not using that, they're using Foxit, right?
+2:59
+One of those two.
+3:00
+What's nice about Adobe is this multi-platform.
+3:02
+So from an attacker's perspective, you can actually take the bugs that you're finding and
+3:06
+lay them across different architectures.
+3:08
+So that's really makes it an interesting target to look at.
+3:10
+And there's a lot of old code in there.
+3:12
+So we'll be talking a lot about the details of the architecture.
+3:15
+And some of this stuff is open source code that's no longer maintained.
+3:18
+Some of its stuff they've purchased from third parties.
+3:21
+Some of its stuff that they just don't actively maintain very much because there's not a lot
+3:24
+of feature change in it.
+3:25
+So there's a lot of old code in this product that you can go look at and reach from basically
+3:30
+a PDF document.
+3:31
+So it makes it a fully featured, very rich, very juicy attack surface for people.
+3:35
+And we're seeing a lot of that come into the program now.
+3:38
+So if we look at the architecture, there's really three different components that she kind
+3:42
+of want to be aware of.
+3:43
+This is the core Acrobat DLL or Acroread32.DLL.
+3:47
+And from there, you can actually load in different plugins based on the functionality that you're
+3:51
+trying to trigger inside of Adobe Reader or Adobe Acrobat.
+3:55
+So you can look there eScript and a bunch of different plugins that you can pull in and
+3:59
+start activating stuff.
+4:00
+And they actually have access to these back-end DLLs, which you can then go and kind of execute
+4:05
+a lot of the functionality here in the back end of the application.
+4:09
+And that's where a lot of the older code exists, right?
+4:13
+So that's where you're going to want, eventually, want your POCs, your exploits to be hitting.
+4:17
+Now, we sit there and we kind of look across the ecosystem and we're buying vulnerabilities
+4:23
+from lots of people from all over the world.
+4:24
+So we kind of get an idea of what's happening and when things are becoming hot and
+4:27
+specific applications.
+4:30
+And so back before 2015, Adobe Reader, in the least in our program, wasn't receiving
+4:35
+a lot of attention, right?
+4:36
+So we did some research and we released some research in 2015 that kind of spawned some
+4:40
+people to actually start submitting vulnerabilities in Adobe Reader into our program.
+4:44
+And it's really blossomed since then.
+4:46
+So you can see back in 2015, what's depicted on the slide is the patched bugs that have
+4:52
+come from ZDI in Adobe Reader over the years, right?
+4:56
+So 2015, in the less than 100 bugs, here in 2018, almost 250 zero days that were submitted
+5:03
+and purchased by us and patched.
+5:06
+Now, we kind of look at those bugs as they're coming in and we try to like analyze for trends,
+5:10
+right?
+5:11
+That's kind of what our job is.
+5:12
+And so what we want to do is understand why the bugs are manifesting in the way that
+5:16
+they are, right?
+5:18
+And what we noticed in 2017, 2018 is that a lot of the bugs that we were receiving were
+5:24
+just basic bypasses for the bugs that we had purchased in the previous years, right?
+5:29
+So, you know, like we're paying twice now for these bugs, like what the heck's going
+5:32
+on?
+5:33
+And so, you know, we wanted to kind of analyze that a little bit more and we continued
+5:37
+to watch this trend happen.
+5:39
+And that's why we're talking here today.
+5:41
+We want to show you the actual code, the actual fixes and the proof of concepts and the
+5:46
+bypasses for this proof of concepts so that you can understand and look at those bugs
+5:50
+yourself, generate proof of concepts and maybe find your own bugs based off of bugs that
+5:54
+are previously patched.
+5:55
+Now, we're not the only ones who noticed this.
+5:57
+In fact, you know, this is a, some conversation that was happening around the time that the
+6:03
+hacking team reached occurred with Vitaly Torpoth talking to and I quote, it says, Adobe analysts
+6:09
+are awful and they're unable to extrapolate, right?
+6:12
+And, you know, basically what he's saying is that when they get a patch, they're not actually
+6:17
+looking beyond the patch itself, right?
+6:19
+As a security researcher or security analyst, you want to, you know, you hope that the researcher
+6:23
+takes your bug and they look at it and they apply it across the entire software, try to
+6:28
+fix a lot of bugs, especially if you're on the white-hand side of the market.
+6:31
+That's what you want to happen, but in this case, even not, most of the industry is now
+6:35
+starting to notice that they're missing bugs.
+6:38
+And I know Jay's will have a story here where he wanted to talk about, you know, an experience
+6:41
+that liked this.
+6:42
+So, around the same time, it was either 2015, maybe 2016, there was a vulnerability that
+6:48
+Project Zero had reported in JPEG 2000 parsing.
+6:53
+And it was a stack buffer overflow and there's an if-else clause in the if-close, it went
+6:58
+true.
+6:59
+There was a potential stack buffer overflow.
+7:01
+Adobe patched it and Tencent looked at it and ended up taking advantage of another bug
+7:06
+that's right next to it and used it in Poon-to-own.
+7:10
+And the kind of funny but really just sad thing is it was in the yelves clause, almost the
+7:14
+exact same stack buffer overflow.
+7:17
+They fixed it in the if-branch, but not the else branch.
+7:21
+And that's just a great example of how they very much focus on breaking the crasher and
+7:27
+not really looking any further than that.
+7:29
+Yep.
+7:30
+So, we're going to go over set of failures, right?
+7:33
+We're going to be looking at JavaScript, we're going to be looking at XSLT, we're going
+7:36
+to be looking at indexing, and we're going to be looking at file parsing inside of a
+7:39
+reader.
+7:40
+And the way that these sections work is we're going to give you a little bit of overview
+7:43
+of what is actually happening in that attack surface, how you would go about hitting it,
+7:46
+what a proof of concept looks like.
+7:48
+We'll talk about the vulnerability and question that we're looking at and we'll talk about
+7:51
+how it was triggered.
+7:52
+We'll talk about how exactly they patched it the first time.
+7:56
+And we'll talk about how easy it was to bypass and how fast that happened.
+8:00
+And then we'll talk about how they actually fixed the core issue.
+8:03
+So when we look at JavaScript API, these are the components in the architecture that you
+8:09
+can hit.
+8:10
+So from Acre Read 32, from the core effectively, you can actually force the loading of the
+8:15
+eScript plug-in.
+8:17
+And from the eScript plug-in, you can reach basically every subcomponent in the backend
+8:21
+that you want to reach, right?
+8:22
+So it's a very powerful way of accessing a lot of the old code that's in the back there.
+8:26
+XSLSE being the XSLT engine, you know, JPEG parsing a bunch of different stuff that you
+8:31
+can reach from JavaScript, which makes it a very interesting place to start if you're
+8:35
+going to attack Adobe reader or Adobe Acrebit.
+8:39
+Now obviously, you know, everybody, if you haven't been in computing for, you know, basically
+8:44
+five minutes, you'll know about JavaScript.
+8:47
+And what's interesting about Adobe is they have a bunch of JavaScript APIs that they've
+8:51
+developed specifically for manipulating the actual PDF itself and making it interactive.
+8:57
+Things related to forms, JavaScript APIs for forms, annotations, collaborations, et cetera.
+9:01
+Like that document is like 300 pages long, right?
+9:04
+So there's a lot of documentation and a lot of stuff going on there for you to interact
+9:09
+with.
+9:10
+Now the JavaScript engine itself has actually a spin-off spider monkey, so if you've been
+9:12
+looking at that engine, that's what it is.
+9:14
+Now that's all contained in eScript API.
+9:18
+And a lot of the documentation, though there is a lot of documentation, it's actually
+9:20
+not all of the features of the JavaScript engine are actually documented.
+9:24
+And so a lot of them are undocumented, and you can actually use some of the stuff that
+9:28
+we've talked about in other presentations related to Adobe reader to actually find all
+9:33
+of the undocumented APIs.
+9:34
+And some of the bugs that you're going to be able to uncover are in places that, you
+9:38
+know, people didn't know actually existed, right?
+9:40
+So there's an example of collaboration where the documentation says there's three APIs
+9:45
+off of that object, but in reality, there's like 130, right?
+9:49
+So at one point there was.
+9:51
+And some of the APIs are only available for the standard or professional versions of the
+9:55
+product.
+9:56
+So obviously, if you're going to be targeting somebody, you're going to want to know what
+9:59
+they're using.
+10:00
+And so it gives you an idea of what's available to attack.
+10:04
+Now Adobe's JavaScript runs in two contexts, and Adobe is going to describe a little bit
+10:09
+about what those contexts mean.
+10:11
+So in the JavaScript API, there's two contexts, privilege and non-privilege.
+10:16
+So if you guys go to the API reference that Adobe provided, you would notice that there's
+10:21
+an S, like red S next to certain APIs.
+10:25
+And these APIs are considered restricted or privileged.
+10:28
+The non-privilege APIs can be executed from normal docking privileges.
+10:32
+So if you open a PDF, you can execute these APIs, no problem.
+10:36
+And all these APIs have been really hardly audited and looked at.
+10:40
+So most of the bugs that you guys have seen in public are definitely bugs targeting
+10:46
+these non-privilege APIs.
+10:48
+Nevertheless, the privilege APIs can be executed from inside a dock context if they're inside
+10:55
+a trusted function, and they're re-engrapped in a block, like a begin-privilege and end-privilege.
+11:02
+These APIs have not been properly audited and have not been looked at.
+11:06
+For the one reason is that basically it's really hard to hit them, and it will actually require
+11:11
+you a privilege API bypass in order to hit these.
+11:15
+So you basically have to chain multiple works together to hit them.
+11:18
+That's basically over.
+11:19
+I have to say it on this slide.
+11:20
+And we do believe that there's quite a few like use-after-freeze and things back in
+11:24
+those privilege APIs.
+11:25
+So if you can figure out how to do the JavaScript API restriction bypasses, you can hit a lot
+11:31
+of those bugs, and those are very valuable now.
+11:33
+In fact, there was a bug that I found in AppifledGPI, which is very simple.
+11:38
+It's called Launch URL, the API.
+11:42
+And basically on the macOS version of Acrobat, it was vulnerable to command injection.
+11:47
+So basically, you forgive it a path of an actual binary on disk, and it's going to execute.
+11:52
+So that's how much it has been audited, no one toss it before.
+11:56
+All right.
+11:57
+So the first place we're going to look a little bit is annotations.
+12:00
+So annotations are used to create interactive forms and multimedia inside the PDF itself,
+12:06
+and the APIs are relatively simple.
+12:08
+You can see just add a not or get a not or get a not.
+12:12
+There's different APIs that are available.
+12:13
+Basically, allowing you to create that interactive PDF that you want to have, right?
+12:17
+That's the whole point of the PDF.
+12:19
+But when we took a look at this attack surface, one of the things that we had, one of the
+12:23
+kind of earliest veins of gold that we found in Adobe Reader was basically finding ways
+12:30
+to force the document object to be freed.
+12:33
+And the first way we figured out how to do that was using closed-doc, right?
+12:36
+So the proof of concept here, CVE 20160931, is a bug that I found when we were doing an
+12:44
+audit of this.
+12:46
+And we had discovered that in this case, the structure of the proof of concept is you
+12:49
+define an array, you define a getter off of the array for the first element in the array,
+12:54
+and in the getter handler, you basically just close the doc.
+12:57
+And then basically any API that you call later when it handles the getter, it's going
+13:00
+to remove the document object and force it to use after free condition.
+13:04
+So this is the simple proof of concept that we developed back then.
+13:06
+And it was so effective that I remember we were sitting at Recon, we had figured this
+13:10
+out, and we were literally sitting in the conference room there at Recon, going line by line
+13:15
+through the API document, and we had discovered like dozens and dozens of bugs just sitting
+13:19
+there at the conference using this technique and just not even like fuzzing, we just
+13:24
+taken the document and going through it.
+13:26
+So we said, okay, we're going to go fix this issue with Adobe so we disclose all those
+13:30
+bugs to Adobe.
+13:32
+And they fix the bugs and we kind of said, okay, well that's that, right?
+13:36
+We're going to move on, we're going to find something else.
+13:38
+And we decided let's take a closer look at finding other ways where we can close a document.
+13:42
+And this is what we came up with.
+13:44
+Right?
+13:45
+Literally the same exact thing except just with a different way of closing the document.
+13:51
+So very highly effective.
+13:52
+We found that like literally a couple days after the patch went out.
+13:55
+And again we went line by line through the API document, rip a note apart, and finding
+13:59
+dozens and dozens and tons of bugs just looking for different ways of closing the document.
+14:03
+Right?
+14:04
+So you think that they would have tried to take a little bit deeper approach just not like
+14:08
+looking at the proof of concept itself and trying to stop that but trying to figure out
+14:11
+the core of the issue itself.
+14:13
+Now the way that we're going to look at like the real bugs that we're going to analyze
+14:18
+here, the first bug is this is an OCD set intent, heat-based buffer overflow.
+14:23
+The original bug was the CVE 2018 4910 and it was ultimately fixed in CVE 2018 4962.
+14:34
+So what is OCD?
+14:36
+So OCD is optional content groups.
+14:38
+And so when you want to have an inner, if you think about like a CAD drawing and it's
+14:42
+got different layers to show different things, that's effectively what OCD is for Adobe.
+14:47
+It controls the visibility of page content.
+14:49
+So if you have one, I want to have a multi-language document, you can have a layer that's English
+14:54
+and a layer that's German.
+14:57
+And so you can toggle this on and off with flags.
+14:59
+And you can all do it from JavaScript.
+15:01
+So there's a nice set of APIs that are available to you and the one that we're looking at specifically
+15:05
+here is set intent.
+15:07
+So set intent is supposed to set the intent array for the OCD objects and it basically takes
+15:14
+an array.
+15:17
+So if we look at the core bug, it's the classic integer overflow leading to a heat-based buffer
+15:23
+overflow, almost like stuff textbook from some of the C programming guides back in the
+15:27
+day.
+15:28
+So what ends up happening is in the vulnerability, they get the length property right here,
+15:33
+fully controlled by the attacker.
+15:36
+Then they do a little bit of math, multiplying it by two, which wraps the integer to make
+15:40
+it small.
+15:41
+Then they call malloc on that to create a small heap object.
+15:45
+And they start using a loop, start going into a loop with a length that was provided previously
+15:50
+and ends up resulting in a heat-based buffer overflow.
+15:54
+Classic programming mistake being made in this example.
+15:59
+So how do you trigger the bug?
+16:00
+So let's take a look at the proof of concepts.
+16:02
+Now the CNT doesn't really matter, but what's important is that there's an array there
+16:06
+and there's a new, there's a new getter, we're defining a getter that basically sets
+16:11
+the length of the array to a value that you know is going to wrap.
+16:14
+So in this case, 7FFFFFFFF.
+16:18
+Then you're going to call set intent on that array and it's going to result in the
+16:21
+heat-based buffer overflow occurring.
+16:23
+Now, you know, we sent this to Adobe, sent this proof of concept to Adobe and they released
+16:31
+quarterly.
+16:32
+So it took them months to analyze this bug.
+16:34
+They had months to look at it.
+16:36
+And so if you would think like an integer overflow, you know, you're going to do some sort
+16:40
+of overflow calculation, overflow check to make sure that you're actually, you know, correctly
+16:45
+fixing the bug.
+16:46
+But no, this is what they released, which is effectively only looking.
+16:53
+It's still a quick fix.
+16:58
+It's a fix.
+16:59
+It's a fix.
+17:00
+It's a fix.
+17:01
+You can imagine the guy was probably under a lot of pressure or the guy or the gal under
+17:05
+a lot of pressure to get the fix out.
+17:07
+So this is what we had, right?
+17:08
+This is what we get back.
+17:10
+It's quality.
+17:12
+It's quality.
+17:13
+All right.
+17:15
+So you think about, okay, obviously, you know, this is this patch is bypassable and it
+17:20
+was kind of funny because we know we know people look at our advisories and they know that
+17:25
+the bugs are coming out and we know that people monitor all that stuff, right?
+17:29
+And so when the patch came out, the researcher literally sent us the bypass in like an hour
+17:36
+after the patch was released.
+17:38
+So like immediately into the system, we had a brand new proof of concept that was triggering
+17:43
+the bug again and this is exactly what the proof of concept looked like.
+17:49
+So quite good.
+17:50
+Yeah, very enjoyable.
+17:51
+We paid him twice.
+17:52
+So yeah, you know, when I'm working on budget, I got to account for all of these things.
+18:00
+Later on, Adobe figured out how to do math and they fixed the vulnerability.
+18:07
+I made sure that the end length wouldn't wrap anymore and as a result, the calculation
+18:11
+would work.
+18:12
+So that's the JavaScript API section.
+18:15
+I'm going to turn it over to Jay Zill.
+18:16
+He's going to do the XSLT section and talk about that area.
+18:20
+All right.
+18:21
+So extensible style sheet language transformations, XSLT.
+18:26
+If you're ever in the unfortunate position of having to process XML at all, but especially
+18:30
+large quantities, XSLT is a great way of just transforming that data.
+18:34
+I'm going to give a little bit of an overview of it, but in Adobe reader or Acrobat, you
+18:41
+start off with Acrobat or Acrobat or Acroread 32 as you would with anything else.
+18:45
+You have two vectors in.
+18:47
+You have eScript, so through JavaScript.
+18:49
+And then you have Acroform, which is like XML forms architecture.
+18:54
+Not really going to cover that as much though one of the bypasses will use that.
+18:59
+Ultimately though, it ends up going to AXSLE, which as Bransett earlier is the XSLT parser.
+19:05
+All of that code is really just based on and really is an open source product called
+19:12
+Savlatron.
+19:13
+That was abandoned, I think, in 2010.
+19:17
+The version that Adobe is currently using in the reader that's shipping right now is a
+19:21
+slightly modified version in that they've had some spot fixes, but as we'll see, they
+19:26
+don't fix everything perfectly.
+19:28
+One of the first bugs we found, or we had submitted to us, was in 2012 by Nicholas Gregor,
+19:35
+who often goes by Agari.
+19:37
+He broke the patch and resummitted a case in 2017.
+19:41
+All right, so here's just an example of what using XSLT from JavaScript in reader might
+19:50
+look like, or from a PDF might look like.
+19:53
+We have this very, very simple XML document where we just have a self-terminating node, nothing
+19:58
+too interesting.
+19:59
+We then have an XSLT, which is also just XML.
+20:02
+In this case, it can match some stuff and then run for each for every node that it runs
+20:06
+and then just sorts it.
+20:10
+As far as actually using the API, it's fairly straightforward.
+20:13
+We parser XML and we end up with a DOM-like structure.
+20:17
+And then we can apply XSLT to particular nodes, which is the entire DOM or really anything
+20:23
+like that.
+20:24
+It's pretty straightforward.
+20:25
+If we go the XFA approach, it's very similar.
+20:28
+You can do it basically the exact same way.
+20:30
+So either works perfectly for triggering bugs here.
+20:34
+One thing I want to point out is, one thing that you really want to do if you're doing
+20:39
+any sort of parsing of XML documents is filter and only do certain things on certain nodes.
+20:45
+And it's done through these select attributes using a syntax called XPath.
+20:50
+The main thing about XPath is you have fairly rich syntax to specify individual nodes depending
+20:56
+on their ancestors or siblings or anything like that, also their attributes.
+21:00
+And to aid that, there are a lot of functions that are available to you that you can call
+21:04
+to basically filter out different nodes.
+21:09
+And the voter billies we'll talk about are in the Lang function.
+21:13
+CVE 2012, 1530, and the bypass is 2017, 2962, both of which are type confusion.
+21:23
+So the way the functions are handled for everything in the XPath syntax is there's a giant switch
+21:30
+statement for every single function that it supports inside a function called call
+21:35
+funk.
+21:36
+And when it goes to handle this, it ensures that it has the correct number of arguments.
+21:41
+So for the Lang function, it's responsible for filtering based on the localization of
+21:45
+a particular node.
+21:47
+And it does that by checking to see if that particular node has a Lang attribute set to
+21:52
+whatever language you're looking for.
+21:54
+So if you want EN-US and your node specifies EN-US, then that would return true and it would
+22:01
+be selected.
+22:03
+If it doesn't, but its ANCESTER node does have that set, then that would be selected.
+22:08
+And so basically, it'll iterate from the current node all the way up the ANCESTER chain and test
+22:13
+repeatedly whether or not it even has a Lang attribute and if it does, if it equals what
+22:17
+we're looking for.
+22:19
+And so that's exactly what this code does.
+22:21
+But if we look at the very, very bottom line, we'll see a call to a function, or what looks
+22:26
+to be a function called to E, on the current node that we're offering on.
+22:30
+And then that gets dereferenced and function gets called as a result of it.
+22:34
+If we look at what to E actually looks like, we'll see that it's actually a macro.
+22:40
+That macro is just calling another macro called cast.
+22:43
+Cast is conditionally defined.
+22:45
+The sad thing is, if you are looking at a debug build, then it's going to call a dynamic
+22:50
+cast.
+22:51
+And if you do a dynamic cast of incompatible types, then it's just going to return a
+22:55
+null pointer.
+22:56
+And in this particular case, because we're already dereferencing it without checking
+22:59
+anything, we'll end up crashing.
+23:02
+But pretty innocuous.
+23:04
+In the production code, that ends up being a C-style cast.
+23:07
+And so we just trigger type confusion if we're providing a type that is not appropriate.
+23:13
+Unfortunately, it is trivial to use a type that's not appropriate.
+23:18
+And with this proof of concept, it'll end up crashing as it tries to dereferenced ABCD
+23:23
+as a pointer.
+23:24
+It's very, very straightforward here.
+23:26
+We just have an access-ill style sheet that will match on every node.
+23:30
+And then just call line function on a given node.
+23:34
+In this case, it will target ABCD.
+23:36
+And you have an instant access violation.
+23:40
+So Adobe patched this as they patch everything and fixed the crash.
+23:45
+It no longer crashes.
+23:47
+Unfortunately, for them, they didn't actually properly look for any variant testing whatsoever.
+23:53
+And Agari found that he could bypass this patch with text nodes or comment nodes.
+23:59
+And so here's an example.
+24:01
+And in this case, he just merged the two together in an XFA.
+24:05
+And in this case, we'll end up crashing as we dereference XXXXXXXXX.
+24:10
+It's very, very simple and very, very straightforward to trigger.
+24:14
+And Adobe just did not do any variant hunting.
+24:18
+We can see how they actually patched things to updated sabletron sources that they provided.
+24:23
+And we can see that they actually fixed it properly, but now actually using a call to
+24:27
+dynamic cast.
+24:29
+And there's a no pointer check afterwards.
+24:31
+And we know that it's in reference to the case that we submitted to them because we see
+24:35
+fixed for P-Sert 6-0-8-1, which is just kind of nice to be able to see.
+24:40
+And with that, I'm going to hand it over to Abdul.
+24:43
+So I just want to note down that recently, Adobe updated the sub-Lotron code and uploaded
+24:48
+it to the website so you guys can check it out if you guys want to find more bugs.
+24:51
+All right.
+24:52
+All right.
+24:53
+All right.
+24:54
+So I'm going to talk about indexing, which is relatively a new attack surface.
+24:58
+I found this last year, right before point to on.
+25:01
+And it happens that Sebastian Appel, which he was here probably, was looking at the same
+25:06
+thing, but he was being a little bit quiet about the whole attack surface.
+25:10
+So you can reach this through eScript, catalog, plugin, search plugin.
+25:17
+And eventually everything that deals with index parsing happens inside Onix32.
+25:22
+So what's Onix32?
+25:25
+An overview.
+25:26
+So basically, back in 2003, Adobe needed a solution for like an indexing solution for fast
+25:32
+searching in PDFs.
+25:33
+So they bought a solution from a company called Lextec.
+25:36
+They offered that and it's called Onix.
+25:39
+And basically it's just a DLL, Onix32, the DLL.
+25:43
+And everything that deals with indexing, fast searching happens there.
+25:47
+The nice thing about this is that this DLL hasn't been audited.
+25:50
+So when I saw the DLL, it was the last time it was modified, was 2015, I guess, or 2014,
+25:55
+something like that.
+25:56
+So no one touched it.
+25:58
+I included a note here that it was possible to trigger the parsing code through JavaScript.
+26:04
+I don't think it's possible anymore.
+26:05
+I'll get to that later.
+26:08
+The nice thing about Lextec, they provided documentation and sample code of how to use
+26:13
+the actual API of Onix.
+26:15
+So what I did is basically I read the documentation, grabbed some sample code, I wrote a small harness,
+26:21
+and I started fuzzing the DLL directly.
+26:24
+And I found a bunch of bugs.
+26:26
+Sebastian did the same thing, but he basically took another approach.
+26:29
+He did when I failed.
+26:30
+I did my own framework.
+26:32
+He found more bugs than I did.
+26:35
+Just fine.
+26:38
+I admit defeat.
+26:42
+But I'm going to be discussing an interesting bug, which is an interested point of reference,
+26:47
+which we both found.
+26:48
+I found it first, so I had contests on that.
+26:51
+But he bypassed it past later, so it's an interesting use case.
+26:55
+Okay.
+26:56
+So initially I wasn't looking at indexing.
+27:00
+I was looking at the catalog plugin, which is a plugin that only exists in Acrobat and
+27:05
+not Mirror, which is the paid version of Reader.
+27:10
+So the way it works, you can grab a bunch of PDFs and create an index file for them
+27:16
+for searching purposes.
+27:17
+That's a whole purpose of catalog.
+27:20
+So it generates a PDF file, which links to two files, a master index file and a sleeve
+27:25
+index file.
+27:26
+In this case, it's index and index one.
+27:30
+I found out that you can pass the path of PDFs and then you can call build on it and
+27:34
+then you can force the parsing to happen, the Onix code.
+27:40
+The thing that I wrote down is that build is not documented.
+27:42
+So I found it by accident, was just dumping shit out of catalog and I found it, which is
+27:47
+cool.
+27:48
+Eventually, I was able to find two types of bugs.
+27:51
+The first type of bug affected the actual core APIs of Onix and the second type of bugs
+27:57
+actually affected the way these APIs were being used inside catalog.
+28:02
+So if you use them in a specific way, then you can trigger heap overflows in the catalog
+28:06
+plugin.
+28:07
+So that said, I ship I think three bugs, four bugs.
+28:11
+I think three in catalog and one in the core APIs.
+28:14
+Send them to Adobe.
+28:15
+They went back to us with the fix and they fixed, they basically had to send the Onix
+28:22
+bug to Lextack.
+28:23
+They fixed it.
+28:24
+They got back to us and they disabled the build API.
+28:27
+So basically according to them, we cannot reach that code anymore.
+28:31
+They went in like they went further and they were like listen, we're not interested in
+28:35
+these indexing bugs anymore.
+28:37
+And they sent us a big email listing all the possible vectors that they think that you
+28:41
+might be able to use to reach that code base.
+28:46
+And inside the email, they basically mentioned the search plugin and they were like listen,
+28:52
+the catalog stuff is done.
+28:54
+You might be able to reach it through search, but every single method in the search API
+28:59
+is privileged.
+29:00
+So basically you guys cannot do it unless you bypass the privileges.
+29:04
+So I was like okay, but it happened before.
+29:07
+We were able to bypass privileges and we were kind of making that argument.
+29:11
+And the meantime, I think the day after a couple of days later, Sebastian thinks me and
+29:16
+he's like well, I found a way to actually trigger all these bugs.
+29:20
+And I was like how?
+29:21
+He's like through the search plugin.
+29:23
+I was like no, Adobe said it cannot be done.
+29:28
+And in fact, what he found out is that one of the methods, if you pass a specific argument
+29:34
+to it, then you can hit it through the document privileges.
+29:38
+So basically, how do we didn't do their job quite well?
+29:41
+So in fact, what he did, he used that, which he did as a bypass, mitigation bypass.
+29:47
+And he slammed all these bugs together.
+29:48
+So he eventually sent like nine bugs or something.
+29:52
+So Adobe eventually admitted defeat as well.
+29:56
+And they started processing these cases.
+29:59
+So back to the untrusted pointer dereference.
+30:02
+So this was initially found by myself through fuzzing.
+30:06
+And it was in Iax start retrieval session, which is exported by onexpertitude.dll.
+30:14
+Basically, I called it an untrusted pointer dereference.
+30:17
+Sebastian calls it an internal overflow.
+30:20
+Which is true because you overflow an object and basically overwrite a file class t pointer,
+30:26
+which gets dereference later.
+30:28
+The interesting part is that you can overwrite that file class t pointer with a counter.
+30:34
+Initially, I thought that I cannot control this bug.
+30:38
+I did further investigation and it turns out that you can increment this counter by duplicating
+30:43
+a certain object inside the actual index file.
+30:47
+So I started replicating this object and I ended up with this like 10 mega write of index
+30:52
+file, which overplicated.
+30:54
+And eventually, I was able to control it in something meaningful.
+30:59
+We sent this back to Adobe and basically when they sent it to Lextack, when they patched
+31:05
+it, Sebastian got back to me.
+31:06
+He's like, I can trigger the bug again.
+31:08
+It was like fine.
+31:10
+Send over, send me the crash.
+31:12
+And it turns out that what they did, they didn't fix the core issue.
+31:16
+They added a simple magic value check.
+31:18
+And basically, if you get that check right, then you can trigger the bug again.
+31:23
+We sent that back to Adobe.
+31:26
+And Adobe sent it back to Lextack.
+31:28
+Eventually, they got back to us and they were like, listen, Lextack is not going to patch
+31:32
+this on time.
+31:34
+I think they don't have the staff for that or whatever.
+31:39
+And they figured out there's only one solution to it, which is basically killed the whole thing.
+31:44
+So they've disabled the whole onix code base.
+31:48
+Basically, if you want to enable it, you have to do that through the just free key or
+31:53
+whatever.
+31:54
+So this is the indexing stuff.
+31:56
+We're going to go over some file parsing issues.
+31:59
+Brian's going to start off.
+32:02
+So one of the kind of newest, hottest areas inside of Adobe Reader is file parsing vulnerabilities.
+32:08
+And the way that it works is a lot of it's happening in image conversion.
+32:13
+So image conversion will actually take an image and try to convert it into a PDF for display
+32:18
+within the application.
+32:20
+And it's really nice because you can, again, reach a lot of the backend DLLs where a
+32:23
+lot of this older code is, including font parsing, JPEG 2000 parsing, etc., color management,
+32:29
+graphics management, all of these different APIs that you wouldn't normally be able to
+32:32
+get to.
+32:33
+Now, the way that it works is that image conversion is a plug in that's actually used
+32:37
+to convert those images to PDFs, like I talked about.
+32:41
+It can be used, you can simply trigger it by opening the image file from within Reader.
+32:46
+So it automatically goes to image conversion and try to convert it.
+32:49
+But you can also do it from JavaScript.
+32:51
+So if you're trying to deliver a payload where the actual attack doesn't happen from opening
+32:55
+it from within Reader, you can open it from JavaScript.
+33:00
+And they actually leverage a lot of open source projects.
+33:02
+And so you can actually use like AFL and some of these other tools and fuzzy, fuzzy
+33:06
+actual open source components and then actually apply those bugs and try to trigger them
+33:10
+within side of the closed source binary itself.
+33:13
+Now, you can see like we put some of the stats for the types of bugs that we're getting
+33:18
+in this area.
+33:19
+And you see back in 2016, really nobody was looking at it publicly at least and sending bugs
+33:24
+to us.
+33:25
+So just two out of bounds reads.
+33:26
+But if you look in 2018, it really exploded.
+33:30
+People are really fuzzing this hard, including some of the people in this room.
+33:34
+And we're receiving a lot more bugs in this area and a lot of the code is being audited
+33:38
+quite heavily right now, which is interesting.
+33:40
+Now, like I said, you can do EMF parsing, JPEG parsing, all of these JPEG 1000 TIFF, etc.
+33:45
+So there's a lot of formats to go fuz if you're interested in.
+33:49
+But one of the most buggy formats that we have seen in the program is actually EMF.
+33:54
+Right?
+33:55
+So EMF can actually be parsed by Adobe Reader and Abdul is going to cover all of the details
+33:58
+related to EMF parsing in the bugs that we've seen there.
+34:02
+So one thing I want to mention that at one point of my life, I was fuzzing Foxit Reader.
+34:10
+So I was fuzzing the image conversion in Foxit Reader and I found I got this crash in a JPEG
+34:14
+image.
+34:15
+So I was like, let me test it in Adobe and basically a crash as well.
+34:20
+At one point as well, we were doing other thing on Adobe Reader and we found a bunch of bugs
+34:24
+in JavaScript.
+34:25
+We tested them in Foxit and they actually had two.
+34:27
+So if you guys have a bug here there, you might get it to head on the other software.
+34:33
+Just a note.
+34:34
+Back to EMF.
+34:35
+So basically it's a very old file format initially.
+34:39
+It's WMF.
+34:41
+Basically a 16-bit format back to Windows 3.11.
+34:45
+And then it evolved when 32-bit GDI has been introduced and basically it's now EMF.
+34:52
+It's documented.
+34:53
+It's all online.
+34:54
+Most of the bugs that we got were in the records parsing, which I'm going to get into.
+35:00
+Basically it has records, a bunch of records.
+35:02
+Each record has a type, a size and a record buffer, a bit like record buffer.
+35:07
+The buffer has a bunch of parameters but we're not going to get into that in detail.
+35:13
+So this is the record that we've been getting a lot of bugs in, which is the alpha blend,
+35:17
+which is basically specifies a block transfer from the source of it map to a destination
+35:21
+rectangle.
+35:23
+So the bugs that we received basically affect the way the parsing happens.
+35:28
+So before the parsing happens, it allocates a buffer and then it tries to copy a bunch
+35:36
+of data to it and then it allocates another buffer and tries to move it up to the initial
+35:41
+buffer.
+35:42
+And let me show you a cold flow from a high level.
+35:45
+So initially it starts off with parsing a bunch of EMF fields, then it allocates a buffer.
+35:50
+Right?
+35:51
+And it chooses the compression based on that then it goes to a parsing function, a bit
+35:57
+map parsing function.
+35:59
+In that parsing function, they're just switch case based on the bit count.
+36:04
+In these switch cases, it allocates another temporary buffer.
+36:07
+Then it puts bitmap data in it and it enters a copy loop and it copies it to the initial
+36:13
+buffer there, which is quite innocent but Adobe managed to massacre the whole thing.
+36:19
+So first of all, I'm going to be talking about a hate buffer overflow.
+36:24
+Let's go back to the flow.
+36:26
+So it starts parsing a bunch of EMF fields, which I have highlighted here.
+36:30
+These are the ones that are relevant to this bug.
+36:34
+It allocates the buffer based on the following formula, which is X source multiplied by
+36:40
+304 based on the value of bit count.
+36:42
+So if bit count is 18, then it multiplies it by 3.
+36:46
+If not, it multiplies by 4.
+36:49
+Can you guys see the bug?
+36:51
+Yeah.
+36:52
+I think so.
+36:54
+So basically, if you consider the following values, 5, 5, 5, 5, 6 multiplied by 3, then it's
+37:01
+going to wrap.
+37:02
+It's going to end up in a size 2 buffer and basically kind of integer overflow.
+37:08
+The compression that we used in this case is RGB.
+37:11
+So basically in Acrobat, it supports the following compressions, RGB, RL8, RL9 and bit
+37:16
+fields, which are in one switch case.
+37:19
+The bug that I'm going to be covering basically covers the first compression, which is RGB.
+37:25
+So when the parsing happens, we overflow the buffer, the integer, and then we go to the
+37:33
+switch case based on the bit count, allocate a buffer, get the bitmap, and then enter the
+37:38
+copy loop.
+37:39
+In the copy loop, the counter is the X source, which is something we control, and basically
+37:44
+overflow buffer, which is pretty simple.
+37:48
+This is the first allocation that happens there.
+37:51
+As for the patch, I don't think they actually understood where the bug is.
+37:57
+So something I did not mention before the allocation happens, there's a small multiplication
+38:03
+that's done that multiplies B width by B height, multiplied by 3 or 4.
+38:08
+It's not a check for integer overflow.
+38:11
+It's basically a check whether it exceeds a certain size for allocation, basically, if
+38:15
+it's exceed a certain size, then it's going to tell you not enough memory if not then
+38:19
+go ahead.
+38:20
+So what they did, they thought that B height is the problem.
+38:25
+So they entered another check.
+38:26
+So basically it fails because if you consider the following, if B height is 1, then basically
+38:32
+it's going to bypass that check, and it's going to allocate exactly the same way it
+38:37
+allocated before.
+38:38
+But they did, they basically just made sure that the bug that we send them does not hit,
+38:43
+right?
+38:44
+Regardless of whether what you guys control, what you guys do not control.
+38:50
+So I'm not going to go over the final fix because they basically fixed both bugs that I'm
+38:53
+going to be talking about in one fix, which we're going to mention later.
+38:58
+So the last bug that I'm going to be talking about is an out of our greed.
+39:03
+Going back to the code flow, it allocates the buffer.
+39:07
+This time we're not going to overflow the buffer.
+39:08
+We're not going to trigger the bug, choose the compression.
+39:12
+This time the bit count is 20, and then we allocate a temporary buffer.
+39:18
+The temporary buffer is allocated using this formula, which is basically bit count multiplied
+39:22
+by width, shifted by 3.
+39:24
+And if you guys consider these values, it's 20 multiplied by 80001, so the by 3, and then
+39:31
+it's going to overflow and you're going to end up with a buffer of size 4.
+39:34
+So basically they failed every allocation here.
+39:40
+Then you basically enter a copy loop.
+39:42
+The copy loop is based on the X source counter, and then you're going to trigger an out of
+39:46
+bond read when accessing that temporary buffer.
+39:50
+So how did they fix this guy?
+39:53
+So they went back five codes all the way back because they figured they have to fix it
+39:59
+from the root codes, right?
+40:02
+In this case, I think it was the same developer.
+40:05
+He basically thought that 7FFFF is the value that we should look for.
+40:11
+And he just wanted to make sure that the value is less than 7FFFF.
+40:15
+In fact, this is the comparison here.
+40:18
+So in fact, if you consider the following values, because we control all the values, right?
+40:25
+4 multiplied by 4002, shifted by 3, then you're going to have a small buffer as well.
+40:33
+And then you get to hit the bug again.
+40:35
+So I mentioned that all these bugs exist in the RGB compression, which is the first case.
+40:41
+Nevertheless, we did a little bit of investigation and turns out that case 0 and case 3 functions
+40:48
+are almost identical with a slight change in case 3.
+40:51
+So basically all the bugs that you can trigger in case 0, which is compression RGB, can
+40:56
+be actually triggered the same exact bugs in the other function, which is fascinating.
+41:02
+So that said, we sent all this to Adobe and they basically figured out that there's only
+41:07
+one way to fix it.
+41:09
+Kill the whole thing.
+41:11
+Yes.
+41:12
+So basically they disabled the MF parsing and you can enable through the registry.
+41:19
+They also, I think they killed XPS parsing because they got totally bad as well.
+41:24
+So that's basically it.
+41:26
+I'll give it to Brian to conclude.
+41:28
+Yeah, so in conclusion, obviously we're having lots of fun at the expense of Adobe.
+41:33
+But we wanted to, in reality, what we really did is only covered four pieces of the attack
+41:39
+surface that are interesting.
+41:41
+So if we look back at the general architecture, the real question that we have is what exactly
+41:45
+is going on in that code base.
+41:47
+So if we're seeing the same bugs over and over again, where are we seeing regressions happen?
+41:52
+In R, the regressions happening, how fast are they discovered, which means how fast can
+41:57
+us hack or take advantage of just basically patch, diffing the bug and finding the bypass.
+42:01
+There's an entire industry out there just for generating NDPOCs.
+42:05
+So if you look in, they spend a little bit more time just looking at Adobe stuff, you'll
+42:08
+be able to get into the industry of the zero day POC.
+42:11
+So it's kind of interesting.
+42:12
+So if we actually go back and highlight all of the pieces of the attack surface where
+42:16
+we've had regressions occur, it gets basically all red.
+42:21
+So when we're looking at the code base and we're spending a lot of time analyzing these
+42:26
+components, it's showing up over and over and over again.
+42:30
+Now you have to understand the big software manufacturer having four months to patch a
+42:34
+bug, lots of pressure, a lot of bugs coming in.
+42:38
+It is actually a challenge.
+42:39
+So if we look at the final thoughts, I like to kind of separate them between defensive
+42:42
+and offensive perspectives just because we're at offensive cons, so we're going to look
+42:47
+at the offensive side.
+42:48
+But patching can be very, very challenging.
+42:51
+So not only like us in the security world, we live and breathe all of these different
+42:56
+vulnerability types.
+42:57
+We spend a lot of time looking at the code base.
+42:58
+You can imagine a sustaining engineer who gets the bug from their security at mailbox,
+43:03
+has to go in and analyze all this stuff.
+43:05
+And they're getting lots of different bugs.
+43:07
+And so trying to fully understand all the proof of concepts, it can be really challenging
+43:10
+for them because they may not be as passionate about the code base as we are.
+43:15
+But in this case, we're poking at Adobe.
+43:17
+We were making fun of Adobe a little bit, having some fun with them.
+43:20
+But Adobe is not the only vendor struggling with this.
+43:23
+There's a lot of failed patches coming out.
+43:24
+In fact, Patch Tuesday was what this week.
+43:27
+And we're already aware of failed patches in the Microsoft patches that occurred.
+43:32
+So it's happening across the industry.
+43:36
+And if you look at the other verticals, like we're talking about Adobe and kind of these
+43:39
+big name vendors.
+43:40
+But if you look at the other verticals like SCADA and IOT, there's a significant amount
+43:45
+of failed patching going on.
+43:46
+And we'll be talking about that later in the year more than likely, where there's so
+43:51
+much failure going on when it relates to patches that it could almost be considered fraud.
+43:56
+So looking at a lot of what the vendors are doing is eliminating those old code bases.
+44:01
+They're not even going and fixing the bugs anymore.
+44:03
+They're just saying forget it.
+44:04
+We're just going to disable the entire thing.
+44:07
+Nobody's using this code base.
+44:08
+We're just going to get rid of the whole thing.
+44:11
+Which is a viable solution.
+44:12
+And maybe the only viable solution if you don't have access to the code or the developers
+44:15
+have left.
+44:16
+If you're not interested in supporting that stuff, make it really painful on the end user
+44:20
+to actually go use some of that functionality that they're trying to get access to.
+44:25
+Now from the offensive perspective, obviously patched- if thing is going to be extremely valuable
+44:30
+when you're dealing with code bases where you know patch failed patches are occurring quite
+44:33
+often.
+44:34
+And you can use that to go find new variants.
+44:36
+Like for example, the proof of concept that Jayaz will talk about at the very beginning
+44:40
+of the presentation where they didn't fix it in the else clause.
+44:43
+You can do a patched- if and go look in the else clause, even Project Zero would
+44:47
+miss that one.
+44:48
+So I know when we were doing the proof of the concept you wanted to mention the closed
+44:53
+off thing.
+44:54
+So Brian had shown that basically just replacing app to closed-doc with the exact menu item
+45:01
+closed was sufficient to trigger a bug.
+45:03
+There was one that I wanted to bring up then and I didn't remember until a couple of
+45:06
+slides later.
+45:07
+But a dual-founded bypass where it was just calling closed-doc twice to now trigger the
+45:12
+use after free.
+45:13
+That's just ridiculous.
+45:15
+Yeah.
+45:16
+So you're just spending a lot of time looking at the proof of concepts that exist out there.
+45:20
+Doing simple modifications or intspets, modifications can actually extend the life of the exploit.
+45:25
+If we look at the EMF one, there's like 15 different ways to hit the different bugs just
+45:29
+underneath in that one piece of code.
+45:31
+So there's ways that you can go about and extend the life of the proof of concepts that you
+45:35
+have or retrigger them and get paid twice by bounty programs like ours just by understanding
+45:42
+what's being patched, how it's being patched.
+45:44
+And always remember, 7FFF is the God of all evil, at least for Adobe.
+45:50
+With that, is there any questions?
+45:53
+I can't see you because the lights are so bright.
+46:11
+Thank you very much.
+46:14
+I want to thank offensive conference having us out here.
+46:16
+We sponsor it every year, so it's a great conference.
+46:19
+Thank you.

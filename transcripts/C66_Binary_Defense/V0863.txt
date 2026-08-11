@@ -1,0 +1,920 @@
+0:00
+What is good, my analyst, today we're going to be looking at a payload that was recovered
+0:09
+from a fishing attempt.
+0:10
+I'm going to show you the different steps, the tips and tricks and tools that I use when
+0:14
+I'm looking at payloads like this to extract the tactical threat intelligence from them.
+0:20
+This is not going to be a full-on malware analysis video.
+0:24
+I'm going to just show you the kind of different steps you can go ahead to go through this type
+0:28
+of payload to extract the information that you need to then assess whether or not there
+0:34
+are further indicators of compromise or other compromise systems on your network.
+0:39
+So with that said, let's just jump into it.
+0:44
+Right off the bat, you can see that we have a bunch of HTML data and then we have a base
+0:48
+64 command here and then obviously a bunch of base 64 data.
+0:55
+So you can use a lot of different tools out there.
+0:59
+Cyber Chef, if you're not familiar, you can just Google it.
+1:02
+Cyber Chef's in there and you could just do a from base 64, drive that over there and
+1:11
+it will do a base 64 decode.
+1:12
+You can do it all with Power Show or you can do the base 64 command natively here.
+1:19
+So let's go ahead and just get into my visual studio thing here and we're just going to
+1:26
+paste the base 64 data in there.
+1:28
+I'm going to save this as base 64 dot text.
+1:34
+That's good.
+1:35
+Base 64 dot text.
+1:43
+And then all we're going to do is cat base 64 dot text pass that over to the base 64
+1:50
+command dash cap of the without that output that to decode a dot text.
+1:58
+And let's go ahead and open that up.
+2:00
+We don't need to see that anymore.
+2:03
+We'll have it just in case.
+2:09
+Okay, so what do we see here?
+2:13
+Let's say I don't want to do that.
+2:14
+Yeah, let's do this too.
+2:15
+We'll have them all just nice and erode for you and show you.
+2:18
+I'm going to do this step by step.
+2:20
+I have no idea what's on the other side of this.
+2:22
+So you're going to see me make mistakes, but I think showing the work is important.
+2:25
+Okay, first thing here.
+2:28
+This SVG source on load.
+2:34
+This is something that you need to be familiar with in cybersecurity.
+2:38
+So the threat landscape, especially for fishing in terms of delivery mechanisms, they've been
+2:43
+migrating a lot towards HTML smuggling and one of those mere methods to do that is SVG smuggling.
+2:51
+And that's basically using the SVG image format to pass along packed encoded data and then
+2:59
+execute it using as the page is rendered, right?
+3:03
+So when the page is rendered, it's going to execute it.
+3:06
+And that way you can hide it within this because it all gets run on the fly and you can
+3:11
+run JavaScript in here.
+3:13
+So probably this is a bunch of JavaScript in here.
+3:16
+Another tip as defenders, if you're not getting comfortable or familiar with the different
+3:21
+functions within JavaScript, I highly recommend you do so just because so much of it is moving
+3:25
+in here.
+3:26
+The slash r slash n is keyword for return new line and there's a lot of them, which makes
+3:31
+me think that this is just like padding and an obvi-scation method.
+3:34
+If we get to the bottom, the way the SVG works, we'll see a document open document, right?
+3:40
+Yes.
+3:41
+And decode URI component, which means there's probably a lot of URI data in here and then here
+3:46
+we go.
+3:48
+Dot replace is just right here.
+3:52
+And JavaScript is just means I'm going to replace that slash r slash n with nothing.
+3:57
+That's it.
+3:58
+So we can easily figure out what this is.
+4:03
+What we're going to do is again, we'll copy and paste this data, we'll copy it, we'll
+4:09
+create a new file just so we can keep it all pastes this in there.
+4:14
+We will save this as we'll call it stage to dot HTML.
+4:24
+Okay.
+4:27
+So now we have this and what do we need to do?
+4:30
+We just need to do a replace function.
+4:31
+And again, you could use cybership for this.
+4:33
+So you can go ahead and do a replace and you could do simple string slash r slash n replace
+4:46
+it and you'll get the output or you can use the in bait in tools.
+4:52
+PowerShell is great at this.
+4:53
+You could use said a bunch of different ways you could do it.
+4:57
+With PowerShell, we would just basically say, let's call test equals paste all that data
+5:04
+in there.
+5:05
+It's going to take a second for it to do it.
+5:13
+And then dot replace.
+5:15
+Did it again.
+5:20
+The wire equals paste all this in there.
+5:26
+Actually, we could probably just grab it from the file.
+5:30
+Like I said, I'm going to do this live.
+5:32
+So, and then you just do dot replace slash r slash n.
+5:45
+And then just to quote, sir, replace it with nothing.
+5:48
+And then what did I call it?
+5:52
+Oh, do I.
+5:54
+And now we can see all that sort of data in there.
+5:58
+So we can copy and paste all that over.
+5:59
+So let's go ahead and do that and do a new text file and paste it in there.
+6:08
+Okay.
+6:10
+So now we have another HTML file.
+6:14
+So we'll call this stage to decoded dot HTML.
+6:21
+All right.
+6:24
+And like I said before, this is still don't be intimidated when you see this kind of stuff
+6:28
+because there's clues that you can look into.
+6:30
+So this is still HTML data.
+6:32
+And then you see all these percent and then numbers.
+6:37
+And then when it said at the bottom here, decode, you are I, where was it?
+6:45
+Yeah.
+6:46
+And here decode you are I component.
+6:49
+All this is just you are I encoded data.
+6:54
+So there are things on the internet you just type in you are ID code.
+7:02
+And look, first result.
+7:04
+You go like this, you paste it in there and hit decode and then you'll get the you are
+7:09
+I decoded data.
+7:12
+You can also use power shell to do this because it has a built in component to do a decode.
+7:22
+Right.
+7:23
+So I may open up my power shell again.
+7:26
+We'll clear all this.
+7:29
+And so we have staged.
+7:32
+So we'll call this just a wire equals get content stage to decoded.
+7:44
+And then you can use a one of the things we'll call.
+7:50
+We'll say.
+7:54
+I don't know.
+7:55
+The wire decoded equals system dot net dot web utility spelling.
+8:06
+Hopefully correctly.
+8:09
+And you are a decode.
+8:12
+And we'll do that on the wire.
+8:16
+And so I didn't mess that up and type.
+8:20
+Something wrong.
+8:21
+Yep, here you go.
+8:22
+And you can see we have it decoded and it's a lot easier to to read.
+8:27
+So let's go ahead and just copy and paste that over.
+8:35
+Into.
+8:36
+Where is it?
+8:37
+I'll do that.
+8:38
+I lose it.
+8:39
+Not yet.
+8:40
+Here it is.
+8:41
+Sorry.
+8:42
+Other screen.
+8:43
+All right.
+8:45
+We'll go ahead and just really copy and paste that.
+8:48
+OK, so now this looks a lot easier to deal with.
+8:53
+Now we can actually see the HTML data.
+8:55
+Looks right off the bat.
+8:56
+We have these.
+8:59
+I'm willing to bet many American dollars that this is base 64 data.
+9:06
+We could try to concatenate those together.
+9:08
+Because or because there's one, two, three, four, five of them.
+9:13
+And then here is a bunch of JavaScript right off the bat.
+9:17
+And oh, you know what else I see?
+9:20
+We'll format this to make it look a lot nicer.
+9:23
+But look right here.
+9:24
+See this variable that is just nonsense.
+9:27
+And then you have a bunch of different known commands in here.
+9:30
+This is a common obviacation technique to do a replace.
+9:36
+So a lot of sort of dynamic analysis of code and things
+9:41
+like that will look for, you know, unsafe commands.
+9:47
+And instead of saying like run, you know, Latin one
+9:51
+or whatever this is going to be run console,
+9:55
+then actually run X. And I'm going to go through this array here
+9:58
+and then find a swap.
+10:00
+So you can in X automatically comes one of these commands.
+10:03
+So this is definitely heavily obviscated.
+10:06
+You can tell right off the bat.
+10:07
+And that's probably one of the things that is do.
+10:09
+It's probably loops through and does a replace
+10:12
+on all these kind of things.
+10:13
+So let's make this a lot nicer.
+10:17
+So and then I use a tool called JS beautify here in VS code.
+10:29
+And it does a nice job of making this a lot easier to use.
+10:32
+So it's just an extension of VS code, JS beautify.
+10:35
+And now we can see that this is a lot easier to digest.
+10:44
+Okay, taking a look at the JavaScript here.
+10:48
+There's a lot going on.
+10:50
+You can see that it's heavily obviscated.
+10:52
+Every time you just see a lot of variables
+10:54
+being defined as numbers or just random strings.
+10:57
+This is probably run through some sort of obviscation tool,
+11:01
+which means there's a lot of probably string replaces
+11:04
+in different functions like that.
+11:06
+Like I said before, this right here is likely some sort
+11:12
+of ripping replace on commands that are going to be used
+11:16
+later.
+11:18
+There's replace all.
+11:19
+So it's probably going to be replacing strings
+11:21
+and it kind of just loops through there.
+11:24
+And what else do we have?
+11:26
+This is a bunch of stuff we're going to have to figure out.
+11:29
+Here's something.
+11:33
+This looks like it's something.
+11:37
+Let's quickly kind of take a look at this.
+11:48
+And all we want to do is do a doyer to string.
+11:57
+And I'm only doing that just because I don't know if all
+12:00
+the different quote signs in there are going to make it weird.
+12:03
+Replace.
+12:05
+And I just want to get rid of all the single quotes.
+12:11
+And you can, the other thing that's
+12:13
+great about the replace function is you can chain these together.
+12:16
+And we want to get rid of all the commas with nothing.
+12:24
+What else is there?
+12:26
+And then we'll get rid of all the spaces.
+12:32
+It looks to me like there's a space between some of these characters.
+12:39
+Sylegal sales.
+12:41
+OK.
+12:43
+Yeah.
+12:43
+All right.
+12:44
+So this UGGCF, if you don't know right off the bat,
+12:51
+you could just Google it.
+12:52
+But what this is, and I didn't know this what this was until I
+12:57
+Google it a bunch of times before.
+12:59
+But this is just a rot 13 encrypted or encoded payload.
+13:06
+So you can just Google that and you'll get what it is.
+13:12
+And there's probably a replace function in there that's
+13:17
+going to replace these parentheses with lashes.
+13:21
+But this is what key then, this is immediately what I'm going to key in on.
+13:27
+Crypto-js-min.js, which is a JavaScript way to encrypt and decrypt data,
+13:34
+which means there's probably encrypted data in this thing that gets decrypted on the fly.
+13:40
+Now, if it gets decrypted on the fly, there's more often than not
+13:45
+when you're looking at phishing information.
+13:50
+Then the key to do the decryption is somewhere in the code.
+13:55
+I bet that's the first thing we're going to look right off the bat.
+13:58
+We're going to see if we can't find where the key is and see where the decryption function is.
+14:03
+And like I said before, here we go.
+14:05
+So this is right here.
+14:08
+This tile function joined together, get rid of the spaces,
+14:11
+replace the parentheses with slashes to make it a valid URL.
+14:16
+OK, so it is using the crypto-js somewhere.
+14:22
+So the first thing we want to do is we want to do a find.
+14:30
+And I just want to do a find for crypto-js.
+14:38
+And this is probably the decrypt right here.
+14:44
+I'm just, these are the red dots on the left hand side.
+14:48
+These are just breakpoints.
+14:49
+I'm going to do a breakpoint on all of every reference to crypto-js.
+14:57
+I'm also going to change this log.
+15:06
+I'm just going to put another line in here to breakpoint before the script is finished.
+15:13
+Just so it doesn't try to detonate anything.
+15:17
+Also, OK, the other thing that I noticed is this thing right here.
+15:31
+Nope, don't rename stuff.
+15:33
+It looks like it's referenced in the bottom there.
+15:39
+OK, another clue.
+15:43
+OK, so like I said before, that looked like base64 data.
+15:47
+Here it is basically looping through and taking one, four, two, three,
+15:55
+going through that, adding them together, concatenating them together,
+15:59
+and then atob, another keyword, a tab.
+16:03
+I'm not exactly sure how atob is how I've always set it.
+16:06
+It's a JavaScript for base64 decode.
+16:09
+So it is base64 encoded data.
+16:12
+We just need to put them together in the right way.
+16:14
+OK, so this is immediately what I would do from a plan of attack is start looking.
+16:23
+I'm going to start this in a debugger mode, because what I want to do is all these kind
+16:27
+of name replaced, these are all string replaces to obviously what the command is actually doing.
+16:35
+You can just kind of look at this and see that there's a bunch of junk in here.
+16:38
+And they're just trying to make it as difficult for a human to read as possible.
+16:42
+But one of the things that no JS that we can do is we'll just start this in a debugger
+16:48
+with these different breakpoints.
+16:49
+And then we'll be able to evaluate the values and all of these kind of commands
+16:56
+to basically figure out what all of those mean.
+17:00
+And the first thing I want to do is I want to look for where, because I didn't see it anywhere else.
+17:08
+Crypto JS, oh, breakpoint down here.
+17:12
+Where it, but we know that this one's in crypt.
+17:14
+So because dashed, ENC or crypto.js.
+17:18
+Dot A, ENC is encryption, which means it's just going to put something crazy on the output.
+17:23
+Where we're going to look for the word decrypt, right?
+17:28
+It's probably right here, right?
+17:29
+Because just knowing if you Google like how to decrypt with crypto JS,
+17:34
+it's going to have code that looks like this.
+17:38
+But I'm going to show you the steps like if I didn't actually know that,
+17:41
+we're just going to look for where is the line for decrypt and take it from there.
+17:47
+And I bet we'll be able to find out a key hopefully,
+17:51
+and then we'll just do a decryption to see what is being decrypted.
+17:54
+Because there's obviously more data in here that we can see that we need to pull out.
+18:00
+And it's probably in this base 64.
+18:03
+Now that makes sense, right?
+18:06
+Light bulb, they put together all the base 64 data here,
+18:11
+pass that to the decryption or encrypt it somewhere in this.
+18:17
+We'll have to go through it and then decrypt it on the fly.
+18:22
+Okay, so let's start with that plan of attack first and go from there.
+18:29
+We'll see where we get from here.
+18:32
+Okay, so the next thing that we need to do is start our debugger
+18:37
+and so we can get to these lines.
+18:41
+So let's go ahead and just start debugging, let it go.
+18:45
+Chrome Windows is going to open up in the back.
+18:49
+Now, do you remember why I said we want to do this in the debugger
+18:53
+so we can kind of keep track of things?
+18:55
+One of the things that just popped up immediately when I was like,
+18:58
+oh, we're going to be looking for the key.
+19:02
+Is if we see this right up above here, this value right here,
+19:06
+so I can right click on that and evaluate in the debug console test pass.
+19:12
+That's an obvious that this is right here.
+19:15
+This means this x.
+19:17
+Yeah, this is 256.
+19:19
+Yeah, encoded to make a key.
+19:21
+Right, so if I go to evaluate x in the debug console, that's our key.
+19:27
+willing to bet a lot of money on that.
+19:30
+Yeah, you can see it right down here.
+19:32
+crypto.js, as we'll step through this, we'll get there,
+19:35
+but it calls key right here.
+19:37
+I bet that this is the key.
+19:39
+I'm almost sure of it that this is the key.
+19:41
+Right, so this is why I'm saying like you don't need to be a super,
+19:44
+we're going to go through this.
+19:45
+Here's that's a very good strategy when you're looking for payloads
+19:49
+that render dynamically of websites,
+19:51
+especially the way that I've seen a lot of these.
+19:54
+If they're referencing crypto.js and the data is encrypted,
+19:59
+most of the time you can get the decryption key right from the code itself.
+20:03
+You just got to know where to look and the first thing I ever do is set
+20:06
+break points every time crypto.js is mentioned and go from there.
+20:12
+Look for the decrypt word and as we step through this,
+20:14
+we'll be able to find the word decrypt, right?
+20:16
+Because what we'll be able to do is you see this,
+20:22
+we evaluate that right click, evaluate and debug and substring.
+20:27
+Right, so this is actually just substring.
+20:29
+And you can remember before when you see something like this,
+20:34
+and I bet the word decrypt is in here,
+20:36
+right here.
+20:38
+So decrypt is in there.
+20:39
+So we'll eventually we're going to find a line that's going to be
+20:44
+crypto.js calling decrypt and in that line,
+20:47
+we'll find a reference to the key.
+20:51
+And now all we can do, and then I'll show you what we're going to do.
+20:53
+I'll show you what we can do, like without having to know anything about crypto.js,
+20:56
+I'll show you exactly what we're going to do to take care of this.
+20:58
+So let's go down here.
+20:59
+And we're just going to step over this.
+21:01
+What I want to kind of do, it looks like activation function,
+21:05
+loops through here.
+21:08
+And I'm just going to add this to my watch list right over here.
+21:12
+So we'll be able to see this go and get populated.
+21:18
+Yeah.
+21:19
+So you can see activation function is populating over here.
+21:23
+And it's just being every time that run, every time that ran through,
+21:28
+it just added one, four, two, three together in that order.
+21:36
+So as long as we remember that, we'll just, we can do that pretty easily on our own.
+21:41
+We don't need to know that.
+21:43
+So it looks like then did a base 64, which means all of this is probably going to be,
+21:50
+yeah, see this is all gobbling gook because it's just more junk, right.
+21:56
+Let's go ahead and see what this means.
+22:05
+That's encrypt, right?
+22:08
+So 0x185 is encrypt.
+22:14
+So we basically know that these three are encrypt, right.
+22:20
+Which means that we can't really grab anything from there.
+22:25
+Let's see what this one is.
+22:29
+Decrypt, all right.
+22:30
+See, you see how that goes?
+22:32
+This is where we want to be, right?
+22:34
+So I'm going to basically step, well, actually, we just leave this in debugging
+22:42
+because that means that this function right here does a decryption using the key that we know.
+22:52
+So we can basically take this code and just reuse it, supply the key and decrypt whatever is in
+23:03
+there to see what the second stage paper.
+23:05
+So we're going to do that now.
+23:10
+Okay, so the first thing that I want to do is we are going to replicate this activation function.
+23:20
+Which means we need to combine those classes from the HTML data in order 1432.
+23:28
+We're just going to, okay, so we're going to do that just by copying and pasting them into
+23:36
+a new file.
+23:39
+Why I'm doing, I'm just going to reuse the names because what I want to do is I'm going to show you
+23:42
+that we can just copy and paste all of this over there and reuse it.
+23:50
+So we have 1423.
+23:53
+So we can say activation function equals part one plus part four plus part two plus part two plus
+24:07
+part three.
+24:09
+And if that worked, then we won't get an error when we do this.
+24:18
+So because if we messed up, it'll say this isn't valid.
+24:25
+Oh, the other thing, I want to make sure I want to make sure I copy that because we definitely want to know that.
+24:32
+So let me say let's go ahead and save this.
+24:38
+I'm going to stop debugging the other one.
+24:40
+Even though we're going to go back.
+24:43
+Like we are going to go back into it in debug mode because we're going to have to go and grab and find out all the different strings.
+24:53
+But this is just to make sure that we want.
+24:56
+So we're going to run it with no JS.
+25:01
+We got no errors, which is great.
+25:05
+Okay.
+25:10
+So now that that is doing us, we're going to go back to here.
+25:15
+We have a couple more.
+25:16
+So all we're going to do is just copy and paste this over and copy it over.
+25:23
+The only thing we need to do is I put this.
+25:28
+Because we want to make sure we have our key defined.
+25:35
+So that was copied over.
+25:40
+The only things we don't know if we try to run this right now, we would get a bunch of like string errors for what these all mean.
+25:49
+So we have to go back in here, go back into debug mode on the first one.
+25:59
+Let me step over that.
+26:02
+And basically all I'm going to do now is make note of we already know this is encrypt.
+26:10
+So what this command would look like over here, but the replace, as we go over here,
+26:18
+this is actually crypto, JS, encode, Latin one, parse.
+26:23
+Because those are valid commands that.
+26:28
+So you see how I did that is basically just like I find and replace.
+26:32
+Because all of these are being like evaluated as strings by like looping through there,
+26:39
+we know that this is encode.
+26:40
+Let me evaluate that in the debug console, Latin one.
+26:44
+And then I got this as parse.
+26:48
+Evaluate and debug console parse, right?
+26:50
+So that this one becomes crypto.
+26:54
+JS dot encode dot Latin one dot parse.
+27:00
+We can get rid of this.
+27:03
+And rinse and repeat.
+27:10
+If I spell it right, rinse and repeat, right?
+27:12
+I'm just going to continue to go that.
+27:14
+I'm going to walk through this.
+27:16
+I'm going to show you what looks like.
+27:17
+And when you come back, it'll be format.
+27:20
+And I'll just quickly instead of making you watch me do this, it'll be a lot better.
+27:26
+Okay, so I went through and I did the key, the kind of string replaces over here.
+27:31
+So remember, it kind of looked like this with all these references to a function
+27:37
+that would just replace it with a string.
+27:39
+I went back over here and replaced those out to just the standard command.
+27:45
+So we didn't need to copy and paste any of those other office
+27:47
+station functions over.
+27:48
+We just put the actual strings in there to make the actual command.
+27:54
+The other thing I did is I forgot to just before,
+27:56
+but I added crypto JS to our program here.
+28:01
+And we can test this.
+28:05
+We'll just make sure that our, you know, there's got no errors or something like that.
+28:11
+So what is this called, the wire.js?
+28:16
+We'll run that.
+28:16
+We've got our command, great.
+28:18
+Love that for us.
+28:23
+We'll go ahead and comment that out.
+28:24
+Now, the next thing we have to do now, you can just google this.
+28:29
+But if we kind of just took a look at this is technically decrypted, right?
+28:38
+This is the decrypted information.
+28:42
+But if we look at this,
+28:47
+what did I do?
+28:48
+Consul that log.
+28:50
+If we took a look at this and just let it rip,
+28:55
+you'll see that it's not going to be human readable.
+28:57
+What you're going to do is get basically an array of words, right?
+29:01
+So what we need to do to convert that into something usable for us,
+29:10
+we need to do one more crypto JS command.
+29:13
+And you can just google this.
+29:16
+If you've got to this part on your own, you can kind of just google,
+29:20
+well, how do I make crypto JS?
+29:22
+I'll put human readable.
+29:25
+And this is where you're going to go.
+29:26
+So the only thing we have to take from all were
+29:31
+command tiers, remember that it was encrypted with Latin one.
+29:36
+So we want to make sure that we use Latin one for this.
+29:41
+And then we can do console.log for decrypted.
+29:47
+And that should be it.
+29:49
+So as long as I didn't mess anything up, we should be able to see is now I'm going to run this.
+29:55
+And yeah, here we go.
+29:56
+So this was an encrypted on click.
+30:01
+Run this final URL.
+30:03
+I don't want to scroll up because I'm pretty sure this was a targeted fishing.
+30:09
+And I don't want to show the company or the person that got this.
+30:11
+But so this was the encrypted information.
+30:14
+So if we go back to here,
+30:17
+what we would see is that we could kill all these breakpoints.
+30:24
+But what I'm imagining is it would decrypt and then on the fly,
+30:29
+this document would be opened.
+30:34
+And then the second encrypted document would then be put at the end here.
+30:42
+So we could like step through most of this and kill all my breakpoints.
+30:47
+And you'll see there's probably an initial page.
+30:50
+And then on click, it would load the encrypted one on the fly, which would be something else.
+30:57
+And knowing what I got from the fishing information was credential harvesting.
+31:01
+So yeah, I took a look at this and as I stepped through, I did see that there was some targeted
+31:07
+information in there in terms of a particular organization.
+31:09
+I want to show that on the screen.
+31:11
+So but I went through the rest of it.
+31:13
+There was nothing additional in there other than a highly obvious scatid sort of page
+31:17
+that rendered and then when you clicked, then you would get the second stage of that encrypted data.
+31:23
+And it was loaded on the fly.
+31:26
+But you could go through this if you really wanted to get comfortable with it.
+31:29
+But it would take you a long time.
+31:30
+But basically this thing is just looping through all of this junk.
+31:36
+Did you keyword replaces to render a web page that have a lore that says you have a new voicemail?
+31:44
+As soon as you click on the voicemail, then you get the encrypted part, which then is the
+31:49
+credential harvesting key. So it loads off of street 65 page to try to grab your credentials.
+31:57
+So the that's kind of it, right? Like I said before, it's like, you don't need to spend the hours
+32:04
+and hours of looping through every one of these lines. When you see that crypto JST,
+32:09
+it's an immediate thing to key in on and take the two minutes or whatever that took us to kind
+32:14
+of find the decrypt keyword and then work your way back and usually you can find the key in there
+32:20
+to help you go forward. And anything that's encrypted, especially with fishing attempts,
+32:24
+usually the juicy stuff that really can help you in your analysis or an assessment to see
+32:30
+if there's any other indicators of compromise to go forward. So stay tuned. We're going to be doing
+32:35
+a lot more of these until then. Happy hunting.

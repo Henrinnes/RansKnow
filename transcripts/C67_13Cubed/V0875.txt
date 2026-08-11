@@ -1,0 +1,424 @@
+0:00
+Welcome to another episode in the introduction to Memory Forensic series.
+0:12
+In this video, we're going to talk about bass lining as it relates to memory forensics.
+0:18
+Now the concept is pretty simple.
+0:20
+Let's pretend that you're an enterprise that uses a gold image for your workstations.
+0:25
+Upon creation of that image, let's say that you happen to acquire memory from that known
+0:31
+good configuration and save it away for a rainy day.
+0:35
+Then at some point in the future, you get a phone call or maybe a ticket.
+0:40
+And a user says, hey, there's something not right with my system.
+0:44
+And of course, you say, well, what exactly is wrong?
+0:47
+And they say, well, I don't know.
+0:49
+I was using the internet and then I clicked on something and then all of a sudden, I saw
+0:53
+this little window pop up and it went away and I really don't know what's wrong.
+0:58
+Of course we've all been there, right?
+0:59
+Find evil.
+1:00
+And of course you ask the questions, don't get a lot of information.
+1:03
+And your job is just to magically determine what's wrong and figure out everything and
+1:07
+save the day.
+1:09
+Well, paranormal triage practices probably one of the first things you're going to do,
+1:13
+at least hopefully, is acquire memory from that system.
+1:17
+Suppose for a moment that there will be some magical way to automatically compare the
+1:21
+memory from the gold image that you already took to this potentially compromised systems
+1:27
+memory and just show the outliers.
+1:29
+In other words, show what exists only on the compromised system, but not on the known
+1:34
+good system.
+1:36
+Sounds useful, right?
+1:37
+Well lucky for us, there are a trio of volatility plugins that can be used to perform this
+1:42
+exact task.
+1:44
+They are process BL, service BL, and driver BL.
+1:51
+And just based upon the name alone, it should be quite obvious as to the purpose of each.
+1:57
+In the next section of the video, we'll fire up volatility on our sift workstation and
+2:02
+compare two Windows 10 images, one of which is clean and the other not so clean.
+2:07
+I think it'll be amazed at how easy it is to find evil or at least to find things that
+2:13
+would warrant further investigation.
+2:16
+Once we develop a few leads, we'll quickly take a look at a few other handy plugins that
+2:21
+can help us identify the malware.
+2:23
+So let's get started.
+2:27
+Alright, so as you can see here, we have two images, clean.raw and infected.raw, taken
+2:35
+from the same virtual machine.
+2:38
+Clean of course was taken right after it was built and infected was taken after it was
+2:42
+infected with real malware.
+2:45
+First up, let's go ahead and take a look at the correct profile that we're going to
+2:49
+need to use to analyze the clean or infected.raw samples.
+2:55
+We'll use KDBG scan, which is a little bit more capable and accurate than image info.
+3:01
+And you'll see this first stanza here.
+3:02
+We'll get each one of these for every profile installed on the system, but really all we
+3:06
+care about is this build strain here, which as you can see is 17763.
+3:12
+That's what we need to know to determine the correct profile to use.
+3:16
+In this case, I am not using the volatility that came with the SIFT workstation, but as
+3:21
+you can see, I've cloned from the GitHub repo, the newest version.
+3:25
+And if I look at the installed profiles, you'll notice that there is a 17763 profile
+3:31
+installed, but as of the time of this recording, that profile was not present within the volatility
+3:36
+version on the SIFT workstation.
+3:39
+Additionally, you'll notice that this was volatility version 2.6.1, which again is
+3:44
+the newest as of the recording of this video.
+3:48
+So now let's specify the infected image, the profile that we just learned, which is again
+3:53
+17763.
+3:55
+And now we're going to use our first plugin, which is Process Baseline or Process BL.
+4:01
+And if we do a dash H, we'll see the help associated with it.
+4:05
+And as you can see, there are a lot of options, but really we're going to focus on these bottom
+4:09
+ones.
+4:10
+Starting with the dash capital B, which specifies our baseline image, which is our clean
+4:14
+image, and then we have a dash capital K or dash capital U for known or unknown.
+4:21
+So in other words, we can tell the plugin only to specify what is known or what is unknown.
+4:26
+Of course, most likely we're going to be interested in what is unknown.
+4:30
+So let's go ahead and specify the base image of clean.raw.
+4:34
+And then we'll use the dash capital U to show us only unknown.
+4:39
+And then I'm going to take standard error and direct it to dev null, because it's not
+4:43
+uncommon to see issues when volatility processes this.
+4:47
+You'll get errors here and again, but I don't want to see those on screen for the sake of
+4:51
+clarity.
+4:53
+And immediately you'll notice these processes, which did not appear in the baseline image.
+4:58
+And this one looks a little odd because it's running out of the root of the user folder.
+5:02
+As is the one at the bottom, and then sandwiched in between, we also have an SBC host.exe process.
+5:09
+Which is interesting because you'll notice the parent pit is 61.72, which is the WUAUCLDT.exe file.
+5:18
+So that's a little odd because the parent should be, as we know, services.exe for a valid SBC host.exe process.
+5:27
+So immediately we see some things that we could probably pull some strings on and take a closer look at.
+5:34
+So let's go ahead and take a look at our second baseline plugin, which in this case is going
+5:39
+to be service deal.
+5:42
+The options are exactly the same, so I'll just repeat the command.
+5:46
+And what you'll see on screen are the services that were not present in the clean memory image.
+5:52
+Now that does not mean that all of these are evil.
+5:54
+In fact, none of them may be evil, but this gives us something to look at.
+5:58
+We would want to check each one of these and not just depend on the name, but actually
+6:02
+check each one and verify that they are legit.
+6:05
+Don't just assume because it's named correctly that it is in fact correct.
+6:09
+That may not be the case.
+6:11
+So lastly, we're going to take a look at our third plugin.
+6:16
+And that's going to be our driver BL plugin.
+6:19
+But we're actually not going to see anything here because this particular malware,
+6:24
+which will determine a little bit later on to be cut will, does not install any kind of malicious driver,
+6:30
+at least not this variant of it.
+6:32
+So we're actually not going to get any output here.
+6:36
+But if we ran it, it's the exact same usage as the other two plugins and we would see any
+6:41
+of those drivers located here, which again, doesn't necessarily mean evil, but it means
+6:46
+this is an outlier.
+6:47
+This is something that has been installed since that base image was taken since the clean
+6:53
+image was taken.
+6:54
+So in that case, we would want to look at those particular drivers to rule them out and
+6:59
+make sure that they were all legit.
+7:02
+So those are our three baseline plugins, again, process BL, service BL, and driver BL.
+7:10
+We use the dash capital B and then the dash capital U option with each.
+7:15
+So now, what if we wanted to take this a step further?
+7:19
+As you can see, we have these three pids of interest here.
+7:23
+C172, 2388, that was from our original process BL plugin and those of course are the parent
+7:30
+pids.
+7:32
+So in real life, if I was going to take this a little further, I would probably go ahead
+7:36
+and run another plugin with volatility, even something as simple as PS list and we'll
+7:40
+grab for that 1868 PID.
+7:43
+And when we do, you'll notice that actually is explorer.exe, meaning the parent of those
+7:48
+malicious processes, WUAU, CLDT, and N-O-B-F-U-D-Y-C-O-M-A-L.exe is explorer.exe.
+7:59
+So that's interesting and another piece of information that we didn't previously know.
+8:03
+So now I might do something like run malfind, which shows us evidence of hidden or injected
+8:09
+code.
+8:10
+Remember, we already have a few pids that we think aren't normal, some things that we actually
+8:15
+want to look a little bit closer at.
+8:17
+So let's see if malfind finds any of those same pids.
+8:22
+Now as always with malfind, there are going to be likely some false positives and smart
+8:27
+screen.exe is such false positive so we can ignore that.
+8:31
+But here we have one of those suspicious pids, 61.72.
+8:36
+And here's our 4D5A900 or MZ header.
+8:41
+So that is executable code in memory with no backed file on disk.
+8:46
+So that is a little odd.
+8:49
+And here we see that process again.
+8:51
+As we scroll down, there's our SVChost.exe process that we thought was a little odd,
+8:56
+PID 2300.
+8:57
+Again, executable code is present here.
+9:01
+And we see it repeated below, though that doesn't appear to be executable.
+9:06
+And then here is our other malicious or potentially malicious file, PID 8988.
+9:13
+And again, 8988 marked as executable.
+9:16
+So clearly our suspicions are proving to be correct in that there's something not right
+9:21
+with these.
+9:22
+Malfind is showing them as evidence of hidden or injected code.
+9:26
+So now I could go ahead and run proc dump.
+9:29
+And I could dump the actual process binary, in this case for 61.72, to disk.
+9:36
+So let's go ahead and dump PID 61.72.
+9:40
+And there we go.
+9:41
+That's our executable directly for memory.
+9:43
+I could use mem dump to actually dump all of the process memory associated with it.
+9:47
+But in this case, I'm dumping the process binary itself.
+9:50
+We'll do the same for PID 2300.
+9:55
+And then we'll also do the same for 8988.
+9:58
+And you'll see where I'm going with this in a second.
+10:01
+And again, I am just giving you a high level overview here.
+10:04
+There are plenty of other walkthroughs in the playlist associated with this series, which
+10:09
+I would strongly recommend you take a look at.
+10:11
+But at this point, we could take one of these hashes and we could take it over to virus
+10:16
+total and actually search virus total and see if we see anything associated with this
+10:21
+hash.
+10:23
+So let's try the first one.
+10:25
+No matches, okay?
+10:26
+Well, we've got two other hashes.
+10:28
+Let's see if there are any matches in virus total for those.
+10:32
+So let's grab this one and paste it.
+10:37
+And let's see what we have here.
+10:39
+Yep, I would say that is a good sign that something isn't right.
+10:44
+54 of 73 for a detection ratio.
+10:48
+And you can see cut well listed there, which as I mentioned earlier is this particular
+10:52
+malware.
+10:54
+So clearly something evil here.
+10:57
+So now let's take a look at that last PID and do the same thing.
+11:02
+And by the way, in case you're wondering why I didn't just upload the binary itself,
+11:05
+well, I could have done that, but just be careful with the opsec, even the hash may be an
+11:10
+opsec issue.
+11:11
+Just remember that if a malware author is looking to see if that particular variant of malware
+11:17
+has been detected, they may in fact leverage virus total because when you upload something
+11:22
+to virus total, you're providing information to the community and to anyone else who is
+11:26
+using virus total.
+11:28
+So that would include potentially malware authors who are looking to determine whether or
+11:33
+not their malware has been detected yet.
+11:35
+So you may end up tipping your hands, so just keep operational security in mind.
+11:39
+In this case, a hash is a little bit safer than uploading the binary itself.
+11:43
+Now of course, this is malware that's been in the wild for years and I didn't really
+11:47
+have to do that.
+11:48
+But as a best practice, I went ahead and did so anyway.
+11:53
+So to recap, we have taken a look at three different baseline plugins.
+11:59
+We first looked at Process BL, which immediately showed us several processes that were not
+12:05
+in the baseline image, three of which we immediately thought might be suspicious based
+12:11
+on some contextual information.
+12:13
+Then we looked at Service BL and saw numerous services that were different.
+12:17
+We do not yet know if any of those are malicious and we would need to vet each one of them independently,
+12:23
+not just assuming that because it's named correctly, it's legit.
+12:26
+And then lastly, we looked at driver BL to look at our drivers.
+12:30
+And in this case, there were no differences.
+12:32
+So no drivers were installed in the infected image that weren't already installed in the
+12:37
+previous clean image.
+12:39
+But had there been any, we would have seen them there, and much like the services, we would
+12:43
+need to vet each one.
+12:46
+So that was the initial process we used.
+12:48
+And then we took it a step further.
+12:50
+We used our basic PSList plugin to take a look at the parent for some of the processes.
+12:56
+And then we used Malphine to take a look at hidden and injected code.
+13:00
+And that was interesting because the PIDs that we already thought were a little suspicious
+13:04
+from Process BL were identified within Malphine.
+13:09
+So clearly we're on the right track there.
+13:12
+And then lastly, we just went ahead and dumped those three suspicious process binaries using
+13:18
+PROC Dump.
+13:19
+Again, PROC Dump will dump the binary itself, whereas MIM dump will dump all of the allocated
+13:25
+process memory belonging to that process.
+13:28
+But in this case, I wanted the binary itself.
+13:30
+So we did that for each of those three PIDs.
+13:33
+Then we took a SHA1 hash of those submitted it to BIOSTOTAL.
+13:37
+And two of the three of them got clearly significant hits that would point us in the right
+13:42
+direction and tell us what kind of malware we're dealing with.
+13:47
+Now again, this was a very quick walkthrough and example of these baseline plugins.
+13:51
+But I hope that you'll see immediately the advantage to using baselineing with our memory
+13:57
+forensics analysis.
+14:00
+So I hope you enjoyed this episode in the introduction to memory forensics series.
+14:05
+As I previously mentioned, there is an entire playlist of other videos in which we walk
+14:09
+through this same process again using several other types of malware.
+14:14
+So I would highly encourage you to take a look at that.
+14:17
+And as always, thank you for watching, thank you for subscribing, and I will catch you
+14:22
+in the next episode.

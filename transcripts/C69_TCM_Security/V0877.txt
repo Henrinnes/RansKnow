@@ -1,0 +1,628 @@
+0:00
+All right, today we're going to be looking at Windows LNK files and why they are a useful
+0:04
+piece of evidence when you're piecing together what a user was doing on a system.
+0:08
+Now, we're not going to cover every little detail about the Outer Fact because there are
+0:12
+a ton of nuances, but this should be enough to get you started and understanding its relevance.
+0:17
+So LNK files are a Windows Shell item.
+0:21
+Now Shell items actually encompass a number of different artifacts that all kind of share
+0:25
+a common underlying data structure.
+0:28
+That shared structure is what we refer to as a Shell item.
+0:31
+One of the most popular and well-known Shell items is the shortcut or the LNK file, which
+0:36
+is what we're going to be focused on today.
+0:38
+So an LNK file is a Windows shortcut.
+0:41
+You'll hear, you know, it's called different things like link files or LNK files or shortcut
+0:46
+files all kind of referring to the similar kind of data structure.
+0:50
+And this format goes all the way back to Windows 95 and so it's been incrementally extended
+0:56
+over the years, but it's well understood and well supported by different parsing tools
+1:01
+which we'll look at later.
+1:02
+You likely already know the obvious side of LNK files, right?
+1:06
+Those little icons sitting on your desktop or entries in your start menu, you know, apps
+1:11
+that are pinned to your taskbar, maybe you've gone in and created your own shortcut file
+1:15
+before.
+1:16
+Well, each of those examples is an LNK file pointing to the executable that actually launches.
+1:22
+It's less obvious is that Windows generates LNK files on its own, automatically all the
+1:28
+time.
+1:29
+In most cases, when a user opens a document or, you know, interacts with an image or video,
+1:35
+pretty much any file that goes through, you know, the standard explorer or the open dialog,
+1:40
+Windows quietly drops a corresponding LNK file into the user's recent folder.
+1:45
+Now the user doesn't see it, right?
+1:47
+It kind of happens in the background.
+1:49
+So, so that things like the recent list in office applications or, you know, the recent
+1:54
+items menu and explore all of those things have something to populate from.
+1:58
+That's really the general user experience purpose of LNK files.
+2:02
+They're kind of the plumbing behind features like the recent items list or things like
+2:06
+jump lists, which maybe we'll talk about in a future video.
+2:09
+And you know, shortcuts that users rely on every day to get back to files and applications
+2:14
+that they've used before.
+2:15
+Right?
+2:16
+Windows leans on these kind of artifacts constantly to make navigation feel seamless.
+2:21
+And that automatic behind the scenes kind of generation is what makes LNK files so valuable
+2:25
+to us from a forensic perspective because they exhibit strong evidence that a file was
+2:30
+accessed or interacted with in some way by a user.
+2:33
+And it's not just the file itself.
+2:35
+When a user opens a document, Windows will typically generate an LNK file for the parent
+2:40
+folder of that document as well.
+2:41
+So we end up with evidence of both file access and the directory the user navigated to in
+2:46
+order to get there, which is really good for reconstructing user activity.
+2:51
+The really useful property is that like with many file system artifacts, LNK files outlive
+2:56
+their targets.
+2:58
+So what I mean by that is if the target file that the LNK file is pointing to gets deleted,
+3:04
+well, the link file is generally still going to be sitting there in the recent folder.
+3:08
+If the target was on a thumb drive that's been, you know, pocketed in and walked off,
+3:12
+the link file stays behind along with all of its shell item metadata.
+3:17
+You know, if it was on a network share that the user no longer has access to, same deal,
+3:20
+we can still glean a ton of user activity data long after the fact.
+3:25
+And the metadata stored inside is much richer than just a file name.
+3:29
+Remember, these are shell items.
+3:31
+So a parsed LNK file can give us things like the full path to the original target.
+3:36
+That targets file timestamps, right, the created, modified, accessed, all captured at the
+3:41
+moment that the link file was generated.
+3:43
+We can get the size of the target file, the volume serial number of the drive that the
+3:47
+file lived on, the volume label, the drive type, right, is at a fixed disk or removable
+3:52
+media or, you know, a network path, right.
+3:54
+In fact, we can get the UNC path and the share name if it came from a remote location.
+3:59
+And in some cases, we have this idea of the distributed link tracker data block, which
+4:03
+can include identifiers like the machine ID or, you know, values derived from network
+4:08
+interfaces.
+4:09
+Those, these aren't always present or always reliable, but they can be a fantastic set
+4:13
+of additional metadata for us to parse through.
+4:16
+Now as always, there are a handful of caveats to keep in mind with these artifacts.
+4:20
+The recent folder isn't unbounded, right.
+4:23
+And so what I mean by that is older entries get aged out as new ones come in.
+4:27
+And so a missing link file isn't always proof that nothing happened.
+4:32
+Historically, that limitation was capped at around 149 files in the recent directory.
+4:37
+But in more recent versions of Windows, we've started to see well above that number, which
+4:41
+is a great benefit to us.
+4:43
+Also remember, just like with pre-fetch files, users can clear the recent folder manually.
+4:48
+And in, you know, some cleanup or anti-frenzic utilities will target it specifically.
+4:53
+And in those cases, we can turn to things like, you know, carving for link file headers
+4:57
+in unallocated space or turning to volume shadow copies.
+5:01
+Both are worth a look for recovering historical artifacts.
+5:05
+It's also important to remember that shell items are generally a graphic user interface
+5:09
+or a GUI feature.
+5:10
+And they don't typically get created during command line activity.
+5:14
+We also occasionally see some odd edge cases around shortcut files.
+5:17
+And so as always, in your forensic methodology, treat them as one source of evidence among
+5:22
+several rather than a single source of truth.
+5:25
+And we're also now seeing that in later versions of Windows 10 and above, when a file is created,
+5:30
+a link file will also be created in the recent folder as well.
+5:33
+And so, you know, if you use the Save As feature in an application to create a new file,
+5:38
+or in some cases, even downloading a file, a corresponding LNK file is created.
+5:43
+So keep that in mind when we think about date created timestamps as well.
+5:47
+Interestingly enough, link files can also be created through different means.
+5:52
+For example, you know, opening a web page through the run dialog box or even from the
+5:58
+Explore window itself, which is something you can do as quick little trick.
+6:02
+Or from opening a URL in, say, Slack or Teams, you know, a different kind of application.
+6:07
+For example, if I type in the URL to my blog into the Windows Run dialog box here, well,
+6:12
+it's going to open up in my default browser of choice.
+6:15
+And when it did that, it created a link file with the name of that link file corresponding
+6:20
+to the website that I accessed.
+6:22
+So very interesting there.
+6:24
+We even sometimes get protocol level information as well.
+6:26
+Sort of embedded into the file name of the LNK file, which is super interesting.
+6:32
+So these LNK files can generally be found in two common locations.
+6:36
+The main location where we'll find the bulk of these automatically created LNK files is
+6:40
+in the user's recent folder.
+6:42
+So for example, C colon slash users, then the username, and we go under app data, roaming,
+6:50
+Microsoft, Windows, and recent.
+6:53
+This is sort of that catch all for the automatically generated LNK files that are sort of tied
+6:58
+to user file access.
+7:00
+There's also an office specific equivalent that only kind of targets files interacted with
+7:05
+using office applications, and that can also be found under app data, under Microsoft,
+7:11
+Office, and Recent.
+7:14
+Now in saying that LNK files can technically be found all throughout the operating system.
+7:19
+And so typically when we run a triage collection on a system, we might want to glob or kind of
+7:24
+wildcard any LNK files or dot LNK files that can be found for us to later analyze.
+7:30
+And if you're not seeing any LNK files when you navigate to these directories, there
+7:35
+could be a few reasons why in some cases, Windows likes to hide them from us.
+7:39
+And so you'll sometimes have better luck opening up a command prompt and then listing
+7:42
+out the directory that way.
+7:44
+But that's only really going to be a problem if you're doing this live.
+7:48
+The other thing is there's a chance that your system's not even recording this artifact
+7:52
+at all.
+7:53
+In which case you can check by going to Settings, Personalization, and then under Start, if
+7:58
+we scroll down, we'll see this setting show recommended files in Start, Recent items in
+8:03
+File Explorer, and Items in Jumpless.
+8:06
+And so if that's toggled off, these link files are not going to be recorded.
+8:11
+Now if we hop back into that Windows Recent directory, we can almost do a quick triage
+8:16
+pass, just kind of like we can with prefetch files as well, right?
+8:19
+Just pointing File Explorer at the folder and adding the day created and date modified
+8:24
+columns gets us somewhere immediately, right?
+8:27
+Because we can rely on the source file system timestamps to give us some indication and
+8:31
+some important details here.
+8:34
+Because with artifacts like these, we're often dealing with two distinct things.
+8:38
+We have the source, which is the forensic artifact itself, right?
+8:41
+The LNK file.
+8:43
+We also have the target, which is the actual file that caused the artifact to be generated.
+8:49
+And it's really easy to get these two confused.
+8:51
+But just remember that source refers to the source of your forensic analysis.
+8:56
+In other words, the artifact that you're actually examining.
+9:00
+And so when we're thinking about the timestamps here, the day created timestamp of an LNK
+9:05
+file reflects when that specific link file was first created, which often corresponds
+9:10
+to the first time a file or target, with that exact name has been interacted with.
+9:16
+But reuse and duplication behavior can vary.
+9:18
+So again, we always need to be careful and double check.
+9:21
+We will sometimes see link files appended with a number in parentheses to highlight subsequent
+9:26
+interactions, right?
+9:27
+Recording multiple link files for some folders.
+9:29
+But it's not a guarantee.
+9:31
+And you really never know what you're going to find until you take a look.
+9:35
+Because the update is generally in place, the LNK files on disk date created stays anchored
+9:41
+to that very first open of any file with that name.
+9:44
+While the body of the LNK file, right, the actual content gets updated or rewritten to point
+9:49
+to the most recent target or the new path or the new target Mac times, the new volume
+9:54
+information, right?
+9:55
+So these things get updated as the user interacts with the target.
+9:59
+And so by the same logic, the LNK's last modification time tracks the last time a file
+10:05
+with that exact name was opened.
+10:07
+And so all that is to say, sorting by either timestamp gives us a very quick, usable timeline
+10:12
+even before we run any kind of parser against these files or against this directory.
+10:17
+And on Windows 10 and above, you'll see here that we're actually seeing the file extension
+10:21
+as part of the LNK file name, which is information that we could easily find as we start parsing
+10:26
+these artifacts.
+10:27
+But it's nice to be able to do so at a high level here, even just in file explorer or
+10:31
+in our command prompt.
+10:33
+So to actually parse one of these out and pull all of that metadata in detail, we'll use
+10:38
+Erick Zimmerman's link explorer command line utility or LECMD.
+10:44
+And it comes from the same family of tools as prefetch explorer, you know, PECMD and many
+10:48
+others, for example.
+10:50
+And so they all offer very similar syntax.
+10:53
+And so for a single file, if we want to target one, we can provide the F argument and
+10:58
+point it to a specific dot LNK file itself.
+11:02
+And so if I call LECMD, point it to this budget plan Excel file here with the dot link extension,
+11:09
+we're going to get an immediate output in our console, right?
+11:12
+And this output is going to be grouped into a few logical sections.
+11:15
+And so if we scroll up to the top, we're going to get information about the link file
+11:19
+as it sits on our local system, right?
+11:21
+We're going to see all these timestamps here for the source file.
+11:24
+When it was created, modified, accessed.
+11:27
+If we open up the header here, we can see the target file timestamps, right?
+11:30
+We created modified access for the actual file on disk.
+11:34
+And if we look under the local path here, we can see exactly where that file was located.
+11:40
+And also under the header, we can see things like the file size.
+11:42
+We can see different flags associated with it, the attributes, right?
+11:46
+So a ton of information as we keep scrolling through this single parsed LNK file.
+11:51
+Right?
+11:52
+We can see the volume information, the drive type, the volume serial number, the volume
+11:57
+label.
+11:58
+Other things get interesting in cross artifact analysis.
+12:00
+Right?
+12:01
+The drive type comes back as removable, for example.
+12:04
+You know, we're looking at evidence of external media use.
+12:07
+And that volume serial number can be matched up against things like artifacts in USB store
+12:12
+in the registry, for example, or mounted devices and different related registry keys to
+12:16
+identify the specific device.
+12:19
+If the target lived on a remote share, instead, we might see the network share details in place.
+12:23
+Right?
+12:24
+The UNC path, the share name, the network provider type.
+12:27
+All of these things can be useful for tracking activity across SMB shares.
+12:32
+At the bottom here, there's also this tracker block, which can include identifying information
+12:36
+about the system that the LNK file was originally created on.
+12:40
+Right?
+12:41
+So we see this kind of net bio style machine identifier.
+12:44
+We get a MAC address.
+12:45
+This could be particularly useful in trying to attribute or scope out an intrusion when
+12:51
+we have malicious LNK files being used.
+12:54
+As a quick aside here, it's hard to talk about LNK files without talking about malicious
+12:59
+LNK files.
+13:01
+Attackers have long abused shortcuts as a way of execution.
+13:04
+And the very nature of how these files are shown to the user makes them easy to appear
+13:08
+benign.
+13:09
+And so there are many cases of malicious payloads being dropped as LNK or link files through
+13:14
+email attachments or download it on the web as sort of these client side attacks.
+13:18
+Now we can investigate malicious link files in the same way.
+13:22
+In fact, it's metadata can be leveraged for our own threat intelligence, specifically
+13:26
+when trying to attribute things like the machine ID, right?
+13:28
+And this different tracker database blocks.
+13:30
+Or when we're looking at malicious command lines or payloads embedded inside of an LNK
+13:36
+file.
+13:37
+For example, if I had over to a nice malware database here, I can do a search for any
+13:42
+kind of LNK file extension as a submission.
+13:46
+And when I do that, we're going to get a ton of different malware samples that use LNK
+13:51
+or link files or shortcut files to their advantage.
+13:54
+So let me try to find a good example here.
+13:55
+I'm sure any of these would be good, but I'm going to try to find one related to cobalt
+13:59
+strike.
+14:00
+Those are usually good examples to showcase.
+14:01
+So I'm going to grab this one here and then download it to my system so I can then parse
+14:06
+it using LECMD.
+14:07
+And I'll just rename this to something shorter like malware, rename the file here.
+14:14
+Interestingly enough, we take a look at the properties.
+14:17
+We're already giving away some of the some of the magic here in the target.
+14:20
+But if you look, it looks like it's pointing to what is that an Excel icon, right?
+14:25
+So that's the icon that it's using again to try to coerce a user into thinking this
+14:29
+is benign.
+14:30
+So you can imagine if I rename this to something like malware.slsx, it's still a shortcut file,
+14:37
+right?
+14:38
+So if I open this up in the command prompt, just do a dir here, it's actually a dot LNK
+14:43
+file.
+14:44
+But it appears even when I have the, what is it?
+14:47
+If I go under show, file name extensions, even when I'm showing file name extensions,
+14:51
+it is not showing me that it's a dot LNK file.
+14:54
+I actually have to go under type here where it says shortcut, right?
+14:58
+And so this is why, you know, from a client's height attack perspective, these can be pretty
+15:02
+nasty.
+15:03
+And so we can see malware.slsx.lnk.
+15:07
+And so what I'm going to do is point LECMD over to this file here with the file argument.
+15:13
+And just auto correct that there.
+15:15
+And there we go, right?
+15:16
+So we parse this file.
+15:17
+And what do we have, right?
+15:18
+Well, we have the source created, source modified and accessed.
+15:22
+We have, you know, the different header information.
+15:25
+Interestingly, it's hard to avoid it now.
+15:27
+But if we look under arguments here, this is where the malware is actually embedded itself
+15:33
+into, right?
+15:34
+And so we can see what it's doing here.
+15:35
+Well, we can sort of make out what it's doing.
+15:36
+It's running some power shell, right?
+15:38
+So it's calling the arguments here.
+15:41
+We can see it's opening up power shell in that window style hidden.
+15:43
+We have a ton of like obfuscation and, you know, hitting kind of ways to mask static analysis
+15:49
+or mitigate static analysis.
+15:50
+So it's using some of those different power shell encoding and obfuscation tricks.
+15:55
+And so if we want to do, we could really go through and try to figure out what it's
+15:57
+doing here.
+15:58
+We see a reference to gamehook.exe.
+15:59
+Now we can see a dat file being referenced.
+16:04
+You know, it's doing a ton of stuff.
+16:05
+A ton of bad.
+16:07
+None of this looks particularly good to me.
+16:09
+See, it's creating something in the temp directory.
+16:11
+We're not going to do a full analysis of this payload, but I just wanted to show you how
+16:16
+these things are actually delivered inside of malicious link files.
+16:20
+Now for real case work, we typically don't want to parse LNK files one at a time.
+16:25
+All right.
+16:26
+So just like with other Erics Zimmerman tools, the link explorer command line tool also handles
+16:30
+directory level processing.
+16:33
+And it's very easy, right?
+16:34
+We can just point it at any folder we want using the D or the directory argument and ask
+16:38
+for a CSV output with the CSV flag.
+16:42
+All right.
+16:43
+So I'll just point it over to my recent folder here and just output that as a CSV.
+16:48
+And it's going to walk through the entire directory and parse every LNK file it finds
+16:52
+and produce a flat CSV for us with every field broken into its own individual columns.
+16:57
+All right.
+16:58
+We'll get things like the source and target timestamps, the local pass, volume data, network
+17:02
+data, arguments, everything we might want into a nice CSV.
+17:07
+If we drop that into something like Timeline Explorer, what we very quickly created ourselves
+17:11
+a sortable and filterable view of file access across the user's entire profile.
+17:17
+So a few examples of what this could get us in practice.
+17:20
+We could create a kind of most recent activity view by sorting by the target modifier source
+17:24
+created.
+17:26
+We could filter the local path on a specific extension or folder that we're interested
+17:30
+in.
+17:31
+And suddenly we get targeted answers, right?
+17:33
+We want every Doc X file interacted with or every file accessed out of the temp directory.
+17:39
+The hunting opportunities here are limitless.
+17:41
+We could filter on the network share fields, right?
+17:44
+And so just anything we could think of here in these columns, we could start to chop up
+17:48
+and filter by it.
+17:49
+Very powerful.
+17:50
+And so that's a good spot to wrap things up.
+17:53
+Unfortunately, forensic artifacts on Windows can be complex and we only have so much time
+17:58
+to discuss them in these videos.
+18:00
+And so I encourage you to continue your research, right?
+18:03
+L&K files are easy to overlook because they're small and unassuming, but they give us file
+18:08
+access evidence with rich metadata.
+18:11
+They can survive the deletion of their targets and they can tell us about the devices and
+18:16
+shares involved in that activity.
+18:18
+Now there's plenty of more to dig into, you know, jumpless, the automatic and custom destination
+18:22
+files that they're built on.
+18:24
+Again, we could go deeper into malicious link triage.
+18:27
+All good candidates for follow-up videos.
+18:29
+But as always, if this was useful, be sure to hit like and subscribe and I'll catch you
+18:33
+in the next one.

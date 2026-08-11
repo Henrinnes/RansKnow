@@ -1,0 +1,316 @@
+0:00
+Welcome everyone to part 8 of the Lockbit Antinalysis series.
+0:11
+The previous videos now have kind of taken us through an in-depth discussion and analysis
+0:16
+of how the runtime linking is performed and a lot of the different.
+0:21
+And maybe somewhat minor tweaks that Lockbit has implemented in order to accomplish that.
+0:27
+The last video, for example, we finally got to the point where we saw the implementation
+0:31
+of the trampolines and the impact that that has on our analysis.
+0:34
+Now we're finally ready to navigate through the last couple of functions here and talk
+0:40
+about some more direct anti-analysis.
+0:42
+So the first function just comes after the last call to...
+0:47
+I might have renamed this since the last video, but you'll see that all of these functions
+0:52
+resolving imports with trampolines.
+0:55
+This is where we left off in the last video just looking at how it kind of goes through
+1:00
+each library that it needs and resolves function pointers, re-opuscates them, and then
+1:06
+crises will trampolines to execute them.
+1:09
+So we're done analyzing all that code.
+1:11
+Now we have this call to sub 40B444 with an argument of zero.
+1:17
+So if we navigate into that function, you'll see that there really isn't a whole lot here.
+1:22
+We don't know much about this argument at this point.
+1:25
+So oftentimes I like to do things like this and just say, okay, I know it's a constant
+1:29
+zero.
+1:30
+I don't know what else it is.
+1:31
+But if we analyze the function, you'll see that V1 is the first argument to this now
+1:38
+resolved or will be resolved when we step through this in our debugger function pointer.
+1:44
+It's the first argument.
+1:45
+And so we can see that it either is equal to the argument if it's greater than zero.
+1:51
+Otherwise it's just going to have a hex value of FFFFE.
+1:55
+So what is this?
+1:57
+Well, for this analysis so far, usually at this point when I haven't decided to commit
+2:03
+to trying to resolve all of these function pointers globally and do this across my entire
+2:09
+IDB, my Ida database, I'm just going to continue with the debugging.
+2:14
+So I think what we'll do here because of how I want to walk through this, let's go ahead.
+2:19
+We're going to set a break point right here.
+2:21
+6.5.3a, that's the offset.
+2:24
+And I'm going to use x64.
+2:26
+That's what I've been using for, I think this entire series.
+2:31
+Our image base is e10000.
+2:32
+Let me just confirm that.
+2:35
+There it is.
+2:36
+So I'm going to set that break point.
+2:40
+Wouldn't hurt.
+2:41
+Let's just go ahead and write the very beginning.
+2:45
+So this is the initial break for the load of this executable.
+2:49
+Now we're at our entry point.
+2:50
+And so I'm going to set a break point here after all this runtime linking at this knob.
+2:56
+Just in case I make a mistake, you know, at this point, we know that this is going to get
+2:59
+into all the rain somewhere stuff.
+3:01
+So we've got the break point set.
+3:03
+We've got our fallback set.
+3:05
+Let's go ahead, resume execution.
+3:07
+And there we go.
+3:08
+We're at the push.
+3:09
+So by the end of this video, I'm going to talk about some real simple ways to get past
+3:13
+this.
+3:14
+Mainly, we'll just knock out the instructions for now.
+3:16
+And that's why I want to set the break point here because we'll need to knock out not
+3:19
+only the push but the call.
+3:21
+For now, though, we can go ahead.
+3:23
+We can step into this function.
+3:25
+And all we want to do is get to the call itself.
+3:29
+Now this is memory that was allocated in that new heap and represents that trampoline.
+3:35
+So we step into the call.
+3:37
+You'll see that there is the obfuscated function pointer, the technique that was used for
+3:41
+this particular execution then was to move that into eax, rotate it right by five bits
+3:47
+and now jump eax.
+3:48
+So it's the jump eax value or what's now in eax, which represents the actual API.
+3:55
+And you can see that that is out of ntdl and it's cw set information thread.
+4:00
+So knowing that, we can go online, a couple of resources here.
+4:06
+I usually like to start with Windows APIs with MSDN.
+4:11
+Not everything's going to be defined here, but I usually like to take a look at what Microsoft
+4:15
+officially has to say if they have anything to say.
+4:18
+And here you can see that it is in fact documented.
+4:21
+The first argument is the thread handle.
+4:23
+So it looks like it's going to be utilizing this technique in order to essentially detach
+4:29
+debuggers from itself.
+4:31
+There are a couple of different, well, there's a number of different ways I think you can approach
+4:35
+this.
+4:36
+One is, of course, reading the documentation here, trying to figure out exactly what it
+4:39
+is that the malware authors are trying to accomplish.
+4:44
+Oftentimes I find a quicker way is to just search for the technique, search for the API,
+4:49
+and you might uncover techniques.
+4:52
+So this is a great blog.
+4:53
+I've used it or talked about it in many videos, but you'll see that the ntset information
+4:59
+thread, which is the API that we're talking about here, is used to hide from a debugger.
+5:04
+And it does this by setting the thread info class to a value of hex 11 or a base 10 value
+5:10
+of 17.
+5:12
+And so that I think is a little bit quicker to understand rather than going through all
+5:16
+the documentation here and trying to piece it together that way.
+5:20
+Of course, you're not always going to find great resources like this.
+5:24
+So this is just again, I come across an API that's being utilized.
+5:28
+Maybe I don't recognize the technique.
+5:30
+I just go to a search engine and search, maybe a set information thread anti analysis or
+5:36
+set information thread malware.
+5:38
+And you might find a resource like this.
+5:40
+Now if we go back to our analysis, we can see that, okay, this would then be the handle.
+5:48
+So we could update the argument here or this local variable.
+5:52
+And there is our hex 11 or if we go into base 10 value of 17.
+5:59
+So now we know pretty sure it's going to detach.
+6:02
+It's going to detach from the debugger.
+6:04
+We might want to update the call targets here as we go, just recognizing that this is
+6:09
+going to be to the trampoline that eventually calls it, not necessarily the most efficient
+6:14
+or effective way.
+6:16
+But when I'm early in the process of analyzing a binary, I'm still trying to piece together
+6:22
+what's going on here and then figuring out how to handle this anti analysis is a part
+6:26
+of that step.
+6:28
+So this is a good way to just keep track of what's going on.
+6:32
+Now if we go back to the debugger, if we allow this to execute, and I'm not going to do this
+6:36
+for the video, but if you allow this jump to be taken and eventually this method, this
+6:41
+function to be called, your debugger is going to stop receiving events.
+6:45
+Basically, you're no longer going to be able to debug the malware and it's going to take
+6:48
+off and run and you're going to get ransomed.
+6:51
+So we do want to be able to handle, especially if we want our analysis to continue, we want
+6:56
+to be able to handle this function.
+6:58
+So there's dozens of ways you could probably come up with in order to do this.
+7:03
+So one technique is just to simply patch instructions and memory during debug.
+7:07
+So I've already reset the session here and you can see now we're back at that initial
+7:11
+push.
+7:12
+We have to be a little careful here because if we just knocked out, and that's ultimately
+7:16
+what I'm going to do, if we knocked out the call, well, that push will throw off our
+7:20
+stack alignment.
+7:21
+So we want to make sure to get all of the relevant instructions in the bytes X32, X64,
+7:26
+we just have to hit the space bar.
+7:27
+That'll put us into the assembly mode and then we can just say, okay, let's knock out
+7:32
+the current instruction.
+7:34
+So that's only going to handle one byte, but then we can check this box fill with knobs
+7:37
+and that'll get the rest of the bite.
+7:39
+So you can see this instruction, the push zero is a two-byte instruction that'll knock
+7:42
+out both of those.
+7:44
+There we go.
+7:45
+We can skip over.
+7:46
+That's actually the next instruction, which is now a knob and now we're to the call.
+7:51
+We'll do the same with that.
+7:52
+We'll say, knock it out and fill with knobs and now that entire call is gone.
+7:59
+And so now we can continue to step and we're not going to deal with the call to that first
+8:04
+level on an analysis.
+8:06
+Now of course, you're probably thinking, well, that's not persistent and it's not.
+8:10
+Every time we start restart the debug session, then the code is back to the original and
+8:15
+we've got to deal with it.
+8:17
+And we don't really, I certainly would not want to have to knock this out every single
+8:20
+time.
+8:21
+So I would be looking to go into Ida or whatever tool that you prefer, you know, prefer
+8:25
+to do your binary patching and just patch it out in the actual underlying binary, make
+8:30
+it persistent.
+8:31
+And if you're not sure how to patch binaries, I already have a video in the channel here
+8:35
+that talks about how you can do that with Ida.
+8:38
+So you'll be very, I think, be very easy for you to take a look at that and then apply
+8:42
+that technique here with the binary.
+8:45
+But essentially, you're just making sure that in the underlying binary itself and the
+8:49
+executable, you take these same bytes at these locations and not them out so that you don't
+8:55
+have to deal with that anti analysis.
+8:57
+Of course, in the next remaining videos here on the series, we're going to tackle the
+9:01
+last bit of anti analysis.
+9:03
+So likely what you would ultimately want to do is just patch all of the remaining bytes
+9:07
+and get rid of all of the anti analysis.
+9:09
+But we'll maybe save that for a final video here.
+9:13
+That's it, one technique.
+9:14
+I'm going to wrap this video up and we'll talk about the remaining here in the future
+9:18
+videos.
+9:19
+So I hope to see you then.

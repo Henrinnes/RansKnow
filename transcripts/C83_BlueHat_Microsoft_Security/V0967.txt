@@ -1,0 +1,572 @@
+0:00
+Hello, everyone. My name is Rituras. Let's start with a quick show of hands. How many of
+0:09
+you have dealt or investigated with OOT cloud applications? I see quite a few hands, and
+0:17
+honestly, that's not surprising. OOT applications are increasingly becoming one of the most
+0:23
+common entry points in the cloud environments. And if you have dealt or investigated one of
+0:30
+cloud applications, you know how challenging or messy that investigation can become. So you
+0:37
+start with applications metadata. You look when this application was created, who created
+0:43
+or published it, what's its name, then you pivot to signing logs or the consent logs. You
+0:49
+check who are the users who consented to it when they did the consent part and with what
+0:55
+permissions. Then you go to the API telemetries and you check what kind of calls or API activities
+1:01
+this application is doing in your environment. And sometimes you also dig into the third
+1:06
+party publisher information or any other data source. And the challenge is not that this
+1:12
+data does not exist. It exists. But it's scattered across multiple systems. And you need
+1:19
+a lot of time to stitch the context together by joining all these data together. And it
+1:25
+takes your valuable investigation time. And this fragmentation of the scatteredness of this
+1:31
+data can also easily create confusion in the SOC teams or the SOC analysts mind. And that's
+1:37
+exactly the gap we are trying to solve here. And in this talk, we are going to talk about
+1:43
+and walk you through how AI agents can actually gather all these evidences, can analyze
+1:48
+the signals and can perform evidence driven risk assessment to understand whether a cloud
+1:54
+application is malicious or not. So since we know why all applications can be so challenging
+2:03
+and met in terms of the investigations, let me give you a quick overview of what we are
+2:08
+going to cover today. So we'll start with a very quick introduction of cloud applications
+2:13
+basically to those who are new to this topic. Then we will get into the what kind of the
+2:18
+problem SOC teams are facing when they are dealing with the investigations of cloud applications.
+2:25
+Then we get into the heart of the session, which is evidence driven risk assessment, where
+2:30
+we will get into the architecture, how multiple agents are basically collecting this data,
+2:36
+doing the analysis and the risk assessment. We will also have a look at the demo to understand
+2:41
+how this agent is working in action. Then we will follow up with benchmarking, evaluation,
+2:47
+and the results on the real world samples. So you can understand how this agent is performing
+2:52
+in the real world investigation data. And at the end, we will wrap up with some closing
+2:57
+reflections and on how we plan to advance this frontier. Now let's take a look how
+3:04
+the cloud applications work in the real world attack. So imagine an employee receives this
+3:11
+email, which says a file has been shared with you or your document is ready. And there
+3:18
+would be a link embedded in the email. And if the employee happens to click on that email
+3:23
+in the link, it will lead to a consent screen like this. Now we all must have seen a consent
+3:29
+page or a consent screen like this whenever you access a website. And it says that you
+3:35
+can log in through a Gmail account, Facebook account, or Microsoft account. And in this
+3:40
+consent screen, what you see in the red box is the name of the application. You also see
+3:45
+the logo of the application. And in the bigger red box, what you see is the list of permission,
+3:50
+this app is trying to request for. And if the user or employee clicks on the accept
+3:57
+part, it will generate an access token. Now imagine if that app has been created or controlled
+4:03
+by an attacker, the attacker can use that access token to call the cloud APIs and it can
+4:10
+basically access the organization's resources. Mainly it can read or send emails, it can
+4:15
+download the files from the stories, or it can enumerate the directories. So now we
+4:22
+have seen how a single consent can open the door of an organization to the attacker. Let's
+4:27
+take a step further. So not all the applications are going to be malicious. Many of them are
+4:34
+going to be legitimate and trusted. So on the left side of the screen, what you see is
+4:39
+the example of a higher risk application. And there are multiple patterns attached to
+4:44
+it. For example, it can have the brand impersonation or typo squatting in the ename. So what you
+4:49
+see is not O 365 access, it's 0 365 access. It is mainly used to give a sense to the user
+4:58
+that it's a trustworthy and legitimate application. It can request for very elevated and the
+5:04
+privileged permissions, which can be further used to exfiltrate and collect the data. On the
+5:09
+right side, what you see is an example of a lower risk application. It's known and trusted.
+5:16
+There are no signs of abuse. It's API calls are aligned with the legitimate business use
+5:21
+cases. In other words, it's behaving and acting as expected. And that's where the main challenge
+5:28
+begins for the talk teams. As you can see, both applications are providing similar
+5:33
+consent experience to the end user. Same consent screen, same flow. And under the hood,
+5:42
+the consent experience is similar to for both applications under the hood. Their impact
+5:47
+and their behavior can be drastically different. And distinguishing between these two applications
+5:53
+accurately and quickly is not a trivial task. And that's where it becomes more challenging
+6:01
+when you are dealing with alerts which are coming in at a scale. Let's take a look how
+6:06
+soft teams may face this kind of scenario. So soft teams may have a lot of alerts in their
+6:12
+queue. And these alerts could be related to a suspicious consent flow or it could be related
+6:19
+to anomaly flag by a machine learning model or a detection rule in its API calls. Each
+6:26
+alert would come up with a short description and the associated application idea or the
+6:31
+involved application idea. And at this stage, it's just a signal. You don't really know
+6:37
+whether this application is malicious. It's benign. It's a species what it is. And to do
+6:43
+that, to confirm that you move to the advanced hunting or some similar portal and that's
+6:48
+where things start to get overwhelming. So what you see a lot of tables related to the
+6:53
+applications which could be applications metadata, registration logs, it could be the
+6:58
+sign-in logs, consent logs, API activities. And what you end up doing with you end up joining
+7:05
+all this data together, it's just the context which takes your valuable investigation time
+7:11
+instead of actually assessing the risk. And if that app, if it's malicious, could still
+7:17
+be active in your environment. And that's the exact problem soft teams face when they
+7:23
+deal with the cloud applications, investigations, the complexity of the data, the fragment
+7:28
+addition, the cognitive load, the soft teams can face when they investigate these alerts which
+7:33
+are coming in at scale. So to summarize, in the space of cloud applications, investigations,
+7:42
+we think there are three main key challenges where agents can make the maximum impact. So
+7:48
+first is the evolving threat landscape. So cloud application threats are evolving very
+7:53
+fast, new consent fishing techniques, new abuse patterns, and the new TTPs are emerging
+7:59
+on the regular basis. And it's almost impossible or difficult for a human to stay updated or
+8:05
+keep up to that pace. AI agents can continuously learn and adapt and can give the soft teams
+8:11
+and edge. The second is the limitation of human grading. So if you are manually triaging
+8:18
+and investigating a cloud applications, this can be a slow, expensive, and time consuming
+8:24
+process. And it's also prone to errors. Now AI agents can actually automate this entire
+8:30
+process. It can reduce the noise. And it can truly prioritize the highest applications.
+8:38
+And the third is the lack of contextual understanding. So a soft team may have a partial view
+8:44
+of an application. And they might not know how this application is behaving, let's say,
+8:49
+globally or across other tenants. And AI agents now can come into the picture and can bridge
+8:55
+that gap. They can provide that additional context, basically correlating that broader
+9:01
+intelligence with the local signals. So now we have set the context that what are the
+9:09
+problems, soft teams are facing. What are the challenges one may face while they are
+9:14
+dealing and investigating the odd cloud applications. Let's see how the AI agent would come here
+9:20
+and would really help. And just to call it out, the examples which you are going to show
+9:25
+here, they may use Microsoft technologies, but the idea, the solution, architecture,
+9:31
+and the approach are equally applicable to other service providers. So let's say if you
+9:36
+are a fuck analyst and you are sitting in front of your computer, you open the co-pilot.
+9:42
+And instead of juggling between multiple systems, tables, and the portals, what you do,
+9:47
+you just enter one natural language command, something like this, investigate this alert
+9:51
+or investigate this application. That's it. No hunting for the right table, no joining
+9:57
+of multiple data or nothing, just a natural language command. And once this command has
+10:02
+been given to the co-pilot, the orchestration agent would take over, it will pass the alert
+10:09
+ID in this case and it will give that alert ID to a tool what we call entity identification
+10:15
+tool. Now this tool basically acts as a smart lookup engine. It will go in and it will
+10:24
+vary from alert related tables in the backend and it will come back to the orchestration agent
+10:30
+with a clean and structured response. And that response will have the application ID involved,
+10:37
+the tenant ID of the organization ID, it will have the context of the alert, basically
+10:42
+the description of that alert, and it will also have the timestamp when that alert was
+10:46
+generated. And once the orchestration agent has that detail, it will hand it over the
+10:53
+button to the planner agent. Now the planner agent's job is to think strategically. Before
+10:59
+we begin any heavy lifting, it is trying to basically understand what we are dealing
+11:04
+here. Whether this alert is related to a consent flow, whether it's related to anomaly in
+11:11
+the API calls or am I looking at the branding person, the type of squatting, what I'm dealing
+11:16
+with here. And now after analyzing the alert context or alert description, it will define
+11:23
+an investigation scope. And in that investigation scope or investigation plan, it will identify the
+11:30
+right set of tools or the data sources. So essentially, instead of running blindly and calling
+11:37
+all the tables everything, it will create an intelligent plan that will say, these are
+11:43
+the data sources or these are the tools really matters most when I will be dealing with this
+11:47
+alert context. And once that investigation plan is ready, the next step is the evidence
+11:54
+collection, which is basically the first core building block of our entire risk assessment
+11:59
+pipeline. Now the evidence collection agent, it will trigger a series of analyzers or we
+12:08
+can also call them tool. Now it is receiving the investigation plan and the list of tools
+12:13
+from the planner agent and it will trigger all of these analyzers. Now these analyzers
+12:19
+have access to a lot of tables in the backend. So basically those tables could be related
+12:24
+to application features or it could be the event or the audit logs. And the objective
+12:30
+of each analyzer is basically to look at the applications through a very different lens.
+12:37
+And you can think of them in this way that they will provide you the list of patterns
+12:43
+which would require otherwise a human analyst to identify manually. So for example, you have
+12:48
+the metadata analyzer. It will only fetch the metadata features of the applications like
+12:54
+age, name, URL and it will try to understand when this application was created. It can return
+13:01
+that whether a brand in person is in type or squatting exists in the metadata or not.
+13:06
+The sign in analyzer would look at the sign in features and the logs and will try to understand
+13:11
+how the users are interacting and consenting with this application. The activity analyzer
+13:16
+would look at the API calls made by this application trying to spot any behavioral anomalies. There
+13:22
+could be a dormant signalizer which will take a look when this application was last active
+13:27
+before this alert was raised. Has it come out of the dormant state and suddenly started
+13:31
+doing a lot of activities. So each analyzer is designed with this objective that you
+13:37
+look a particular aspect of this application and what you are going to give me, you are
+13:42
+going to give me your observations or patterns once you look at analyze and those features.
+13:48
+And we have designed these analyzers with very standard prompts. So these prompts would
+13:54
+contain the core objective, the standard system instructions. You will also give them a
+13:59
+sense of what kind of input you may receive, what should be your evaluation guidelines or
+14:04
+criteria that would basically consist of the species patterns and some notable observations
+14:10
+and a very defined output structure. So this is an example of a prompt for one of the
+14:16
+analyzer which will contain the evaluation guidelines, the output structure. And with this
+14:22
+standard prompting format you ensure that each analyzer is going to return your observations
+14:27
+in a very consistent format.
+14:31
+So once you have collected these observations from each individual analyzer, the next
+14:35
+step is to prepare the evidence collection report. And the objective of this evidence
+14:41
+collection report is that you aggregate the findings from each individual analyzer. So
+14:47
+essentially you have this raw observations coming from each one which are scattered kind
+14:54
+of but you still want to aggregate them and you prepare a consolidated evidence report.
+14:59
+You also do a correlation and structuring here of the pattern. So for example, one analyzer
+15:05
+says this application was created recently just two days back. Activity analyzer says this
+15:11
+application has been involved in a high volume of email read activities. Now this agent
+15:17
+would basically combine these two disconnected facts into a linked insight. So it could be
+15:22
+something like this a recently created applications performed a high volume of email read activities.
+15:29
+And once you have done with this entire raw observations what you will get you will
+15:33
+get a coherent and structured evidence collection report. Essentially if you look under the hood
+15:39
+it's nothing but summarization in the formatting of the raw observations coming from the individual
+15:44
+analyzers. So now we have collected the evidences we have created the coherent and structured
+15:53
+report. So the next question is what happens after this? How do we make sense of it all? What
+16:00
+do you think, Sipsankar? What do you should do here? That's what exactly what I'm going to talk
+16:07
+about. The process of evidence driven risk assessment. So at this point all the hard work has
+16:15
+already been done. The evidences has been collected, structured and summarized. Now a
+16:20
+risk assessment agent takes these evidences as an input and runs it through a structured
+16:26
+decision making process. So to make this process more robust and less prone to bias we select
+16:35
+multiple expert persona. Think of them as like multiple expert analyst each of them is having
+16:42
+a different investigation mindset. For example there is a statistic and analyst who is an
+16:47
+expert in analyzing security studies using numerical and statistical features. Likewise there
+16:55
+is a forensic expert whose primary objective is to look at each piece of evidence with a little
+17:01
+more conservatively. So it's going to scrutinize every evidence with a little more doubt and
+17:06
+skepticism. While the statistic and analyst and the forensic analyst is going to look at all
+17:12
+the evidences and is also going to evaluate the risk for any kind of attack vectors you can
+17:18
+also think of there are additional set of analyst who acts like a domain expert. So for this
+17:24
+use case there is an email attack expert. So this expert actually can analyze only email
+17:31
+related evidences and similarly there is a consent phasing expert and it is an expert
+17:37
+which can only analyze consent related attack vector. So together each of these analyst is going
+17:46
+to evaluate the security risk independently using the evidences it has collected and in the
+17:52
+end is going to produce a risk verdict along with the justification. And all of these together you
+17:59
+can think of they are working as a judge bench. So there is a judge agent that's going to aggregate
+18:06
+all the individual assessment report which are coming from individual analyzer and then is going
+18:12
+to consolidate those into a final risk code along with a comprehensive explanation of how it has
+18:19
+arrived to that risk code. So next let's look at an example. So for a given application this
+18:27
+jury of agent has analyzed all the notable security risk for the input application and it has
+18:34
+assigned a risk code of 85 which is relatively high and it has came up with that risk code with a
+18:41
+sufficiently high confidence and along with the risk code and the confidence code it also has
+18:47
+attached a list of evidences. That's clearly depicting how this AI system or this agentic system
+18:54
+has came up with a high risk code for the input application. For a different scenario where you're
+19:01
+not working on a cloud-based security or thread vectors your choice of expert or the domain expert
+19:09
+as like we have used the email attack expert and the consent-facing expert you may select a different
+19:15
+first persona for the analysis and to enable the dynamic selection of the persona we are leveraging
+19:21
+a knowledge base. A knowledge base is a repository that is comprised of attack vectors along with
+19:28
+that we also do have the guidelines on how to pursue an analysis on those attack vectors and this
+19:35
+jury of agent what it is basically doing it is using a detrived to detrived the most relevant
+19:41
+attack vectors and with that it's also trying to keep itself up to date with the latest attack
+19:47
+and imaging threads. So now the question is how do we keep this knowledge base up to date with
+19:54
+the imaging thread. So security researchers are continuously updating this knowledge base by
+20:01
+adding you know newly observed low medium or high risk attack pattern along with that they also do
+20:07
+add the associated indicator and their behavior and with that you know this whole system is
+20:13
+continuously trying to update itself with any kind of latest attack vector. So next let's come
+20:21
+to the final flow of this pipeline where once the jury of agent is done with the analysis of
+20:29
+all the evidence that is collected finally it come up with an application report and this
+20:35
+application report contains a classification verdict that assigns a classification verdict
+20:41
+to the input application either it declared the application as a true positive or a false positive.
+20:46
+It would also have a confidence code as like we have seen earlier in the example within
+20:53
+our range of 0 to 100 it would also do have a comprehensive investigation report and this
+21:00
+this report will have a detailed justification of how this agent system have arrived to the
+21:06
+classification verdict and you would also have the list of evidence that we have seen earlier.
+21:11
+It may also do have a disruption recommendation if such an action is needed by the SOC
+21:19
+analyst. But doing all these the SOC analyst is getting access to this kind of application
+21:25
+this report instead of raw log or alert and with this kind of a clear and evidence driven decision
+21:32
+they can take the further actions. So if the given application is declared as a true positive
+21:39
+with a high confidence the analyst may go ahead and take disruption actions maybe they can
+21:44
+remove the consent or they may in a completely block block the application. If the application
+21:50
+is declared as a false positive in those cases like you know it also become a learning to the
+21:56
+analyst and they can also review the list of evidence that was found by the AI system and
+22:02
+accordingly they can also take the next set of actions actually. So the key difference over here
+22:09
+is the speed and clarity. So what earlier used to take hours of hunting and analysis is now
+22:16
+reduced to a very clear and evidence driven decision that they can act upon. So next let me walk
+22:23
+you through an example of how this system works in to end. So for a scenario a SOC analyst may
+22:31
+trigger an investigation by writing a prompt in natural language which could be as simple as
+22:38
+investigate the application ID given application ID and a tenant ID. Once this prompt is submitted
+22:45
+as discussed earlier the orchestrator agent kicks in and this orchestrator agent dynamically
+22:51
+takes a decision that which all analyzer needs to be engaged and then all of these individual
+22:57
+analyzers are basically you know executing a set of targeted queries to collect the evidence
+23:02
+then it would also engage with an LLM to generate the individual report and finally this jury of
+23:08
+analyst is going to consolidate everything is going to create a final report that may look
+23:16
+something like this. So for the given application this agent system has identified that that is a
+23:23
+case of brand impersonation through type of sweating and it has also found that this application
+23:29
+was very recently created it was just created couple of days back. Currently this application was
+23:34
+also holding a set of high privileged permissions as like you know a melody ride, mail send and so on
+23:41
+while looking into the activity data it has also found that in a last 24 hours this application
+23:48
+has very high number of email read, high number of you know attachment read request and this
+23:56
+particular application also have created you know very high number of message rule. So all of
+24:01
+these notable observation together is helping the agent to assign a true positive verdict to this
+24:08
+application. While you get a summary of analysis in this complete and the final report you may also
+24:16
+want to look at a detailed report as created by individual analyzer. For example as you see
+24:22
+for the metadata analyzer it is clearly saying that this application is using a name say O365
+24:30
+of this out loop and if you carefully notice you will find that instead of O365 this application has
+24:37
+basically you know replace O with a numeric zero. Additionally it has also found that in the
+24:42
+reply model instead of using Microsoft.com domain it replace S with a Z so it is using Microsoft.com
+24:50
+so it is a clear case of type of squatting. So you may also look at this kind of detailed report by
+24:56
+the analyzer to take an informed decision and similarly you know if you look at the report by the
+25:01
+activity analyzer it is clearly saying that you know there are very high number of email read access
+25:07
+there has been very high number of you know attachment request there are 31 number of you know
+25:13
+message rule which are created that looks very much suspicious right. So while working on this
+25:19
+solution we also wanted to look at how this sort of AI system or AI agent generalizes across
+25:27
+different kind of attack scenario. So we have pursued a benchmarking study on more than
+25:33
+1000 real world example and while doing that our objective was to you know track the precision and
+25:38
+recall among these two the precision was prioritized all because misclassification of a benign
+25:45
+application as a malicious one may also impact customers business and during this analysis we have
+25:51
+found that this system has achieved a precision of 95 percent that means 95 percent of the time
+25:59
+this AI system has correctly declared or predicted a malicious application as a malicious one.
+26:07
+With the high precision we have also reached a recall of 72 percent that is necessarily means that
+26:12
+this system was also successfully was able to capture majority of the true threat and in that
+26:20
+process it was also trying to reduce the false negative. What is also very interesting to look at
+26:26
+and during this benchmarking process we have observed that there is some percentage of cases
+26:33
+where the AI agent has actually found more evidences that was earlier missed by the human
+26:39
+greater and this was directly contributing to the correction of the misclassified true threat
+26:47
+and and this was an amazing observation from the prototype that we had built.
+26:52
+So with all of these our goal is to advance the frontier of evidence driven risk assessment
+27:00
+and in order to achieve that we would like to advance in three different dimensions connecting
+27:05
+the dots. So you might have seen earlier that we are getting individual assessment report from all
+27:11
+of this individual analyzer and then the notable observation that we have seen there are being
+27:17
+considered independent indicator. So it doesn't account the fact that this indicator might
+27:23
+also be connected to each other. So as one of the next step we would like to build an evidence
+27:28
+graph and in that graph it is going to establish a relationship among this indicator and in that
+27:34
+process we might also end up finding attack path through this evidence graph and this evidence
+27:41
+graph will definitely help the AI agent to build more robust system. It will also help the AI
+27:47
+agent to maybe capture more complex pattern and this evidence graph will also be pretty helpful to
+27:53
+the analyst in understanding how each of these indicators and the evidences are linked to each other.
+28:00
+Another area where we would like to make advancement is with the intelligence itself.
+28:05
+So you have seen earlier that the knowledge base is continuously updated by the human researcher.
+28:13
+Now that might not be scalable always. The security landscape is very dynamic and I mean there are
+28:19
+new abuse techniques which are emerging every now and then. So we would like to build some of the
+28:24
+muscle and it techniques to auto-enities the knowledge base and always keep it up to date with the
+28:29
+most recent attack vectors. And the third and video obvious areas where we definitely have to make
+28:35
+improvement is by improving the kind of coverage that we have through the analyzer. So we have seen
+28:42
+there are many false negatives as predicted by the AI agent and those are false negative because
+28:49
+the agent still do not have access to the right evidences. So we would like to increase the
+28:54
+coverage of the data access it has today and with that we are hoping that you know you will be able to
+29:01
+rectify many of these false negative that's are being identified today. So with all of these
+29:08
+advancement in the frontier our goal is very clear. We would like to transform from a reactive
+29:15
+detection mechanism to a proactive disruption mechanism. So with that I'll stop it here.
+29:22
+Thanks a lot for attending this session. In case if you have any questions just let us know.
+29:28
+Yeah thank you.

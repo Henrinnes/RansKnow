@@ -1,0 +1,1446 @@
+0:00
+Hello packages, parsers and programs. We've crossed the summer solstice bringing us shorter days and longer nights.
+0:07
+There is an app-seq solstice except things just get longer.
+0:11
+The lists of CVEs, top 10 lists, lists of JavaScript frameworks, list of AI frameworks,
+0:17
+and the only kind of days that get shorter are the number that app-seq requires for patching volns.
+0:23
+Maybe we spend too much time chasing bugs in the dark instead of illuminating better designs.
+0:30
+And so this week we chat with Ev Constervoy about deploying agents in a way that doesn't erode resilience,
+0:36
+explode into chaos, or fragment identities.
+0:39
+Reach for the sky and stay tuned for application security weekly.
+0:43
+It's the show to learn the latest tools and techniques to understand DevOps, applications, and the cloud.
+0:49
+You are a trusted source for the latest app-seq news. It's time for application security weekly.
+0:54
+This is episode 388 recorded June 22nd, 2026.
+0:58
+I'm your host, Mike Sheema, and I'm here with Ev. He's co-founder and CEO of Teleport.
+1:03
+An engineer by training, he launched Teleport in 2015,
+1:07
+but was previously CEO and co-founder of Mailgun, and his held a wide variety of engineering roles before that.
+1:13
+And I wanted to get all that out of the way because it's more interested in talking to what you're working on today, Ev.
+1:18
+Hello. Thank you for joining us.
+1:20
+Hello. Hello. Good morning.
+1:22
+Great to be here.
+1:24
+Happy to have you.
+1:25
+And I think one of the things to kick this off is I'd always thought of Teleport.
+1:31
+Well, it's another security company because it's doing secure access, secure remote access.
+1:37
+But we talked about fair, and I think security company in a way was kind of an unfair moniker,
+1:43
+not quite the right way to think of this.
+1:45
+And I think that's also a better way to talk about our topics for today about agents and identity.
+1:50
+But tell me a little bit why I shouldn't just be thinking security when I think of Teleport.
+1:57
+Well, thank you for this question because I don't think of Teleport as a security company.
+2:02
+We think of ourselves as an infrastructure company.
+2:07
+And to describe a little bit deeper on what we do is we, so we provide you with an infrastructure identity layer.
+2:14
+Like without our technologies, your infrastructure is naked.
+2:17
+It is anonymous.
+2:18
+It's full of anonymous applications.
+2:21
+It's full of anonymous hardware, software, people wear.
+2:24
+So Teleport manages identities of engineers, of laptops, they use of servers,
+2:30
+and of everything that you run on those servers, including agents.
+2:34
+So we manage their identities, identification, authorization, audit, visibility, access,
+2:38
+like all of them, as they interact with each other.
+2:41
+So for us, that's just trusted computing.
+2:44
+So we see ourselves as a trusted compute provider.
+2:48
+But I definitely understand why people from the outside might call
+2:51
+Teleport a cybersecurity company.
+2:53
+I would even say that the big difference, another difference is that
+2:58
+most cybersecurity solutions are sold to IT.
+3:02
+And Teleport mostly sells to a platform engineer in teams.
+3:08
+Yeah, I think it's that idea that focus on infrastructure that there's a nuance there for
+3:13
+me that I wanted to riff on a little bit, just in the sense that this is how
+3:18
+applications are built. This is how organizations, you know, products are built with this
+3:22
+infrastructure and these different types of identities you were describing, whether it's
+3:26
+the hardware, the services, the microservices, cloud accounts, etc., the people.
+3:32
+And AppSec is almost thought of as a bolt on or AppSec.
+3:37
+In my mind, shouldn't be just a fully different discipline.
+3:41
+It should just be, oh, by the way, we're doing all of these things in a secure manner,
+3:46
+in a secure way. And I kind of wanted to build that story on top of what everybody's talking
+3:50
+about this year, agents. So you did list what was that? The naked hardware, we don't have naked
+3:59
+humans, thankfully. But we have the humans working, the microservices, cloud accounts, etc.,
+4:05
+and now we do have the agents. And one of my go-to questions always been,
+4:11
+why from like an identity and access perspective, are we even talking about, why aren't agents
+4:16
+just a synonym for service accounts? Are they really something special and different? And if so,
+4:23
+what makes them special that we need to think about them with different controls or in a special case?
+4:29
+I would say there are two things. First is that still undefined nature of an agent.
+4:36
+If you if you talk to 10 different industry practitioners and ask them, describe to me what an
+4:41
+agent is, you are going to get different answers. So there are eight, like some people to them,
+4:47
+an agent is some kind of browser plugin they use, right? So for others, that's something that runs
+4:53
+in their terminal in like in the loop, that's their agent. And for others, agent is essentially,
+4:59
+like you said, it's a microservice running in a data center that is LLM driven and behaves
+5:04
+undeterministically, that's another agent. And then finally, there are people who would describe,
+5:09
+hey, we built, like they would take their entire SaaS stack, their entire solution and say,
+5:14
+this is one giant agent. So that's first thing that I think a lot of people kind of trip over,
+5:19
+what is an agent? Because I would argue that right now all of these use cases are, but the way
+5:26
+how you treat identity for them and the way how you treat authentication, authorization,
+5:30
+and all these other things are very different. That's first. Oh, please, kill, come ahead.
+5:36
+And a second is just fundamental, I think, rethink, like we need to fundamentally rethink
+5:44
+how we treat identity. And here's what I mean by that. So traditionally, we had human and non-human
+5:52
+use cases. So humans are non-deterministic. So we're curious, we can make mistakes, we could be
+5:59
+bribed. So generally, it's impossible to predict how a human would behave with high accuracy all
+6:05
+the time. But we also slow, okay? So it takes a while for us, like if you hack into my laptop,
+6:11
+it will take you several minutes, maybe even an hour to find all the secrets and interesting
+6:15
+data that I have in my laptop, right? So slow, but smart, non-deterministic. And we also
+6:22
+relatively few numbers, there are only eight billion humans, right? That's not a lot in computer
+6:27
+number. So that's one type of identity. And then the other type is non-human. That's basically,
+6:32
+like you think of machines, like service accounts, microservices. So right there, there are
+6:36
+a bunch of new numbers, right? There are so existent, probably trillions of those. They are dumb,
+6:42
+like they basically do exact same thing, very, very basic one thing, do it in a loop. Yes,
+6:46
+and very, very fast. So therefore, pretty much all of our security systems. And I'm talking about
+6:53
+everything, really. They all designed with these two assumptions. Like either I'm treating,
+6:59
+like either I'm working with fast and slow and slow and smart and non-deterministic and few
+7:08
+numbers, or I'm dealing with something like numerous, very fast, but dumb and predictable.
+7:14
+Agents are both, okay? So therefore, they push design boundaries of almost every
+7:22
+cybersecurity system we currently have. So which is kind of sort of how I'm already answering
+7:28
+a question. Why can't we treat them as a service accounts? Because service accounts were not
+7:32
+designed with non-predictable non-deterministically behaving actors. They were designed for dumb,
+7:42
+predictable service accounts for software. So that's one of the reasons why we need to rebuild
+7:48
+this part of our infrastructure. Zero trust is clearly the future as threats get faster,
+7:54
+quieter, and harder to detect, but implementing it shouldn't disrupt the business.
+7:59
+Threat Locker enforces default deny at execution in a way that remains enterprise-ready,
+8:05
+scalable and operationally clean. Unknown software is stopped cold. Trusted apps stay
+8:12
+contained and drift is locked down across the environment. It's zero trust that works in real
+8:18
+enterprises and prepares you for the threats ahead. CYC'sos are adopting it at securityweekly.com
+8:25
+slash Threat Locker. It is and there's an aspect there of the, you know, that we can call the
+8:32
+the agent's dumb and non-deterministic two degree, but they're also being given, do these actions,
+8:39
+in other words, either write some code or compile and deploy some code through the CICD pipeline.
+8:45
+There's certain aspects of attempts at sandboxing. So this says here agent go run within
+8:51
+this employee's laptop or within this server or the CICD pipeline. But some of that,
+8:57
+I'm going to equate that non-deterministic aspect to unexpected actions or actions that
+9:04
+it's allowed to take that perhaps humans didn't intend for it to take or were surprised that it took.
+9:11
+And this might be something like it's downloading a package because it's needs,
+9:18
+it just wanted that for some reason. And the reason I'm bringing this aspect up is
+9:24
+there's sandboxing and constraining, but there's identity, but I think identity, the more important
+9:30
+story probably is about privilege and access controls. And maybe we're bringing, I'm conflating a
+9:35
+little bit of authorization with authentication. Is that how does that aspect of identity
+9:42
+change a little bit in the sense of rather than just saying we know this is a human, we know this
+9:45
+is an agent? So I would, well, technically speaking, when we talk about access control,
+9:54
+there are four pillars to it. So there is authentication. So that's like you have to prove that you
+9:59
+are who you claim you are. So then there is authorization. So what actions are you allowed to,
+10:04
+or not allowed to do? Is it like read-only access or is it read-write access? So then there is
+10:11
+kind of visibility, like what is happening? Like if you click this button, so what is the trail of
+10:18
+kind of sequence of events every time a certain action is taken? And that visibility is kind of
+10:25
+split into two parts. One is real time, so you want to see what's going on. And the second one
+10:30
+is historical. Like tell me what happened last week when we did this deployment, for example.
+10:35
+So that's like a access control in the nutshell. So the question is, if I'm interpreting
+10:40
+equation correctly, where does identity fit in? Like what is an identity? Why do you need a separate
+10:44
+work? Which is keep saying authentication? So when you authenticate, you have to present some
+10:50
+kind of credential. And I'm sure all of you listeners are aware of the different types of
+10:56
+credentials. There is private public keys. Like there is user name and password. There is like
+11:01
+MFA. So all of these different things, so the purpose of having them is to prevent impersonation.
+11:07
+So and that's what identity concerns itself with. Like a good identity implementation
+11:14
+eliminates impersonation as a possibility. So which basically means that if you say, hey,
+11:20
+have here's my user name and password, I would argue that's not an identity. That's just an
+11:25
+account. That's an alias. So if I get your user name and I get user name and password, I become
+11:30
+you, which means that those things are not an identity. I would argue that identity is fundamental
+11:37
+in not an electronic thing. This is why it's so important. So identity is not data. It's not
+11:43
+supposed to be data. If you have, if your access, if your authentication depends on a possession
+11:49
+of some kind of data information, that is not a strong identity implementation. Because data is
+11:55
+fundamentally, it can leak. You could copy paste. You could have multiple. You could sell your
+12:00
+credentials and dark web or something. So those are terrible identity implementations. The identity
+12:06
+that is a real identity is a physical world thing. So I would say that you cannot become me. There
+12:12
+is no way. You don't know what I know. You don't have my experiences. So therefore, a proper
+12:19
+identity implementation must be rooted in physical world principles, which means for software
+12:27
+or basically for all things non-humans, you need to tie it to hardware somewhere. So every laptop
+12:33
+has a TPM. Trust the platform. And that's going to be like the the past key or some biometric
+12:38
+basis. Exactly. Exactly. So for non-humans, it needs to be a derivative from a like a TPM or HSM.
+12:44
+It's a microchip, which is a unique to a particular machine that is present on. So only things that
+12:51
+have access to that microchip. So they actually derive their identity from it. So you could ask
+12:56
+the HSM to sign you a certificate, for example. And for humans, you combine that with biometric and
+13:02
+all the usual MFA factors. So now in-depth with identity implementation that simply cannot be
+13:08
+replicated. So my identity here is teleport. It's my fingerprint. It's the password in my head.
+13:15
+It is a trusted platform module microchip on the motherboard of my laptop. And also a second
+13:19
+factor. Okay. On top of this. So that is even even if I wanted, I cannot give you that identity.
+13:26
+It means I need to chop off my fingers, ship you the laptop. That's why identity is important.
+13:32
+It prevents impersonation. Right. Yeah. And that's that anti-fishing aspect that is cryptographically
+13:37
+bound to that TPM. And even that destination domain. So the human, we no longer have to say,
+13:42
+go read that URL and figure out is there just a homophone attack or a little L instead of an i,
+13:47
+things like that. And you're definitely getting, you're going to make me smile with that story.
+13:52
+But now we definitely have to say, well, where is the fingerprint, where is the biometric,
+13:58
+where is the physical presence related to the agent identity? And I think that's maybe where
+14:03
+you're going here. Yes. I'm guessing that's a question that everybody's asking right now.
+14:08
+So and now I would have to go back to the fact that, hey, fortunately or unfortunately, the language
+14:14
+is lagging the technology right now. Right. So we keep inventing new things, but we don't always
+14:20
+come up with new terms for them in time. Right. Like even the like the word microservice. It didn't
+14:27
+show up like this second when the first one was deployed. We used to call them processes,
+14:31
+like daimons that are all kinds of words. But then finally, okay, we need a new word for this
+14:35
+thing. Same with agents. So if so I would like for just to keep things relatively simple, I would
+14:42
+say there are what we see is people running and deploying mostly two types of agents. One agent
+14:49
+is let's call it digital twin. So let's just say you perform a task every day, like someone sends
+14:54
+you an email, again, hypothetical simplistic task, someone sends you an email with an attachment,
+15:00
+your end data attachment is some kind of Excel spreadsheet, you open that attachment and based on
+15:04
+information, Excel spreadsheet, you update some kind of database. That's something you do in a daily
+15:08
+base. Like someone who's an agent that I'm explicitly saying go ahead and impersonate me. Exactly.
+15:14
+So that's a very important task that I want to deal with. Yes. So an agent like that, like when
+15:20
+you instantiate an agent like that, you say, Hey, I want you to inherit a subset of my privileges.
+15:28
+So you are going to be given an identity that's going to be derivative of my and you are going to
+15:33
+inherit a subset of my privileges. And that subset should be just enough to complete this task
+15:39
+that I want you to do and nothing else. Notice that if you do it this way, you're creating a
+15:46
+hierarchy, you're creating a tree. Because if you imagine, like if you launch like five agents,
+15:52
+so you become root and they can become your children. But the interesting thing and by the way,
+15:57
+and you could say it and task manager or task monitor, like like every operating system has a app
+16:02
+that allows you to see all the running applications and all the logged in users. It has a tree view.
+16:08
+Right. So what does that tree show us? It shows how humans, human identities and non-human identities
+16:15
+that they have a child parent can a relationship. When you laptop boots, the first process that starts,
+16:23
+that's the root. Okay. So that process lets you in. It's kind of interesting that a machine lets you in.
+16:29
+So it launches another process that shows you authentication screen. So you go in there,
+16:35
+you put your credentials or use your Apple ID, whatever if you're an Apple ecosystem. So you become
+16:40
+a child of that parent. So then you start an agent. Agent becomes your child. You see that it's
+16:45
+a hierarchical tree where privilege has passed along and we're all getting privileges that are just
+16:51
+enough to do what we're supposed to do. So that's that. Yeah. I want to jump on that for a second
+16:57
+because there's also aspects that we have SUDU, for example, that totally inverts the just enough
+17:02
+privileges, like you said, to get some more privileges. And that's got to be an aspect that's a
+17:09
+danger of what agents potentially do, too. And I'm curious is that a good way to interpret this,
+17:14
+to be thinking of this or I love that you brought this up because this analogy of having a single
+17:23
+operating system on a single computer versus having a computing environment on AWS. Let's keep that
+17:30
+in mind because I would argue that your AWS account is a computer. It's just like giant
+17:37
+like virtual computer connection cloud parts exactly exactly. And my argument here, and this is
+17:43
+why teleboard exists, is that that computer doesn't have an identity layer, but your laptop does.
+17:49
+Your operating system does. The operating system manages identities of human applications and humans
+17:55
+that run on or use that computer. So that's what you need to have in your cloud account as well.
+18:02
+And in systems like that, so when you have an identity that exists with a very small set of privileges,
+18:09
+that identity should can request elevated privileges. That's what SUDU does. SUDU is kind of like just a
+18:17
+special case because it's a convenient command that simply asks for all privileges. But you could
+18:22
+implement a different version of SUDU that simply elevates just one aspect of your privileges.
+18:27
+It basically could, you could, you could build a command line tool that says, hey,
+18:31
+give me just this one extra privilege. Like I don't want like full SUDU, but I want like actually
+18:37
+SUDU has that via command line. You don't have to ask for root like SUDU can give you privileges of
+18:43
+another user. And that is what you should have in the cloud as well. Let me maybe, hey, am I talking too
+18:51
+much? No, I think that's why I know this is good because I'm asking questions to help us build,
+18:57
+build this narrative about what this means and how agents are, you know, there's a subtext of
+19:01
+agents here. And I think let's let's play with the cloud a little bit because too, there's an
+19:06
+aspect of clouds have that abstraction layer that here's an S3 bucket. And it's very hard to
+19:13
+impersonate an S3 bucket unless you're also an S3 bucket. Like you could redirect a destination.
+19:19
+So as an attacker, I'm going to exfiltrate data to this other bucket. But the way that the APIs
+19:27
+even interact, it's very, in the way the identities of those services, that's what I'm trying to get to,
+19:32
+are very strictly of a type. It's, I'm not going to try to overreach and say this is like a
+19:37
+programming types, but these are identity types, I would say. And I think what I'm hearing too is
+19:43
+that you're describing ways of what managing privileges. And I want to say, you know, I want to
+19:50
+introduce the term, is that, is that necessary and sufficient? Or is that not sufficient just to say,
+19:57
+here's an agent, it can ask for some privileges at a certain time. Let's say like it needs a right
+20:03
+access to the S3 bucket to deploy an artifact or update a cache, something like that where other
+20:08
+times maybe it just reads. In my mind, that seems like that's good practice. Have you seen that
+20:15
+type of practice work in the scale that agents are being deployed or the way that people are
+20:21
+adopting and wanting to use agents in the sense of, I just want this person to this, this, sorry,
+20:27
+this agent to impersonate me and do any type of action that I normally would think, oh, I should
+20:33
+be allowed to do this. So the agent should be allowed to do this too. So in your question,
+20:39
+there was one very interesting word to use earlier, you said scale. So what you said, like, will
+20:45
+this work at agent scale? So I will give you maybe it's controversial, but at the same time,
+20:50
+it's not. I will give you the answer that's no, it's not going to work. In fact, even it doesn't
+20:56
+even work for humans anymore. If you go today to like a typical average American enterprise,
+21:03
+that's basically my bread and bar. So I could speak to my experience here. And you go to the
+21:09
+production environment and you pick a random database and a random table. And then you ask
+21:14
+there are security people who has access to this data. And they will tell you, we don't know,
+21:21
+there's just give us a little bit of time, we're going to let you know. And then you ask how much
+21:24
+time and you're going to get answers that measured days and weeks. So what does it tell you?
+21:30
+It tells you that actually here's not example. You could ask him, okay, how many employees you
+21:36
+guys have? Let's just say they tell you 3000. We have 3000 employees or maybe 3000 engineers,
+21:43
+which is going to closer to my will house. Okay, 3000 engineers, how many rolls do you have in
+21:47
+your organization? And they will give you an average like two, three times. Basically, every
+21:54
+company has more roles than they have employees. Which basically means that the way how we manage
+21:59
+privileges today, which is based on our back, role based access control is already broken.
+22:04
+If you have, if you end up with more roles than you have employees, something is wrong.
+22:09
+And now we also will already know that companies are planning already are running 10 times as many
+22:15
+agents as they have employees. So what will that do to your role based access control? So I would say
+22:22
+that situation actually pretty depressing. So our back already doesn't work and now we want to
+22:27
+try to reuse it for something 10x as numerous. The answer we believe, and look, obviously like
+22:38
+our back is everywhere. You have to support our back for backwards compatibility purposes. So I don't
+22:42
+want to be like this madman that calls for something unreasonable. But there is an end state. You
+22:49
+have to be slowly moving to if you want to be in a responsible safe spot with agents deployed.
+22:57
+Imagine if your infrastructure had no roles whatsoever or no accounts either. Like you have no roles,
+23:04
+no accounts, there is nothing to log into. And it's actually going to work just fine because
+23:09
+infrastructure is absolutely, it doesn't need humans most of the time. But it's a very clean state
+23:15
+where you could basically say, hey, no one can log into my infrastructure. I'm unhackable.
+23:20
+You only need to introduce these things like identities or privileges when,
+23:25
+when there is something to do, when there is like action that requires, for example, human attention.
+23:30
+And I would argue that is what you should be attaching privileges to.
+23:35
+Today, privileges are attached to identities or groups. That is a path to nowhere because groups
+23:42
+and identities they grow faster than you're ravening. Then your infrastructure size, they grow non-linearly,
+23:48
+they exploding. So don't attach privileges to something that grows very quickly over time. That is
+23:54
+not scalable. Yeah, two actions. Yeah, two actions. Because if you look at a company that has 500
+24:01
+employees or 5000 employees and you observe what are they doing under infrastructure, it's going to be
+24:07
+very similar. So here's an alternative scenario. So you have something that needs to be accomplished,
+24:14
+a unit of work. Let's just say it's deployment. So then you ask yourself, who's going to be
+24:20
+responsible for this deployment? It's going to be this engineer, and also that agent also,
+24:25
+and also, and also have a laptop. So then you attach identity of a laptop, identity of
+24:32
+a device, identity of agent to that ticket, like a ticket to run deployment. So you see,
+24:37
+you're already kind of enforcing policy that this deployment is taking. And I want to ask
+24:41
+there too because I'm definitely following along with how you're describing, but for the sake of
+24:47
+listeners who might start to be asking a question, aren't you just describing right there like the
+24:52
+deployer group? What is the nuance between that group of laptop and of an agent that are allowed
+24:59
+to deploy versus the important distinction you're making about? This is the action to deploy.
+25:05
+What I'm describing is essentially attribute based access control. So if you go and like we
+25:10
+keep idiot and look up access control, there's a role based access control and this is a back. So
+25:17
+I would say our back is a subset of because A back is much more generic. You basically say,
+25:22
+like this action is allowed where these identities have some kind of attributes attached to them.
+25:27
+Okay. So in the example I'm describing, so you have a ticket, you're attached all these identities
+25:32
+to it, and then you ask yourself, what privileges do they need to complete this ticket to close this
+25:38
+ticket? Then you attach privileges to that. So then you ticket, so then the system provisions access.
+25:46
+Then you go to the deployment with agent or agent does it without you, it doesn't matter. When
+25:50
+the ticket is closed, then you'll re- everything evaporates, access evaporates again. So to have a
+25:56
+flexible system like that, yes, you could leverage roles, but again, just temporarily,
+26:02
+like you would be treating a role just as a attribute. So like, F, for example, needs to be on this
+26:08
+team. That's really what role communicates, but there are other attributes, you may want to check,
+26:13
+you may want to check, am I on vacation? Am I in the right time zone? Am I in the right network
+26:19
+IP segment? Am I on, was it kind of schedule, like on page or UE? Am I supposed to be on duty right
+26:28
+now? So you could implement all kinds of attributes in a system like this,
+26:36
+and they will continue to be manageable because it's much, much, much simpler because everything
+26:40
+is ephemeral. You're creating access when there is something to do, you're removing it when there
+26:45
+is nothing to do. And that is ephemeral. Yeah, I want to expand on the ephemeral part because
+26:51
+that to me is where I've seen a lot of other services moving to, for example, I'll just use GitHub
+26:57
+as an example. They've been for a long time saying we used to have these classic tokens that could
+27:02
+do everything, any action, we now would like you to use these fine grain tokens that are actually
+27:09
+specific to this particular action or this other action. And then grant and revoke just as needed.
+27:15
+And that feels like it's giving better confidence that this agent is while it's spinning CPUs and
+27:20
+doing nothing, it can also do nothing because it hasn't requested or attempted to take an action that
+27:27
+has been granted to it. So that is a very good point because you kind of like going back to your
+27:34
+kind of pseudo question earlier. So I would argue that when you have long running agents,
+27:40
+these durable agents that run and you infrastructure all the time, they should have access to absolutely
+27:44
+nothing. Every time they need to do something, they need to be asking essentially running a pseudo.
+27:50
+And someone or something needs to improve it. I'm sorry. And usually it's something, it's not
+27:56
+someone because if you have 100,000 agents constantly asking for permissions, you're not going to
+28:00
+have a human hit like approval. It's not exactly good engineering either. Exactly. So now imagine
+28:07
+the situation, you have a huge number of agents with no privileges at all. Every time they have
+28:12
+an action in front of them, they ask, they basically like execute pseudo. And you could have other
+28:18
+agents or I would argue you could probably you should probably have deterministic kind of old school
+28:24
+automation, granting or approving that access, checking on like arbitrarial attributes. I would
+28:30
+argue that is a much, much more going to simpler and scalable access control system where agents are
+28:36
+first class citizen. So it is part of that. So very, very binary yes, no for those approvals as you
+28:44
+are describing right now. Earlier, you also described like a data access inventory or I'll just
+28:51
+simplify to say data inventory. Do you know what data you have? How who can access to that?
+28:57
+And then do you just have an inventory of agents or an inventory of engineers? For example,
+29:02
+those 3000 engineers. And the reason I'm kind of being repetitive there is that's very much an
+29:07
+inventory that's easy to say, but feels like is very hard for a lot of organizations to do
+29:13
+accurately. So as organizations try to say we're moving fast and everybody's using agents, we need
+29:19
+to deploy them. We need to adopt MCPs or what have you, whatever their flavor of acronyms today.
+29:26
+Have a good inventory story. I can imagine that's one step. Is there another step that's that you
+29:32
+would recommend that an organization can get to a better maturity or that is that is absolutely
+29:38
+necessary mindset or way of approaching this problem so they can actually solve this in a more
+29:45
+reliable and effective manner. So what I think what you're referring Mike, it needs to be addressed.
+29:52
+So there's this elephant in the room, which I can imagine that a lot of you listeners are listening
+30:00
+to us right now and thinking, well, these two guys, they're talking about sounds wonderful.
+30:07
+Like agents get privileges based on the tasks that are in front of them. All of this is great,
+30:12
+but how will I implement it? I cannot. And the elephant, the ugly elephant that prevents them from
+30:18
+implementing this policy is identity fragmentation because identity even for humans is fragmented in
+30:24
+all organizations. Like for example, if you if you log into AWS account using AWS credentials,
+30:31
+your AWS identity, then you create an instance. And then on that instance, you top like apt install
+30:38
+the MySQL. Now you have MySQL running and that MySQL users completely different identity system,
+30:43
+completely disconnected from AWS. And this fragmentation keeps happening like you install another product,
+30:50
+maybe like Kubernetes and it's not AWS flavor of Kubernetes. It's a different one. So it has
+30:55
+its own identity and that's the hell that everyone lives in. So that and the reason why you need to
+31:02
+have unified identity is in order to get that inventory that I'm talking about because the reason
+31:09
+why you need a full inventory of everything you have is because you need to refer to items in
+31:15
+that inventory in your policy. You should be able to say that agent with these attributes has
+31:22
+access to these particular API and points to these particular file systems to these particular
+31:28
+tables in this particular databases. In order to even like enumerate all these possible things,
+31:35
+you need to have which means that identities of all these databases, all these machines, all the
+31:39
+APIs, they need to be in the same system because today they're not. And this gap between these gaps
+31:47
+between identity silos, that's what attackers essential exploiting. That's what creates
+31:52
+opportunity for impersonation. This is why attackers can pretend to be machines or they can pretend
+32:00
+to be different humans and you could trick agents into making exact same kind of mistakes. So that
+32:06
+is why the key and I would argue it's a must have prerequisite. In order for you even to get into a
+32:14
+state where you ready to start running agents in your computing environments permanently in production,
+32:20
+you need to have a unified layer that keeps track of identities of all of your databases,
+32:26
+your machines, your microservices, agents and humans all in one place. Otherwise, you will not be
+32:31
+able to enforce policy. Yeah. And does that, does that unified layer have you in practice? Does
+32:38
+it succeed more with also unified team that's in charge of it? For example, engineering has also
+32:44
+what has traditionally been the IT for the human identities, the human logins, as well as, I'll just
+32:50
+say machine logins, all the services, for example, or can it be multiple teams, but it still needs
+32:56
+this platform or this single point where all identities can be reasoned about. I'm curious about
+33:04
+the, again, trying to riff on that idea of in the real world, how have organizations managed this?
+33:12
+So there is actually a big shift happening right now with that a lot of, well, historically,
+33:17
+identity was owned by the IT team. That's usually who buys, like, octa, something like that.
+33:23
+But those teams are not realizing that, hey, actually, that's the not in the entire identity story.
+33:30
+Like, we need to, because your traditional identity team, like they might not be able to incorporate
+33:36
+all the agents and Kubernetes and AWS into, like, under their wings, simply because they have no
+33:42
+expertise managing those things, like engineers usually manage those things. So this is why most
+33:46
+organizations that are, they are going through some kind of transformation of security responsibilities.
+33:51
+They're doing reorgs, they rebuilding their security teams, because the security function now needs
+33:56
+to become more technical. They need to become more comfortable with complexity. So, which basically
+34:02
+means that cybersecurity function is now engineering function. So whether you keep it in IT, but you
+34:08
+add more engineering talent to that team is one option, whether you move it completely to platform
+34:14
+engineering team and say, you now guys own identity here. So different organizations do it differently.
+34:20
+But the human systems, just like language, like we talked before, because there's this lag. So we need
+34:26
+to reshape our org charts and we need to reconfigure our human systems to keep up with this
+34:32
+technological innovation of what's happening in the data center. Yeah. And I think that if we do
+34:37
+that and embrace the patterns that you're describing, I think we get better security too. And the
+34:44
+reason I say that I purposely haven't even mentioned, because we've been talking about agents prompt
+34:49
+injection or malicious skills or supply chain, you know, these classic usual suspects of application
+34:55
+security, because if an agent is constrained on what it can do, it feels like it's better to
+35:02
+manage and be able to reason through and have visibility into its actions, its attributes,
+35:08
+and solve that problem very deterministically, rather than have really fancy rejects or the LLM
+35:14
+that's checking the natural languages. This prompt injection or not, or is this 90% to likely
+35:20
+to be a prompt injection that feels like the better place to be solving this type of security problem?
+35:26
+Yes, but again, the key is to not treat agents as anything special. Like we believe that
+35:35
+academically correct way to treat identity is to design identity systems without these assumptions.
+35:40
+No longer we should be thinking about deterministic or not, fast or slow, smart, dumb, no.
+35:46
+There are identities, identities have attributes, and there are privileges, privileges need to be given
+35:53
+according to the task the identity has, and then revoked right after the task is completed.
+35:59
+And the reason why you need that unified treatment is because malicious actors they can
+36:03
+jump identity boundaries. You might have a bad actor pretending to be an agent, you could have an
+36:09
+agent that is tricked to behave as a bad actor. So again, there is not such thing as a genetic
+36:15
+identity, there is not such thing as human identity, there is not such thing as non-human identity,
+36:19
+there is simply an identity. And that I think probably the most kind of important message that I
+36:27
+bring to this conversation that I hope people who listen to you will walk away remembering that,
+36:31
+that would be great. I love that. And let me squeeze in one last question here too in the sense of
+36:38
+trying to give names and because so many things have been changed, you've been pointing out,
+36:43
+it's good to have expressive names trying to describe what we're talking about.
+36:46
+I've heard intent come up quite a bit. Yes. We relate to agents. Is intent, is that one of our
+36:52
+synonyms for what you're describing here? Is that helpful way to be thinking about that? I think it's
+36:56
+a good way. I historically have been using kind of task oriented access. Simply because it's
+37:04
+easier for people to connect with things like ticketing systems and kind of things like
+37:10
+we already have digital artifacts representing what needs to be done on our infrastructure. We already
+37:15
+have that. But intent is basically the same thing. So if you could treat it as a synonym to a task.
+37:25
+So then then my one final final question is something we ask all of our guests. And this is a
+37:30
+little bit more fun. I bring back a little bit of AppSec view into this. How would you describe AppSec
+37:35
+in three words? Here's what I want to say. AppSec is an art of convincing your application to stay
+37:48
+on your team. How you can press that. But anyway, so that's how I feel it is. You need to be,
+37:59
+you're in my team, like just stay with us. Don't join them. But that's what AppSec is.
+38:06
+Convincing your friends. Maybe we'll try to stay on the team. Good to see you.
+38:11
+Yeah, that's not going to work. That's one of that. Sorry. We'll work on that. As we're pointing
+38:16
+out, inventory and inventory in words is there's a metaphor there. But in any case, thank you so
+38:23
+much for this conversation. Appreciate it. Well, thanks for having. Thanks everyone for joining us.
+38:28
+We're going to take a quick break and we're turned with two interviews from last week's
+38:32
+Identiverse 2020 6. So stick around for more identities, agents and some advice. Remember to
+38:38
+subscribe. Check out the show notes. Share us on the socials. And if you want some music to listen
+38:43
+to while you're reviewing all your identities, check out Midnight Prospect by beta max. We'll see
+38:49
+you next time on application security weekly. Generative AI is powerful, but it comes with real
+38:55
+risks from prompt injection to data leakage misuse and agent to AI. The OOS Gen AI Security Project
+39:03
+unites a global community of expert practitioners who tackle these challenges every day. Together,
+39:09
+they've built practical playbooks, adoption guides and the OOS Top 10 for LLMs. Resources of
+39:15
+any team can apply right now to strengthen AI security. And it doesn't stop there. This is
+39:21
+open source built by practitioners, four practitioners working together to secure generative AI.
+39:27
+Visit securityweekly.com slash OOSP to use the playbooks and join the effort to protect
+39:32
+tomorrow's intelligence today.
+39:35
+Welcome to Identiverse 2026. I'm Mike Sheema. Joining me today is Neha DeGal, Chief Product Officer
+39:53
+at PZRA Security. Yeah, thanks for being here. Yeah, I'm excited to be here. Talk to you.
+39:59
+I hope you're still excited because we're going to have to talk about agents. We're going to have
+40:02
+to talk about problems we've had for 20 years. I know I'm sorry, but let me see if I can frame
+40:11
+it this way to kick things off. Sure. A lot of the conversations are about the agents gone rogue.
+40:16
+Here's a prompt injection. Here's a malicious skill. But that's not necessarily just a prompt
+40:22
+injection itself. Isn't the real problem or at least I don't think it is. I think you've got a
+40:27
+very more nuanced aspect here to tell us about. Yeah, I mean, everyone loves to talk about
+40:33
+rogue agents and everybody likes to talk about how in multiple different ways, agent can take
+40:39
+malicious actions. Right. But I think from my perspective, from what I'm looking at it as I
+40:45
+speak to customers, as I talk to folks that are actually deploying agents into production,
+40:51
+even following the news, it's not the rogue agents that, yes, they should be a part of your worry.
+40:58
+But in most of the cases, what you're actually seeing is agents just trying to do their job.
+41:05
+In adverbidentally, because of the way they are given permissions to do their job,
+41:10
+they'll try and break every barrier to ensure they get their job done. So whether,
+41:14
+they're, you know, again, privileged abuse, they don't, agents don't have a conscience, so they
+41:20
+can't sit and sort of evaluate what that looks like. So in my opinion, I say, yes, worry about your
+41:26
+rogue agents, but worry about your naive agents that can actually inadvertently cause massive
+41:32
+destruction. If you follow the news, like, you know, in the last few months, we've heard about
+41:36
+pocket OS, you know, where again, the whole database was dropped along with replicas,
+41:41
+happened previously with, you know, other companies as well. And in each of these cases,
+41:46
+it wasn't a malicious agent. It was just an agent trying to do its job,
+41:50
+was over permission, ended everything in its power to go fix the problem. And again,
+41:56
+let the massive data loss. So yeah, you know, when you're thinking about these agents, like,
+42:01
+yes, rogue agents, but think more broadly beyond what agents can do, again, what they should be
+42:07
+allowed to do. And I love that framing because it highlights what's so important. The question
+42:13
+isn't like, like, points of laugh, oh, look, it deleted a database. What prompted it to do that?
+42:19
+It's more of why did it have the permissions to delete the database in the first place?
+42:23
+Exactly. Yeah. That's such a, but that feels like, this is not because you said it, but that
+42:29
+feels like such a boring story. It's hard to convince, like, security folks that do that. So yeah,
+42:34
+how do you help me make that story more interesting? Is there a way to do that?
+42:38
+I mean, I think inherently humans are like attracted to you, you know, the who's ours. Again,
+42:44
+that's why I think the rogue agent stuff gets stuck. But it's all these mundane sort of things in
+42:50
+life that, you know, you need to care about more. And in the case of agents as well. Because the risk
+42:56
+that these, yeah, these posts to your organization are way more massive. And again,
+43:03
+is something that can happen to anybody at any time. So, you know, again, thinking about some of
+43:08
+these things is important. Might be boring, but that's life, you know, you've got to think of these
+43:13
+things. And in a lot of these cases, a lot more important because the consequences are massive.
+43:21
+Yes. And all argue that it's only half jokingly a boring day for the incident response team is
+43:27
+probably a good day. Exactly. Yeah. Exactly. So, you know, I don't think cybersecurity would have
+43:33
+too many problems in braced boring. Yeah. But to get to not boring to belabor that topic a little bit.
+43:40
+So, you know, there's that extreme case that's fun. That rogue agent delete the database. That's
+43:45
+bad. They're still organizations that are rolling out agents and trying to fair how to do this right.
+43:51
+But I suspect that there's humans in the loop to use that phrase, approve this, approve this,
+43:58
+or they should do this. How do you get beyond or how does an organization get beyond approvals for
+44:04
+agent actions without burning someone out or boring someone to death just hitting? Yes, yes,
+44:09
+yes, this is okay. I mean, human approvals for regular age, like for agent actions for things,
+44:15
+the agent supposed to do. Anyways, I don't think I think it's a no go from the get go. Why?
+44:20
+Because that yeah, that just slows down what agents are supposed to do. You're bringing in agents
+44:25
+to improve the productivity in some cases, increase velocity and doing something like that may sort of
+44:31
+hamper the speed. And you would probably see pushback from folks that are actually developing agents
+44:38
+say, Hey, I do not want that. So, I think security teams have to be thinking about how can they
+44:43
+bring in guardrails in place, the right guardrails in place. So, you're not slowing down
+44:48
+productivity of your organization, but still have guards. So, human and the loop, yes,
+44:54
+makes sense. And it should absolutely be there, especially when agents trying to do something
+45:00
+destructive, like, you know, right into a database or drop something or like delete something from
+45:05
+your sales force instance, for example, I truly think and we've seen this in multiple customer
+45:12
+conversations for sensitive actions, if you will. Yes, there should be some sort of foresight.
+45:19
+There should be some escalation mechanism in place. So agents are, you know, again, do not have
+45:25
+the access or don't even get to the point where they have a capability of destroying something.
+45:32
+But I think for the use cases, there are well understood for like a predictable like,
+45:37
+from an agent perspective, what it's expected to do. Using, you know, again, you should have
+45:43
+tools and guardrails in place that can help evaluate the context on what the agents trying to do,
+45:48
+who's trying to take that action with the agent, should be able to evaluate that and be,
+45:54
+you know, allowed to be given the right sort of privileges when it needs them. So they can still
+45:59
+do that action without introducing that friction of like, Hey, every action must be approved for it.
+46:05
+Yeah, and that theme of bother the human when it's important or when it be a consequential,
+46:10
+not just for the one-day things that are boring, but that's what agents will do. They'll do a whole
+46:15
+lot of boring things on their own and give us time to do what they're more interesting.
+46:19
+Velocity is more of the essence when it comes from an agent perspective. So I think in the case of
+46:24
+a genetic, it's you have to be cautious of like, you're not slowing the system down. But from a
+46:31
+security perspective, still have the guardrails to ensure that the agent is behaving or is, you know,
+46:38
+sort of doing actions within the confines of what should be normal behavior. At anything outside,
+46:44
+you know, that is flagged for explicit approval. Yeah, now I want to, I want to riff on that idea of
+46:50
+the guardrails that you've mentioned. And there's a strong history of that in the sense of cloud,
+46:56
+for example, and just teams building out guardrails for humans to deploy securely. Yeah.
+47:00
+Why not do the same for agents? We live in the world of 2026 and agents in acronyms. Let me throw
+47:06
+LLMs and MCPs into this. So MCPs are way to get agents to do many, many actions. Is there an
+47:14
+opportunity for guardrails there or how have you seen the adoption of MCPs or tooling around MCPs,
+47:19
+try to constrain or control agents in any effective way? Absolutely. I mean, you can't, you should
+47:27
+absolutely have guardrails around MCP tool access because MCPs in some ways are APIs to your
+47:34
+underlying applications. That's right. It's a very simple way of like, I think it's very fair,
+47:38
+though. Yeah. So I think, and I, and I, from an agent perspective, I think there is, you
+47:46
+should think about the MCP tool access is absolutely important. But in, from an agent perspective,
+47:53
+I think you need to look more broader than that. Yes, having that MCP tool level authorization,
+48:00
+if you will, is important. But at the end of the day, what application it's accessing and what
+48:05
+privileges the agent should have in that app, once it passes the MCP tool level, is equally as
+48:11
+important. And as we have these conversations with customers, there's multiple patterns that
+48:16
+have emerged. Folks will either, from an agent perspective, just because they want to deploy stuff
+48:22
+faster, may give its, you know, over permission service account identities or inherit the human
+48:28
+user that's calling like their over provision identities. And as we think about how you should
+48:34
+think about your agent applications and what policies and guardrails you need to put into place,
+48:38
+you want to look at those identities to the, the concept of the human user or the identity that's
+48:44
+invoking the agent, create that sort of that blended identity and look at like what that
+48:49
+identity is trying to do in the system. And then have, you know, guardrails in place for sure,
+48:53
+that blended identity have that MCP tool level access. And if the answer is yes, then ultimately,
+48:59
+the authorization is to the backend application. So that blended identity should never have any
+49:05
+standing privileges to the backend application. It sales force, it could be a data store,
+49:10
+snowflake, what have you. That should be provisioned as and when that blended identity needs.
+49:16
+And those permissions should be wiped once the agent's done what it's supposed to do.
+49:20
+That way you have no standing privileges that exist within your, you know, within your ecosystem.
+49:26
+And if the agent tried to do something beyond what the guardrails ordered to do, it would never be
+49:31
+able to do that because it doesn't have access to. Yes, it's, it's, I'm smiling as you describe
+49:37
+that because it's like, do we, as a security team, put all of our time into figuring out in this
+49:42
+markdown, is there something in the natural language that's tricking the agent or telling the
+49:46
+agent to do something or do we just say you don't have access to this API? It feels so much easier
+49:51
+and smarter just to cut off access or allow access where needed for that matter. Yeah, it's like,
+49:56
+yeah, at that access API level for sure. And then even the backend source, like, you know,
+50:01
+even if the tool allows access, you, again, you won't have any, if you don't have any standing
+50:06
+privileges, you could be allowed access. But, you know, again, cannot go beyond the confines of
+50:11
+what your role is being defined. Now, is this, in my mind that I love this approach,
+50:16
+and it feels straightforward logically, in practice, is it still straightforward? Where do,
+50:21
+where do people stumble with this in the sense of trying to apply that both granular access,
+50:27
+controlled to the agents as well as the just in time access you're describing? Yeah.
+50:31
+Is it just, is it just like, this is like machine accounts that we've been dealing with or human
+50:35
+or cloud accounts we've been dealing with? There's something special about agents that
+50:39
+makes it harder to manage or that the people should be thinking about here. I think some of the
+50:45
+problems are very similar and can be translated from both human and non-human identities here
+50:50
+into this ecosystem. I think the volume that you're dealing with is now substantially different
+50:55
+from what it was before. But I think the principles, the security principles still apply. Any,
+51:02
+any conversations that we are having always start with like, hey, it first discovered, like,
+51:07
+what exists within your environment, right? You can't really control what you can discover.
+51:12
+But once you discover the next thing you should be doing is like looking at controls in place,
+51:17
+like that controls you want to put in place. And here, I think some of the again,
+51:21
+best security best practices that we've talked about for years, still in a play, like, look at like,
+51:26
+what systems are accessing sensitive data or will want to access your sensitive data.
+51:32
+And start thinking about the broad sort of guardrails that you can put in place.
+51:36
+The controls you can put in place. And then, you know, having a tool, again, I'm biased here
+51:42
+from P0, but our tool has the capability to show you every sort of tool call and back-end resource
+51:48
+call you're making. So, again, a tool that can help you sort of manipulate these policies on the
+51:54
+fly. So as you see the agent behaving in certain ways, you can then go configure and fine tune your
+52:00
+policies to ensure they're as granular as you want them to be. And again, ultimately, you want
+52:05
+to protect your enterprise data, right? So just fine tuning those policies, but starting with
+52:10
+discovery, control, and then, again, you know, being able to prove what agent had, what agent,
+52:18
+what was the agent trying to do, what access did it want, how was it granted that access,
+52:24
+and again, everything that the compliance teams have wanted forever. So, you know, basically being
+52:28
+and that's got to be really helpful information because that shows you also,
+52:32
+wait, where did this agent come from and why is it talking to here?
+52:35
+Absolutely. Because both you can discover here as a shadow agent to use that term.
+52:40
+Yep. And over here, wait, we didn't think this was sensitive data, but some human went and
+52:45
+looked at and analyzed and like, oh, actually, we now also have our data inventory. That's
+52:50
+telling us that something new that we didn't learn before. Yep, exactly, absolutely. And now,
+52:55
+yeah, you want something that captures all of that information so you can find here.
+52:59
+It's a learning process. You know, a lot of folks are in various stages of agent deployment,
+53:05
+but the fundamentals of security, I don't think, change. The way you want to handle
+53:10
+agentic should, you know, has to be more sort of holistic. And I think in human users and in
+53:19
+NHIs, a lot of people live with standing privileges, but in the agentic world, zero standing
+53:25
+privileges actually becomes really, really important. And you have to start sort of thinking about
+53:30
+it from that lens and, you know, using that discover control proof model to ensure that you have
+53:36
+your agentic sort of story tied down. Yeah, and I think that that sounds like a wonderful
+53:42
+guardrail to me is that standing, making making those a femoral. Yeah. And just knowing what's out
+53:47
+there. Those are two great messages. And unfortunately, on the theme of the femoral, we don't have
+53:51
+much time to continue the conversations, though I appreciate the messages you've been telling us.
+53:55
+Thank you. Yeah, thank you so much. If you'd like to learn more about P0 security,
+54:00
+check out securityweekly.com slash P0 IDV. And for all of our Identiverse 2026 coverage from
+54:06
+cyber risk alliance, as my voice is breaking, check out securityweekly.com slash IDV. Stick around,
+54:12
+we'll be right back after the break. AI is accelerating how software gets built and how it gets
+54:18
+attacked. Most teams still rely on periodic pen tests, which leaves gaps in coverage and means
+54:25
+findings remain theoretical rather than proven. Expo is not autonomous penetration testing platform
+54:32
+that mirrors real world attacks and proves which vulnerabilities are actually exploitable.
+54:39
+Test running hours to quickly produce clear evidence your team can reproduce and fix. Go to
+54:45
+securityweekly.com slash expo to see how it works. Welcome to Identiverse 2026. I'm Mike Sheema.
+54:55
+Joining me today is Amit Massan, founder and CEO at IDM Express. Amit, thanks for being here.
+55:00
+Thank you Mike. Thanks for having me here and I'm really glad it's a good show and this is my
+55:06
+15th Identiverse show and I'm loving it. That's crazy. So 15 that we were talking a little bit
+55:11
+before we even started rolling today about how long ago 15 years was let alone 20 years or
+55:17
+possibly even 30 by this point. The conversations have had to have changed a lot. I am Pam, zero trust,
+55:24
+bunch of buzzwords. What does 2026 look different to this? It's all about NHI, it's all about AI,
+55:32
+how the market is changed so much so rapidly and it has been phenomenal how people have had
+55:40
+been to those changes and I'm excited because those changes will, their changes are only
+55:47
+constant and those changes are only going to be better for the future. Well, I'd love to tell me
+55:53
+a little bit more about what those changes are because part of my thinking originally was,
+55:58
+oh, we've had machine accounts, service accounts, now we just have agents, how come those aren't
+56:03
+just the same? I mean, see there are different parts of NHI, one is the credential,
+56:11
+there are other non-human identities which has their own ID so every identity is defined in a
+56:17
+different way. Now, what has changed is it is growing rapidly so what humans used to do has been
+56:25
+now taken over by AI agents and that's where things change a lot and that's where I feel like
+56:31
+there's so much innovation required, so much understanding required. I think we're still at
+56:36
+ground zero as far as AI agents is concerned but ground zero still feels a lot of changes because
+56:43
+it's new and once we start adapting those changes, once we start looking at what these AI
+56:50
+agents are going to do functionality wise or configuration wise or AI agents creating another AI
+56:57
+agents in the loop we're going to change the world, right? So that's going to be important.
+57:02
+Yeah, now you started off that with saying humans and I'll make the argument that humans are
+57:08
+relatively predictable, at least from the sense of I'm an employee, this is what my daily workflow
+57:13
+should look like if I'm not a malicious insider for example. Yeah, agents on the other hands,
+57:20
+maybe they got prompt injected, maybe that's a it was a malicious skill that was downloaded,
+57:25
+maybe they're just hallucinating, there's got to be a little bit more chaos that does this harder,
+57:30
+what does that look like when you're trying to secure them? What was changing and how you
+57:34
+approach that? So the different kind of ways how you approach this, right? Some companies are building
+57:39
+a solution which are specific to AI governance where you're tracking those AI agents and you're able
+57:46
+to stop them when they are hallucinated or they're doing things which they are not supposed to be
+57:52
+or they are hacked or downloaded as you said. So when companies are building those kind of
+57:58
+solutions it's important to pay attention on how to track those AI agents and when it's necessary,
+58:04
+stop them from doing the necessary stuff, unusual stuff. And that's gotta be hard though because
+58:09
+especially it's and I think you were touching on this, it's not a mapping of me as one employee
+58:15
+has one agent. Yeah, it might be here's a swarm of agents, here's multiple agents that are taking
+58:20
+different actions that ostensibly should be something that I'm aware of. Right, but I don't think
+58:27
+that's how things work in practice, right? So we are counting agents, right? We're saying it
+58:32
+changed from one to 30 today and then it's going to be 100 tomorrow. It's a great thing. But the
+58:37
+important part that we want to take care of is the behavior, right? The behavior of the agent,
+58:43
+the risk factors, how are you going to keep the risk in mind in order to
+58:50
+work with those agents fluently without any issues. I mean issues are going to be there. The other
+58:56
+thing we talked about is human intervention. It's an important point. When we are moving towards
+59:01
+agent AI, human intervention is going to be so much important because unless, you know, for example,
+59:08
+you know, you're watching a TV and the agents keeps on changing a channel, right? Now you need a
+59:14
+remote where somebody's saying, okay, stop it. I just let me watch soccer World Cup, right?
+59:19
+Instead of watching a cricket match, for example, or NFL, right? So yeah, human intervention is going to
+59:25
+require in the same way in an environment where agents keep on changing the world. But at a given
+59:32
+time, and human intervention will come and say, I want it this way. And that's this, so that will be
+59:39
+constantly required. Now, I'm laughing because I love, I think that might be the first time I've heard
+59:43
+televisions used with it as abstract or it's super security. It's going to be happening.
+59:48
+But that's a good point because it's very obvious if somebody's changing the channel,
+59:52
+watching soccer or I love the WNBA, local, here in Vegas, ACEs or my hometown, the Valkyries.
+59:59
+Yeah. If somebody changes the channel, I'm going to notice it complained. But AI to play around with
+60:04
+your metaphor a little bit, it's watching TV 24 7. We humans like to go to bed eventually,
+60:10
+for example. So how does that human intervention or human oversight or let's broaden that to just
+60:16
+say governance? How does that work if agents are running continuously 24 7? So this all depends on how
+60:22
+you build it, right? So there are, if you're building a solution where it's a workflow management,
+60:28
+what human identity used to do earlier was who has access to what? Right. Similarly, there's going to
+60:33
+be a world where agents have who has access to what? Right? There's a fundamental behind that. So
+60:39
+building an NHI solution, having the workflow management, having an agent connect to service now or
+60:45
+workday or Salesforce to kind of do the things what human used to do in the in the previous time.
+60:52
+But now it's going to be all taken over by agents. So things has rapidly changed. I was sitting
+60:56
+with a CSO yesterday last night and we were talking the same thing. He's like, I'm like, what product
+61:02
+do you have? He said, I mean, that doesn't matter because now it's all taken over by NHI and AI and
+61:07
+those stuff. So things are changing and then how you're going to have that workflow add up to your
+61:12
+environment where it was access to what is control and implemented correctly is going to be the key.
+61:19
+I'm curious, especially with that, using that conversation as an example, are the CSO still struggling
+61:25
+just to figure out the who did what in the sense of after the fact, oh, the agent did this, at least
+61:31
+we have our incident response team respond and look out and figure out that was good or that was
+61:36
+or is the are they even at the point where they can be preventative and saying the agent shouldn't
+61:40
+be allowed to do this and we have some way of enforcing that so it won't happen.
+61:45
+Prevented a user, very good boy, right? It's important to understand how these agents are going to be
+61:52
+controlled. Now, when we used to do an identity assessment, right, they used to do a road map saying
+62:00
+here's the road map three to five years, here is what you're going to do as a team because of the
+62:06
+problems you had, you created a solution and then on basis of that you have a road map. In AI
+62:12
+agent world, you cannot have that road map. The CSO, the biggest dilemma like you ask me the question,
+62:17
+the problem is they don't know what they're going to do in next six months. That's crazy. So
+62:23
+the NHI assessments, you know, continuously holding each other's hands, we have to kind of,
+62:28
+it's like COVID, right? We didn't know what's going to happen next. Same thing with AI,
+62:33
+agent, AI, the world has changed. It's a pandemic. It was pandemic now. This is AI,
+62:37
+dynamic, whatever that is, you call it, but you cannot predict what is going to happen in next six
+62:43
+months. That's the dilemma. All the sea level executives are facing today and that's where I think
+62:49
+VSIDM experts want to come and help and see how you know how we can change this world holding
+62:55
+each other's hands. Now, I imagine at least I want to hope here. I'm attempting to be optimistic
+63:01
+that even though I totally agree, you can't predict in the next six months what the road
+63:05
+map should be for the agents or what's changing here, but I would hope that there's still some
+63:09
+basics that any CSO can be doing. You mentioned, for example, like just discovery called an asset
+63:15
+inventory and identity inventory. Is there another one or two things that are still the fundamentals
+63:21
+should be in place to help now the governance of AI go more quickly or more smoothly or that can
+63:27
+just happen in the first place. When it comes to mobile application security, good enough is a risk.
+63:34
+A recent survey shows that 72% of organizations reported at least one mobile application security
+63:40
+incident last year and 92% of responders reported threat levels have increased in the past two years.
+63:47
+Guard Square delivers the highest level of security for your mobile apps without compromising
+63:53
+performance, time to market or user experience. Discover how Guard Square provides industry-leading
+63:59
+security for your Android and iOS apps at securityweekly.com slash Guard Square.
+64:06
+It's a very good question and not an easy question to answer, but I think it's important to take a
+64:13
+back step and say, okay, let's look at it from the holistic view what these agents are going to do.
+64:19
+Before you even implement them, for example, you take a vaccine if you're going out of states and
+64:26
+is the same way, take a back step, find out what needs to be done, how you're going to prevent
+64:31
+if something happens, be prepared for it. So the preparedness is important. When you predict things
+64:37
+will not happen, I don't think it's you cannot hope, right? You have to prepare and once you prepare
+64:45
+then you are ready for the changes that are coming. Maybe you're not 100% prepared, but be prepared
+64:50
+like 70-80% that will at least hold you at that time that, okay, I was prepared for it. Maybe I
+64:56
+didn't expect this 100% but I can handle 80% of it. So the world is changing and the preparedness
+65:02
+is going to be important. And I would think that's part of the story of governance. Governance is
+65:07
+this is how we're going to prepare for how things should be. There may be a gap smaller
+65:11
+large between how things really are. But if let's go back to that 15 years, if a company had
+65:17
+good governance, how difficult is it then to turn that good governance to pull in these NHI,
+65:23
+these non-human identities of agents in AI? See ultimately humans created AI agents, right?
+65:29
+And then of the day if you have a governance body who was responsible for identity in general,
+65:35
+whether human or non-human, and they are able to put in the process in order to before we
+65:41
+implement anything if you have the process in place for a specific functionality and then you can
+65:47
+also like you said, what else we can do? Go feature by feature. Don't go, don't try to boil the ocean,
+65:53
+right? Go step by step. Once you go step by step, you will be able to figure out that, okay, at this
+65:59
+step this agent will act in this way and you're going to control in that sense. And I think it can
+66:05
+be the those challenges can be solved. So let's imagine tonight you're having another conversation.
+66:11
+Yes, time with the CISO. Very new, very fresh. They're trying to figure out where to start. And
+66:18
+what do I do? Is there going to be the question they ask? What's your answer to help them
+66:23
+stick started here? I think the same thing I said earlier, just be prepared, do take a back step,
+66:29
+and take a step back and find out what you did wrong or what the process has been so far.
+66:37
+What are you going to do in next three months, at least from the process perspective? And then
+66:42
+when before implementing, make sure that you're able to predict what those agents have done. Do
+66:48
+a good POC. Do a good POC. Once you do a good POC, I think you're prepared for what's coming for
+66:53
+next. And now we were already talking just a few minutes ago about the difficulty of predicting that
+66:59
+that three to five year road map. It's month road map. Good luck. But there's got to at least be
+67:04
+something that you've probably seen people underestimate or mistakes about. What's a good mistake?
+67:10
+What's some advice you would offer up to avoid that underestimating or that mistake that people
+67:15
+have been been doing recently? I think what happened is the mistake that people did. I would say
+67:23
+everybody started adopting or buying a cloud subscription, for example, or open AI or co-pilot,
+67:30
+whatever that service would be. Nobody predicted that these prompts will cause so much expense,
+67:38
+which was out of control. For example, out of 100, if 60% was your AI budget,
+67:44
+you still overspend by another 20 to 30%. So what left with IT is 10%. You have to work only
+67:50
+with 10%. So that was not expected. So how did you keep in a buffer? Was your buffer more than
+67:57
+100%. Did you add that additional 20% on your buffer in order to kind of say, okay, I don't know what's
+68:03
+coming. I am prepared for additional 20%. Maybe I can use in this way or that way. And maybe they could
+68:09
+have prepared that way. Maybe going forward if anybody is starting their journey, start from fresh,
+68:14
+they have to keep that buffer of additional 22 to 30% budget. So that if something goes wrong,
+68:19
+they can use that. If somebody loves a cloud or an AI subscription and they keep putting the prompts,
+68:27
+they're going to be charged with heavy bills. But I love that example because so much of
+68:32
+cybersecurity boils down to risk management, which easily translates into where you spend
+68:38
+that money because that's where you're preventing hopefully or you're seeing the losses.
+68:42
+Paying attention to that token spend or how that is is happening with agents.
+68:47
+It's going to be important. I think the important part that everybody is going to see is there's
+68:52
+a lot of consolidation going to happen. I think I am seeing a lot of consolidation coming,
+68:58
+even in NHI space. The products which are new are going to be challenged with another
+69:03
+newer products and that will ask for consolidation. And we are going to kind of see the world where
+69:10
+people are not prepared for what is coming. No, I'm curious to see what when you hit your
+69:15
+16 next year of Identiverse is probably going to be a completely different conversation.
+69:20
+Right? Absolutely. Thank you so much for all the questions and I look forward to
+69:28
+solving the identity AI problems for the world. No, thank you. I know everybody has limited
+69:32
+budgets of time especially. So thank you for spending the time with us. Appreciate it. Thank you, Mike.
+69:36
+To learn more about IDM Express, visit securityweekly.com slash IDM IDV. For all of our Identiverse
+69:43
+2026 coverage from CyberWescal Alliance, check out securityweekly.com slash IDV.
+69:48
+Stick around now. We're going to be right back after this break.

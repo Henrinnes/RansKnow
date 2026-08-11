@@ -1,0 +1,496 @@
+0:00
+Okay, here we are, moving into video three of this series, in which we're just looking
+0:12
+at some of the anti-analysis essentially for the lock bit three or the lock bit black
+0:17
+executable.
+0:18
+Just to get us on the same page here, last video we talked about some basic analysis
+0:22
+of those binaries that the builder created.
+0:25
+In this video, what we're going to focus on is the essentially the unpacked version.
+0:31
+That way we don't have to worry about having that password passed in during debugging.
+0:36
+We can just jump right into the analysis now kind of the next stages.
+0:42
+Some of the basic analysis we identified the lack of strings, the lack of imports.
+0:46
+It's a very common pattern here as we begin to unravel malware to have to then once you
+0:52
+get past perhaps a layer of packing, which isn't always monolithic, right?
+0:57
+Sometimes the packing and just how all the code is obfuscated can be very difficult
+1:01
+to fully unravel.
+1:03
+But in this case it was, there was a distinct function here.
+1:07
+This was the first function.
+1:08
+And even with this version that's not, you know, that isn't actually packed.
+1:12
+There's no logic here as you can see.
+1:14
+It's just called a null sub by IdaPro.
+1:18
+We can still unpack it to help keep our bearings.
+1:21
+This is the entry point here.
+1:22
+Of course we're looking at this binary in Ida.
+1:25
+And so now that the unpacking is complete, we can move on to this next function.
+1:29
+And that's what we're going to try to figure out.
+1:30
+Now again, it kind of makes sense that as we're unraveling this, that imports and maybe
+1:36
+any necessary strings at these early stages are going to be required.
+1:40
+So they're going to have to be resolved.
+1:42
+And much like unpacking and just regular, you know, general code obfuscation, the unpacking
+1:47
+doesn't always have to cut or I'm sorry, the import resolution doesn't always have to
+1:50
+come immediately and all exclusive, all inclusive, right?
+1:54
+It might be that every API is resolved on demand as the binary executes.
+2:00
+So we can't guarantee also that this function is responsible for that.
+2:03
+But this is just a general pattern.
+2:05
+And these are the kind of activities that I start to anticipate as we dig further and further
+2:10
+into these binaries.
+2:11
+So let's jump into this binary.
+2:13
+As you can see, I'm going to try to keep things a little bit simple here just in terms
+2:18
+of saving real estate for the video.
+2:21
+And I have just the pseudo code view open here off to the side and have that synchronized
+2:26
+here with the disassembly listening.
+2:27
+So I'm going to go back and forth here a little bit between the two.
+2:31
+If we have these in sync, you can see that hopefully between the disassembly and the
+2:35
+decompile results we can stay or kind of understand, you know, from the decompile review
+2:40
+or the pseudo code view, the corresponding disassembled instructions.
+2:45
+And that can be really helpful to go back and forth between the two.
+2:48
+Now with this one, I oftentimes or with this particular function, and if in particular,
+2:55
+I'm suspecting that there is some sort of API resolution.
+2:58
+Yeah, I like to just take a glance at the function itself and use the pseudo code if possible
+3:04
+because that gives you, you know, maybe a little bit oftentimes a bit easier of an understanding.
+3:10
+You know, in this case, I can see this same function is called over and over and over
+3:13
+and over again.
+3:14
+That is sub 405 DA zero.
+3:18
+In addition to that, we can just look at the first two arguments.
+3:21
+And this is going to take us to this unknown global variable, but this is followed by a
+3:27
+bunch of D words.
+3:29
+And if we just simply follow one of these D words, you can see, so I just highlighted one
+3:35
+and hit the X key for cross references.
+3:37
+You can see that it's actually used as the operand for a call instruction.
+3:42
+Right?
+3:43
+So if that's one of the arguments to this function that we're investigating, sorry, that kind
+3:49
+of jumped us around there, then it looks like, you know, it's very likely then that that
+3:53
+function is going to resolve a bunch of function pointers for us or API calls.
+3:58
+Very similar.
+3:59
+If we look at the second argument, you can see that this is an array of D words.
+4:07
+These appear to be hashes or check some values.
+4:11
+And this cluster of D words ends with a hex cccccc.
+4:15
+And you see that repeat over and over here as we just kind of glance and scroll through
+4:19
+this data.
+4:21
+So again, this would be a very common pattern in that, you know, this first argument is
+4:26
+going to point to an array or a region of memory where once those functions, those APIs
+4:31
+are resolved, it's going to store those values so they can be called later.
+4:36
+And a second argument is going to contain an array of checksums or pre-computed hashes
+4:42
+so that the functionality that we're about to explore can go through and essentially
+4:49
+compute based off of process internals and structures that we're going to go throughout
+4:54
+this, you know, go through throughout this video.
+4:57
+It doesn't, we don't have to have hard coded strings.
+4:59
+It can actually use the DLLs that are loaded in memory, walk their export tables to find
+5:04
+those function names, compute the hash and then compare it to this hard coded list of
+5:09
+hashes here.
+5:11
+So you could think of this, you know, it is helping to construct an import table.
+5:15
+And essentially, instead of having a list of imported names like virtual alok and virtual
+5:20
+protect and, you know, you know, date formats w and whatever, it's just using these pre-computed
+5:28
+values.
+5:29
+Okay, so we've got pretty good insight into this functionality already.
+5:36
+We don't know what v1 is, we don't know what result is, but as you highlight these and
+5:41
+we go back up a little bit earlier in the function, you can see that, well, this is where, for
+5:45
+example, result is being assigned a value, right up here, similar to v1.
+5:51
+v1 is assigned the result from this function call.
+5:55
+And so we'll be able to really kind of piece together the last couple of arguments to get
+6:01
+a better understanding of what's going on in this function before we have to drill into
+6:05
+some of these additional functions.
+6:08
+So let's start with this first area here.
+6:12
+This is called a sub 405 AEC.
+6:16
+And you'll notice that, you know, the decompiler versus the disassembler, if you look at the
+6:23
+disassembly, we have a four-byte value moving into eax, then a, then that value in eax
+6:29
+is x-sword with this constant 10035FFF.
+6:34
+That's pushed onto the stack as the argument, which is why you see this value minus 133228312.
+6:41
+Maybe we convert this to hexadecimal value.
+6:47
+You see that pushed onto the stack, and then there's a call to the sub 405 AEC.
+6:52
+Now this highlighting it, you can see it's not the same as sub 405 DA0.
+6:58
+And so as we get a little bit further into this, you're going to realize that there are
+7:02
+actually two layers of how this, you know, how this ransomware is deciding to resolve APIs.
+7:09
+And the second layer here is quite a bit, well, it's quite interesting.
+7:13
+So that's probably going to be, though, in a second or third video from here.
+7:18
+What do we know about sub 405 AEC?
+7:21
+Well, you can see that there is a must return a result because eax is being tested.
+7:26
+And you'll notice if we highlight eax, eax is called a little bit later on.
+7:33
+So this must be resolving an API and returning it directly as a return result on the eax
+7:39
+register so that it can be called later on.
+7:42
+So as I make these discoveries, it's good to start to rename.
+7:49
+Name APIs, rename functions, I'm sorry, reading functions, rename local variables.
+7:53
+I'm going to call this direct API.
+7:55
+And what I mean by direct is it's going to take a check some value of this x-word.
+7:59
+And this is kind of another little twist on the standard approach of doing this that
+8:06
+this malware is doing, that instead of just providing a pre-computed for byte value, it's
+8:14
+actually like recomputing by adding this x-word, this x-word key here.
+8:20
+So that's another layer of just making it a little bit harder for us to detect what
+8:25
+these APIs are because ultimately, that's what we need to do.
+8:29
+We need to figure out what these calls, if we go to just this location, but these locations,
+8:36
+I'm going to pick one of these at random.
+8:39
+In order to understand what this chunk of code is doing, we need to understand what
+8:44
+this API is.
+8:46
+We need to understand that in order to build the context and figure out where, what the
+8:50
+malware is doing or in the case of our ransomware, maybe we're just really interested in how
+8:55
+it's choosing to enumerate the file system or what crypto it's using or whatever the case
+8:59
+may be.
+9:00
+But until we peel back this layer, we don't really know for sure.
+9:06
+Okay, so now we look at that.
+9:10
+That resolves an API.
+9:11
+We know that because it is returned in the EAX register and used as an operand to a call
+9:17
+instruction.
+9:19
+It's done twice.
+9:20
+So we'll have two different APIs that are going to be resolved here as well as the result
+9:28
+of calling this first API.
+9:29
+So we really want to figure this out.
+9:32
+In order to do that, we're going to navigate into this method that I just renamed direct
+9:37
+API resolution and we're going to start to analyze this function.
+9:42
+All right, so this function is going to provide us with an opportunity then and really become
+9:49
+the focus of the rest of this video on just how did they go from simply providing a hash
+9:56
+value to getting a function pointer.
+9:59
+It's actually really cool.
+10:00
+I've got videos that cover it in my channel, but this is just another implementation of
+10:05
+it.
+10:06
+So in this case, it's part of a kind of a two stage technique.
+10:10
+So let's take a look here.
+10:13
+When you notice or when you look at in the in the pseudo code, you'll notice that this
+10:17
+function begins with two conditional statements, two ifs.
+10:21
+If this deward value does not contain a value, assign it a value, and then provide that
+10:27
+value as an argument to our direct API resolution function, returning that to that same
+10:34
+deward.
+10:35
+So essentially what it's doing is it's saying, okay, really what it's saying is before we
+10:39
+can get into the rest of the logic here, there's a couple more APIs that have to be resolved
+10:45
+and it's going to do that by calling itself recursively.
+10:48
+So by renaming that before we entered into this function, it makes that easier to recognize
+10:53
+this.
+10:54
+That is that we already had some inkling as to what it was responsible for.
+11:00
+We're not going to do much with these checksum values, right?
+11:03
+One of the kind of next steps analysis here would be to create a method for maybe an
+11:08
+Ida plugin or something that would actually go through and then resolve all of these
+11:13
+for us.
+11:14
+Our focus is on what exactly is this doing?
+11:17
+Okay, so if this is called, we can see that it is returning a function pointer.
+11:23
+So we know that this is going to be some API.
+11:28
+And this call gets made then, right?
+11:31
+Then this will at first, the first time through, this will now be populated.
+11:35
+So I guess actually the second time through, this will now have a value.
+11:38
+It's in the process of resolving that.
+11:40
+And so now we're going to hit this conditional.
+11:42
+This won't be, so there's going to be another recursive call.
+11:46
+And in doing so, it's going to assign this global variable a value.
+11:52
+This means that this will get called the third time in which case neither one of these
+11:55
+conditionals now will will be entered because they both have value set and they're both
+11:59
+essentially waiting on recursive calls.
+12:02
+And the rest of this logic to resolve that API will be executed.
+12:08
+Let's start then by setting a break point in our debugger and tracing through these calls
+12:14
+just to see what these APIs are before we get too far into the rest of this functionality
+12:19
+here.
+12:20
+So this is, once this returns a value and this returns a value, well then it can finish executing.
+12:28
+And we'll go back here to resolve whatever API this is.
+12:34
+Okay, in order to do that, I'm going to set a break point on this call right here.
+12:41
+So that's going to be at this address 405 B13.
+12:45
+So we'll just copy that.
+12:46
+And I've already got X32 debug open.
+12:49
+You'll need to take note of your memory map and the fact that this execution for me is
+12:55
+at a different image base, E10000.
+13:00
+Okay, so this is at 5B13.
+13:03
+So we just need to add the two together.
+13:05
+We'll set a break point at E15B13.
+13:10
+All right.
+13:15
+We can go also, so we just catch the default break points here.
+13:21
+We'll catch the break point at the program entry.
+13:25
+All right.
+13:26
+Here's unpacking.
+13:27
+Here is where we're going to step into and then beyond this call is ransomware stuff,
+13:33
+right?
+13:34
+So I'm going to set a break point here just in case I make a mistake, I can get, I can
+13:38
+catch execution before we get into ransomware ops and probably stop it or restart it.
+13:45
+All right.
+13:46
+So now let's go ahead.
+13:47
+We'll hit go, we hit our break point.
+13:50
+There is that first call.
+13:52
+So here's the compare.
+13:53
+There's the jump.
+13:55
+And now that's that first call.
+13:56
+So we're going to step into that.
+13:57
+Okay.
+13:58
+No, we've just recursively called ourselves.
+14:00
+We're not going to enter that if statement.
+14:03
+We're going to enter this one though.
+14:07
+And I'm not going to step into this one.
+14:09
+Instead, we're going to step over and you'll see in Eax, we have now the address for LDR
+14:17
+get procedure address.
+14:19
+This comes out of NTDLL.
+14:21
+All right.
+14:22
+So what does that mean?
+14:24
+That means this right here is LDR get procedure address.
+14:31
+Okay.
+14:32
+This makes sense.
+14:33
+So let's start to think about it.
+14:34
+If we want to resolve a bunch of imports and load a bunch of libraries, then there's
+14:41
+just typically two APIs that we need.
+14:44
+Load library and get proc address.
+14:46
+And what this malware is doing is instead of using those from kernel 32, which is maybe
+14:51
+more of a standard library or a standard way of doing it, it's getting equivalent functionality
+14:56
+out of NTDLL, which is just a lower level API or low level library.
+15:02
+Okay.
+15:05
+We can also, going back to our debugger, right.
+15:08
+Here's that call.
+15:10
+Well, we can set a break here.
+15:13
+We can let this run.
+15:15
+And now we can see inside of Eax, that was LDR, load DLL.
+15:19
+All right.
+15:20
+So yeah, that makes sense.
+15:22
+Let's change the schoolable variable.
+15:25
+Let's see if I've already got those values there.
+15:27
+And now that that's finished, now we can get into stepping through this logic to see
+15:34
+how it's resolving the function pointer for this hash right here.
+15:40
+In order to do that, we're going to first explore using the disassembly.
+15:45
+And then we'll also annotate and update our decompiled results here as we go.
+15:50
+Although you can kind of see that Ida has already done a little bit of that with some
+15:54
+of these structures.
+15:56
+To help keep these videos just a little bit more digestible, I'm going to go ahead and
+16:00
+wrap things up for here.
+16:01
+This was kind of like the preamble to getting into how this API resolution is done.
+16:06
+Now we're going to get into the API resolution by specifically looking at the peb structure,
+16:11
+how it's going to walk the export table from the DLLs that it finds in memory, and then
+16:15
+how it actually creates those computed checks and values.
+16:18
+So hope you enjoyed the video so far and the series in total.
+16:22
+I'll see you all in the next one.

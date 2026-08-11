@@ -1,0 +1,580 @@
+0:00
+One of the core reasons why we hunt for evil is to close the gap created by dwell time.
+0:05
+Now, security tools generally fall into either protection tools, which aim to keep attackers out,
+0:10
+and response tools, which we use along with our response processes,
+0:14
+after discovering an intrusion.
+0:16
+But what about the gap in between the period after our defenses fail,
+0:20
+but before our detection and response efforts kick in?
+0:24
+Well, that's where threat hunting lives.
+0:25
+If we can uncover signs that our protection mechanisms have failed,
+0:29
+we can invoke our response processes and methods in tooling before the damage spreads.
+0:35
+And starting on the network is one of the best ways to begin hunting for malicious activity.
+0:40
+As Chris Brenton once put it, the network is the great equalizer.
+0:44
+Because once you're looking at the network, everything almost becomes universal.
+0:48
+Packets are packets, regardless of the underlying operating system, or software, or application.
+0:54
+Right, attackers can try to hide processes from slash proc, or the Windows API.
+1:00
+You know, they can migrate processes or inject into other processes.
+1:03
+But so long as their tools need to communicate externally,
+1:07
+that activity will leave traces on the wire.
+1:09
+Now, we're not going to focus on network-wide threat hunting in this video,
+1:13
+because this series is focused on live endpoint analysis using PowerShell.
+1:17
+Instead, we'll continue looking at the host level,
+1:20
+but explore different utilities that we can use to interrogate network artifacts on a Windows system,
+1:26
+and correlate endpoint activity across running processes.
+1:30
+And if you haven't checked out the previous video in the series
+1:32
+where we hunt for malicious processes and command lines,
+1:35
+you can find that video right here.
+1:37
+And if you need a general PowerShell refresher before diving in,
+1:41
+check out our PowerShell crash course as well.
+1:43
+Now, previously, we left off with finding indicators of compromise,
+1:47
+and artifacts associated with a malicious PowerShell backdoor on a Windows workstation.
+1:52
+And so we did that by focusing on live process enumeration and analysis.
+1:56
+And because as we looked at, oftentimes, malware is going to need to execute as a process
+2:01
+at some point during an intrusion.
+2:03
+But there's much more that we can examine on a Windows system,
+2:06
+especially network-related artifacts,
+2:08
+to uncover additional indicators or suspicious activity worth investigating.
+2:13
+The real power comes when we can correlate what's happening on the network
+2:17
+with what's happening on the endpoint.
+2:20
+When we can pinpoint the exact program or application that's responsible for a certain piece of network telemetry,
+2:26
+that gives us both context and more clarity during our investigations.
+2:30
+And so let's go ahead and look at some ways that we can do just that.
+2:34
+Now, there are many different commands and utilities out there that we can use
+2:37
+to interrogate active network connections on a Windows endpoint.
+2:40
+For example, a popular legacy choice is just the netstat.exe command.
+2:45
+If I provide some arguments here, you can see we can very quickly enumerate all the network connections on this system.
+2:51
+And so we'll return to netstat in a moment, but continuing on building up our PowerShell incident response toolkit,
+2:57
+we can turn to the get net TCP connection commandlet.
+3:01
+And as a name suggests, this is going to enumerate and return all the current TCP connections
+3:06
+associated with our system.
+3:07
+Along with, as we can see here, a number of different TCP connection properties,
+3:12
+like the local or remote IP addresses or local or remote ports,
+3:16
+things like the connection state, right?
+3:18
+And also the owning process or the process ID that's associated with each of these connection events.
+3:24
+And as we can see, we're not only just listing out the different services that are opening up ports on the system,
+3:30
+but also any inbound or outbound TCP connections as well.
+3:34
+So in a malicious scenario, this output might include things like listening processes that are just
+3:38
+idly waiting for an attacker's inbound connection,
+3:41
+or also establish outbound connections over to an attacker's command and control server.
+3:46
+Now, typically, in a standard Windows environment, we're going to see
+3:50
+a lot of network activity occurring from any given system.
+3:52
+Right, we have to think about all the legitimate network traffic going to and from an endpoint
+3:57
+during normal business operations.
+3:59
+And so we'll commonly see things listed here as they relate to different Microsoft
+4:03
+update services or different Microsoft telemetry collection, right?
+4:07
+Or, you know, different web browser activity like Edge or Chrome or Firefox or other various
+4:12
+third-party applications that are running and reaching out to the internet in order to function.
+4:17
+Now, as an aside, it's important that we understand the differences between the state of the
+4:22
+connections that are listed here. And so we can see a number of different network objects that are
+4:26
+set to listen under its state. Now, this refers to network objects that are listening for incoming
+4:31
+connections on a specific port number. And we're going to see pretty common port numbers listed
+4:35
+here for dealing with Windows systems. For example, we can make out 445 here for SMB
+4:40
+and also listening on port 135 for RPC traffic. Now, if we scroll down here, we'll see a few
+4:46
+established sessions as well. And this is pretty self-explanatory, right? These are just
+4:50
+referring to an established outbound connection. We can even make out the remote address of these
+4:54
+connections or sort of bound to as well. Now, I don't see it in this list, but we might also see
+5:00
+certain states that are set to time weight. And this represents a formally established outbound
+5:05
+connection that's currently in the process of tearing down, right? And so if we happen to run
+5:10
+getting a TCP connection at the right time, we might see some, you know, previously established
+5:15
+outbound connections that are currently in the process of tearing down. And so we'll see that set
+5:18
+to time weight. Now, along with the state, we also have certain caveats to remember. And when it comes
+5:24
+to how some of these remote and local IP addresses or interfaces are formatted, because it can be a
+5:30
+little convoluted at first. But once we understand it, it makes a ton of sense. Now, when we run something
+5:36
+like GetNet TCP connection or even tools like NetStat, because again, this is more of a general
+5:40
+networking concept, we can see some listings here that have a local address of just two semi-colons
+5:46
+here. And we see a bunch of these different listed here. To make this more clear, I'll just pull back
+5:49
+the listening entries. And I can do that just by setting the state property here over to listen.
+5:54
+And we'll take a closer look at filtering later on as well. But now we're just pulling back those
+5:58
+different listening network objects. Now, at first, maybe you're thinking that, you know, this specific
+6:03
+local address here just means that we have an empty value, right? We just see two columns. Not quite.
+6:08
+Essentially, when we see these two columns side by side here, this is just a short form or a short
+6:14
+notation for referencing all of the IPv6 interfaces. And so what this is telling us is that these
+6:19
+specific services are listening on all of the different IPv6 interfaces on our system.
+6:25
+And as we continue down the list here, we're going to see a number of different objects that are
+6:29
+set to 0.0.0.0.0.0. Now, this is the notation to specify all IPv4 interfaces, right? So all of these
+6:36
+listings here that mean that these services are listening on all of the IPv4 interfaces on the system.
+6:42
+Now, I don't see it in this list, but if we see a reference to 127.0.0.1, that means that the
+6:48
+listening service is only accessible from the local system, right? Meaning that no external
+6:52
+machine on the network can connect to it. Now, if a service is bound to a specific IPv4 address,
+6:57
+like we can see here, which is bound to 10.0.2.7, well, this is my current machine's IP address,
+7:03
+right? So it means it only is accepting connections on that specific interface, which is important
+7:08
+to note on systems that have multiple network interfaces, right? So for instance, the get net
+7:14
+IP address commandlet will show us the IP address configuration for a specific interface
+7:19
+if we provide its IP address. And by doing that, we can see that this ethernet interface is set
+7:24
+up for my Windows 11 workstation. And so essentially, the address determines which interfaces on the
+7:29
+system can access the listening service and also whether it's reachable locally or externally.
+7:34
+Now, unfortunately, a limitation with the get net TCP connection commandlet is that,
+7:39
+while yes, we can list out the process IDs that are associated with each connection, which is
+7:44
+great for correlation, it doesn't give us the process name, however. But this isn't a huge deal as
+7:50
+the process ID is usually what we're after. But it does give us a bit of extra work to be able to
+7:55
+tie that process to a name. For example, if I were to run the net stat binary with a few useful
+8:00
+parameters here, you can see I'm passing in the A argument here to show all the different
+8:04
+connections and listening ports. The N argument here is going to skip host name resolution and
+8:09
+display numerical addresses and ports. The O flag here is going to show the owning process ID,
+8:14
+right? So that process or that pin number, just like we're seeing here with get net TCP connection.
+8:19
+And lastly, we have access to the B flag here to essentially show or print out the executable
+8:25
+or binary or the file name that's attached to each connection. And so when I run this,
+8:31
+and if I scroll up here past the different UDP connections here, we're going to get a similar
+8:35
+output, just sort of formatted a little differently. Obviously, this is sort of a command line
+8:39
+executable, so we're not going to get a results returned as PowerShell objects. And that's one of
+8:44
+the drawbacks here. But you can see here that we do get a nice listing of information. And when it
+8:49
+can, it's going to list out the associated binary or process or the executable name that's responsible
+8:54
+for each network connection or listening port. And so this can be very useful during the investigation,
+8:59
+but the net stat does come with its own drawbacks. And we'll talk about more of that later. And it
+9:04
+typically isn't as flexible and scalable as anything built into a PowerShell commandlet.
+9:08
+But we can get a bit creative here. And we do have options for correlating network and process
+9:13
+activity on a Windows endpoint very quickly using PowerShell. And so what I'm going to do here is
+9:18
+set a variable to Prox. And this is going to set up a quick lookup table of all the running
+9:23
+processes on the system that are keyed by their individual process IDs. Right, so I'm just
+9:28
+running get process here to list out all those different processes. And then I'm piping that over
+9:32
+to group object by the ID property. And so this is going to group each process that we're listing out
+9:38
+by its unique IP address. And then I'm adding on here as hash table to build out a hash table
+9:43
+where each key is going to be the process ID and the value is going to be the group. And lastly,
+9:48
+here we have as string to force the keys to be strings so that we can easily perform those
+9:53
+string index lookups. And so now I can print out that Prox variable. And when I do, we can see that
+9:59
+it's a hash table where each key is going to be a process ID and each value is going to be the
+10:04
+group object that contains the corresponding process. Perfect. So now we have this as our variable
+10:09
+that we can invoke or introduce using different pipelines. And so what I can do specifically is
+10:15
+use that hash table to quickly map each network connection on the running system to its
+10:21
+owning process name. And really you'd want to run this entire thing as a whole command,
+10:25
+right as a sort of one command line here so that you can guarantee that the process IDs match up
+10:30
+because they can be volatile, right? And they can be reused and overwritten. But just for demonstration,
+10:35
+I've split it up into multiple commands here. And so this command is going to join the results
+10:40
+of GetNet TCP connection with our previously captured process info so that our final table that
+10:45
+we built here is going to show the local and remote addresses, the ports, the state, the process IDs,
+10:52
+and importantly the process name that's responsible for each connection.
+10:56
+Excellent. There we go. We're getting a very similar output here, but we now have this additional
+11:00
+process field. We can see all the different process names as they relate to the different
+11:05
+connections. And so if we look at the established connections here and we're sort of skipping ahead
+11:10
+a bit, we can see a strange random process name here connecting to a remote endpoint 10.0.2.6
+11:16
+over port 4444. As another example here, we can see the PowerShell process is making an
+11:22
+established connection to that same IP address on port 4443. We can also see a service host process
+11:28
+here, making an outbound connection over port 4443 onto this 172.172.255.217 address. And if we
+11:36
+were curious about this, we could look up this IP address and when we do, we'll find out that
+11:40
+it's affiliated and owned by Microsoft Azure. And so this is likely a Microsoft legitimate
+11:45
+Microsoft process, making some sort of connection to Microsoft's back end to do some kind of activity.
+11:50
+Right. And we really wanted to we could dig into this more, but I'm going to be interested in
+11:53
+these two processes here. And we'll get to that in a moment. By the way, if you do enjoy this kind
+11:57
+of thing, we recently released these security operations to a one course on the TCM Academy,
+12:02
+at which dives much deeper into incident response and threat hunting and investigating
+12:06
+intrusions at scale. We get much deeper into using PowerShell for incident response investigations,
+12:12
+as well as powerful artifact collection methodologies. And so feel free to check it out. I think
+12:17
+you'll really enjoy it. Now, we can also use a ton of built in PowerShell filtering commands as
+12:22
+well to turn this stack of network information into something more usable for us. And so for
+12:27
+example, if I run the get help commandlet here, and specifically look at the help page for the get
+12:31
+net TCP connection, if I start to type it out, I can just hit the tab there to auto complete. And so
+12:36
+that can be a quick little trick if you're trying to remember or spell a certain commandlet.
+12:40
+As we can see, we can filter based off of a number of built in properties like the local address,
+12:45
+or the local port, or the remote address in the remote port, the owning process,
+12:49
+even things like the creation time as well. Of course, the state that we looked at, and much more.
+12:54
+For example, if we wanted to list out only the listening ports, or the connections that are
+12:59
+currently waiting for incoming traffic, we can just run the state property here and set that over to
+13:04
+listen. And now we're just pulling back all those listening connections. If we wanted to also
+13:10
+narrow that down to a specific listening port, that we can include the local port property as well.
+13:15
+So I'll just set that over to 139, for example, commonly used for file sharing on Windows systems.
+13:21
+And we're now listing out all the different interfaces that are listening on port 139.
+13:27
+We can also focus on established connections as well. And as you'd expect, we can just set the state
+13:32
+over to established. And extending this farther, we can even filter to a specific remote address.
+13:38
+For example, again, I can see that our system is connected to another IP address in the same subnet
+13:43
+on port 44444, which is purposely a bit of a giveaway here, but this is the default port that a
+13:49
+lot of malware likes to use. And so it can be one of those low-hanging fruit detections for us.
+13:54
+And so what I'll do here is just append the remote address property and set that to 10.0.2.6.
+13:59
+And so now we're just cutting down to the two connections that we have over to that other system
+14:05
+in our network. And so we can get quite verbose in how we want to list out these different network
+14:10
+objects. And importantly, we can correlate this network connection to its underlying process using
+14:15
+that owning process property that we have listed here. And this refers to, again, the process ID
+14:21
+of the underlying process that's making this network connection. And so I can take that PID number
+14:26
+of 4908 and use it to filter for its process on the system using the get process commandlet.
+14:34
+And if I wanted to get a bit more fidelity, I can run the same command again and pipe that over
+14:38
+to select object to grab the name, ID, path, and description. And I'll format that as a list so it
+14:44
+doesn't get cut off. Excellent. And so just like that, we can see that this processing question,
+14:50
+this randomly named executable is reaching out over the network to that remote IP address on port
+14:55
+44444. It's kind of a dead giveaway that this is a process that we might want to look into
+15:00
+farther. Right, even more so, we can see that it's executing out of the temp directory for this
+15:04
+local user, which is yet another anomaly that helps build our suspicion. And so now we've tied that
+15:10
+network connection to its underlying process, specifically to the underlying process binary or the
+15:16
+executable on the file system. Now we can take this a step farther. If you recall from our process
+15:23
+examination video, that we use the get sim instance commandlet to effectively interrogate additional
+15:28
+information about processes like their parent process or command line arguments.
+15:34
+Right, so I can run the exact same thing here, running get sim instance against the win32 process
+15:39
+and filtering for the process ID that equals in my case 4908. Then I'm going to grab the name,
+15:44
+process ID, command line value, and the parent process ID as well. Excellent. Now we get a lot more
+15:51
+fidelity and a lot more information that really makes me suspicious about what this process is doing.
+15:56
+Right, if we take a look at the command line value here, we can see that this strange randomly
+16:01
+named executable is running with a few different interesting parameters here or arguments.
+16:06
+We can see it likely is set to connect to that remote host at 10.0.2.6 on port 44444.
+16:13
+It seems to be using some kind of base 64 encoded key parameter here. And it also includes some
+16:18
+additional parameters like sleep. So this appears to be five minutes if this is referring to 300 seconds.
+16:23
+We can also see jitter here is set to 75%. And these are very common kind of parameters that
+16:29
+can be set and configured for different remote access Trojans or different command and control
+16:34
+or C2 implants as well. And so by taking this process ID that we've identified and working our way
+16:40
+up the execution tree, we can figure out what individual process spawned our suspicious executable.
+16:46
+And so I'm going to run the exact same command again this time just changing the process ID
+16:50
+to the parent process ID of 11.096. And just like that we can see that it was executed through
+16:59
+PowerShell. And so I definitely now want to hone in on this process and figure out when it was
+17:04
+brought over to the system and from where. We can even go a little bit farther here and grab
+17:09
+things like its file hash. Right, so I'm just going to run the get file hash command
+17:12
+unit here set the algorithm parameter over to MD5 to grab a quick MD5 hash. And when it comes to
+17:18
+specifying the file that I want to grab the hash value for, I'm going to include a bit of parentheses
+17:22
+trickery here to make sure that the get process command let runs first with the ID of 4908.
+17:28
+And I'm specifically with the dot notation here grabbing the path value or the path parameter that
+17:32
+returns from this object. And so really we can think of the parentheses here is just a way similar
+17:37
+to math how we can make sure one thing executes first. And so what I'm really doing here is running
+17:41
+get file hash to grab the MD5 hash for the specific path of this process ID, which as we look
+17:48
+back to our command let here returns to this specific path here. And so we could just type that in
+17:52
+manually just a quick way for us to sort of dynamically introduce that path there. And just like
+17:58
+that we're grabbing the MD5 hash which we can you know highlight and copy if we wanted to and
+18:02
+perform a quick look up on whatever threat intelligence tool that we have available to us.
+18:06
+And so for instance on virus total I can search for that specific MD5 hash and we can
+18:11
+see very quickly that this is related to a malicious executable. And we can even get some code insights
+18:16
+here we can figure out that hey this is a popular threat label for this specific binary and we can
+18:21
+see different family labels that are associated with it. We can see it's very likely some kind of
+18:24
+back door we can see references to interpreter. Either way this definitely is not a file that we
+18:29
+want to have on any system in our network. Now we can even go the other way around we can use a
+18:35
+process ID that we've identified or discovered to correlate any network connections or listening
+18:40
+ports that are associated with that process ID. And so what I'll do here is run get net TCP
+18:44
+connection. I'll specifically look for any established connections here with the owning process or
+18:49
+the process ID of 4908. And I'm just going to print out the local and remote addresses and ports
+18:54
+of the state the process ID and also interestingly we get access to the creation time of that session.
+19:02
+And I'll just format that as a list here. And so again all this information we've already
+19:07
+enumerated but just to demonstrate we can go the other direction as well. We can start out from a
+19:11
+process or process ID and correlate that back over to network connections. And interestingly if we
+19:16
+take a look at the creation time here this tells us when that connection was first established
+19:20
+which can be really useful for trying to determine how long something's been running.
+19:24
+So as a bonus we can calculate the session length by subtracting this creation time
+19:29
+from the current date and time on our system. We can do a clever one line or like this where we're
+19:33
+just grabbing the get date. So we're running get date here in parentheses and we're subtracting that
+19:38
+from the results of this command. And when we run that we get an output returned here and we can
+19:45
+start to make sense of how long this network connection has been established. We can see two hours
+19:49
+and 48 minutes. If we wanted to we could actually make this more human readable but I assume you
+19:54
+get the gist here. Excellent. Now just for the sake of completion let's go back to listing out
+20:00
+all of the established network connections towards that 10.0.2.6 IP address. Because if you
+20:06
+remember we had that additional power shell process here that was connecting on port 443.
+20:11
+Now we can't see this from this output alone because we don't have access to the underlying
+20:16
+binary as a property but we do have the process ID of 8360. And so again I'm just going to run get
+20:22
+process here and provide the ID of 8360 and we can see that's related to power shell. And so it
+20:27
+looks like we have this power shell process connecting to remote IP on port 443. In fact this is
+20:33
+the same power shell encoded reverse shell implant that we looked at in the previous video.
+20:37
+And so to prove that we can grab its specific command line values as well just like we did for
+20:41
+the other process. Right so just going to run get sim instance against the process class filter for
+20:46
+that process ID and make sure that I grab the command line value as well. And just like that we have
+20:51
+our long string of malicious base 64 text here. Excellent. Now lastly another useful thing to
+20:58
+mention here is that just like how we can enumerate UDP endpoints using netstat. All right so if I
+21:04
+were to run netstat here and grab all the different connections and not resolve names I'm just
+21:08
+going to search for the keyword UDP here because by default netstat also includes the UDP
+21:12
+connections. But we can do something very similar in power shell using the get net UDP endpoint
+21:18
+commandlet. And so if I run this just on its own and we're going to get a pretty familiar
+21:23
+output here right in this case we're grabbing the local address and the local port for all those
+21:27
+different UDP connections. And if we pipe this over to the get-member commandlet we can see that we
+21:34
+have access to a very similar set of capabilities and properties that we do with the get net TCP
+21:39
+connection commandlet as well. Excellent. And that's all the time we have for today but I hope you're
+21:45
+starting to see the power of correlation in action. And just like with hunting for suspicious
+21:50
+processes there's no perfect list out there for indicators or anomalies to watch out for when we're
+21:55
+trying to identify suspicious network connections. But once we understand what normal looks like in our
+22:00
+environment we can use visual cues and differential analysis to spot unusual behavior. We can also focus
+22:08
+on how attackers try to blend in and how to untangle the true anomalies from the general background
+22:15
+a common giveaway is when we see network activity that just doesn't match what we'd expect for
+22:19
+certain processes. Right if we find that suddenly the notepad.exe or calc.exe is making network
+22:26
+connections to remote host well that's usually a clear sign that something isn't right here right
+22:31
+those processes don't normally make network connections or don't need to there's no general
+22:35
+business purpose there. We can also think about network session times as well right remember when
+22:41
+we enumerated the creation time of a particular established session. We can quickly figure out how
+22:46
+long it's been active. Right perhaps through doing this additional analysis we can identify a long
+22:51
+running command and control beacon. Right there are a ton of different strategies and indicators out
+22:56
+there as well but using commandlets like get net TCP connection that really let us observe many of
+23:02
+these behaviors and different properties. And once we start combining that information with other
+23:07
+data sources right like correlating network information over to get process or using get Sim
+23:12
+instance and performing IP and domain lookups or grabbing file hash information and cross-referencing
+23:18
+that with various threat intelligence feeds. Right all of this additional enrichment just gives us
+23:22
+more more of a complete picture and helps us spot suspicious activity with more confidence.
+23:28
+And so thank you for watching and feel free to leave a like if you want to see more of this
+23:31
+content and be sure to subscribe if you haven't already take care.

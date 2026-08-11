@@ -1,0 +1,550 @@
+0:00
+All right, we'll continue our analysis here.
+0:02
+As promised, we're going to take a look at name.exe.
+0:05
+So this video, what we're going to do is we're going to continue.
+0:08
+Basically, every time you get a new artifact,
+0:10
+you start the basic triage process over.
+0:13
+What can we determine about this file to inform next steps of analysis?
+0:18
+So in order to do that,
+0:20
+I like to use tools such as DetectItEasy.
+0:23
+Basically, what I want to do is confirm that I have first and foremost a PE file,
+0:28
+the name extension, the file extension.exe would suggest that.
+0:32
+But when we look at this file with DetectItEasy,
+0:35
+we get a lot better insight here.
+0:37
+Not only do we have evidence of a packer,
+0:40
+you know, UPX being utilized,
+0:42
+but we also now have indication that there's AutoIT.
+0:47
+And AutoIT is a scripting language.
+0:49
+So the PE file actually contains the entire AutoIT runtime
+0:53
+with bytecode that represents the script.
+0:56
+And it's that script that gets executed.
+0:58
+So oftentimes these files that use AutoIT are another stage.
+1:03
+They're a downloader, they're a dropper.
+1:05
+And so we can extract that AutoIT script and look at it,
+1:09
+sort of like you would recover, you know, a .NET or a Java file, right?
+1:12
+We'll have more or less the original code,
+1:16
+although it'll likely be off-uscated.
+1:19
+Okay, so recognizing that we have both AutoIT and UPX,
+1:25
+they're, you know, normally when I see something packed
+1:26
+with UPX, first thing I do is unpack it,
+1:28
+so that way I can see the entirety of the file.
+1:31
+But in this case, it looks like the necessary components
+1:35
+for the AutoIT script are not compressed within UPX.
+1:41
+We can actually figure out exactly what's causing the match
+1:43
+if you select Signatures.
+1:47
+This will bring up the Signature dialog.
+1:49
+And we're in PE file.
+1:50
+So if we go to AutoIT right here,
+1:55
+there's the Signatures for AutoIT, you can actually debug.
+1:59
+And what's cool about this is now we can kind of step through
+2:05
+to see what matches.
+2:06
+And you'll notice that we matched right here, right away.
+2:10
+If PE.Resource script, then we know we're dealing with an AutoIT.
+2:14
+That's at least the detection.
+2:16
+So now we can close our debug.
+2:18
+And if we go back to the memory map, scroll down here,
+2:23
+you'll see there's our resources.
+2:26
+I'll make this a little bit larger.
+2:30
+And if we look for, there's our resource name script,
+2:35
+and there's the format AutoIT.
+2:37
+So the script is there.
+2:38
+And I guess this is sort of a long way of getting around
+2:41
+to the fact that I don't, that we don't need to actually
+2:44
+extract unpack it with UPX.
+2:47
+We can just go right to a tool like AutoITRipper.
+2:50
+And let's just create.
+2:52
+So this is going to take two arguments.
+2:54
+That's our input file named.exe and an output folder.
+2:58
+So AutoITRipper, you'll see it's going to do exactly
+3:01
+what the name implies.
+3:02
+And it's going to extract the AutoIT script
+3:06
+and then any additional resources.
+3:07
+So here we have the script as well as lards and backtrists.
+3:12
+So now we can go into this folder and we can look at these files.
+3:16
+Now the .au3 this script, this is maybe
+3:20
+as you would expect going to be the actual AutoIT script.
+3:23
+So this is going to contain more or less the truth data.
+3:27
+This is going to be, if we want to know exactly what's
+3:30
+going on, we're going to analyze this AutoIT code
+3:34
+because this will tell us this is going to have
+3:37
+off-excation.
+3:38
+There's likely a bunch of code in here.
+3:40
+You can see it's quite lengthy.
+3:42
+A couple thousand lines or so, 1,200 lines.
+3:46
+Quite lengthy.
+3:47
+So likely there's a bunch of garbage in here.
+3:49
+You can see we have nonsensical variable names.
+3:54
+You may have noticed right before I started moving around
+3:58
+that we have lards.
+4:00
+So we have references to those additional resources
+4:03
+that were extracted.
+4:03
+So that could be a pretty good point to anchor on
+4:06
+and then start analyzing code around here.
+4:09
+You'll be able to identify some of the de-offuscation routines
+4:11
+that are at play.
+4:13
+Before we do any of that, though, and not
+4:15
+to disappoint anyone, but I don't actually
+4:17
+have found a way, again, my usual approach
+4:20
+is path of least resistance.
+4:22
+And so we don't have to spend a lot of time.
+4:24
+Actually, we don't have to spend any time analyzing the code
+4:27
+because of some intuition and some sort of guesses
+4:30
+that I took here.
+4:33
+Now, if we look at the other artifacts,
+4:36
+and that's always something I'm going to do,
+4:37
+because perhaps maybe we just have a PE file.
+4:41
+There's no additional layer of obfuscation here.
+4:44
+So here's lards.
+4:45
+OK, this definitely looks like we've
+4:49
+got real simple obfuscation that is the abstract character
+4:53
+being embedded between these byte values.
+4:56
+So maybe that's something we can work with.
+4:59
+And then back to us.
+5:00
+You'll see, we have really nothing that I would say
+5:04
+is recognizable, at least nothing
+5:07
+that I recognize based off of magic bytes,
+5:10
+the overall structure of the output here or anything.
+5:13
+So to me, the most likely is to start with this file.
+5:18
+If we do a replace, and we'll just do a hex replace,
+5:22
+so 2a will be our search and replace all.
+5:33
+28,000 occurrences.
+5:35
+Does that seem right?
+5:36
+Yeah, that seems pretty correct.
+5:38
+Took us to the bottom of this file.
+5:41
+Let's go back to the top.
+5:43
+And you'll see that it's prefixed with a 0x,
+5:46
+and then we just have byte values.
+5:48
+And what was my first sort of guess
+5:51
+that I'm dealing with shell code is this hex 55.
+5:55
+That's the opcode for push EBP.
+5:57
+So that would make sense if this is the beginning of a function.
+6:04
+So let's go ahead.
+6:06
+We'll clean up.
+6:07
+I want to modify the size of the file.
+6:09
+We'll delete that leading 0x will save.
+6:12
+And what should happen here is that file is saved.
+6:16
+HxD is going to make a backup for us.
+6:18
+And it's something that I do no matter what,
+6:20
+whenever I start modifying content,
+6:23
+have a backup of the original just so I don't have to go
+6:25
+through all the work of extracting it again.
+6:28
+OK, the next thing that we need to do
+6:30
+is you can see that this is still hex encoded.
+6:35
+So what we'll want to do is we'll want to go to CyberChef
+6:38
+or whatever tool that you're comfortable with.
+6:41
+Let's delete our recipe and our input from the last time
+6:44
+we use this.
+6:44
+We'll open that file as an input file.
+6:49
+Auto-IT lards.
+6:51
+And then we'll say from Hx.
+6:53
+So no doubt the auto-IT script was responsible for creating
+6:58
+that conversion.
+6:59
+So now we can save it.
+7:01
+I'm going to call this Stage 2 shell code,
+7:03
+because it's the second round of shell code
+7:05
+that we've encountered.
+7:07
+And we'll save that in our primary folder here
+7:12
+that we've been doing our analysis.
+7:15
+And again, just to do a sanity check,
+7:18
+going to look at Stage 2 shell code and a hex editor.
+7:22
+And what I want to see is, yeah, there we go.
+7:25
+There's the byte value of 55.
+7:28
+And I want to see that as the raw byte value not in the decoded
+7:32
+text.
+7:33
+So now we have what appears to be our raw binary, a shell
+7:38
+code in our raw binary state.
+7:40
+OK, so now we can use our Yara or however
+7:44
+we want to look for this pattern to get some potential
+7:46
+candidates.
+7:48
+And I've looked at enough shell code.
+7:51
+It's not always going to be obvious where the entry point is.
+7:56
+The pattern that we've picked up on, at least in the previous,
+7:59
+one of the previous videos here, is that we actually
+8:01
+have a displacement.
+8:03
+We're going to say we have E8, some value, some byte value,
+8:06
+which is relative, and then the rest of these zeros.
+8:08
+Now, if we look at, say, this first match at Office
+8:11
+at 1BDE, E8, and then all zeros,
+8:15
+that's like the traditional call $plus 5, that's
+8:17
+saying call to the next address.
+8:22
+Don't add anything additional just the next location
+8:26
+after the current instruction.
+8:27
+So this actually would be a pretty good candidate.
+8:30
+And we can use SC launcher then to just start.
+8:34
+We might have to do a little trial in error.
+8:36
+We might have to do some guessing.
+8:38
+But if we say dash F, Torror input file,
+8:41
+we're going to create a PE file.
+8:42
+And our entry point being 1BDE, there we go.
+8:46
+We've created this, wrapped it as a PE.
+8:48
+And now we can open up Ida and just see what we get.
+8:53
+So let's take a look at this.
+8:57
+Yep, there we go.
+8:58
+And awesome, call $plus 5.
+9:02
+So that's just going to call to this next location.
+9:05
+And we have what looks like a pretty extensive call
+9:09
+graph.
+9:09
+We've got discovered a lot of functionality here.
+9:12
+So likely we're well on our way.
+9:14
+Now, you might look at this.
+9:16
+I would look at this and go, ooh, golly.
+9:18
+That's a lot of show code.
+9:20
+Likely, there's Office Cation.
+9:21
+And who knows what else is going on here.
+9:23
+So I don't know.
+9:24
+Do I really want to analyze this code?
+9:26
+Do I just want to try to find a quicker route?
+9:29
+In this case, we can use the utility like floss.
+9:34
+And it can analyze the program for us.
+9:37
+And not only is it going to extract strings,
+9:41
+ask you and wide character, but it
+9:43
+has several techniques for decoding strings.
+9:45
+So sometimes this can actually be a surprisingly quick win.
+9:48
+And we'll run floss here and just give it a moment and see
+9:51
+what kind of results we get.
+9:53
+OK.
+9:53
+And we have results.
+9:54
+Not only do we have results, but we have decoded strings.
+9:57
+So stack strings and decoded strings.
+10:01
+So that means yes.
+10:02
+It definitely flossed.
+10:03
+Definitely helped us with performing analysis here
+10:07
+in an extracting additional string content
+10:09
+that might have taken us a little bit more work, actually
+10:12
+manually going through that show code.
+10:15
+Here we can see references to backtrace.
+10:18
+We have regsvcs.exe.
+10:21
+If you were to take this original beginning
+10:24
+of this execution chain or even just name.exe and run it,
+10:27
+you'd see that it creates a process-red services.exe.
+10:33
+So likely we've got process injection.
+10:36
+This is where, again, a little bit of intuition
+10:38
+comes into play.
+10:39
+XOR is a very common encryption scheme
+10:42
+used to hide data and XOR can use multi-by-keys.
+10:48
+So this is where intuition, maybe a little bit of laziness,
+10:52
+kicked in.
+10:52
+And I said, you know, I wonder if this is just a big XOR key.
+10:58
+So we can certainly test that theory.
+11:02
+If we go back to CyberChef, open up our input file,
+11:08
+so backtrace, and then find the XOR operation,
+11:15
+paste in the key, and then we'll use Latin1.
+11:22
+I sure got lucky on that because look at that.
+11:25
+There is our PE file.
+11:30
+OK, so now we're ready to save this file as output.
+11:35
+What should we call this?
+11:36
+We'll just call this stage3.pe.
+11:39
+I'll say OK, and we'll save it to the same analysis folder.
+11:43
+Last thing we'll do in this video then
+11:45
+is just to confirm we, in fact, have a PE valid PE file.
+11:50
+OK, and so it looks like not only do we have a valid PE file,
+11:54
+we have a .NET binary, and we have some modifications.
+11:57
+So likely we've got another layer to deal with,
+12:00
+and that's the old tackle in the next video.
+12:02
+So hopefully, this is just one of those scenario of events
+12:07
+where having a little bit of understanding
+12:09
+as to what each stage is doing is very helpful,
+12:12
+because then you may be able to find some shortcuts.
+12:15
+And this was certainly one in which not having to deal
+12:18
+with all of this AutoIT script, because I was able to extract
+12:22
+the show code, do basic analysis, right?
+12:26
+Using floss, a little bit of intuition here
+12:29
+to say this kind of XOR is common.
+12:31
+So maybe this is just a multi-byte XOR key,
+12:34
+and then it turns out it is, right,
+12:36
+that helps us to get to the next stage.
+12:39
+It's not always that easy.
+12:40
+And so you might get stuck at any one of these intermediate
+12:44
+stages if you really want to figure out what's going on,
+12:46
+or maybe you're dealing with some really good anti-analysis.
+12:49
+This show code, for example, this is quite a bit of show code.
+12:53
+That doesn't mean all of it's being utilized, of course.
+12:56
+We'd have to analyze it to really understand what's going on.
+12:58
+But on the surface here on the face of it,
+13:01
+it looks like there's quite a bit.
+13:02
+So this could take a little bit of time,
+13:04
+but if they had some really good anti-analysis
+13:06
+buried in here, you might be forced to go through
+13:09
+and analyze this show code very similar with the auto IT
+13:12
+script, right?
+13:13
+You might actually have to spend some time with the auto IT.
+13:17
+But in this case, we were able to recognize the relationship
+13:20
+between the script and the resources before the extraction.
+13:23
+OK, so I feel like I'm beating a dead horse.
+13:27
+Let's wrap this video up.
+13:29
+And in the next video, then, we'll
+13:30
+continue our analysis with our .NET binary.

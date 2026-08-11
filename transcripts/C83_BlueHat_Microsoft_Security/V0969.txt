@@ -1,0 +1,574 @@
+0:00
+Hi, everyone.
+0:07
+Very good afternoon.
+0:15
+Imagine that you walk into your office tomorrow and instead of your regular hammer activities,
+0:22
+you found a chilling truth that your entire virtual infrastructure got locked.
+0:27
+Not just few files, but all of them are encrypted.
+0:31
+The critical workloads that runs your business operations are inaccessible.
+0:36
+The very systems that you relay on as the last lane of difference, which is your backups, are encrypted.
+0:43
+The security solutions like your EDR management servers, your backup servers, your patch management,
+0:51
+your PAM solutions, which are all hosted in the virtual infrastructure are compromised.
+0:58
+Your IT team will be running in all the directions to look for a clean backup to start the restoration activity.
+1:05
+Just imagine the efforts that your organization is going to put to bring back the business online.
+1:12
+So this is not a hypothetical nightmare.
+1:14
+This is the stark reality that an organization is going to face when they have an answer mark attack.
+1:20
+As well as if their virtual infrastructure gets compromised.
+1:25
+Thanks for joining this session.
+1:27
+Instant response in virtual infrastructure, combating APT and ECHRIM threats.
+1:31
+I'm Thiru.
+1:32
+I work for Madden Consulting, part of Google Cloud.
+1:35
+So we predominantly support our customers to respond and remediate to major security breaches,
+1:40
+as well as to proactively assess the security posture of their environment.
+1:46
+Today I'll talk a lot about bare metal hypervices.
+1:50
+That's a core component in a virtual environment.
+1:54
+And we'll discuss some intricate attack techniques used by ECHRIM actors such as Ransomr operators,
+2:02
+as well as sophisticated techniques used by nation-state retactors.
+2:08
+We'll also discuss some critical steps on how to investigate and remediate these threats.
+2:14
+Bare metal hypervices.
+2:17
+So they are the virtualization software that runs on top of the hardware stack.
+2:25
+So pretty much when you want to create a virtual machines, so that's all done in the hypervisa layer.
+2:31
+So hypervices are always the prime target for the retactors.
+2:38
+So mainly because a lot of organization security team, they do not monitor hypervisa logs.
+2:45
+And not only that, some of the hypervisa softwares, they don't support antivirus or EDR solutions.
+2:55
+Ransomr operators, previously when they need to encrypt, like, 100 servers, for example,
+3:01
+they need to laterally move into each individual servers.
+3:04
+They need to push the binaries. They do that in an automated fashion.
+3:08
+And they detonate it in each individual servers.
+3:11
+But in the recent few years, they are detonating the Ransomr binary in the hypervisa layers.
+3:18
+So in a matter of few clicks, they can encrypt the fleet of VMs.
+3:23
+So that's the main reason they are targeting hypervices.
+3:26
+And interestingly, we're also seeing nation-state retactors.
+3:30
+They're also targeting hypervices so that they can do persistent activities in the targeted guest-watchable missions.
+3:41
+Just to brush your skills, I'm going to talk about VM at today.
+3:45
+So VM is one of the leading virtualization provider in the market.
+3:50
+ESXi plays the hypervisa role.
+3:52
+That's an enterprise class, bar-metal hypervisa.
+3:55
+So that runs unix-like operating system.
+3:58
+That's a VMware proprietary software.
+4:01
+And ESXi don't support EDR or AV component.
+4:05
+So pretty much for the SOC team, they have a very limited visibility on what's happening in the hypervisa layer.
+4:12
+And in larger organization, when they have multiple ESXi host,
+4:16
+they need a management server, which is called as V-center.
+4:19
+So we'll talk about threats that are targeting VMware ecosystem today.
+4:25
+ESXi hypervices can be accessed through S-SH, Web Interface, Console, as well as through Web API calls.
+4:33
+Typically, we have seen threat actors accessing ESXi through SSH as well as through Web API calls.
+4:42
+A lot of organizations, they integrate ESXi with Active Directory.
+4:47
+We don't recommend that.
+4:49
+Mainly because if an Active Directory is compromised, pretty much threat actors can easily, laterally move into.
+4:54
+ESXi hypervices.
+4:57
+But still, there are organizations, they do that.
+5:00
+When an ESXi is integrated with Active Directory, there's a group called ESXi admin gets created in the Active Directory.
+5:07
+So whichever user accounts that has membership privileges over this group,
+5:12
+will have an administrative promotion in the ESXi host.
+5:17
+So when the threat actor is doing an AD reconnaissance,
+5:21
+and if they identify this specific group, then it's a clear indicator to them that the organization has VMware ecosystem,
+5:29
+and that is integrated with Active Directory.
+5:32
+So I generally recommend my customers to change the default name at least,
+5:36
+so that you can reduce the exposure of ESXi administrator.
+5:45
+I'll touch base into these four different techniques,
+5:49
+and a few of them are sophisticated techniques,
+5:52
+and we'll also talk how to investigate and remediate these threats.
+5:56
+Ransom are targeting ESXi.
+5:59
+In a general scenario, a ransomware operator, they get an initial access,
+6:05
+either by social engineering or by phishing,
+6:10
+or even by compromising the edge devices that includes your VPN getways or Citrix getways or exchange casters.
+6:18
+So once they get an access, they always go behind Active Directory.
+6:22
+They're always 100 ways to compromise Active Directory.
+6:25
+Let's not go into it.
+6:26
+But once an AD is compromised, they'll utterly move into ESXi hypervisor.
+6:30
+They move the binary, and they look for backups.
+6:34
+Where are the backups stored? They'll try to delete it,
+6:37
+and then they move the ransomware binary, stop the VMs,
+6:40
+and they execute the ransomware in the hypervisor layer.
+6:44
+So now, in a few clicks, they'll start the encryption process.
+6:48
+So this is a modus, this is a modus operandi of ransomware operators.
+6:53
+No matter what flavors they have, it can be like black add or high log,
+6:58
+or log bit, or the reason one like Akira's.
+7:01
+The modus operandi is pretty similar.
+7:04
+Now let's talk about how to investigate this threat.
+7:07
+I'm going to list out some of the logs in the ESXi,
+7:11
+which you can leverage for investigation, as well as for the monitoring purpose.
+7:16
+Let's go on by one.
+7:19
+Syslog.log.
+7:20
+So this records all the general system log messages in the ESXi hypervisor.
+7:25
+So whoever connects the ESXi, the IP details,
+7:29
+usename details, and the file executions are recorded in this specific log file.
+7:34
+Another log file called is auth.log.
+7:38
+So this records if anyone tries to authenticate through SSH to the ESXi host,
+7:45
+that will be recorded here.
+7:48
+And then comes shell.log, that's my favorite.
+7:50
+So any command execution that happens within the shell in the hypervisors
+7:54
+are recorded in this log, pretty useful artifact.
+7:59
+And then comes host.log.
+8:03
+So this is the host agent log.
+8:06
+So that runs in the ESXi hypervisor.
+8:09
+This records any connection at terms against the ESXi hypervisors.
+8:14
+That includes SSH, web API calls, or web interface connections.
+8:20
+Another useful artifact you can even see the use of agents in the logs.
+8:25
+If a thrattacter tries to do a time stomping, right, when they try to change the time stamp details,
+8:31
+VMK warning.log will record the details.
+8:36
+All the ESXi hypervisors runs in a in-memory file system.
+8:39
+So what it means, whenever a ESXi gets reboot, the logs will also get re-initialized.
+8:45
+So more chances that you may miss the logs.
+8:49
+So at the time, this crotch partition is going to be our savior.
+8:52
+So this specific partition is a persistent storage.
+8:55
+So it's by default like 4GB in size, which can be expanded.
+8:59
+So this is created while the installation of ESXi.
+9:03
+So this will record all the historical logs, no matter whether you reboot the ESXi or not.
+9:10
+So this is the savior for the instance response team.
+9:14
+And then you can leverage this specific query.
+9:17
+And you can list out what type of files are accessed modified in the ESXi host.
+9:23
+So when you know the incident timeline, pretty much you can leverage this script.
+9:27
+And you can list out the files modified by the attackers.
+9:33
+Now let's move to the next section, another sophisticated technique.
+9:37
+How the attackers abuse Wix API to perform persistent activities on the targeted guest VMs.
+9:45
+So we observed UNC 3886 threat actors.
+9:49
+They were using this technique against the guest virtual missions.
+9:54
+So whenever you create a virtual mission, you would have noticed installing VMware tools in it.
+9:59
+So that's mainly used in order to copy files from host to guest or to copy and paste files between virtual missions.
+10:07
+But this tool is not only meant for that.
+10:10
+So the hypervisors can also connect the guest virtual missions through this tool through Wix API.
+10:17
+So the administrators can create scripts and they can leverage Wix API libraries and they can connect guest virtual missions and perform various methods.
+10:28
+The beauty of Wix API is even if the guest virtual mission is contained by your EDR solution.
+10:36
+Or if the networking ports are disabled, still the hypervisors can connect the guest virtual missions.
+10:43
+And through Wix API you can do various operations.
+10:47
+So like listing the registry file or initiating a file transfer from guest VMs.
+10:53
+You can start a program, you can delete a file, you can install a specific binary, you can do various method through Wix API.
+11:02
+So I'm listing out an example where I'm trying to push Mimicats binary on the targeted guest virtual missions and I'm trying to extract the log on credentials from the virtual mission.
+11:13
+So you not achieve this attack technique, you definitely need an admin permissions in ESXi.
+11:18
+And then the Wix API needs to be authenticated with the guest virtual mission.
+11:24
+So you need the VM credentials.
+11:27
+However, if the VM tools are not patched, someone can exploit authentication by pause vulnerabilities.
+11:35
+So a lot of organizations they don't patch VM by tools regularly that's running in the VMs.
+11:41
+UNC3886 actors, they exploited CV202320867.
+11:48
+So that's an authentication by pause vulnerability.
+11:50
+They were able to do various methods without authenticating the guest VM.
+11:55
+It's one of the stealthy techniques we have observed in the VM echo system.
+12:00
+Now let's talk about how to detect it.
+12:03
+So most of the organizations will monitor the guest virtual missions which can be windows or unique flavors.
+12:09
+So in this example I've listed out windows locks.
+12:13
+So whenever a hypervisor connects the guest virtual mission, there's a 4624 event ID, windows event ID recorded.
+12:20
+So that's a log on type 4.
+12:22
+And as well as if you have a EDR or a Sysmon utility, you can also see a specific event created for the service VM tool ST.exe.
+12:32
+So in the previous example I was pushing Vimicat through PowerCLI.
+12:35
+So that's why you can see a child process created, powerful for the VM tool ST.exe.
+12:41
+And in the ESXi side, all the guest operation methods are recorded.
+12:46
+So that's recorded in a file called VMware.log.
+12:50
+But you may not see the payload details in it.
+12:53
+You can only see like list process or initiate file transfer from guests, those types of events, but no payloads in it.
+13:00
+If you really need the details of the guest operation method, then you may need to enable debugging in the guest virtual mission.
+13:08
+For the service, Vimicat.exe.
+13:12
+So once you enable debugging, you can see the details now.
+13:17
+So in this example, I'm showing you starting a program in a guest VM.
+13:21
+So you can see details like the PowerShell and the encoded process parameters recorded in the specific log in the guest VM.
+13:29
+Another example where I'm trying to initiate a file transfer from guest VM to perform a data exfiltration, for example.
+13:36
+So this is also recorded. What type of files are moved from guest VMs, as well as like who did that.
+13:43
+If you notice in all these logs, you can see an opcode like 188 as well as 185.
+13:48
+So that's the unique mapping of guest operation methods.
+13:53
+So I'm giving you a sample like the opcodes map to the guest operation methods.
+13:58
+When you're going to monitor this log in the sim side, you may need to do some normalization where you need to map the opcode versus the guest operation methods.
+14:08
+Enabling debugging predominantly generates humongous of log and that's bit noisy.
+14:15
+Let's move to the next attack technique.
+14:17
+How to attack a target V center in order to maintain a persistent access in the ESXi host.
+14:24
+So VMR V center is a management server, predominantly used to manage multiple ESXi host.
+14:30
+When a ESXi host is integrated with V center, V center will have admin permissions over the ESXi host.
+14:37
+So now the attackers will target V center so that they can maintain the same access over the ESXi.
+14:44
+When a ESXi is integrated with V center, a specific service account is created.
+14:50
+It's called Vpx user. So this service account is created in ESXi host and that has admin permissions.
+14:57
+Interestingly, the Vpx user service account passwords are also stored in V center.
+15:04
+So it will be stored in an encrypted format.
+15:07
+The decryption key is also stored in the V center in a file called simkey.dat.
+15:13
+So every time V center will retrieve the credential, decrypt it and then they connect the ESXi host.
+15:22
+So this specific service account credential, the password reset happens every 30 days once.
+15:28
+VMR is not recommending to reset it manually.
+15:33
+So another example of how I extracted Vpx user account credential from V center.
+15:39
+As a first step, you can access file called vcdb.properties.
+15:44
+So this will give you details about the postgres SQL database.
+15:48
+And then you can connect the postgres SQL database.
+15:50
+You can retrieve the encrypted password, leverage the decryption key from simkey.dat.
+15:56
+With all these details, you can access some public decryption tools and decrypt the password.
+16:02
+Now with this credential, you can log into the ESXi host and maintain the administrator privileges.
+16:08
+It's pretty hard for SOC team to differentiate whether it is a V center activity or this is a threat actor activity.
+16:16
+Because this service account is meant to be used only by V center.
+16:20
+However, SOC team can monitor ESXi auth.log.
+16:25
+So that will record all the Vpx user account activities.
+16:29
+And you can correlate based on SOCIPs.
+16:32
+If you see any SOCIPs other than the V center IP ranges, then that can be a good indicator.
+16:39
+So by default, postgres SQL logs are enabled.
+16:43
+In the default setting, the SQL statements executed against database are not recorded.
+16:48
+If you really need that, you may need to tweak postgres SQL.conoff file.
+16:53
+And you may need to add a parameter under lock statement with the value all.
+16:58
+So this will start recording all the SQL statements executed against database.
+17:03
+So if a threat actor tries to retrieve the credentials from the database, that will also be recorded in this log.
+17:09
+Again, this generates humongous of log and bit noisy.
+17:13
+In addition to the postgres SQL logs, you can also monitor these logs recorded in the V center.
+17:20
+You can also leverage these logs for investigation purpose.
+17:25
+Let's move to the last attack technique.
+17:27
+How the attackers run persistent backdose in ESXi host through Vipfiles.
+17:34
+So Vipstan for Vspare installation bundle.
+17:37
+So that's a collection of file packaged into a single archive file used for distribution.
+17:42
+Typically, ESXi host are upgraded or patched through Vipfiles.
+17:48
+Vip contains three important components.
+17:51
+One is actual payload and then the descriptor file.
+17:54
+So that denotes content, what is there in it.
+17:57
+And the third file is called signature file.
+17:59
+So that's a digital signature.
+18:01
+So that helps us to identify the integrity of the Vipfile.
+18:06
+So each Vip comes with an acceptance level.
+18:10
+So that denotes who created the Vip, as well as what level of testing is at hand in it.
+18:15
+For example, like VMware certified Vips.
+18:19
+So these Vips are created and tested by VMware.
+18:22
+If it is a VMware accepted Vips, these Vips are created by the partners, but approved by VMware.
+18:28
+The third one is partner supported Vips.
+18:30
+So these are created and tested by VMware partners.
+18:34
+The last one is a community supported Vips.
+18:36
+These Vips are created by any individuals.
+18:39
+Even the throttacter malicious Vips are denoted as a community supported Vips.
+18:45
+In the default configuration in the ESXi, partner supported Vips are the minimum acceptance level.
+18:52
+But at any given time with an administrator permission, someone can change the minimum acceptance level.
+18:59
+As I referred earlier, ESXi operates in a in-memory file system.
+19:04
+So what it means, not all the installations persist after rebooting the ESXi host.
+19:11
+If the installations are through Vip files, then predominantly that can persist.
+19:16
+So throttactors can package their backdose or malicious files as a Vip file and they can install it.
+19:23
+Mandeant has identified various malicious Vip with the compromised ESXi host.
+19:27
+And one of them is a virtual file.
+19:29
+It's a backdore written in a Python library.
+19:33
+So as I referred earlier, partner supported Vips are the default minimum acceptance level.
+19:38
+So in this default setting, the community supported Vips cannot be installed.
+19:43
+But however, if a throttacter has administrative permission, they can change the acceptance level and they can install the malicious Vip.
+19:51
+Not only that, VMR is also offering you a forceful installation method.
+19:56
+So through adding a parameter, hyphen, if and force, you can install any types of Vips.
+20:03
+So now throttactors can also use the same method. They can abuse the feature.
+20:06
+They can install any types of Vips.
+20:09
+Defenders, you can query your ESXi hypervices and you can list out all the install Vips, their acceptance level, as well as the signature verification status.
+20:18
+And if you really wanted to query all your ESXi host at a large scale, then you can leverage this specific script issued by VMRT.
+20:27
+So through which you can hunt for unsigned Vips that are installed in the environment.
+20:33
+So we talked about various attack techniques.
+20:37
+Now let's talk about some rapid remediation efforts when you see some suspicious activities within the ESXi host.
+20:48
+So as a first step, disable SSH and shell access in ESXi and Vcenter whenever you observe suspicious activities in it.
+20:57
+And then there is a firewall capabilities offered by VMR in the ESXi.
+21:02
+Try to create rules, restrict access and allow only approved IP ranges to connect ESXi and Vcenter.
+21:10
+That's a very important step we need to do.
+21:13
+And then if an ESXi is integrated with Active Directory, remove it from AD and try to create local accounts and maintain a unique strong password.
+21:22
+If in case you have a PAM solution, that's the best method where you can access the VMR components through the PAM solutions.
+21:31
+Isolate the management interfaces of all the VMR components into a restricted VLAN.
+21:38
+We have seen organizations that are disabled SSH in ESXi host but still retactors can enable it on by just making a web API calls because the web interface is enabled by default.
+21:50
+So to avoid that you can enable log-down mode.
+21:52
+When you have a log-down mode enabled, pretty much you are resetting access to ESXi only from Vcenter.
+21:58
+Very, very important control.
+22:00
+I strongly recommend you to enable this control in all your ESXi host.
+22:04
+So there are two log-down modes.
+22:06
+The normal log-down mode, you are resetting access to ESXi only from the console as well as through Vcenter.
+22:13
+If you want a stringent control, you can enable strict log-down mode.
+22:17
+So now we have restricted access to ESXi only from Vcenter.
+22:22
+The next important step we need to do is enable MFA.
+22:25
+So N4 was an enable MFA and make sure your administrators perform multifactor authentication when they need to be able to do that.
+22:33
+So Vcenter 8.0 update to onwards.
+22:36
+You can integrate with N3D as well as Octa and they can perform multifactor authentication.
+22:43
+The earlier versions, they can pretty much integrate with on-prem ADFS solutions so that through ADFS you can integrate with third party MFA solutions and they can perform MFA.
+22:56
+Let's talk about how to restrict malicious web execution.
+23:01
+Enable UEFI secure boot.
+23:04
+So this will restrict loading of any unsigned web files during the booting process.
+23:10
+Not only that, this will also prevent if someone changes the minimum acceptance level as well as if someone tries to forcefully install the malicious web or any types of web.
+23:21
+So let's talk about how to restrict the non-vib binary.
+23:26
+When I say non-vib binary, they are the shell scripts.
+23:29
+Not only that, the scripts that comes in a L format typically ransomware binaries are in L format.
+23:36
+If you enable exec install only setting through kernel level and pretty much not apply the change you may need to reboot the ASXI host.
+23:45
+And once the changes are applied, that will restrict execution of any scripts.
+23:49
+But however, Python binaries are allowed to be executed in the ASXI host.
+23:56
+So if a malicious code written in Python or a ransomware written in Python, I seldom see ransomware in Python, but in those scenarios they can circumvent this control.
+24:07
+So that's something that we need to be aware of.
+24:11
+All right.
+24:12
+So we explored integrated attack techniques used by three factors targeting VMware ecosystem.
+24:18
+And we also discussed some of the investigation steps as well as some rapid remediation.
+24:23
+We are leaving here not with a sense of fear, but with a renewed commitment to proactively defend our hypervices.
+24:29
+So that the scenario which I've briefed in the beginning remains hypothetical, not in our reality.
+24:35
+Thanks a lot for listening to my talk.
+24:37
+Appreciate your time.
+24:38
+Thank you.

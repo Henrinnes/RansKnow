@@ -1,0 +1,244 @@
+0:00
+Welcome to 13 cubed.
+0:04
+In this episode, we're going to talk about NTFS MFT file records, specifically how those
+0:10
+records are reused by the file system and how the status of a given record is tracked.
+0:16
+Now, there was a previous episode entitled Anatomy of an NTFS file record that covered
+0:21
+the foundational details.
+0:23
+If you haven't already watched it, I would highly recommend you do so before you watch
+0:27
+this episode.
+0:28
+You'll find a link in the description below.
+0:31
+Let's start by recapping some basic information about the MFT or Master File Table itself.
+0:37
+The MFT is arguably the most important part of the NTFS file system, or at least the
+0:43
+single most important piece of metadata.
+0:46
+The MFT is essentially a database.
+0:49
+Records within that database are usually 1,024 bytes in size.
+0:54
+On rare occasions, you may encounter 4,096 byte records.
+0:59
+Records will begin with the ASCII string file, FIL, which is 46494C45 in hexadecimal.
+1:09
+Bad records will begin with the ASCII string BAD, which is 42414144 in hexadecimal.
+1:19
+Without the MFT, you wouldn't be able to even use the NTFS file system because the MFT
+1:24
+holds the answer to where every file and directory is stored within that file system,
+1:30
+which is why I said it's probably the most important part of NTFS itself.
+1:34
+Okay, so now that we've recapped the basics, let's go ahead and switch over to our Windows
+1:39
+11 system and take a look at something in action because I want to demonstrate exactly
+1:43
+how record reuse works and how the record status is actually tracked.
+1:49
+On my desktop, you'll notice I have a file called residentfile.text, and this is indeed
+1:55
+a resident file.
+1:56
+Notice the size is showing 22 bytes.
+1:59
+As a reminder, a resident file is a file that is less than approximately 600 to 800 bytes.
+2:06
+The reason why I say approximately is because the actual maximum size of a file that could
+2:11
+be stored in a resident state can vary depending on the metadata associated with the file,
+2:16
+such as long file names, hard links, permissions, and so on.
+2:21
+Now the reason why it's called resident is because the actual contents of the file itself
+2:26
+are stored within the MFT file record, as opposed to a pointer to one or more clusters
+2:31
+on disk where that file would live, which would be the case for a typical file.
+2:36
+So in this case, the file itself, the entire contents of this file are going to be found
+2:41
+within the MFT file record.
+2:43
+Let's go ahead and open it up, and as you can see, the only thing within this is the
+2:46
+text there are four lights with an exclamation mark at the end.
+2:51
+Let's go ahead and copy this string because we're going to end up searching for that exact
+2:54
+string to be able to find the MFT file record so I can show you a few things.
+3:00
+Let's go ahead and close this, and you'll notice that I have 010 editor pulled up here.
+3:05
+This is a cross-platform hex editor that is excellent.
+3:08
+It's not free, but it does have a free trial if you want to check it out.
+3:12
+As I've launched this with admin privileges, I can actually open a drive as opposed to
+3:18
+just being able to open a single file.
+3:20
+What we're going to do is go up to file, and we're going to go down to open drive, and
+3:25
+under logical drives, you can see C is highlighted.
+3:29
+Let's go ahead and open the C drive.
+3:31
+You'll notice that you can see the text in TFS right here.
+3:35
+You're literally looking at the contents of this C drive in hex.
+3:40
+What we're going to do is press Ctrl F to bring up the search, and as you might have
+3:44
+guessed, we're going to paste in the string.
+3:47
+There are four lights and search for that.
+3:50
+This will take a moment, so I'll speed this up a bit.
+3:52
+We should be able to find the MFT file record that corresponds to the file named resident
+3:59
+space file.text.
+4:02
+Notice that we do have a match.
+4:03
+Let's go ahead and press escape to stop the search.
+4:06
+What I'm going to do here is scroll up a bit until I see the start of the MFT file record,
+4:11
+and you can see it right here with the bytes 46494C45, which as we said is file and ASCII.
+4:20
+You can see that highlighted right here.
+4:22
+This is an MFT file record that contained the text that we just searched for.
+4:27
+If we scroll down a bit, you'll actually see the short file name, which is RESIDTILDA1.text.
+4:35
+That's the 8.3 compatible name or short file name.
+4:39
+If you scroll down a bit more, you'll see the long file name, residentspacefile.text.
+4:45
+Right there.
+4:46
+Now we also have the full set of standard information and file name timestamps, and a lot of other
+4:51
+important values that are stored within this MFT file record.
+4:55
+I would refer you back to that previous episode, which again is going to be linked in the
+5:00
+video's description.
+5:01
+So check that out if you need a refresher on all of those other important fields that you
+5:05
+would find within this MFT file record.
+5:08
+But what we're going to do here is look at a couple of things that we didn't cover in
+5:12
+that previous episode, and we'll start right here with these two bytes, which are 10000,
+5:20
+or red in little Indian 0010, which is decimal 16.
+5:26
+So what does that mean?
+5:27
+Well, it turns out that's the record use number.
+5:31
+This field will increment each time the file record is reused, so it's essentially a
+5:36
+use count for this file record.
+5:38
+So at this point, the value is 16.
+5:40
+Remember, we do need to read this in little Indian, which will be 0010, which as I said,
+5:46
+is 16.
+5:48
+The next value I want to show is right here with these two bytes.
+5:52
+So this is going to be byte number 22 and 23, and red in little Indian, it's 001.
+6:00
+Well that actually corresponds to whether or not this is a deleted or in use file or directory.
+6:06
+The potential values that you would see here are going to be 00 for a deleted file, 01 for
+6:12
+a file that is in use and allocated, 02 for a deleted directory, or 03 for a directory
+6:20
+that is currently in use and allocated.
+6:23
+So because this is 01, that means a file that is in use and currently allocated, which
+6:28
+makes sense because our resident space file.
+6:31
+Text text file is indeed a currently existing file that is in use within the file system.
+6:37
+So the value of 01 is exactly what we would expect.
+6:41
+So now let's go ahead and close this drive and what we'll do is delete resident space
+6:47
+file.text with shift delete.
+6:50
+And now let's switch back to 01 zero editor and we'll just go ahead and open up the C drive
+6:54
+again and repeat our search because what we need to do is see if those values had changed.
+7:00
+So let's give this a moment to finish the search and we'll check it out.
+7:04
+Okay, as you can see, it is found the string once again.
+7:08
+So let's scroll up to the beginning of the file record, which is right here.
+7:12
+And now let's take a look at those bytes.
+7:14
+And first off, you will notice that this is 0011.
+7:19
+So it has indeed incremented by one to decimal 17 because again, this file record has changed
+7:26
+so that use number has incremented by one.
+7:29
+Pretty cool, right?
+7:30
+And now check out those other two bytes that we looked at, which are bytes 22 and 23.
+7:34
+And you'll notice that they are 0000 and what does 00 mean?
+7:40
+A deleted file, a file that is not currently allocated.
+7:44
+This essentially tells the operating system that this MFT record is available for reuse.
+7:50
+So another file can come along and reuse this MFT file record, which happens all the time.
+7:56
+Now you may be thinking, well, how quickly will that happen?
+7:59
+And unfortunately, the answer I'm going to give you like so many answers in forensics
+8:03
+is going to be, it depends.
+8:05
+It depends on how busy the system is, how much activity is occurring on the system.
+8:10
+I've seen situations in which file records are reused literally within seconds of a file being deleted
+8:16
+and in an unallocated state.
+8:18
+But again, it could take a lot longer than that depending on how busy the system is.
+8:23
+But that's really all I wanted to show you here.
+8:25
+So to recap, we talked about the record use number, which incremented by one as a result of our operation.
+8:31
+And then we also talked about the record status flag, which tracks whether or not you were looking at a deleted file
+8:37
+or a file in use, a deleted directory or a directory in use.
+8:41
+I hope you found this information useful.
+8:43
+And as always, thanks for watching.
+8:46
+Thanks for subscribing.
+8:47
+And I'll see you in the next 13 cubed episode.

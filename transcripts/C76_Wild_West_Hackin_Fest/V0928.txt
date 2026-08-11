@@ -1,0 +1,694 @@
+0:00
+So today, again, like we just mentioned, we're going to talk about deploying Canary tokens
+0:13
+in M365 and then specifically go over two trials of two different live environments that
+0:20
+we deployed these Canary tokens in.
+0:25
+11.47pm, it was almost midnight, day 12 of our very first trial piloting these Canaries,
+0:33
+and we got our first alert. Jumped right in, started the investigation. There's no malware,
+0:40
+no suspicious binary. There wasn't any EDR alerts. All I had to go off of was just these mailbox
+0:48
+operations, the type you see thousands and thousands of times a day, right? Regular mailbox
+0:55
+activity. And we had to figure out what was going on. And that was the point of the whole trial
+1:02
+to see if we can use that native telemetry to serve as Canary token. Before diving in a little
+1:09
+bit more, I'll rewind and kind of show you a little bit of background on how we decided to build
+1:13
+these and then what the process taught us. So three parts, talk a little bit about the problem,
+1:19
+cloud intrusions, they get into the build aspect, kind of some of the designs and the criteria we
+1:26
+had in mind for that. And then finally, what happened when we ran in production, one win and one miss?
+1:33
+So again, we already did a little bit of bio, senior security engineer, Microsoft, more on the
+1:37
+offensive side. I really have enjoyed writing detections now for catching the types of
+1:43
+behavior I used to do. And then standard disclaimer, this is my own personal research, not anything to do
+1:50
+with my company, not my employer's position. There's no confidential data, just things we were doing
+1:57
+on the customer facing side, like what everyone has access to. So I'm sure a lot of people are
+2:06
+familiar with this already, right? There's been a transition recently over the last couple years
+2:12
+of attackers focusing on endpoints. They're staying away, moving from the endpoints into the cloud
+2:20
+environment. They're heading where the data lives. And this is a great quote from Florian Roth,
+2:27
+really kind of encapsulating it. Takers are bypassing the endpoints entirely and staying purely up in the
+2:33
+cloud using tokens to achieve their objectives. And we don't just have to rely on that anecdotal
+2:39
+evidence, right? We have some great figures from crowd strikes from last year detailing the almost
+2:46
+140% rise in cloud intrusions that they saw. So again, we need to ensure that we're protecting the
+2:55
+areas where attackers are going and that our detection strategy accounts for that. So here's kind
+3:02
+of the main proposal or thesis of this talk. Canary tokens. So these small trip wires planted in
+3:09
+our environment that are going to get alerts or send off alerts when they're interactive with.
+3:14
+They can provide effective early warning on specifically attacker post compromised activity in
+3:21
+M365. And then just to be really clear about scope, right? We're talking about Microsoft 65,
+3:26
+365. So outlook, teams, SharePoint, nothing to do on the Azure infrastructure side, right? No
+3:35
+on-prem exchange, just that productivity suite. You know, where people's email lives, where invoices are
+3:43
+stored, and really where attackers are kind of heading after they conduct their token stealing.
+3:53
+And the goal is really simple, right? We want to detect the moment an attacker starts searching for
+4:00
+valuable content. That's where we're going to want to place our canaries because it's a process
+4:05
+that's repeated and it's effective from the attackers standpoint. And then the reason for this,
+4:11
+why I'm focusing on this part, is that in a lot of cases, most organizations are still finding
+4:19
+detecting these intrusions too late. This is some great data from
+4:24
+Mandean detailing dwell time. So the gap between compromise and detection, and it breaks it down by
+4:34
+detection source. So who found the intrusion? And we see some really great data here. The overall
+4:41
+median is 11 days. If we break that down a little bit, and we compare external and internal,
+4:48
+external being like a third party, a partner, law enforcement, there's a gap of 16 days. So that's
+4:57
+an incredibly large difference, right? A full two weeks that the attackers can have access
+5:05
+in environments, trying to achieve their objectives. So the goal is to move detection
+5:12
+earlier in the attacker workflow to try to lessen the overall dwell time there. And then even
+5:19
+for the internal figure right, 10 days, we'd use this as a method to reduce that as well. I think
+5:25
+that would be a huge help. And again, we're going to focus on that initial post-compromise behavior.
+5:33
+This is an example of that, a real-world example from an APT group, Storm2372, well known for
+5:42
+conducting device code fishing campaigns in order to steal tokens and get initial access, right?
+5:49
+Once they conduct that token theft, what is one of the first things they do? They start searching.
+5:56
+The keyword searching through compromised mailboxes looking for user name, password, admin,
+6:03
+and then also some things specific to their objectives, right? It's not sophisticated, it's not fancy,
+6:11
+but it's works and it's effective. And that's why they keep doing it. And this same pattern repeats
+6:18
+across a lot of different cloud intrusions as well. So again, as far as placement and where we want
+6:26
+to keep plays our canaries, we want to hit the first part of that search export expo.
+6:35
+A little bit of theory and background, but now I'm going to talk about the build process and the
+6:39
+design process and kind of how you can maybe do this pretty simply in your own tenant if you
+6:47
+want it and with permission, of course. So one quick distinction, right? Because obviously this is
+6:52
+an a new idea. Canaries exist, email canaries exist. There are several that are very focused on
+7:01
+the URL portion, right? I wanted to kind of take a different approach and alert off of the access
+7:09
+itself. So a lot of companies like you can create a URL, put that in the email,
+7:13
+an attacker finds it, they're going to click that email and that's going to trigger the alert.
+7:20
+But if we can remove that additional step and alert off the email access itself, I think that would
+7:28
+be a benefit. It's removing friction and extra steps that the attackers need to take. So
+7:35
+that was again, one of the founding or one of the principal ideas I wanted to do to challenge
+7:40
+myself for this. Now, very simply like what did I think about or how did I go through and design
+7:47
+this? Starting off at the very beginning, right? It's pretty intuitive. We need to generate
+7:51
+lures that attackers are going to want to access. So I broke down three really simple categories based
+7:57
+on what I've seen before based on three thread intel as well. Now, obviously this part seems very
+8:06
+trivial, but in reality, it's where a lot of the canaries fail. Lures need two things, some of these
+8:14
+keywords that we want them or we expect them to enumerate and then also like a cover story or context
+8:22
+as well. So for the first two pilots I started off with, Cred's Finance HR, you can see some of the
+8:28
+keywords listed there. Now, the different noise profiles of these different contexts are going to
+8:35
+depend on the organization there you're in. Again, different organizations behave differently.
+8:42
+I can tell you right now the finance ones can be especially tricky and I'm going to talk a lot
+8:47
+of more about that later. So general idea, creating lures. So I started doing research where are we
+8:54
+going to place these? How am I going to place these? I started looking at different things and I
+8:58
+stumbled across this really great blog from Sotaria and it talks about hidden male folders, hidden
+9:04
+inbox folders. So the graph API supports a property called is hidden on these male folders.
+9:11
+If you set that to true, that folder won't appear in Outlooks. You won't see it in a desktop app
+9:19
+in OA, not on mobile. And this is obviously documented behavior, but I haven't heard about it before.
+9:26
+So I started testing it and playing around with it. Seeing if this could be like a nice little trick
+9:32
+or something that we use for hiding some of our canary or lower emails. One quick gotcha if you start
+9:38
+testing this is it takes about 15 minutes around 10 to 15 minutes for the folder to actually disappear
+9:45
+visibly. So if someone had their Outlook open, you can kind of see the moment when it actually
+9:51
+goes away. So if you're going to deploy this or use this for anything else, make sure to deploy
+9:57
+in during off hours or maintenance windows. Okay, cool. So could this be a possible location for
+10:04
+the lower email? And it turns out that while the folder is hidden, if we place our canary or Outlook
+10:12
+email inside of that folder, it's still searchable. When I first set this up, I was concerned that
+10:19
+maybe the folder is hidden or there's lower emails not going to show up, but during testing, they
+10:27
+still would. And not just during regular manual search. This is a screenshot from graph runner,
+10:34
+the really great graph API post exploitation toolkit. You can see I'm doing keyword searches on a
+10:39
+hidden folder or for an email inside of a hidden folder and it's still showing up the result.
+10:47
+Again, this is helpful from a sense that it's a little bit more hidden from browsing for a regular
+10:55
+user. A user can still stumble across this if they're searching like anyone else. But again,
+11:00
+if they're just poking around going through their inbox, it won't be hanging out there. And that's
+11:05
+what we're trying to do with the canaries as well. Really avoid those type of collisions so we don't
+11:11
+have as many false positives. So we've put it in there. Our law, we're expecting an attacker to
+11:20
+search and access it, right? And when they access it, we'll get telemetry. Now, what specific
+11:26
+telemetry you're going to get? Well, we can use the mail items access operation from the unified
+11:32
+autolog to use and inform and kind of conduct the alerting portion, right? One of the properties is
+11:42
+in an email is the internet message ID. And we can think of that as just like the key, the reference
+11:47
+to our actual email. So when we have that, right, this event registers whenever an email is accessed,
+11:54
+you know, opened, read, and it's a very, very high volume alert, rire event. But we can use
+12:03
+this event in the internet message ID as that link that unique identifier to treat as an asset
+12:12
+and monitor for any access. Again, here's a little quick KQL query at the bottom. Again, super simple
+12:19
+way to do this. And the good news is that telemetry, that data, that operation is exposed in a
+12:26
+couple different ways. You can, again, if you have XDR and those advanced tables, you have cloud app
+12:31
+events, office activity, you can also pull it straight from the Office 365 management API. You can
+12:37
+use PowerShell, Exchange Online Management, the Graph API. One quick thing to note, you have to
+12:46
+make sure that mailbox auditing is enabled. And that is by default, if you have E3, E5, but the
+12:53
+small business licenses don't always have that by default. So just want to point that out. So,
+12:57
+okay, great. We have a way to track our lore email. Now, what other data can we use from that
+13:04
+record to help us? So after an alert occurs, someone accesses it, our lore email will need to
+13:11
+determine whether that was like a legitimate access, if it was just a regular user, and investigate
+13:19
+what happened. And we can use linkable identifiers to help us with that. Specifically, AAD session ID,
+13:28
+and unique token ID to kind of correlate other activity that has happened in that session,
+13:34
+or whatever that access token access, right? So this means when the Canary fires,
+13:43
+you can pivot immediately to what else did this session do, what else did this token access?
+13:50
+And that's one of the main points here, right? Since we're using such a high volume record
+13:58
+operation as an alert, we're going to have to very quickly find out just a false positive,
+14:04
+whereas it's actually malicious. Linkable identifiers and kind of that three-step process listed there
+14:10
+is great for that, right? We want to pull out the session ID and then unroll what other events
+14:16
+happen there and correlate that to other sources of information as well. So, talked about
+14:24
+four different parts right there, you can kind of combine those and see how it works from start to
+14:30
+finish. Step one, we just create a hidden folder. We can use your graph API to do that.
+14:35
+Step two, we're going to plant our lore email that we created, right? One of those contexts
+14:40
+placed it inside of that hidden folder and make sure we are keeping track of that internet message ID.
+14:45
+Three, we're just going to consistently monitor for the mail out of access events,
+14:52
+and that specific internet message ID to get an alert, say, hey, someone has accessed your
+14:58
+canary email. And then four, when we do get an alert and if fires, we're going to immediately
+15:05
+use that pivot, use those session identifiers and check out what else that that token do
+15:11
+determine if it's an attacker. So, pretty simple, simple, hidden folder, lore email,
+15:17
+we have the monitoring set up and then the pipeline. Again, no real agents to speak of and we're
+15:23
+kind of making the best use of telemetry that we have. Now, what will this cover and what won't
+15:29
+it cover? It's going to cover and it's going to catch one in an attacker is using that, like,
+15:34
+pretty common post compromised workflow, right? That search, export, x fill, and then when they're
+15:40
+interacting with that canary item, we're going to get signal. And again, we'll take that and we'll
+15:47
+use our pivots to figure out what else happened. Now, what this won't catch is if an attacker gets
+15:54
+access to a compromised mailbox and they just never search for any of the keywords that we've
+16:00
+planted as canaries, right? They don't interact with it, they don't see it, it's not going to trigger
+16:05
+anything. Also, a quick distinction on the mail items access event, there's also, there's
+16:11
+bind and sync events. Sync events are more when they're kind of syncing whole folders and generally
+16:17
+larger portions of the inbox. We won't see that events, we want to focus on the bind events.
+16:23
+And then, very specifically, right, we mentioned this, you need to have a way to audit and retain
+16:30
+some of that autolog retention and we also want to make sure mailbox auditing is turned on.
+16:35
+So, that's the general idea, right? Sounds pretty straightforward, nothing tricky. But what would
+16:40
+happen when we deploy these in the actual real world, right? Like, thesis sounds cool, but you know,
+16:45
+it might not work. So, we were able to find two small companies to set this up in their environment
+16:51
+and to conduct kind of two production pilots and we can look at what the results were. This is from
+16:57
+number one. We deployed around 50 of these autocamaries around. We said in initial three-month
+17:05
+duration, we ended up having three alerts. One of those is worth digging into more, about
+17:13
+two in a second, and then two of those were basically benign and not actual events.
+17:20
+Now, I want to dig into the one that actually mattered and this is just a really small timeline of
+17:27
+what happened for that. Day zero, canaries deployed, cross-fail 50 mailboxes. Day 12, that was the first
+17:34
+canary triggered. I started talking about at the beginning. So, again, immediately dug in,
+17:41
+started investigating, looking for anything I can pull out as malicious,
+17:46
+determinate. I'm looking at IP addresses, locations that might have changed, browser, like, the
+17:52
+device that it came from, what application was used to access that email, spend time unrolling
+17:59
+the session, looking for other suspicious operations like new inbox rules. There's a lot of
+18:05
+hard deletes that are going on in high volume, excessive deleting, moving files, hiding files into
+18:12
+maybe the RSS folder. I went through everything I could, nothing stood out as legitimately suspicious.
+18:20
+It's going to mark it as a false positive and move on, but something didn't really sit right.
+18:25
+Couldn't figure out what it was, though. So, I reached out to the POC, add the company,
+18:31
+right, this organization, let them know, like, hey, we had this fire. I want to keep you updated.
+18:38
+You have any other information about it, or does this seem off to you? And he filled me in on the
+18:45
+full picture that really helped. So, it turns out that just two days before that fired,
+18:53
+this specific employee was notified that they were going to be let go, right? So, the same week,
+19:00
+we have the notification for that user that they're going to be let go, and then our canary was
+19:05
+triggered on day 12, two days after that. So, adding to the story, this maybe started to give
+19:17
+a little bit more context, what happened potentially. So, I decided to switch directions in the
+19:24
+investigation and focus a little bit more on volume. And this is the volume of
+19:31
+actual email accesses, not just mail items, access to events, right? Because each one of those
+19:36
+has an operation count of how many actually occurred in it. This is the overall number of
+19:42
+operations inside of that. You can see we have a little bit of normal fluctuation from week to
+19:48
+week. But then things start to ramp up, I would say, more than triple any previous number, and then
+19:56
+also going back further. But this was the week they were notified in the week of the canary access.
+20:06
+So, again, we have another piece of information kind of showing some suspicious behavior as well.
+20:15
+Now, one of the things that really sealed the deal, we found out a little bit later that this user
+20:24
+had already accepted a new job. And it wasn't for a direct competitor of their current company,
+20:31
+but it was for a company that would love to know who the customers were at their current company
+20:37
+and what they were buying, right? That information would be incredibly helpful to them at their
+20:43
+new position. So, to me, this seems like a little bit more than someone just cleaning up,
+20:52
+loose ends. This looks a little bit more like someone searching and collecting valuable information
+20:59
+that they can use at their next position. We're also some other things that we found out later,
+21:05
+but can't share too much of the about that because it's kind of customer confidential. So,
+21:11
+that, in essence, kind of reframed how I thought about canaries entirely. My overall
+21:18
+initial impression was, hey, I'm building this to find external attackers, people that have
+21:25
+unauthorized access. But that first win was more on the insider risk with the legitimate user,
+21:34
+right? But it flagged because that collection behavior is still the same. They were going through
+21:42
+their inbox, old emails, old folders, old files, and looking for anything that can help them with
+21:51
+that. And the point is the behavior is the same. The canary is collecting,
+21:59
+or is firing on that collection behavior regardless of who is behind it. And it's not really just
+22:04
+the hypothetical either or something that small businesses deal with. This happened a couple of
+22:10
+weeks ago. It was in the news. Google, a former Google employee was found guilty of economic espionage
+22:20
+because they had been siphoning thousands and thousands of files related to Google's AI program.
+22:27
+We're moving it from their work environment and then uploading it to their personal drive.
+22:34
+And Google, apparently, according to the documents, only found out about this when they encountered
+22:39
+this person at some AI conference acting as a CEO of a different company, right? They didn't
+22:47
+detect that collection. They found out by chance. So again, I found that pretty enlightening.
+22:55
+I consider that a win. Now I can tell you about the miss. Pilate to
+23:02
+same set up, but different environment, different organization, deployed canaries across kind of
+23:08
+those standard contexts, those themes that I talked about earlier. But in this environment,
+23:16
+the finance team lived in their inbox, right? They searched for invoice and wire transfer
+23:23
+constantly. It's just how they work. That's how they did business. So we had a choice.
+23:30
+We could drown in those false positives or we could tune out some of those finance related terms.
+23:37
+Again, the whole point of doing these trials is to validate, like, hey, does this work? Is it too
+23:42
+noisy? Is this going to be manageable? Especially for thinking about maybe making this something that
+23:48
+administrators that small businesses could use, they can't handle these really high volume
+23:55
+false positives because it doesn't become a canary at that point. So we tuned out a couple of these
+24:00
+phrases seemed like the obvious call. We specifically tuned out Payroll, I'm sorry,
+24:09
+specifically tuned out invoice and wire. We kept Payroll and Payment even, right, as a first step.
+24:16
+Now we kind of figured that if an attacker did get in, they would search maybe a little bit more
+24:22
+broadly than just two search terms. So that was kind of the bet we made and it turned out that
+24:29
+we lost that bet. Just a couple of weeks after we tuned that out, there was an actual real breach,
+24:36
+external attacker, compromised credentials, unauthorized access. This is exactly what we had built
+24:43
+the canaries for, right? So I went dove in again and I checked, didn't get any alerts. I pulled the
+24:50
+rest of the logs to kind of find out what happened, see what we missed, and we found out these are the
+24:56
+logs here. The attackers performed two searches total, which happened to be specifically invoice and
+25:05
+wire. Just two, I'm not even joking. I was, I would have bet before this a lot of money that
+25:13
+be insane. Hey, they're going to do at least three searches, right? Like, and they did two.
+25:18
+The canaries were there before and they would have fired if we kept them, but we had already tuned
+25:26
+them out. And so this was like kind of the second lesson we took away. These tuning lessons and
+25:34
+tuning decisions are assumptions about attacker behavior. Again, me as a pan tester, having done
+25:41
+red teams, reading thread intel, I was thinking, hey, these guys are going to act like this.
+25:48
+They're going to be constantly searching. They're going to be thorough in what they're doing.
+25:52
+But that's not what happens. That's not what a business, business email compromise is the attackers
+25:58
+care about one thing. They're not exploring. They're not curious. They have that very specific
+26:04
+singular goal and they go straight forward. Now, the good news is the fix wasn't complicated. We
+26:11
+rebuilt the detection with some more environment specific baselines, right? And then kind of overhaul
+26:17
+the process a little bit to add more of a baseline at the beginning a couple weeks now instead of
+26:24
+just performing these blanket exclusions. But the lesson really did stuck right. We can't assume
+26:31
+attackers will always resemble pan testers, red teamers, or even even other thread actors.
+26:40
+Okay. So what are the lessons or kind of key things that hopefully we can take away from this?
+26:47
+Three things. Canaries, catch collection, whether it's an external attacker or an insider.
+26:57
+We built this again for attackers with attackers in mind, but it ended up highlighting more of an
+27:03
+insider risk type case during an extremely kind of sensitive offboarding time.
+27:10
+A tripwire doesn't care who's searching. Just cares that someone is doing it at a volume
+27:17
+or looking for things that they shouldn't be. Number two, tuning is a bet. Every keyword that you
+27:25
+filter out is basically an assumption at that point for the specific type of canary we were building.
+27:31
+So make sure to build your baselines around the environment, tailor them to the environment.
+27:38
+Not around previous experiences or like just thread intel. Number three, I think you don't need a
+27:47
+full deception platform to be able to do a lot of these things. Yeah, that's great and it's very
+27:53
+helpful. But there is a ton of telemetry in these cloud logs. We can start to rethink and reconfigure
+28:02
+how we're using that telemetry, especially for these high volume events like
+28:07
+mail items accessed, right? And it's all native in Microsoft 365. So we showed that
+28:16
+this won't catch everything, approve that. But it can catch the moment starts looking for something
+28:22
+valuable. And hopefully that'll be enough to matter and starts to move that dwell time
+28:31
+from higher to lower, especially in some of those larger cases, right? So that's what I have.
+28:40
+Feel free to reach out on LinkedIn. If you want to dig deeper, implementation details, detection
+28:45
+rules, other lessons, happy to share more and then happy to take questions too.
+28:51
+Just while we're waiting for the next person that's literally right behind me.
+28:56
+I'm curious why for your lures for the Canary tokens? If you, it sounded like you had them all
+29:04
+connected or at least all these different terms in one Canary token. I mean with Canary tokens,
+29:11
+why didn't you just have individual Canary tokens for each one of those specific lures so that you
+29:16
+could see which ones were effective, which ones weren't in each of those environments?
+29:20
+Yeah, great question. We actually did do that. Those weren't all in one email. So thank you for
+29:24
+bringing that up if that wasn't clear. Yeah, we weren't having all of those different contexts.
+29:30
+And one, we would pick like one from each and have them be specific. So yeah, thank you. That's
+29:37
+a better way to do it. You can't just be like, here's Admin and password and here's my ACH and W2.
+29:42
+I'll be a little too overco.
+29:45
+I was wondering how did you root out the two others that were false positive? Like what was the
+29:51
+big difference that didn't give you that little tingly feeling that they were off?
+29:58
+Yeah, it was kind of the users, their positions of who was doing it,
+30:06
+and the context around other searches they had made and their job duties.
+30:10
+Right? And so that is some of the kind of contacts that we started to add in now is job role
+30:17
+as well and trying to as best as we can map those together as another data point to be like,
+30:24
+okay, is someone from accounting, accessing maybe password credentials, SSH? Like obviously
+30:31
+that flags a little bit more. But now if I have an IT admin that's like, hey, here are the API keys
+30:35
+or where did you leave the API keys for this? That's kind of how we decided to do that. That's a good
+30:41
+question. Thank you. So for the, when you tuned out the two flags, the wire and the
+31:02
+payroll, whatever it was, for those specifically, I guess it's like a two-part question,
+31:09
+was the user who was compromised a part of the finance team for that? And then that like kind of led
+31:16
+you to do that out, or were they like some random IT or HR or some other random user? You recall?
+31:23
+That's a good question. They weren't part of the finance team necessarily, but it was part of their
+31:29
+job duties, relatively so, right? Like it was a small business, so everyone kind of did different
+31:35
+things, so it wasn't unusual for that person to be dealing with that if that makes sense.
+31:39
+Okay, that's what I'm going to do off. And then to tune it, to kind of go back and like, if you
+31:44
+wanted to add that, would you like separate the detection by like the role or like the user,
+31:50
+UPN or anything like that, like groups that they're a part of, anything like that?
+31:54
+Yeah, good question. So adding the role in and then also starting to use what we're calling,
+31:59
+like what I'm referring to is maybe like meta canaries in a sense, where if I am going to have
+32:04
+something like that, I'm going to link it to something, if I had finance or wire, maybe you'll
+32:10
+have an additional email address to see if they reach out then, like taking one further active step
+32:16
+to really solidify, okay, one of these was a false positive, potentially, right? But if someone is
+32:22
+taking both steps to do this, then I have a much higher probability of being like, no, this is malicious.
+32:30
+That's a good question, though. Yeah, thank you. Yeah, thank you.
+32:34
+I am curious if the Graph API allows you to search per user what their own prior search history is,
+32:41
+and therefore if you have a half dozen Canary emails, you can only plant the ones that they haven't
+32:46
+already searched for in the last end months as part of setting this up. Yeah, that's a great idea.
+32:51
+And what we're starting to do, I'm thinking about a little bit differently. When I'm doing now is
+32:55
+recording in a separate table every single search that they're doing, so I can look back and see
+33:01
+that as well, right? And again, that gets probably into data labeling, almost moving into like
+33:07
+machine learning, potentially. But yeah, so having a record of like this, this, this, this, this, this,
+33:13
+this, this, this, to be able to put that additional like anomaly detection around it. That's a great
+33:19
+idea. I didn't think about doing it. I'm just wondering because I would rather have impartial,
+33:23
+like, rather have incomplete deployment of wire or ACH or whatever, but still put it on the people
+33:30
+who don't already search for it. Yes. Either by job role or possibly by their own prior search
+33:35
+history. Yeah, that's a great point. Yeah.
+33:42
+So you had mentioned right in the mail items access in the unified audit logs,
+33:46
+there's the bind ops and the syncopes and you mentioned tuning out the syncopes. Just curious
+33:50
+if you could speak to their reasoning behind that. And I guess my follow up question would be,
+33:56
+do you feel like you would have gained a little extra hits, you know, from an attacker is maybe
+34:02
+syncing the box and then taking taking an offline to access those mail items? Yeah, that's a great
+34:07
+point. So again, it's a different way that those type of operations work, right? And what I should do
+34:18
+is detect on that folder being synced, right? That hidden folder being synced is what, like,
+34:27
+we added that in later and that's a good point, but like that's the identifier for that sync operation
+34:32
+because it's showing all of these folders being synced. So now it's not just that that email was
+34:38
+accessed. It's that folder, the hidden folder was synced. So yeah, that's something I'm playing
+34:42
+out with now because that's a great point. That happens. Thank you. Is it possible to still include
+34:51
+invoice and wire, but like exclude the baseline of the user's IP address history? Yeah.
+35:00
+And then detect just based on a new IP address or maybe a new IP address plus device ID.
+35:07
+100%. That logic isn't crazy and that's again, some of the baseline that goes into it more,
+35:13
+kind of building it out, like using those as additional kind of pieces of information to determine,
+35:21
+like, yeah, it's not just this one thing that happened, but now we have a different browser,
+35:26
+a different IP address. This host is not joined. It's not enter joined, right? That is kind of the
+35:34
+next steps for that. That's a great question too. Well, I realize every site's going to be different
+35:41
+are any of these scripts or snippets or power shell examples available anywhere for reference?
+35:47
+Sure. I haven't made any of the deployment ones available yet because, yeah, template,
+35:54
+yeah, but I'm working on it. The only reason is when you start deploying these
+35:59
+Outlook canaries, you need kind of pretty high permission to be able to send things into people's
+36:04
+inbox and like move them around and stuff. And I don't want to put an app out there that's like
+36:08
+mailed.read.all or something. Yeah, but yes, that is something I'm going to do with those predefined
+36:15
+templates. Yeah, yeah, yeah, yeah, actually, no, that is definitely on the thing. For like an open
+36:21
+source tool, choose a template, deploy it, choose your users. That's exactly what we're going to.
+36:26
+I'm just going to have to have a really big warning and be like also talk to your legal department
+36:30
+as well. Don't just start like putting stuff in people's inboxes that you're not allowed to touch.
+36:36
+Hey, I had a quick question about how you were deploying the canaries. Did you just give that
+36:41
+hidden folder to every user or was it like key users that you were interested in there?
+36:45
+Good. That's a great question. Start it off, just key users and then kind of baseline it,
+36:50
+expanded it. But I didn't want to do also because the first time I deployed this, I didn't know if people
+36:55
+were going to notice it or again, it's around for 15 minutes. I didn't want everyone to reach out
+37:00
+to my point of contact at the company to be like, bro, I have folders that are disappearing,
+37:05
+like what's going on or like I didn't create this folder. So we did it in a piecemeal fashion,
+37:12
+but now I kind of chop it up more. But we do name the folders differently, so it's not all the same
+37:19
+thing in case someone like an attacker does end up moving laterally and they're like, well, there's
+37:23
+this folder too. That's weird. So yeah, that's a good question. Thanks.
+37:29
+What's the advantage to using the canaries rather than just alerting off of the searches for your
+37:35
+lower terms? Yeah, that's a good question. So you can, there's another operation, search query
+37:41
+initiated, and search query, will search query initiated exchange, and search query initiated
+37:48
+share point, right? That'll just send you what that person searched for. So now the reason I'm trying
+37:55
+to use the mail items access operation is because of those linkable identifiers. They're not always
+38:03
+included in every single operation yet. Don't know why, but I've seen them more frequently on
+38:10
+mail items access events, and I want to use those to quickly serve as pivot points, right?
+38:18
+Because I want to like immediately go through that session, and I just have seen them more commonly
+38:24
+with mail items access when they do show up, but your point is valid. You should have
+38:30
+detections for those anywhere, right? Again, tailor that to the environment.
