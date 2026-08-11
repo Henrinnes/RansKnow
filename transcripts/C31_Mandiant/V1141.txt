@@ -1,0 +1,810 @@
+0:00
+The users that have privileged access, the agents are now using those same identities,
+0:07
+how do you distinguish between a human using that account versus an agent using that account,
+0:12
+and that leads to from an investigation perspective challenges for those organizations.
+0:17
+So that's definitely something and we did, we've responded to a few incidents where threat
+0:22
+actors, and I'm going to pivot a little bit into LLMs being a living off the land risk
+0:27
+here, where threat actors or malware that looked for CLI tools that are LLM enabled,
+0:33
+and the malware being able to leverage that CLI tool.
+0:50
+Welcome to another episode of Manian's Defenders Advanced Podcast.
+0:54
+I am your host, Luke McNamara.
+0:56
+I have the privilege today of welcoming back, Mohammed Manier, who is a technical manager
+1:01
+on our incident response team within Mandiant at Google Cloud.
+1:05
+Mohammed, great to be talking with you today.
+1:07
+Thank you, Luke. Thank you for having me.
+1:09
+So we're going to build off of a conversation that we touched on briefly.
+1:14
+I think when you were last long, we touched a little bit of kind of your area of focus.
+1:19
+I believe when that part of the Mania practice was being spun up to kind of the services around
+1:26
+helping customers secure their AI implementation, you gave a talk at Cloud Nexus here,
+1:32
+building further on that.
+1:34
+But I wanted to kind of dive further into this topic because I think it's one that there's
+1:39
+a lot of interest in, and it's not one necessarily that shows up as much in some of the data
+1:45
+sets and reporting that within GTIG, we push out.
+1:48
+So if maybe I'll kind of start with this framing, and you can correct me as we're diving into
+1:54
+this, but people hopefully are familiar with the AI FritTracker report, we put out a recorder
+1:59
+here at GTIG.
+2:01
+And that is primarily looking at threat actors that are misusing or abusing AI.
+2:05
+But there's a whole other area to this that we are increasingly seeing as AI is being adopted
+2:11
+by enterprises, which is the security risks, the misconfigurations, the governance issues
+2:20
+that organizations run into as they start actually implementing this in the run environment.
+2:25
+So beyond just, for example, HalifereDactor, Mike, Conduct, Prompt, Injection, or a distillation
+2:31
+attack against any one individual model, as these models get adoption, as these AI tools get adoption,
+2:37
+now we are starting to think through and kind of run into risk where we've done insecurely
+2:43
+those present issues for the organization.
+2:46
+And so this is something I know you and your team are working with enterprises to help address,
+2:51
+help them work through this.
+2:52
+So maybe I'll start super broad question.
+2:55
+You know, what are you seeing out there?
+2:56
+What's going on these days when it comes to organizational challenges in the enterprise space
+3:02
+in adoption of the AI?
+3:04
+Yeah, absolutely.
+3:05
+I think the logical places start there would be organizations that dive headfirst into adoption
+3:12
+of AI, but they don't necessarily have the appropriate governance defined for the organization.
+3:18
+So when we're talking about governance, we're talking about identifying the risks,
+3:21
+the strategy for adoption of AI, the type of AI use cases that the organization is either going
+3:27
+to acquire from third parties or will be developing in-house.
+3:31
+And that really leads to a few different offshoots.
+3:33
+You've got shadow AI as a risk where business units or different teams within the organization
+3:39
+will develop their own strategies in a silo, execute on those strategies, whether it is engaging
+3:45
+with third parties, developing in-house, and to go one more layer deeper into that component
+3:50
+where some teams might be testing open source models, for example, or integrating third-party AI
+3:57
+platforms with data and tools.
+3:59
+That leads to a higher risk, but that's a blind spot for the leadership teams and the security teams
+4:04
+that, you know, enhances the risk for those organizations.
+4:08
+Part of this is also, again, we make a distinction between governance for AI and governance
+4:12
+of AI. For AI is your overarching governance framework for the organization,
+4:17
+the way that I described it. Governance of AI is ensuring that the AI deployments,
+4:23
+the applications that are either developed in-house or required from third parties,
+4:26
+are adhering to the governance that has been defined for the organization.
+4:30
+So obviously, if you don't have a framework defined, then it's pretty much the Wild Wild West.
+4:34
+But in the event you do have it defined, how do you operationalize that?
+4:37
+For agents, for example, ensuring that they have the appropriate
+4:41
+role-based access controls for agents like you would for employees.
+4:45
+You have the right profiles, your applying the lease privilege approach when it comes to agents
+4:49
+like you would to users. That is something that we're finding organizations trying to figure out,
+4:54
+and in some cases struggling with. One other area I would call out here is legacy security data.
+5:00
+So organizations that have deficient practices around identity and access management,
+5:06
+around vulnerability management, supply chain management, vendor management,
+5:10
+they are at a higher risk as a result. Because again, they have already deficiencies around
+5:16
+those programs, but now with adopting AI capabilities that further, I feel, the impact of the risk
+5:22
+is greater as a result. I've been asked this question by a couple of clients,
+5:26
+is an AI risk-disk IT risk. It is obviously it's part of the IT risk, but it's also a matter of
+5:33
+probability. You know, you've increased the probability of data leakage of data theft
+5:37
+as a result of integrating these capabilities with your data of abuse of your tools.
+5:42
+So those are some high level areas that we're definitely seeing challenges around.
+5:46
+Is that mostly just to kind of highlight our honing on that point there? What you're talking about
+5:52
+in terms of the realization of the amount of tech debt or other sorts of legacy security issues
+5:59
+that haven't been addressed, those come into the forefront. Is that on the sort of now that they're
+6:05
+thinking about architecting AI into this and they're kind of looking at the sort of how is this
+6:11
+going to change our threat posture? Is that where that is becoming apparent? Or are you starting to
+6:16
+see like there's an uptick in incidents that are being traced back to the deployment of AI,
+6:21
+being put into an enterprise that already has a lot of these legacy security issues and that's
+6:28
+just kind of highlighting all the problems that are the wrong. So these are maybe a way to maybe
+6:34
+it was a bit of a helpful but I guess what I'm trying to hone in is like are these because
+6:37
+this is coming to the forefront because more incidents are happening or they're able to kind of
+6:41
+tie this back to AI or this is something where they're just now thinking through the implementation
+6:47
+and as they're kind of tabletopping the realizing we have a lot more long-standing issues we need to
+6:51
+address. So it's definitely more related to them realizing the misconfigurations
+6:57
+and I don't want to say it's as a result of in necessarily an uptick of incidents so I'll give
+7:03
+you an example organizations that have agents that are using user identities instead of agent
+7:08
+identities because they have an enforced agentech identities. That's the result of having
+7:12
+lacks controls around identity and access management and not having a strategy in place for
+7:17
+agentech IDs. So when we are working with organizations and we see that type of behavior we help
+7:21
+them understand what the risk there is how do you distinguish between a developer using an API key
+7:27
+that is assigned to them versus the agent making those calls or similarly users that have
+7:32
+privileged access the agents are now using those same identities how do you distinguish between
+7:39
+a human using that account versus an agent using that account and that leads to from investigation
+7:44
+perspective challenges for those organizations. So that's definitely something and we did
+7:50
+we've responded to a few incidents where threat actors and I'm going to give it a little bit into
+7:55
+LLM's being a living off the land risk care where threat actors or malware that looked for CLI
+8:03
+tools that are LLM enabled and the malware being able to leverage that CLI tool to make up to
+8:09
+basically enter prompts and perform reconnaissance and further actions as a result of that tool being
+8:14
+in place. Now the developers using that LLM enabled CLI tool the malware used that same LLM enabled CLI
+8:21
+tool. So from that perspective there's no way for them to make a distinction when that happens
+8:27
+benign usage versus malicious usage not having the appropriate guardrails allowing for that type of
+8:33
+activity on endpoints even if it is sanctioned fair enough but then you need to have that security
+8:38
+layer in place to say we have appropriate visibility and we have the ability to detect when anomalies
+8:43
+happen and it goes right back to the type of behavioral analytics that we used to perform before
+8:48
+velocity and volume where you know back in the day we used to look for evidence of scripted
+8:54
+attacks that would be evident as a result of the velocity of the the execution the files being
+9:01
+touched same thing here haunting can be indicative of an agent making API called as a result of the
+9:07
+volument velocity of those calls versus a human actually doing it or script executing those those
+9:13
+API calls. So it goes back to again misconfigurations organizations realizing that they
+9:21
+as a result of some of the assessments that we've done realizing that they have facilitated this
+9:26
+type of scenario to propagate in their environments. I feel with the AI capabilities it just exacerbates
+9:33
+so you mentioned we are starting to see these examples of of threat actors using LLMs or AI agents
+9:40
+in the environment as a method of you know whether it's for constants or living off the land
+9:45
+activity more generally. What are some of the things that are attractive about targeting and leveraging
+9:50
+those tools? Obviously we've seen threat actors use AI on the back end to support their operations
+9:56
+from our reconnaissance or attack perspective but using those and maybe this also kind of ties
+10:02
+into the MCP component of where you get sort of over permissioned infrastructure but what makes
+10:09
+this attractive for threat actor that once they're in the environment they want to target it?
+10:14
+I would and again this is a bit of a judgment statement on my part but I feel due to a lack of
+10:20
+visibility on these tools due to a lack of detection capabilities that makes it attractive
+10:25
+and the permissions and the access to data that these agents typically have. We've run into situations
+10:33
+where a world-based access control has been back toward using these agents so for example if somebody
+10:38
+in finance doesn't have access to data in HR but they have access to an agent that does have access
+10:43
+to data in HR. By virtue of having access to that agent they now have access to the data in HR.
+10:49
+Same type of misconfiguration that the threat actors are relying on to say that we can do
+10:53
+reconnaissance in a blind spot. We can dwell in in plain sight leveraging these agents, leveraging
+10:59
+these alons to perform that reconnaissance. Let's let's talk a little bit more about what's
+11:05
+happening in the larger landscape right now. So when you're working with organizations and you're
+11:09
+helping them kind of think through and architect of the secure usage of these tools and infrastructure
+11:16
+I know kind of earlier we were talking about some of the things that you're seeing in landscape
+11:20
+and one of the things you said that was interesting to me is in the interest of maintaining
+11:25
+and kind of managing costs which is something obviously a lot of organizations are now kind of
+11:29
+thinking through with respect to token usage in AI costs, leveraging and hosting open source models
+11:36
+and having the ability to kind of select between different models but depending on different tasks
+11:42
+but you were you were bringing up some of the interesting things that you've seen where maybe
+11:46
+organizations haven't thought through some of the risk associated with just even architecting
+11:51
+things in that way. Maybe if you talk about that a little bit more. One of the primary blind spots
+11:56
+that I'm seeing is organizations not really having an opinion on the lineage of the model. So
+12:00
+that is where who's the publisher of the model. That is one of the starting areas that I'm seeing
+12:06
+organizations having thought things through but when you do pivot into that open source model element
+12:13
+scanning of the model, scanning of the weights, ensuring that they're not backed or
+12:16
+having a process through which you're actually getting assurance around that to say that you know
+12:20
+there's no misconfiguration there. We've seen situations where for example something as simple
+12:25
+as just doing a hash check something that is posted by the publisher of the model and then somebody
+12:29
+going out to hugging face and grabbing a copy of the model but not ensuring that it's a valid hash.
+12:36
+So what that means is it's quite possible it's been modified. So that again is something that is
+12:41
+a miss for organizations. Not extending your vulnerability management practices into this pipeline
+12:49
+is another area that we're seeing deficiencies around. So for example, taking a look at the
+12:54
+different components, libraries and packages, transformers for example, have vulnerabilities that
+12:59
+are associated with them. There are some transformers that I'd remote code execution vulnerabilities
+13:04
+but they're being used by organizations because they're not keeping track of the versions for
+13:09
+transformers. They're not keeping track of the different libraries and packages that are being used.
+13:13
+And again, here's a multiplier impact here. Coding assistance that are being used and coding
+13:17
+assistance that can actually introduce non-standard libraries and packages that are not being reviewed
+13:22
+that are being pushed into production. That speaks to the lack of AI bill of materials where they're
+13:28
+not tracking all the different components. And again, as a result of that, that's leading to an
+13:33
+increased risk. To expand that a little bit, supply chain, we talked about identifying the data
+13:38
+linears. So what type of data or data has the model been trained on? Not a lot of publishers out
+13:44
+there are making that clear. Well, they're not disclosing that necessarily. That can result in a
+13:50
+bit of a challenge that's actually come up with a couple of our clients where they've asked that
+13:53
+question. It says, hey, how do we validate what type of data the model of the open source models
+13:58
+actually been trained on? That is another risk that you have to consider. Further to that, I would
+14:04
+say organizations need to also consider when they're hosting models, whether they're hosting it
+14:08
+in cloud or private cloud, they have to consider the attack vectors that are now going to be part of
+14:14
+their their landscape as a result of hosting a model. What are their capabilities around data quality,
+14:19
+around data integrity, data access model access? It definitely solves a problem from a costing
+14:25
+perspective, but it doesn't necessarily or rather, I should say, it introduces a host of other
+14:32
+security risks that you have to consider. So while yes, you can you can address the costing
+14:37
+element there. You do then also have to address the security the potential security risks that the
+14:43
+organization faces as a result of these models being used open source models being used. Now you're
+14:48
+fine tuning, you're grounding that that model open source model with your corporate data. So data
+14:54
+integrity data lineage is going to be something that you have to be cognizant of organizations that
+14:59
+don't have mature data governance data tagging in place. That becomes a problem for them to say what
+15:05
+type of data are we going to expose to this agent or is it just going to be again a blind spot? We
+15:10
+don't know what type of data is being used or where the data is being sourced from. We've had some
+15:15
+clients that are basically stating that we use whatever data is available within the repo. So the
+15:20
+data owner responsible for the data integrity and quality. But again, there's no assurance there.
+15:25
+So that's that's another risk that you that you run into when you're using open weights,
+15:29
+open weights, and then security of the weights themselves. Distillation attack is something now that
+15:34
+the organization needs to consider where and again, distillation attacks do not happen with one prompt.
+15:40
+It's going to be a high volume of prompts that result in somebody trying to reverse engineer
+15:46
+your weights and trying to understand how the model has been trained. But if you don't have the
+15:51
+ability to detect and prevent those types of velocity attacks, you're you're pretty much
+15:57
+sitting duck at that point. And again, it does depend on whether or not the applications,
+16:01
+for example, the chat bus that might be using the the open source model, whether it's exposed
+16:06
+externally or internally. But regardless, you need to have that visibility. I do want to make
+16:11
+one more comment here. I missed about it. I missed talking about it when I was talking about the
+16:16
+LLM has been living off the land risk. Organizations aren't necessarily tracking how this actually
+16:22
+impacts the insider threat landscape. So when we're talking about threat actors using LLM for
+16:27
+reconnaissance, we're talking about agents having that might be overly provisioned, backdooring
+16:32
+roll based access controls. Well, that does open a door for insider threats as well. Because now
+16:38
+they're able to again do exactly the same thing where conicence, getting access to data, they
+16:42
+typically wouldn't have access to beyond just researching different technologies that are available
+16:47
+within the organization and even they're trying to figure out how do I bypass controls or
+16:51
+you know, being able to write code to to perform certain actions that they wouldn't be able to
+16:56
+before. So that's something else that we want to keep track of how this actually changed the
+17:00
+insider threat landscape. Yeah. And I want to return to the identity piece a little bit later. But
+17:05
+to just kind of linger a little bit more on the supply chain component of this because you
+17:09
+noted that and I think it's important to also highlight this is not something that's just a theoretical
+17:15
+right theoretical risk. There's also something we've seen this year in several supply chain
+17:19
+compromises with malicious NPM or pipeline packages or others. Some of which are, you know,
+17:26
+being downloaded and utilized in a variety of CI, CD pipelines, but you've also seen some that have
+17:32
+been specific to AI applications, harnesses, etc. So maybe I think kind of to go back to an
+17:38
+earlier point, you know, are you seeing an environment where enterprises are very multi-modal in terms
+17:46
+of the models that they are leveraging to include open source and then are leveraging these open
+17:52
+source supply chain pipelines to develop their own kind of harnesses or, you know, to work with some
+17:58
+of the more open source models and they're exposed to some of this risk because of the supply chain
+18:05
+threats that we're seeing and how they're integrating these multiple models and capabilities together.
+18:11
+Yep. So we're definitely seeing organizations that are, again, like you said, multi-modal in the
+18:16
+sense that they've got multiple different solutions and use cases that they have in place. So for
+18:20
+example, and even from the perspective of what's being deployed. So for example, they might have
+18:25
+a specific application that is using a third-party LLM and enterprise LLM and they might have
+18:30
+another application that is using in sort of open source fine-tuned model that they're hosting
+18:35
+themselves. An interesting deployment that I've seen is organizations that are actually
+18:40
+tiering their agents. So for example, and again, this goes to the token cost element where the more
+18:47
+tasks that are geared more towards the third-party enterprise LLM solution, they have that at tier 3
+18:54
+and then they have tier 1 and tier 2 for the more simpler prompts where they redirect those prompts
+18:59
+to their open source models or agents that are using those open source models. So to do that,
+19:04
+they're basically using variations of what I'd call AI gateways where it infers the prompt based
+19:12
+on the complexity of the prompt and decides where it's going to direct that particular prompt to.
+19:16
+Now, one other element here is, and again, a challenge here for organizations is people within the
+19:22
+organization that are running agents locally that are beyond these platforms that they're allowing
+19:26
+people to actually interact with these agents from and then also allowing people to actually leverage
+19:32
+for example, Cloud Code where developers will be using the API key for Cloud Code directly from
+19:38
+their endpoints. And we're seeing that organizations have deployed their API gateways and the
+19:44
+tent is to get visibility on usage of all LLM APIs keys going through that API gateway, but they're
+19:50
+also allowing developers to hit the LLM endpoint directly from their workstations, which means
+19:56
+it's not going through the API gateway. So they lose visibility there. Now they're, again,
+20:00
+having to go through two different platforms. Yes, it's still going to be through the firewall,
+20:04
+but whatever controls you have in place within that API gateway, including payload inspection
+20:09
+is not in place now. So you're allowing a path out to those LLM endpoints that bypasses the
+20:15
+guard rails that you're setting up. And unfortunately, we're seeing this very often.
+20:19
+Something to be said about a typical comment I get from the security teams is, well,
+20:25
+the reason we have to facilitate this is otherwise it's seen security scene as a headwind limiting
+20:31
+element that would slow down the pace of development. And I think this is where organizations need to
+20:36
+make that informed decision, risk-based decision to say, how much risk are we willing to accept
+20:42
+to be able to facilitate this type of an approach? What does the risk look like for us? And if we do
+20:49
+actually enforce the security, how much assurance do we get? How much does that mitigate the risk for
+20:54
+us to be able to enforce that? And to basically state that this is the path, this is the enforcement
+20:59
+that we have in place. To me, again, I might be coming off of a bit by a stair, but more visibility
+21:03
+that you have, more controls that you have, the better, not to the detriment of development. But I
+21:09
+feel once you have that visibility plan and control plan in place, it should, in fact, increase the
+21:14
+adoption and enhance the adoption because you have more assurance and limits the risk for the
+21:18
+organization. Returning back to the topic of governance, which we open this with, but this is
+21:23
+something that I think is since the advent of this technology, probably one of the earliest
+21:28
+areas of concern of risk that I've heard from CISOs and some of our customers about shadow AI.
+21:35
+How do you define shadow AI or even shadow governance of AI? What are some of the things that you've
+21:41
+seen kind of run into in your work? I'll quickly state again that the, for example, organizations that
+21:49
+are allowing usage of non-standard LLMs is something that we're seeing pervasive. The other thing
+21:56
+I want to point out here is some organizations are doing that deliberately again to address the
+22:00
+token cost element to say, hey, if you have access to your own LLM, great, use it because that means
+22:04
+we don't have to pay for it. You're responsible for whatever token, VerneRate, you're going through
+22:09
+and they're applying that to developers as well. I work with one organization where their
+22:13
+developers were using their own coding assistance, whatever they had access to. So if you were,
+22:18
+if you had to wear with all to pay for a cloud code yourself, great, do it.
+22:22
+Which I think just with a pause on that, we're all the second. That's an interesting shift from
+22:27
+like when this was all first starting to roll out and you would hear from CISOs, I don't even know
+22:32
+who's using what and I don't know what they have access to, etc. Now you're carrying from a
+22:37
+lease other parts of the enterprise, maybe not necessarily from the CISO and the CISOs or
+22:41
+but now you're hearing go ahead and use those. Go ahead and use those because of, you know, an
+22:46
+effort to control costs. Well, I just wanted to highlight because I think that's an interesting
+22:49
+dynamic and even shift that now security organizations and leaders have to contemplate.
+22:54
+The coin to term for it, I mean, late 20, early 2025, I heard one client coin the term bring
+23:00
+your own AI, but now I'm starting to see, or rather I'm starting to hear the phrase bring your
+23:06
+own LLM as something that is part of the organization's approach to AI adoption within the world.
+23:12
+I have another interesting take on shadow AI. This again came from a client engagement where
+23:17
+the CISO is faced with a situation where the leadership within the organization goes in, buys
+23:22
+licenses for enterprise LLM solutions, but then there's no security reviewed done even though
+23:27
+it's supposed to be done and those licenses are furnished to the various teams that need access
+23:32
+to those licenses. And at the start of the engagement, the way that shadow AI was defined was
+23:37
+anything that is licensed is sanctioned hence not shadow AI and anything that is not licensed,
+23:43
+not enterprise license is unsanctioned hence shadow AI. Towards the end of that engagement,
+23:48
+the definition changed substantially where the CISO basically said that the security review was
+23:52
+not done. If we didn't, the security team did not give it a thumbs up at shadow AI, it doesn't
+23:57
+matter if it's licensed or not licensed. So even their license solutions that were not security
+24:02
+reviews were not done for that organization at least now means that that falls under the column
+24:08
+of shadow AI. And I think that's a really important point to make, which is organizations need to
+24:13
+define what shadow AI means for them. This is definitely something that we've seen
+24:18
+evolve over a period of time. And there's not a standard definition that goes in place. We
+24:22
+typically lead the discussions, we help them define what shadow AI is, but I'm not seeing a
+24:27
+standard definition for shadow AI, which is fine. But I think that's the nature of the beast right
+24:33
+now, which is for different organizations that have different risk profiles. In this particular
+24:37
+organization's case, there are a lot of enterprise AI solutions that are being used within the org
+24:43
+that have not had a security review. And from the perspective of logging, visibility, they don't
+24:49
+have answers. So that's something that is resulting in that definition to say anything that we don't
+24:54
+have logging for visibility on is shadow AI. So I think organizations need to take a concerted
+24:59
+effort on that to say what does shadow AI mean for us, for our organization, for our use case.
+25:04
+And I imagine especially on large organizations where you're dealing with orgs that span multiple.
+25:10
+This is a unit and have their own kind of interests in different kind of pockets, even globally,
+25:15
+that can become very challenging and the assumption that we're all working off the same. She did
+25:19
+music when it comes to defining some of these terms may not actually be the case. Exactly right.
+25:25
+And I think that also leads to that concept of shadow governance. We've seen that where
+25:30
+different business units have, because either they don't realize that there is a centralized
+25:35
+governance in place that has not been socialized properly, it has not been communicated or it doesn't
+25:39
+exist. Different business units, different teams within the org have set up their own parameters
+25:44
+and they're operating within those. What that means is now they've got multiple variations of
+25:48
+governance. Like you said, there's no standard approach for that organization. So it becomes
+25:53
+harder for those organizations now to say, well, here's a standard framework because now all those
+25:58
+business units that have already gone down, whatever paths they've gone down, will have to figure out
+26:02
+how to deconflict with what is now a standard governance framework. But also to try and understand
+26:07
+how do they fit their current use cases into the overarching governance framework that has
+26:12
+been defined after the fact. So yeah, I think it all goes right back to that lack of governance
+26:18
+or lack of operationalization of governance as a foundational element for AI adoption.
+26:25
+One of the things I want to pull the thread on a little bit more that you've
+26:28
+mentioned a couple of times now is the identity aspect of this. And I think that is something if,
+26:34
+you know, for most, or maybe I should say most, but so many of the compromises and breaches that we
+26:41
+respond to, even still today this year, identity playing a role in that. And obviously,
+26:49
+going even beyond just targeting an individual employees credentials, the uptick and in utilization
+26:55
+of non-standard fishing techniques like fishing, targeting things like SaaS integrations,
+27:02
+targeting wherever O-off tokens might live, identity has just been kind of an area of focus
+27:08
+for a significant amount of the activity we've seen for the last couple of years to continue
+27:11
+this year. And I'm curious now with the expansion of these tools, and you've touched on this a
+27:15
+little bit already. But what are some of the issues that crop up that you find when it comes to
+27:21
+not properly managing the identities of agents as these are now starting to proliferate in a lot
+27:26
+of enterprise environments? So again, speaking to the challenges rather than the gaps that I'm seeing
+27:31
+at the organization level is not having a defined process to onboard agents and not having
+27:36
+proper processes defined to off-board agents. And key component of that is the identities for the
+27:42
+agents. Having agents that were part of POCs, their identities still exist, their orphaned IDs,
+27:48
+they're highly privileged. And again, they're kind of just sitting there at that point, but not really
+27:54
+disabling or removing those those agentech IDs, if they're using agentech IDs at all. And like
+28:01
+I said before, we've run into a lot of situations where agents are using user accounts, human identities,
+28:07
+as what they've been commissioned with. So that's an ongoing challenge for organizations is that part.
+28:14
+So you need to have a process through which you are able to enforce that to say agents cannot use
+28:19
+user identities. And in the event that they do, we need to be able to detect that and sort of
+28:24
+mitigate that. If that's happening and remediated if it's happening. The other part is
+28:31
+secrets management that goes with identities. We have run into situations where API keys have been
+28:38
+stolen for LLM endpoints. And the organization only realized that they'd been stolen when they
+28:43
+got the bill for that particular LLM, which unfortunately in some cases have run into a few
+28:50
+million dollars. So within that 20 day period, the threat actor or whoever was abused that API key
+28:57
+was able to run up a substantial bill for that organization. So secrets management is something else
+29:02
+that we are running into as a challenge. What is that what does secret management look like for agents?
+29:08
+Having said all of that, I do want to point out that from a security challenge perspective,
+29:12
+we aren't necessarily reinventing the wheel. To your point, a lot of the even the areas that we
+29:18
+touched on so far, we can be talking about human identities. We can be talking about user accounts
+29:22
+the same way that we're talking about agent accounts and agent identities. We haven't reinvented
+29:26
+the wheel when it comes to the security challenges. We're looking at it through a different lens.
+29:31
+But the problem statements, the challenges are similar. The tools we might use to mitigate for
+29:37
+agents might be a little bit different. So for example, the agent gateway is a good example there,
+29:43
+where you have a full framework that allows you to onboard and off-board agents, manage agent
+29:48
+identities. So that is a dedicated platform that helps you strategize your identity management
+29:54
+for agents. So yes, there are different platforms, but what you're trying to accomplish is we've
+29:59
+got muscle memory around that because we're trying to accomplish the same thing for user identities.
+30:03
+We've covered a lot of ground here. I want to be mindful of the time. We've covered everything
+30:08
+from governance issues to supply chain threats, identity issues, obviously, and everything in
+30:13
+between. For organizations, for C-SOS and security leaders that are listening to this, and maybe
+30:19
+they're at the kind of start of their journey or a little bit down the road in terms of AI and
+30:25
+agent adoption. What are some of the key things that you would flag to them as risks to be aware of?
+30:31
+Either from a severity standpoint, if you get this wrong, it's going to lead to some really
+30:35
+big problems from what you've seen, or just even a commonality. Something that's like a very
+30:40
+prolific crumb that may be minor, but something that's much more extensive in terms of people making
+30:45
+organizations making that same mistake. I'll try and capture it succinctly. So first off,
+30:51
+address your security debt, your legacy security debt. Be honest about it, it's not meant to say,
+30:57
+don't do it if you have these legacy security debts, but rather be aware of them. So the four that we
+31:03
+talked about vulnerability management, supply chain, your data governance and identity and access
+31:09
+management. Be aware of what they are and understand how that impacts your AI use cases. Not every
+31:15
+single organization is going to be a trainer. What I mean by that is they're not necessarily going
+31:18
+to be finding any open source models. Majority of our clients are integrators, but even for integrators
+31:23
+that are using third party LLM's integrated with data and organizations own tools, you need to
+31:29
+understand what that security debt means for those use cases. Understand the risk reality for using
+31:35
+AI within your organization. How does that impact your risk for the organization? How does it change
+31:40
+the risk profile? Address your governance gaps. Ensure that you've got defined ownership within
+31:46
+the organization. This is something that we find where there's a lot of ambiguity around ownership
+31:51
+of AI. If we ask a question who owns AI within the organization, we have a lot of hands that go up.
+31:56
+When we ask, well, is the risk for AI at the organization? No hands go up. So you need to get ahead
+32:01
+of that. You need to get in front of that. I would also say that you need to try and bridge the gap
+32:05
+between compliance and AI use case. That's something else where organizations haven't necessarily
+32:11
+connected the dots. What does compliance mean and look like for AI? And that's where the governance
+32:16
+foreign off AI comes into play. Governance for again is your roadmap and your strategy and your risk
+32:21
+definitions governance off is how do we operationalize it? How do we ensure that our AI use cases
+32:27
+are adhering to our governance parameters? Governance off is going to be more of a technical
+32:31
+solution. That's where your visibility and monitoring capabilities come into play. I would also say
+32:37
+get ahead of shadow AI. Define what shadow AI looks like for your organization or what it means for
+32:41
+your organization. And then with that, come up with a strategy to which you can mitigate shadow AI
+32:47
+as much as possible. At a very high level, those if you want me to go just one layer deeper based on
+32:52
+whatever use cases that you have, try and address the visibility gaps. Typically, we will recommend
+32:58
+to organizations, you need to capture telemetry from your AI use cases. The problem with that is
+33:03
+sometimes they do get telemetry. These are very verbose applications. They generate a lot of
+33:08
+telemetry. So within the telemetry, there are specific components that you need to track.
+33:12
+For transparency, explainability for the agents for people that are actually interacting with it,
+33:16
+for people that have access to the back end of these use cases. But understand what your use
+33:21
+cases are based on that that should give you some inkling as to what type of visibility you need
+33:26
+for each of those use cases, whether it's something as simple as just the API calls in the payloads
+33:30
+and whether that means access to the back end, if you are fine tuning, open source models. We
+33:36
+talked about that earlier, so I won't repeat that too much here. But understanding what the
+33:40
+implications are in the event that you are using open source models, how do you define the risks,
+33:44
+how do you identify the risks, and how do you mitigate those risks?
+33:47
+Excellent. Well, there's a lot there. I feel we've been talking for 36 minutes, and I feel
+33:53
+we've only scratched the surface of this, but given how rapidly changing this space is,
+33:58
+and certainly I think on the adoption side of this, I'm excited to hear more down the road
+34:05
+of what you're seeing, because I think this is an important piece of the larger landscape and how
+34:09
+it's changing and how some of these risks are changing. And I think it is interesting, I think
+34:14
+as you note how so many of these trace back to kind of pre-existing security issues that
+34:21
+organizations have been dealing with. There's obviously new attack services from a technical
+34:26
+standpoint and the actual technologies that are being deployed that are changing some of the
+34:31
+landscape internally for organizations, but also some of these challenges are ones that we've
+34:36
+dealt with, and either struggled with as an organization or succeeded in finding and building
+34:40
+controls around as well. So it is interesting how that is still continuing to kind of define,
+34:46
+even with the adoption of these new technologies to define the actual threat posture of an organization.
+34:52
+Absolutely. I think if we were to do another edition of this podcast in two or three months time,
+34:58
+yeah, I don't think the security challenges would change necessarily, but how we're seeing it,
+35:04
+I think that's going to continue to evolve for sure. Well, look forward to continuing that
+35:09
+conversation with you. Mohammed, thanks again for doing this and enjoy the rest of your week.
+35:13
+Likewise, thank you very much, Luke. Take care. Cheers.
