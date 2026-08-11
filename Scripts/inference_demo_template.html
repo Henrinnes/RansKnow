@@ -1,0 +1,366 @@
+<title>RansKnow — Live Extraction Demo</title>
+<style>
+  @font-face {
+    font-family: 'Newsreader';
+    font-style: normal;
+    font-weight: 400 600;
+    font-display: swap;
+    src: url(data:font/woff2;base64,__FONT_NORMAL__) format('woff2');
+  }
+  @font-face {
+    font-family: 'Newsreader';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url(data:font/woff2;base64,__FONT_ITALIC__) format('woff2');
+  }
+
+  :root {
+    --paper: #f1f3f2;
+    --surface: #ffffff;
+    --surface-2: #e7eae7;
+    --surface-3: #dde1dd;
+    --ink: #171b1e;
+    --muted: #58636b;
+    --line: #d3d8d4;
+    --accent: #2e6b63;
+    --accent-ink: #1f4d47;
+    --accent-soft: #dfe9e6;
+    --uncertain: #a8601f;
+    --uncertain-soft: #f0e2d3;
+    --success: #3f7d4a;
+    --success-soft: #dfe9e0;
+    --danger: #a13a3a;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --shadow: 0 1px 3px rgba(23,27,30,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181a; --surface: #1a2022; --surface-2: #1f2628; --surface-3: #262e30;
+      --ink: #e7eae8; --muted: #97a19c; --line: #2b3234;
+      --accent: #5fb0a4; --accent-ink: #8fd0c5; --accent-soft: #1c2b29;
+      --uncertain: #dd9a55; --uncertain-soft: #33261a;
+      --success: #6fbf7a; --success-soft: #1d2a1f; --danger: #e28080;
+      --shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14181a; --surface: #1a2022; --surface-2: #1f2628; --surface-3: #262e30;
+    --ink: #e7eae8; --muted: #97a19c; --line: #2b3234;
+    --accent: #5fb0a4; --accent-ink: #8fd0c5; --accent-soft: #1c2b29;
+    --uncertain: #dd9a55; --uncertain-soft: #33261a;
+    --success: #6fbf7a; --success-soft: #1d2a1f; --danger: #e28080;
+    --shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15.5px; line-height: 1.6;
+  }
+  .page { max-width: 980px; margin: 0 auto; padding: 2.4rem 1.4rem 5rem; }
+
+  h1 {
+    font-family: 'Newsreader', Georgia, serif; font-weight: 600;
+    font-size: clamp(1.7rem, 3.6vw, 2.2rem); margin: 0 0 0.5rem; text-wrap: balance;
+  }
+  .subtitle { color: var(--muted); font-size: 1rem; max-width: 62ch; margin: 0 0 1.4rem; }
+  h2 {
+    font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 1.25rem;
+    margin: 0 0 0.8rem;
+  }
+  a { color: var(--accent-ink); }
+  code { font-family: var(--mono); background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.9em; }
+
+  .banner {
+    border-left: 3px solid var(--uncertain);
+    background: var(--uncertain-soft);
+    border-radius: 0 6px 6px 0;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.6rem;
+  }
+  .banner strong { color: var(--uncertain); }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.3rem 1.4rem;
+    margin-bottom: 1.4rem;
+    box-shadow: var(--shadow);
+  }
+
+  textarea#input-text {
+    width: 100%; min-height: 160px; padding: 0.8rem 0.9rem;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--mono); font-size: 0.88rem; line-height: 1.6;
+    resize: vertical;
+  }
+  .examples { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0; }
+  .ex-btn {
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
+    padding: 0.4rem 0.8rem; border-radius: 999px; font-size: 0.82rem; cursor: pointer;
+  }
+  .ex-btn:hover { background: var(--surface-3); }
+  .run-row { display: flex; align-items: center; gap: 1rem; margin-top: 0.6rem; }
+  .run-btn {
+    background: var(--accent); color: white; border: none; border-radius: 8px;
+    padding: 0.75rem 1.5rem; font-size: 0.98rem; font-weight: 600; cursor: pointer;
+  }
+  .run-btn:hover { background: var(--accent-ink); }
+  .run-btn:disabled { opacity: 0.5; cursor: wait; }
+  .char-count { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); }
+
+  .results-wrap { display: none; }
+  .results-wrap.show { display: block; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: var(--accent-soft); color: var(--accent-ink);
+    border-radius: 999px; padding: 0.25rem 0.75rem; font-size: 0.86rem; font-weight: 600;
+  }
+  .chip.empty { background: var(--surface-2); color: var(--muted); font-weight: 400; }
+  .field-row { display: grid; grid-template-columns: 140px 1fr; gap: 0.5rem 1rem; margin-bottom: 0.9rem; align-items: start; }
+  .field-row:last-child { margin-bottom: 0; }
+  .field-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; padding-top: 0.3rem; }
+
+  .tabs { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab-btn {
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
+    padding: 0.5rem 0.9rem; border-radius: 7px; font-size: 0.87rem; cursor: pointer;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .task-meta {
+    font-size: 0.84rem; color: var(--muted); margin-bottom: 1rem;
+    background: var(--surface-2); border-radius: 6px; padding: 0.6rem 0.9rem;
+  }
+  .task-meta b { color: var(--ink); }
+
+  .model-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  @media (max-width: 700px) { .model-cols { grid-template-columns: 1fr; } }
+  .model-col h3 {
+    font-family: 'Newsreader', Georgia, serif; font-size: 1rem; margin: 0 0 0.7rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .model-note { font-size: 0.78rem; color: var(--muted); font-weight: 400; }
+
+  .bar-row { display: grid; grid-template-columns: 110px 1fr 52px; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+  .bar-name { font-size: 0.83rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { height: 16px; background: var(--surface-2); border-radius: 3px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .bar-fill.positive { background: var(--success); }
+  .bar-fill.negative { background: var(--danger); }
+  .bar-val { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+  .loading { color: var(--muted); font-size: 0.9rem; padding: 1rem 0; }
+
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.84rem; }
+</style>
+
+<div class="page">
+  <h1>RansKnow — live extraction demo</h1>
+  <p class="subtitle">Paste transcript text and see what the RansKnow pipeline actually extracts from it — running the real regex-based Knowledge Agent plus trained linear models, both reimplemented faithfully in JS and numerically verified against the original Python.</p>
+
+  <div class="banner">
+    <strong>Read before trusting the trained-model numbers:</strong> the rule-based "Knowledge Agent" section below is deterministic and matches <code>knowledge_agent.py</code> exactly. The trained LogReg/SVM predictions further down are fit on the Knowledge Agent's own weak (regex-derived) labels — not yet checked against human-annotated ground truth (Phase 0.3 of the project's plan). Family classification in particular is currently weak (≤0.08 macro-F1 in real cross-validation) — treat those numbers as illustrative of the pipeline, not as a claim the models work well yet.
+  </div>
+
+  <div class="panel">
+    <h2>Input</h2>
+    <textarea id="input-text" placeholder="Paste a video transcript here, or try an example below..."></textarea>
+    <div class="examples" id="examples"></div>
+    <div class="run-row">
+      <button class="run-btn" id="run-btn">Run extraction</button>
+      <span class="char-count" id="char-count"></span>
+    </div>
+  </div>
+
+  <div class="results-wrap" id="results">
+    <div class="panel">
+      <h2>Knowledge Agent (rule-based, baseline 0)</h2>
+      <div class="field-row">
+        <div class="field-label">Family</div>
+        <div class="chip-row" id="r-families"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Dominant tactic</div>
+        <div class="chip-row" id="r-tactic"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Platform</div>
+        <div class="chip-row" id="r-platform"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Tools</div>
+        <div class="chip-row" id="r-tools"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Trained models (TF-IDF + LogReg / Linear SVM)</h2>
+      <div class="tabs" id="task-tabs"></div>
+      <div id="task-panels"></div>
+    </div>
+  </div>
+
+  <footer>
+    Runs entirely in your browser — no transcript text is sent anywhere. Model weights and regex patterns are exported directly from the training pipeline (<code>Scripts/export_demo_models.py</code>, <code>Scripts/export_rulebased_patterns.py</code>) so this can't silently drift from what the real pipeline does.
+  </footer>
+</div>
+
+<script type="application/json" id="rule-data">__RULE_DATA_JSON__</script>
+<script type="application/json" id="model-data">__MODEL_DATA_JSON__</script>
+<script type="application/json" id="examples-data">__EXAMPLES_JSON__</script>
+
+<script>
+__KA_ENGINE_JS__
+</script>
+
+<script>
+(function() {
+  const ruleData = JSON.parse(document.getElementById('rule-data').textContent);
+  const modelData = JSON.parse(document.getElementById('model-data').textContent);
+  const examples = JSON.parse(document.getElementById('examples-data').textContent);
+  const vocabSize = modelData.idf.length;
+
+  const $ = (id) => document.getElementById(id);
+
+  // Real measured macro-F1 (stratified CV, weak-label eval) per task --
+  // shown alongside live predictions so the demo can't imply more
+  // confidence than the actual experiment results support.
+  const TASK_META = {
+    family: { label: 'Ransomware family', f1: 0.079, note: 'multi-label, 18 classes -- currently the weakest task under any representation tried' },
+    dominant_tactic: { label: 'Dominant MITRE tactic', f1: 0.245, note: 'multi-class, 11 classes -- structured features reach 0.74 in CV; TF-IDF alone is weaker' },
+    platform: { label: 'Platform signal', f1: 0.382, note: 'multi-class, 4 classes' },
+    tool: { label: 'Tool mentions', f1: 0.200, note: 'multi-label, 7 classes -- unstable across CV splits (0.03-0.20)' },
+    relevance: { label: 'Ransomware-relevant?', f1: 0.690, note: 'binary -- the most reliable trained-model task so far' },
+  };
+  const TASK_ORDER = ['family', 'dominant_tactic', 'platform', 'tool', 'relevance'];
+
+  // ---- Examples ----
+  const exWrap = $('examples');
+  examples.forEach(ex => {
+    const b = document.createElement('button');
+    b.className = 'ex-btn';
+    b.textContent = ex.label;
+    b.addEventListener('click', () => {
+      $('input-text').value = ex.text;
+      updateCharCount();
+    });
+    exWrap.appendChild(b);
+  });
+
+  function updateCharCount() {
+    $('char-count').textContent = $('input-text').value.length + ' characters';
+  }
+  $('input-text').addEventListener('input', updateCharCount);
+  updateCharCount();
+
+  // ---- Tabs ----
+  const tabsWrap = $('task-tabs');
+  const panelsWrap = $('task-panels');
+  TASK_ORDER.forEach((taskName, i) => {
+    const meta = TASK_META[taskName];
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = meta.label;
+    btn.dataset.task = taskName;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      $('panel-' + taskName).classList.add('active');
+    });
+    tabsWrap.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (i === 0 ? ' active' : '');
+    panel.id = 'panel-' + taskName;
+    panel.innerHTML =
+      '<div class="task-meta">Real cross-validation macro-F1 (stratified, weak-label eval): <b>' + meta.f1.toFixed(3) + '</b>. ' + meta.note + '.</div>' +
+      '<div class="model-cols">' +
+        '<div class="model-col"><h3>Logistic Regression <span class="model-note">(calibrated probability)</span></h3><div id="bars-' + taskName + '-logreg"></div></div>' +
+        '<div class="model-col"><h3>Linear SVM <span class="model-note">(decision margin, not a probability)</span></h3><div id="bars-' + taskName + '-svm"></div></div>' +
+      '</div>';
+    panelsWrap.appendChild(panel);
+  });
+
+  function renderBars(containerId, scores, opts) {
+    opts = opts || {};
+    const el = $(containerId);
+    el.innerHTML = '';
+    const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    const maxAbs = Math.max(...entries.map(([, v]) => Math.abs(v)), 1e-9);
+    entries.forEach(([name, val]) => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      const pct = opts.isMargin ? (Math.abs(val) / maxAbs * 100) : (val * 100);
+      const fillClass = opts.isMargin ? (val >= 0 ? 'positive' : 'negative') : (val >= 0.5 ? 'positive' : '');
+      row.innerHTML =
+        '<div class="bar-name" title="' + name + '">' + name.replace(/_/g, ' ') + '</div>' +
+        '<div class="bar-track"><div class="bar-fill ' + fillClass + '" style="width:' + Math.min(100, pct) + '%"></div></div>' +
+        '<div class="bar-val">' + (opts.isMargin ? val.toFixed(2) : (val * 100).toFixed(1) + '%') + '</div>';
+      el.appendChild(row);
+    });
+  }
+
+  function renderChips(containerId, items, emptyLabel) {
+    const el = $(containerId);
+    el.innerHTML = '';
+    if (!items || items.length === 0) {
+      const c = document.createElement('span');
+      c.className = 'chip empty';
+      c.textContent = emptyLabel;
+      el.appendChild(c);
+      return;
+    }
+    items.forEach(v => {
+      const c = document.createElement('span');
+      c.className = 'chip';
+      c.textContent = v.replace(/_/g, ' ');
+      el.appendChild(c);
+    });
+  }
+
+  function run() {
+    const text = $('input-text').value.trim();
+    if (!text) return;
+    $('run-btn').disabled = true;
+    $('run-btn').textContent = 'Running...';
+
+    // yield to the browser so the disabled state actually paints before
+    // the (synchronous, but non-trivial) scoring work runs
+    setTimeout(() => {
+      const rb = runRuleBased(text, ruleData);
+      renderChips('r-families', rb.families, 'none detected');
+      renderChips('r-tactic', rb.dominantTactic === 'None' ? [] : [rb.dominantTactic], 'none detected');
+      renderChips('r-platform', rb.platformSignal === 'None' ? [] : [rb.platformSignal], 'none detected');
+      renderChips('r-tools', rb.toolList, 'none detected');
+
+      const vec = tfidfVector(text, modelData.vocabulary, modelData.idf, vocabSize);
+
+      TASK_ORDER.forEach(taskName => {
+        const taskExport = modelData.tasks[taskName];
+        const scoreFn = taskExport.label_type === 'multilabel' ? runMultilabelTask : runMulticlassTask;
+        const lr = scoreFn(taskExport, 'logreg', vec);
+        const svm = scoreFn(taskExport, 'svm', vec);
+        renderBars('bars-' + taskName + '-logreg', lr, { isMargin: false });
+        renderBars('bars-' + taskName + '-svm', svm, { isMargin: true });
+      });
+
+      $('results').classList.add('show');
+      $('run-btn').disabled = false;
+      $('run-btn').textContent = 'Run extraction';
+    }, 10);
+  }
+
+  $('run-btn').addEventListener('click', run);
+})();
+</script>
