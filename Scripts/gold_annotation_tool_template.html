@@ -1,0 +1,832 @@
+<title>RansKnow Gold-Set Annotation</title>
+<style>
+  @font-face {
+    font-family: 'Newsreader';
+    font-style: normal;
+    font-weight: 400 600;
+    font-display: swap;
+    src: url(data:font/woff2;base64,__FONT_NORMAL__) format('woff2');
+  }
+  @font-face {
+    font-family: 'Newsreader';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url(data:font/woff2;base64,__FONT_ITALIC__) format('woff2');
+  }
+
+  :root {
+    --paper: #f1f3f2;
+    --surface: #ffffff;
+    --surface-2: #e7eae7;
+    --surface-3: #dde1dd;
+    --ink: #171b1e;
+    --muted: #58636b;
+    --line: #d3d8d4;
+    --accent: #2e6b63;
+    --accent-ink: #1f4d47;
+    --accent-soft: #dfe9e6;
+    --uncertain: #a8601f;
+    --uncertain-soft: #f0e2d3;
+    --success: #3f7d4a;
+    --success-soft: #dfe9e0;
+    --danger: #a13a3a;
+    --pending: #9aa3a8;
+    --shadow: 0 1px 3px rgba(23,27,30,0.08);
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181a;
+      --surface: #1a2022;
+      --surface-2: #1f2628;
+      --surface-3: #262e30;
+      --ink: #e7eae8;
+      --muted: #97a19c;
+      --line: #2b3234;
+      --accent: #5fb0a4;
+      --accent-ink: #8fd0c5;
+      --accent-soft: #1c2b29;
+      --uncertain: #dd9a55;
+      --uncertain-soft: #33261a;
+      --success: #6fbf7a;
+      --success-soft: #1d2a1f;
+      --danger: #e28080;
+      --pending: #5b6266;
+      --shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14181a;
+    --surface: #1a2022;
+    --surface-2: #1f2628;
+    --surface-3: #262e30;
+    --ink: #e7eae8;
+    --muted: #97a19c;
+    --line: #2b3234;
+    --accent: #5fb0a4;
+    --accent-ink: #8fd0c5;
+    --accent-soft: #1c2b29;
+    --uncertain: #dd9a55;
+    --uncertain-soft: #33261a;
+    --success: #6fbf7a;
+    --success-soft: #1d2a1f;
+    --danger: #e28080;
+    --pending: #5b6266;
+    --shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  button { font-family: inherit; font-size: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; font-size: inherit; }
+  a { color: var(--accent-ink); }
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- Top bar ---- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 1.1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .brand {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+  .brand .who {
+    font-family: -apple-system, sans-serif;
+    font-weight: 400;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-left: 0.5rem;
+  }
+  .progress-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+  .progress-track {
+    flex: 1;
+    height: 8px;
+    background: var(--surface-3);
+    border-radius: 999px;
+    overflow: hidden;
+    max-width: 320px;
+  }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.2s; }
+  .progress-label {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .topbar-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 0.45rem 0.8rem;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .topbar-btn:hover { background: var(--surface-3); }
+  .topbar-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .topbar-btn.primary:hover { background: var(--accent-ink); }
+
+  /* ---- Main layout ---- */
+  .main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  .transcript-pane {
+    flex: 1 1 60%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1px solid var(--line);
+  }
+  .video-header {
+    padding: 1rem 1.4rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .video-header h1 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0 0 0.4rem;
+    text-wrap: balance;
+  }
+  .video-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    align-items: center;
+  }
+  .video-meta a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid currentColor; }
+  .chip {
+    display: inline-block;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    font-size: 0.76rem;
+  }
+
+  .transcript-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem 1.4rem;
+    background: var(--paper);
+  }
+  .transcript-text {
+    font-family: var(--mono);
+    font-size: 0.86rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 74ch;
+  }
+
+  .ka-reveal {
+    margin: 1rem 1.4rem 1.4rem;
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 0.15rem 0.9rem;
+    background: var(--surface);
+  }
+  .ka-reveal summary {
+    cursor: pointer;
+    padding: 0.6rem 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .ka-reveal .ka-body { padding-bottom: 0.8rem; font-size: 0.85rem; }
+  .ka-reveal dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; margin: 0; }
+  .ka-reveal dt { color: var(--muted); }
+  .ka-reveal dd { margin: 0; font-family: var(--mono); }
+
+  /* ---- Form pane ---- */
+  .form-pane {
+    flex: 0 0 380px;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    min-height: 0;
+  }
+  .form-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem 1.3rem;
+  }
+  .field { margin-bottom: 1.2rem; }
+  .field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+  .field .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-top: 0.3rem;
+  }
+  .segmented {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .segmented button {
+    flex: 1;
+    padding: 0.55rem 0.4rem;
+    background: var(--surface);
+    border: none;
+    border-right: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 0.86rem;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button.active-yes { background: var(--success-soft); color: var(--success); font-weight: 600; }
+  .segmented button.active-no { background: var(--danger); color: white; font-weight: 600; }
+  .segmented button.active-uncertain { background: var(--uncertain-soft); color: var(--uncertain); font-weight: 600; }
+
+  select, .textinput, textarea {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+
+  .form-footer {
+    flex-shrink: 0;
+    padding: 0.9rem 1.3rem;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 0.6rem;
+  }
+  .nav-btn {
+    flex: 1;
+    padding: 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+  .nav-btn:hover { background: var(--surface-3); }
+  .nav-btn.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+  .nav-btn.primary:hover { background: var(--accent-ink); }
+  .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ---- Modals ---- */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(20,24,26,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 2rem;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal.wide { max-width: 900px; }
+  .modal-head {
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-head h2 { font-family: 'Newsreader', Georgia, serif; font-size: 1.15rem; margin: 0; }
+  .modal-close { background: none; border: none; font-size: 1.3rem; color: var(--muted); line-height: 1; padding: 0.2rem 0.4rem; }
+  .modal-body { padding: 1.4rem; overflow-y: auto; }
+  .modal-body h3 { font-family: 'Newsreader', Georgia, serif; font-size: 1.02rem; margin: 1.3rem 0 0.5rem; }
+  .modal-body h3:first-child { margin-top: 0; }
+  .modal-body p, .modal-body li { font-size: 0.92rem; }
+  .modal-body ul { padding-left: 1.2rem; }
+
+  .setup-input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1rem;
+    margin: 0.8rem 0;
+  }
+
+  /* ---- Browse grid ---- */
+  .browse-toolbar { display: flex; gap: 0.6rem; margin-bottom: 1rem; }
+  .browse-toolbar input { flex: 1; }
+  .browse-list { display: flex; flex-direction: column; gap: 2px; }
+  .browse-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 6px;
+    background: var(--surface-2);
+    font-size: 0.86rem;
+  }
+  .browse-row:hover { background: var(--surface-3); cursor: pointer; }
+  .status-dot { width: 9px; height: 9px; border-radius: 999px; flex-shrink: 0; background: var(--pending); }
+  .status-dot.done { background: var(--success); }
+  .status-dot.uncertain { background: var(--uncertain); }
+  .browse-row .row-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .browse-row .row-meta { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+
+  .toast {
+    position: fixed;
+    bottom: 1.2rem; left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.6rem 1.1rem;
+    border-radius: 6px;
+    font-size: 0.86rem;
+    box-shadow: var(--shadow);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 860px) {
+    .main { flex-direction: column; overflow-y: auto; }
+    .transcript-pane { border-right: none; border-bottom: 1px solid var(--line); }
+    .form-pane { flex: none; }
+  }
+</style>
+
+<div id="setup-screen" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-head"><h2>Who's annotating?</h2></div>
+    <div class="modal-body">
+      <p>Your name scopes autosave (so two annotators on the same browser don't overwrite each other) and labels your export file. This is <strong>not shared</strong> with anyone automatically — export your progress and send the file when you're done with a session.</p>
+      <input id="setup-name-input" class="setup-input" type="text" placeholder="e.g. Henry" autofocus>
+      <button id="setup-continue" class="nav-btn primary" style="width:100%">Continue</button>
+      <p style="margin-top:1rem"><label style="font-size:0.86rem"><input type="checkbox" id="setup-import-toggle"> I have a previous export to resume from</label></p>
+      <input id="setup-import-file" type="file" accept=".json" style="display:none; margin-top:0.5rem;">
+    </div>
+  </div>
+</div>
+
+<div class="topbar" id="topbar" style="display:none">
+  <div class="brand">RansKnow Gold Set<span class="who" id="who-label"></span></div>
+  <div class="progress-wrap">
+    <span class="progress-label" id="progress-label">0 / 180</span>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+  <button class="topbar-btn" id="btn-guide">Guide</button>
+  <button class="topbar-btn" id="btn-browse">Browse all</button>
+  <button class="topbar-btn" id="btn-import">Import</button>
+  <button class="topbar-btn primary" id="btn-export">Export progress</button>
+</div>
+
+<div class="main" id="main-app" style="display:none">
+  <div class="transcript-pane">
+    <div class="video-header">
+      <h1 id="v-title"></h1>
+      <div class="video-meta">
+        <span class="chip" id="v-channel-type"></span>
+        <span id="v-channel"></span>
+        <span id="v-year"></span>
+        <a id="v-yt-link" href="#" target="_blank" rel="noopener">Watch on YouTube ↗</a>
+      </div>
+    </div>
+    <div class="transcript-scroll">
+      <div class="transcript-text" id="v-transcript"></div>
+    </div>
+    <details class="ka-reveal">
+      <summary>Reveal Knowledge Agent's guess (do this after you've made your own call)</summary>
+      <div class="ka-body">
+        <dl>
+          <dt>Family</dt><dd id="ka-family">—</dd>
+          <dt>Dominant tactic</dt><dd id="ka-tactic">—</dd>
+          <dt>Platform</dt><dd id="ka-platform">—</dd>
+        </dl>
+      </div>
+    </details>
+  </div>
+
+  <div class="form-pane">
+    <div class="form-scroll">
+      <div class="field">
+        <label>Ransomware-relevant?</label>
+        <div class="segmented" id="f-relevant">
+          <button data-val="Yes">Yes</button>
+          <button data-val="No">No</button>
+          <button data-val="Uncertain">Uncertain</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Family</label>
+        <input class="textinput" id="f-family" list="family-list" placeholder="e.g. LockBit — leave blank if none/unclear" autocomplete="off">
+        <datalist id="family-list"></datalist>
+        <div class="hint">Free text — write what the video actually calls it. Datalist suggests known names but doesn't require picking one.</div>
+      </div>
+      <div class="field">
+        <label>Dominant tactic</label>
+        <select id="f-tactic">
+          <option value="">— not sure / none —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Platform</label>
+        <select id="f-platform">
+          <option value="">— not sure / none —</option>
+          <option>Windows</option>
+          <option>Linux</option>
+          <option>ESXi</option>
+          <option>Multiple</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="Anything worth flagging for adjudication"></textarea>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="nav-btn" id="btn-prev">← Prev</button>
+      <button class="nav-btn primary" id="btn-next">Save &amp; Next →</button>
+    </div>
+  </div>
+</div>
+
+<div id="guide-modal" class="modal-backdrop" style="display:none">
+  <div class="modal wide">
+    <div class="modal-head"><h2>Annotation guide</h2><button class="modal-close" data-close="guide-modal">&times;</button></div>
+    <div class="modal-body">
+      <h3>Ransomware-relevant</h3>
+      <p>Mark <strong>Yes</strong> if the video substantively discusses a ransomware incident, group, tactics, or defenses — not just a passing mention in a longer list of unrelated topics. A 40-minute threat-intel roundup that spends 90 seconds on ransomware among ten other topics is a judgment call — use <strong>Uncertain</strong> rather than forcing it, and note why.</p>
+
+      <h3>Family</h3>
+      <p>Write the name as the video itself uses it (e.g. "LockBit", "LockBit 3.0", "Black Basta"). Leave blank if no specific family is named, even if the video is otherwise ransomware-relevant. Don't guess from context — if it's unclear which group, leave it blank and note the ambiguity.</p>
+
+      <h3>Dominant tactic</h3>
+      <p>Pick the MITRE ATT&amp;CK tactic that gets the <em>most substantive discussion</em>, not just the first one mentioned. If the video is a broad incident walkthrough touching many tactics roughly equally, pick whichever gets the most airtime/detail, or leave as "not sure" if it's genuinely balanced.</p>
+
+      <h3>Platform</h3>
+      <p>The platform most central to the ransomware discussion. If multiple platforms are discussed with roughly equal weight (e.g. a cross-platform ESXi+Windows campaign), use "Multiple".</p>
+
+      <h3>When to use Uncertain</h3>
+      <p>Genuinely — mark it rather than guessing. Uncertain cases go to adjudication between annotators, which is more informative than a confident-looking but arbitrary call.</p>
+
+      <h3>The Knowledge Agent's guess</h3>
+      <p>Deliberately hidden until after you've made your own call, via the collapsible panel below the transcript. Check it against your own judgment afterward if you want, but forming your own opinion first is the entire point of this exercise — otherwise it's not independent evidence.</p>
+    </div>
+  </div>
+</div>
+
+<div id="browse-modal" class="modal-backdrop" style="display:none">
+  <div class="modal wide">
+    <div class="modal-head"><h2>Browse all 180</h2><button class="modal-close" data-close="browse-modal">&times;</button></div>
+    <div class="modal-body">
+      <div class="browse-toolbar">
+        <input class="textinput" id="browse-search" placeholder="Filter by title or channel...">
+      </div>
+      <div class="browse-list" id="browse-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="application/json" id="gold-data">__DATA_JSON__</script>
+
+<script>
+(function() {
+  const DATA = JSON.parse(document.getElementById('gold-data').textContent);
+  const VIDEOS = DATA.videos;
+  const TACTICS = ["Initial_Access","Execution","Persistence","Privilege_Escalation","Credential_Access",
+                    "Lateral_Movement","Discovery","Command_and_Control","Exfiltration","Impact"];
+
+  let annotatorName = null;
+  let storageKey = null;
+  let annotations = {}; // video_id -> {relevant, family, dominant_tactic, platform, notes, updated_at}
+  let currentIndex = 0;
+
+  const $ = (id) => document.getElementById(id);
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ---- Setup / storage ----
+  function storageKeyFor(name) { return 'ransknow_gold_annotations_v1_' + name.trim().toLowerCase(); }
+
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      annotations = raw ? JSON.parse(raw) : {};
+    } catch (e) { annotations = {}; }
+  }
+
+  function saveToStorage() {
+    try { localStorage.setItem(storageKey, JSON.stringify(annotations)); }
+    catch (e) { toast('Warning: could not save locally (' + e.message + ')'); }
+  }
+
+  $('setup-import-toggle').addEventListener('change', function() {
+    $('setup-import-file').style.display = this.checked ? 'block' : 'none';
+  });
+
+  $('setup-continue').addEventListener('click', function() {
+    const name = $('setup-name-input').value.trim();
+    if (!name) { toast('Enter a name first'); return; }
+    annotatorName = name;
+    storageKey = storageKeyFor(name);
+    loadFromStorage();
+
+    const importFile = $('setup-import-file');
+    if ($('setup-import-toggle').checked && importFile.files.length) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          const incoming = imported.annotations || imported;
+          let merged = 0;
+          for (const vid in incoming) { annotations[vid] = incoming[vid]; merged++; }
+          saveToStorage();
+          toast('Imported ' + merged + ' annotation(s)');
+        } catch (err) { toast('Import failed: ' + err.message); }
+        startApp();
+      };
+      reader.readAsText(importFile.files[0]);
+    } else {
+      startApp();
+    }
+  });
+
+  function startApp() {
+    $('setup-screen').style.display = 'none';
+    $('topbar').style.display = 'flex';
+    $('main-app').style.display = 'flex';
+    $('who-label').textContent = '— ' + annotatorName;
+    populateFamilyList();
+    populateTacticList();
+    // resume at first not-yet-annotated video
+    let resumeIdx = VIDEOS.findIndex(v => !annotations[v.video_id] || !annotations[v.video_id].relevant);
+    currentIndex = resumeIdx === -1 ? 0 : resumeIdx;
+    renderVideo();
+    updateProgress();
+  }
+
+  function populateFamilyList() {
+    const dl = $('family-list');
+    DATA.known_families.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      dl.appendChild(opt);
+    });
+  }
+
+  function populateTacticList() {
+    const sel = $('f-tactic');
+    TACTICS.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t.replace(/_/g, ' ');
+      sel.appendChild(opt);
+    });
+  }
+
+  // ---- Rendering ----
+  function renderVideo() {
+    const v = VIDEOS[currentIndex];
+    $('v-title').textContent = v.title || '(untitled)';
+    $('v-channel-type').textContent = v.channel_type || '—';
+    $('v-channel').textContent = v.channel_name || '';
+    $('v-year').textContent = v.year || '';
+    $('v-yt-link').href = v.youtube_url || '#';
+    $('v-transcript').textContent = v.transcript || '[no transcript]';
+
+    $('ka-family').textContent = v.ka_family_list || '(none detected)';
+    $('ka-tactic').textContent = v.ka_dominant_tactic || '(none)';
+    $('ka-platform').textContent = v.ka_platform_signal || '(none)';
+
+    const existing = annotations[v.video_id] || {};
+    setRelevant(existing.relevant || '');
+    $('f-family').value = existing.family || '';
+    $('f-tactic').value = existing.dominant_tactic || '';
+    $('f-platform').value = existing.platform || '';
+    $('f-notes').value = existing.notes || '';
+
+    // collapse KA reveal + scroll transcript to top on nav
+    document.querySelector('.ka-reveal').removeAttribute('open');
+    document.querySelector('.transcript-scroll').scrollTop = 0;
+
+    $('btn-prev').disabled = currentIndex === 0;
+    $('btn-next').textContent = currentIndex === VIDEOS.length - 1 ? 'Save' : 'Save & Next →';
+  }
+
+  function setRelevant(val) {
+    document.querySelectorAll('#f-relevant button').forEach(b => {
+      b.classList.remove('active-yes', 'active-no', 'active-uncertain');
+      if (b.dataset.val === val) {
+        b.classList.add(val === 'Yes' ? 'active-yes' : val === 'No' ? 'active-no' : 'active-uncertain');
+      }
+    });
+    $('f-relevant').dataset.value = val;
+  }
+
+  document.querySelectorAll('#f-relevant button').forEach(b => {
+    b.addEventListener('click', () => setRelevant(b.dataset.val));
+  });
+
+  function currentFormState() {
+    return {
+      relevant: $('f-relevant').dataset.value || '',
+      family: $('f-family').value.trim(),
+      dominant_tactic: $('f-tactic').value,
+      platform: $('f-platform').value,
+      notes: $('f-notes').value.trim(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  function saveCurrent() {
+    const v = VIDEOS[currentIndex];
+    const state = currentFormState();
+    const hasContent = state.relevant || state.family || state.dominant_tactic || state.platform || state.notes;
+    if (hasContent) {
+      annotations[v.video_id] = state;
+    } else {
+      delete annotations[v.video_id];
+    }
+    saveToStorage();
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const done = Object.values(annotations).filter(a => a.relevant).length;
+    $('progress-label').textContent = done + ' / ' + VIDEOS.length;
+    $('progress-fill').style.width = (done / VIDEOS.length * 100) + '%';
+  }
+
+  $('btn-next').addEventListener('click', () => {
+    saveCurrent();
+    if (currentIndex < VIDEOS.length - 1) { currentIndex++; renderVideo(); }
+    else { toast('That was the last one — check Browse all for anything left uncertain'); }
+  });
+  $('btn-prev').addEventListener('click', () => {
+    saveCurrent();
+    if (currentIndex > 0) { currentIndex--; renderVideo(); }
+  });
+
+  // ---- Guide modal ----
+  $('btn-guide').addEventListener('click', () => $('guide-modal').style.display = 'flex');
+  document.querySelectorAll('[data-close]').forEach(b => {
+    b.addEventListener('click', () => $(b.dataset.close).style.display = 'none');
+  });
+
+  // ---- Browse modal ----
+  function renderBrowseList(filter) {
+    const list = $('browse-list');
+    list.innerHTML = '';
+    const f = (filter || '').toLowerCase();
+    VIDEOS.forEach((v, idx) => {
+      if (f && !(v.title || '').toLowerCase().includes(f) && !(v.channel_name || '').toLowerCase().includes(f)) return;
+      const a = annotations[v.video_id];
+      const row = document.createElement('div');
+      row.className = 'browse-row';
+      const dotClass = !a || !a.relevant ? '' : a.relevant === 'Uncertain' ? 'uncertain' : 'done';
+      row.innerHTML = '<span class="status-dot ' + dotClass + '"></span>' +
+        '<span class="row-title">' + escapeHtml(v.title || '(untitled)') + '</span>' +
+        '<span class="row-meta">' + escapeHtml(v.channel_name || '') + ' · ' + (v.year || '') + '</span>';
+      row.addEventListener('click', () => {
+        saveCurrent();
+        currentIndex = idx;
+        renderVideo();
+        $('browse-modal').style.display = 'none';
+      });
+      list.appendChild(row);
+    });
+  }
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  $('btn-browse').addEventListener('click', () => {
+    renderBrowseList('');
+    $('browse-modal').style.display = 'flex';
+  });
+  $('browse-search').addEventListener('input', (e) => renderBrowseList(e.target.value));
+
+  // ---- Import (post-setup) ----
+  $('btn-import').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', () => {
+      if (!input.files.length) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          const incoming = imported.annotations || imported;
+          let merged = 0;
+          for (const vid in incoming) { annotations[vid] = incoming[vid]; merged++; }
+          saveToStorage();
+          renderVideo();
+          updateProgress();
+          toast('Imported ' + merged + ' annotation(s)');
+        } catch (err) { toast('Import failed: ' + err.message); }
+      };
+      reader.readAsText(input.files[0]);
+    });
+    input.click();
+  });
+
+  // ---- Export ----
+  $('btn-export').addEventListener('click', async () => {
+    saveCurrent();
+    const payload = {
+      annotator: annotatorName,
+      exported_at: new Date().toISOString(),
+      annotations: annotations,
+    };
+    const jsonStr = JSON.stringify(payload, null, 2);
+    const filename = 'ransknow_gold_' + annotatorName.replace(/[^a-z0-9]/gi, '_') + '_' +
+      new Date().toISOString().slice(0, 10) + '.json';
+
+    if (window.claude && window.claude.downloads) {
+      try {
+        await window.claude.downloads.save({ filename, data: jsonStr });
+        toast('Saved ' + filename);
+        return;
+      } catch (err) {
+        if (err && err.code === 'declined') { toast('Export cancelled'); return; }
+        // fall through to browser-native download on any other error
+      }
+    }
+    // Fallback: plain browser download (works outside the claude.ai viewer too)
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Saved ' + filename);
+  });
+
+  // autosave current field edits as you type (debounced-ish via change/blur)
+  ['f-family', 'f-tactic', 'f-platform', 'f-notes'].forEach(id => {
+    $(id).addEventListener('change', saveCurrent);
+  });
+
+  window.addEventListener('beforeunload', saveCurrent);
+})();
+</script>
