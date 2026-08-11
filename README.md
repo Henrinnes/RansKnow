@@ -1,6 +1,6 @@
 # RansKnow: Ransomware Knowledge Dataset
 
-A curated dataset of **761 video records** (718 with full transcripts) sourced from **50 cybersecurity YouTube channels**, built to support knowledge extraction, NLP research, and threat intelligence analysis focused on ransomware.
+A curated dataset of **1128 video records** (1034 with full transcripts) sourced from **92 cybersecurity YouTube channels**, built to support knowledge extraction, NLP research, and threat intelligence analysis focused on ransomware.
 
 ---
 
@@ -16,17 +16,17 @@ Videos were selected using keyword-based inclusion criteria (ransomware-relevant
 
 ```
 RansKnow/
-├── transcripts/                  # 761 video records across 50 channels
+├── transcripts/                  # 1128 video records across 92 channels
 │   ├── C01_The_DFIR_Report/
 │   │   ├── V0001.txt             # Raw transcript (YouTube timestamped format)
 │   │   ├── V0001.meta.json       # Video metadata
 │   │   └── ...
 │   ├── C02_SANS_Digital_Forensics_and_Incident_Response/
-│   └── ... (C01–C50)
+│   └── ... (C01–C101, with gaps for excluded/unmatched channels)
 │
 ├── outputs/                      # Knowledge Agent extraction results
-│   ├── Knowledge_Agent_Features_718.csv  # v2 — full 718-row feature CSV (current)
-│   ├── Knowledge_Agent_Features_718.xlsx
+│   ├── Knowledge_Agent_Features_1034.csv  # v3 — full 1034-row feature CSV (current)
+│   ├── Knowledge_Agent_Features_1034.xlsx
 │   ├── Knowledge_Agent_Features_307.csv  # v1 — original 307-row CSV (historical)
 │   ├── Knowledge_Agent_Features_307.xlsx
 │   ├── Knowledge_Agent_Output.csv
@@ -36,7 +36,7 @@ RansKnow/
 │   └── Knowledge_Agent_Features_v1.csv   # v1 feature CSV (307 rows)
 │
 ├── Scripts/                      # Data pipeline notebooks and scripts
-│   ├── knowledge_agent.py                # v2 feature extraction pipeline (current)
+│   ├── knowledge_agent.py                # v3 feature extraction pipeline (current)
 │   ├── fetch_transcripts.py              # Transcript fetcher with Whisper ASR fallback
 │   ├── ransknow-getting-started.ipynb    # Getting Started notebook (Kaggle-ready)
 │   ├── 01_Transcript_Dataset_Construction.ipynb
@@ -48,7 +48,7 @@ RansKnow/
 │   └── populate_video_registry_from_transcripts.py
 │
 ├── rubrics/                      # Scoring rubrics and channel registry
-│   ├── Dataset_Channel_Registry_Batch2.xlsx  # Batch 2 candidates — C51–C101 (51 channels, pending)
+│   ├── Dataset_Channel_Registry_Batch2.xlsx  # Batch 2 — C51–C101 (fetched; 4 excluded, no channel found)
 │   ├── Dataset_Channel_Registry_Populated_25.xlsx
 │   ├── Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx
 │   ├── Ransomware_Family_Coverage_List.xlsx
@@ -56,7 +56,7 @@ RansKnow/
 │
 ├── Figures/                      # Visualisations
 ├── Progress_Mapping/             # Weekly progress tracking
-├── Channel_Registry_1.xlsx       # Master registry of all 50 channels
+├── Channel_Registry_1.xlsx       # Master registry — Batch 1 channels (C01–C50)
 ├── Family_Coverage_Targets_Rules.docx
 ├── Ransomware_Transcript_Dataset_Summary.pdf
 └── Video_Selection_Rubric_AutoScore_Filled_6.xlsx
@@ -66,7 +66,7 @@ RansKnow/
 
 ## Knowledge Agent Feature Schema
 
-All **718 videos** with real transcripts have been processed through the Knowledge Agent pipeline (`Scripts/knowledge_agent.py`), producing **37 structured feature columns**:
+All **1034 videos** with real transcripts have been processed through the Knowledge Agent pipeline (`Scripts/knowledge_agent.py`), producing **37 structured feature columns**:
 
 | Category | Columns |
 |---|---|
@@ -79,7 +79,7 @@ All **718 videos** with real transcripts have been processed through the Knowled
 
 ---
 
-## Channels Covered (C01–C50)
+## Channels Covered (C01–C101, 92 channels)
 
 | ID | Channel |
 |---|---|
@@ -133,24 +133,61 @@ All **718 videos** with real transcripts have been processed through the Knowled
 | C48 | ThreatLocker |
 | C49 | LogRhythm |
 | C50 | Darktrace |
+| C51 | SentinelOne |
+| C52 | Check Point Research |
+| C53 | Trend Micro |
+| C54 | WithSecure |
+| C55 | Rapid7 |
+| C56 | Malwarebytes |
+| C57 | Group-IB |
+| C58 | Prodaft |
+| C60 | Kroll |
+| C61 | NCC Group |
+| C62 | Emsisoft |
+| C63 | Intezer |
+| C64 | ZeroFox |
+| C65 | ReliaQuest |
+| C66 | Binary Defense |
+| C67 | 13Cubed |
+| C69 | TCM Security |
+| C70 | Josh Stroschein |
+| C71 | ANY.RUN |
+| C72 | Cado Security |
+| C74 | Virus Bulletin Conference |
+| C75 | Hack In The Box (HITB) |
+| C76 | Wild West Hackin' Fest |
+| C78 | CactusCon |
+| C80 | ICS Village |
+| C82 | Troopers Conference |
+| C83 | BlueHat (Microsoft Security) |
+| C84 | CYBERWARCON |
+| C85 | OffensiveCon |
+| C86 | Claroty |
+| C87 | Nozomi Networks |
+| C88 | S4 Conference |
+| C89 | CISA |
+| C90 | Waterfall Security |
+| C91 | Risky Business |
+| C92 | Security Weekly |
+| C93 | Darknet Diaries |
+| C96 | LetsDefend |
+| C98 | GuidePoint Security |
+| C99 | ThreatConnect |
+| C100 | Optiv |
+| C101 | CanSecWest |
 
-Most channels contribute **10 videos** each, selected to maximise ransomware family coverage and technical depth.
+Most channels contribute up to **20 videos** each (selected via ransomware-keyword matching against recent uploads), capped by how much matching content each channel actually has — several channels landed below that cap because their catalogs simply don't have more matching videos.
 
-### Batch 2 — Planned Expansion (C51–C101)
+### Batch 2 — Completed (C51–C101)
 
-A second batch of **51 candidate channels** (C51–C101) has been curated to expand coverage to ~100 channels, targeting gaps in the current dataset:
+A second batch of candidate channels was fetched to expand coverage from 50 to 92 channels. Of the 51 Batch 2 candidates:
 
-| Category | Channels |
-|---|---|
-| Threat Intelligence / Vendor | SentinelOne, Check Point Research, Trend Micro, WithSecure, Rapid7, Malwarebytes, Group-IB, Prodaft, Anomali, Kroll, NCC Group, Emsisoft, Intezer, ZeroFox, ReliaQuest, Binary Defense |
-| DFIR Practitioners | 13Cubed, HuskyHacks, TCM Security, Josh Stroschein, ANY.RUN, Cado Security, Cyb3rWard0g |
-| Conferences | Virus Bulletin, Hack In The Box, Wild West Hackin' Fest, SecTor, CactusCon, GrayHat, ICS Village, Hack.lu, Troopers, BlueHat, CYBERWARCON, OffensiveCon |
-| OT / ICS / Government | Claroty, Nozomi Networks, S4 Conference, CISA, Waterfall Security |
-| News & Analysis | Risky Business, Security Weekly, Darknet Diaries |
-| Blue Team / Detection | Florian Roth, Eric Zimmerman, LetsDefend |
-| Consulting | GuidePoint Security, ThreatConnect, Optiv, CanSecWest |
+- **42 channels** were successfully fetched and contributed transcripts (listed above).
+- **1 channel** was a confirmed duplicate of an existing Batch 1 channel (Active Countermeasures, C97) and was skipped.
+- **4 channels** — Cyb3rWard0g (C73), GrayHat Conference (C79), Hack.lu Conference (C81), Eric Zimmerman (C95) — have no discoverable dedicated YouTube channel (via API handle lookup or name search) and were marked `Included = No`.
+- **4 channels** — Anomali (C59), HuskyHacks (C68), SecTor (C77), Nextron Systems / Florian Roth (C94) — resolved to real, verified channels but returned zero ransomware-keyword-matching videos within the scanned upload history.
 
-Channel selection rubric and URLs: `rubrics/Dataset_Channel_Registry_Batch2.xlsx`
+Channel selection rubric, URLs, and inclusion notes: `rubrics/Dataset_Channel_Registry_Batch2.xlsx`
 
 ---
 
@@ -217,6 +254,7 @@ The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`
 | v2 | July 2026 | Automated fetch — 761 video records, 424 transcripts, all scripts, rubrics, figures, and documentation |
 | v3 | July 2026 | Whisper ASR fallback — 718 transcripts recovered (94% coverage) across all 761 video records |
 | v4 | July 2026 | Knowledge Agent v2 — 718-row feature CSV (`Knowledge_Agent_Features_718.csv`), fixed tool detection, added Year/DurationSeconds/Transcript_Provider columns |
+| v5 | August 2026 | Batch 2 expansion — 42 new channels (C51–C101), bringing the dataset to 92 channels / 1128 video records / 1034 transcripts; fixed several stale channel URLs; Knowledge Agent v3 — 1034-row feature CSV (`Knowledge_Agent_Features_1034.csv`) |
 
 ---
 

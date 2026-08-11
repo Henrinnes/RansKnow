@@ -10,7 +10,7 @@ Extracts structured features from every transcript with real content:
 
 Usage:
     python3 Scripts/knowledge_agent.py
-    python3 Scripts/knowledge_agent.py --out outputs/Knowledge_Agent_Features_718.csv
+    python3 Scripts/knowledge_agent.py --out outputs/Knowledge_Agent_Features_1034.csv
     python3 Scripts/knowledge_agent.py --only-missing  # append new videos to existing CSV
 """
 
@@ -25,7 +25,7 @@ import pandas as pd
 ROOT        = Path(__file__).resolve().parent.parent
 TRANSCRIPTS = ROOT / "transcripts"
 FAMILY_LIST = ROOT / "rubrics" / "Ransomware_Family_Coverage_List.xlsx"
-DEFAULT_OUT = ROOT / "outputs" / "Knowledge_Agent_Features_718.csv"
+DEFAULT_OUT = ROOT / "outputs" / "Knowledge_Agent_Features_1034.csv"
 
 # ── Tactic patterns ───────────────────────────────────────────────────────────
 
