@@ -165,13 +165,22 @@ def _ka_families(rel_path: str) -> frozenset:
 
 
 @lru_cache(maxsize=4096)
-def _ka_tactic_counts(rel_path: str):
+def _ka_tactic_counts(rel_path: str) -> dict:
+    # NOT sorted -- lru_cache only requires the argument to be hashable,
+    # not the return value, so there's no reason to round-trip through a
+    # sorted tuple. Preserving ka.TACTICS's own iteration order matters:
+    # max(cnts, key=cnts.get) breaks ties by first-seen-in-iteration-order,
+    # and a sorted-by-name reordering picked different winners than
+    # knowledge_agent.py's own extract() on tied counts -- caught by the
+    # rule-based baseline scoring 0.92 instead of a tautological 1.000
+    # against its own labels once the "tool"/"platform" tasks started
+    # exercising this path with different fold splits than "family" had.
     text = _ka_text(rel_path)
-    return tuple(sorted({t: ka._count(text, pats) for t, pats in ka.TACTICS.items()}.items()))
+    return {t: ka._count(text, pats) for t, pats in ka.TACTICS.items()}
 
 
 def _ka_dominant_tactic(rel_path: str) -> str:
-    cnts = dict(_ka_tactic_counts(rel_path))
+    cnts = _ka_tactic_counts(rel_path)
     return max(cnts, key=cnts.get) if any(cnts.values()) else "None"
 
 
