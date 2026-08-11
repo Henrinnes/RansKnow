@@ -33,7 +33,8 @@ def list_registered():
 
 def main():
     parser = argparse.ArgumentParser(description="RansKnow Phase 1 experiment runner")
-    parser.add_argument("--tasks", nargs="+", default=["family", "dominant_tactic"])
+    parser.add_argument("--tasks", nargs="+",
+                         default=["family", "dominant_tactic", "platform", "tool", "relevance"])
     parser.add_argument("--features", nargs="+", default=["structured", "tfidf"])
     parser.add_argument("--models", nargs="+", default=["logreg", "random_forest", "gbm"])
     parser.add_argument("--splits", nargs="+",

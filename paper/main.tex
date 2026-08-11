@@ -1,0 +1,370 @@
+% RansKnow dataset paper -- skeleton
+%
+% Status as of this draft: Dataset Construction and Label-Quality Audit
+% sections describe work that is DONE and verified against the actual
+% repository state. Everything downstream of Phase 0 (baselines, uncertainty,
+% conformal prediction, OOD, interpretability) is marked with \todo{} --
+% those numbers don't exist yet, or exist only as weak-label smoke-test
+% results that shouldn't be reported as findings (see the plan's Phase 0
+% rationale: circularity between weak labels and weak-label evaluation).
+%
+% Generic article class on purpose -- no venue-specific template dependency
+% yet. Swapping to a NeurIPS Datasets & Benchmarks / ACL / etc. class file
+% later is a front-matter change, not a rewrite of the content below.
+
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage[capitalize]{cleveref}
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+% Deliberately not using the todonotes package: its margin-note/inline
+% float mechanism collided with this document's real tables and produced
+% an unrecoverable "Float(s) lost" error (confirmed by isolating with
+% [disable] -- the document compiles cleanly without it). This does the
+% same job -- visually flag incomplete sections -- as plain paragraph
+% text, which can't collide with anything. The optional [inline] argument
+% below is accepted and ignored, so every existing \todo[inline]{...} /
+% \todo{...} call site works unchanged.
+\newcommand{\todo}[2][]{\par\medskip\noindent\textcolor{red}{\textbf{[TODO]}}\ #2\par\medskip}
+
+\title{RansKnow: A Weakly-Labeled Corpus of Ransomware-Relevant\\
+YouTube Transcripts with an Audited Label-Quality Baseline}
+
+\author{
+  Henry Kabuye \\
+  \texttt{[affiliation]}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\todo[inline]{Write after Phase 1 baselines exist. Should state: (1) what
+RansKnow is (1{,}128 video records, 1{,}034 transcripts, 92 cybersecurity
+YouTube channels, MITRE ATT\&CK-aligned regex features); (2) the paper's
+actual contribution, which is arguably the label-quality audit and gold
+evaluation subset as much as the corpus itself -- Section~\ref{sec:audit}
+found that a naive keyword-matched family label collided with ordinary
+English words (\texttt{play}, \texttt{hive}, \texttt{cactus}, \dots) badly
+enough to inflate the single most-detected ransomware family by
+$\sim$3.5$\times$; (3) headline baseline/calibration/OOD numbers once
+Phase 1+ is complete.}
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+\todo[inline]{The gap: no open, transcript-level ransomware knowledge
+corpus with MITRE ATT\&CK-aligned annotations. Motivate why YouTube
+security content specifically (volume, diversity of source -- vendor
+threat-intel channels, DFIR conferences, independent researchers -- versus
+e.g. only vendor blog posts). State the paper's contributions as a list:
+(1) the corpus, (2) the label-quality audit methodology and its concrete
+findings, (3) the experiment framework and baseline results, (4)
+[uncertainty/conformal/OOD once those phases exist].}
+
+\section{Related Work}
+\label{sec:related}
+
+\todo[inline]{Three threads: (a) existing ransomware/threat-intel datasets
+(structured IOC feeds, MITRE ATT\&CK mapping efforts, prior ransomware
+incident corpora -- note what's specific to RansKnow: raw natural-language
+transcripts rather than structured feeds); (b) weak/distant supervision in
+security NLP (keyword/regex-based labeling, its known failure modes); (c)
+conformal prediction and OOD detection in NLP, as background for
+Sections~\ref{sec:conformal} and~\ref{sec:ood} once written.}
+
+\section{Dataset Construction}
+\label{sec:construction}
+
+RansKnow \citep{ransknow_kaggle} consists of 1{,}128 video records sourced
+from 92 cybersecurity YouTube channels, of which 1{,}034 have an extracted
+transcript with real content; the remaining 94\footnote{\todo{Verify this figure against the
+    live dataset before submission -- $1128 - 1034 = 94$, but confirm this
+    is failed transcript extraction and not something else, e.g. videos
+    excluded post-fetch.}} could not be transcribed by any method in the
+fetch cascade.
+
+\subsection{Channel selection}
+Channels were curated in two batches. Batch 1 (50 channels, \texttt{C01}--\texttt{C50})
+covers established DFIR vendors, security conferences, and independent
+researchers. Batch 2 (51 candidate channels, \texttt{C51}--\texttt{C101})
+expanded coverage into threat-intelligence vendors, additional conferences,
+and OT/ICS-security and government channels; 42 of the 51 candidates
+yielded usable transcripts, 1 was a confirmed duplicate of an existing
+Batch 1 channel, 4 had no discoverable dedicated YouTube channel, and 4
+resolved to real channels with zero ransomware-keyword-matching content in
+their upload history. \todo{Cite the specific channel registry files
+    (\texttt{rubrics/Dataset\_Channel\_Registry\_*.xlsx}) and consider a
+    full channel table as a supplementary table rather than inline.}
+
+\subsection{Video selection}
+Within each channel, videos were selected by scanning recent uploads for a
+fixed keyword list (\texttt{ransomware}, \texttt{extortion},
+\texttt{lockbit}, \texttt{incident response}, \dots; full list in
+Appendix~\ref{app:keywords}) matched against title and description, capped
+at 20 videos per channel and a minimum duration of 5 minutes. \todo{Report
+    the actual keyword list and discuss selection bias explicitly: this
+    is a convenience sample conditioned on channel operators' own titling
+    and description-writing behavior, not a random sample of ransomware
+    discourse.}
+
+\subsection{Transcript acquisition}
+\label{sec:transcripts}
+Transcripts were acquired via a three-stage cascade: (1) the YouTube Data
+API's official captions where available; (2) \texttt{yt-dlp}'s
+auto-generated captions; (3) local Whisper transcription as a fallback.
+\textbf{This cascade matters more than a footnote}: only 74 of 1{,}034
+transcripts (7.2\%) came from official captions. 959 (92.7\%) are ASR
+output -- 554 from \texttt{whisper\_base} (the smallest, least accurate
+Whisper checkpoint) and 405 from a local Whisper fallback, 1 from
+\texttt{yt-dlp} captions. \todo{This is Finding B from the label-quality
+    audit (Section~\ref{sec:audit}). Decide whether to present it once,
+    here, or duplicate the framing in both sections -- probably present the
+    raw fact here and the downstream implication (jargon
+    mistranscription risk) in Section~\ref{sec:audit}.}
+
+\section{Label-Quality Audit}
+\label{sec:audit}
+
+The Knowledge Agent pipeline (\texttt{Scripts/knowledge\_agent.py})
+extracts structured features from every transcript via regex matching:
+ransomware family mentions (against a maintained alias list), MITRE
+ATT\&CK tactic mention counts across 10 tactics, offensive tool mentions
+across 8 tools, and platform signals (Windows/Linux/ESXi). Three concrete
+problems were found and are described here rather than left as an implicit
+caveat, because a downstream classifier trained on these labels inherits
+whatever bias they contain.
+
+\subsection{Finding A: generic-word alias collisions}
+\label{sec:finding-a}
+Nine of 41 family aliases collide with common English or business words
+(\texttt{play}, \texttt{hive}, \texttt{cactus}, \texttt{agenda},
+\texttt{clop}, \texttt{inc}, \texttt{maze}, \texttt{medusa},
+\texttt{royal}) -- identified programmatically via dictionary lookup
+against \texttt{/usr/share/dict/words}, then confirmed by manual
+transcript inspection (e.g. \texttt{hive} matching ``registry hive,'' a
+routine DFIR term, rather than Hive ransomware). A windowed-context
+disambiguation fix (requiring a ransomware-context term within
+$\sim$15 tokens of the match) was applied and reduces false-positive
+volume substantially without eliminating it -- residual false positives
+still occur when context vocabulary is itself dense (see
+\texttt{Scripts/audit\_family\_aliases.py} for the audit methodology and
+\Cref{tab:alias-audit} for before/after counts).
+
+\begin{table}[htbp]
+\centering
+\caption{Before/after family mention counts for the 9 flagged aliases,
+  windowed-context disambiguation applied. \texttt{Play} alone accounted
+  for 386 of 494 (78\%) of all family-tagged videos before the fix.}
+\label{tab:alias-audit}
+\begin{tabular}{lrrr}
+\toprule
+Family & Before & After & Dropped \\
+\midrule
+Play    & 386 & 111 & 275 \\
+Qilin   &  88 &  21 &  67 \\
+Hive    &  23 &  10 &  13 \\
+Maze    &  11 &   5 &   6 \\
+Royal   &  28 &  19 &   9 \\
+INC     &  10 &   7 &   3 \\
+Cactus  &   9 &   6 &   3 \\
+Cl0p    &  11 &  11 &   0 \\
+Medusa  &   7 &   7 &   0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Finding B: ASR-dominated transcript quality}
+As noted in Section~\ref{sec:transcripts}, 92.7\% of transcripts are ASR
+output rather than official captions. \todo{Run the Phase 0.4 spot-check
+    (manual comparison of ASR output against source audio for a fixed
+    jargon term list -- \texttt{LockBit}, \texttt{Mimikatz},
+    \texttt{PsExec}, \texttt{Cobalt Strike}, \texttt{rclone},
+    \texttt{BloodHound} -- across the whisper-transcribed subset) and
+    report a measured word-error-rate-on-jargon figure here. Aggregate
+    detection-rate comparisons across \texttt{Transcript\_Provider} did
+    not show an obvious gap, which is not the same as no effect --
+    individual mistranscriptions of rare jargon can matter without moving
+    an aggregate rate.}
+
+\subsection{Gold evaluation subset}
+\label{sec:gold}
+A stratified sample of 180 videos (channel type $\times$ year bucket
+$\times$ family-count bucket) was drawn for independent human annotation,
+held out from all model training. \todo{Report once annotation is
+    complete: sample size actually annotated, Cohen's $\kappa$ per field
+    (ransomware-relevant Y/N, family, dominant tactic, platform),
+    adjudication process, and confusion between Knowledge Agent labels and
+    adjudicated gold labels. This is the section that turns every later
+    result from ``matches a regex'' into ``matches human judgment.''}
+
+\section{Task Definitions and Baselines}
+\label{sec:baselines}
+
+Five prediction tasks are defined over the corpus: ransomware family
+(multi-label, 18 classes after excluding 3 singleton-occurrence classes,
+see \Cref{tab:tasks}), dominant MITRE tactic (multi-class, 11 classes),
+platform signal (multi-class, 4 classes), offensive tool mentions
+(multi-label, 7 classes after excluding \texttt{MegaNZ}, which has zero
+occurrences in the corpus), and a ransomware-relevance binary screen
+(derived, not a stored column: \texttt{Family\_Count > 0 OR
+  Tactic\_Impact > 0}).
+
+\begin{table}[htbp]
+\centering
+\caption{Task taxonomy.}
+\label{tab:tasks}
+\begin{tabular}{llrl}
+\toprule
+Task & Type & Classes & Label source \\
+\midrule
+Family              & multi-label            & 18 & alias regex match (audited, \S\ref{sec:finding-a}) \\
+Dominant tactic      & multi-class (+none)    & 11 & max of 10 tactic-pattern counts \\
+Platform signal      & multi-class (+none)    &  4 & max of 3 platform-pattern counts \\
+Tool mentions        & multi-label            &  7 & per-tool regex match \\
+Ransomware-relevant   & binary                 &  2 & derived \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Model ladder and validation protocol}
+Each task is evaluated over three feature representations (structured
+Knowledge Agent columns, TF-IDF, embeddings\footnote{\todo{Embedding
+    representation is currently blocked in the reference implementation:
+    \texttt{sentence\_transformers} fails to import due to a
+    torch/transformers version mismatch. Resolve before this table can
+    include embedding-representation numbers.}}) and five models (the
+rule-based Knowledge Agent itself as baseline 0, Logistic Regression,
+Linear SVM, Random Forest, LightGBM), under three cross-validation
+protocols: stratified random $k$-fold, \texttt{GroupKFold} by
+\texttt{Channel\_ID} (to detect channel-style leakage -- a model can learn
+``this is CrowdStrike's narration style'' instead of the content), and a
+temporal split (train pre-2024, test 2024+, since 79\% of the corpus is
+from 2024 onward).
+
+\todo[inline]{\textbf{Results table goes here.} A first structured-feature
+    pass exists (\texttt{outputs/experiments/phase1\_structured\_*.csv}):
+    the rule-based baseline scores a tautological macro-F1 of 1.000 on
+    both \texttt{family} and \texttt{dominant\_tactic} (expected --
+    checked against its own labels, not independent evidence of anything).
+    Trained models reach 0.81--0.83 macro-F1 on \texttt{dominant\_tactic}
+    from structured features alone (GBM), but top out under 0.08 on
+    \texttt{family} from the same features -- family identity is not well
+    captured by tactic/tool count patterns, motivating the TF-IDF/embedding
+    representations for that task specifically. \textbf{None of these
+    numbers are gold-set-verified yet} (\S\ref{sec:gold}) and should not be
+    reported as the paper's headline results until they are; they're
+    included here as a framework-validation artifact, not a finding.}
+
+\section{Uncertainty Quantification}
+\label{sec:uncertainty}
+\todo[inline]{Not implemented yet (Phase 2). Plan: reliability
+    diagrams + Expected Calibration Error per task/model, scored against
+    the gold set (not the weak labels a model that's perfectly calibrated
+    against its own training signal has just learned to be confidently
+    correlated with a regex). Random Forest tree-vote entropy as a free
+    uncertainty proxy; MC-Dropout / small deep ensemble for the eventual
+    transformer model. Headline metric: confidently-wrong rate on the gold
+    set.}
+
+\section{Conformal Prediction}
+\label{sec:conformal}
+\todo[inline]{Not implemented yet (Phase 3). Plan: split conformal on
+    \texttt{dominant\_tactic}/\texttt{platform} at 90\% target coverage;
+    per-label conformal calibration (or conformal risk control) for
+    \texttt{family}/\texttt{tool}. Conditional-coverage stress test on the
+    gold subset, post-2025 videos, and conference-channel videos --
+    coverage collapse on any slice is itself the result, and feeds
+    directly into the OOD setups below via the nonconformity score.}
+
+\section{Out-of-Distribution Detection}
+\label{sec:ood}
+\todo[inline]{Not implemented yet (Phase 4). Four setups already grounded
+    in real splits: temporal emergence (train pre-2024, test on
+    Qilin/DragonForce/Black Basta, which only appear post-2023 in this
+    corpus), channel-type shift (Vendor+DFIR vs. Conference+Independent),
+    leave-rare-family-out, and an external non-security corpus as a sanity
+    check. Methods to compare: max-softmax-probability, Mahalanobis
+    distance on pooled embeddings, energy score, and the Section
+    \ref{sec:conformal} nonconformity score used directly as an OOD flag.}
+
+\section{Interpretability and Perturbation Robustness}
+\label{sec:interpretability}
+\todo[inline]{Not implemented yet (Phase 5). Confound checks (length
+    normalization, channel-identity masking, ASR-provider-stratified error
+    analysis) plus two novel-to-this-paper diagnostics: (1) counterfactual
+    explanations -- greedy word-removal search asking whether a trained
+    classifier's \texttt{Play} predictions bottom out on removing the word
+    ``play'' itself with no other family-specific vocabulary in the
+    minimal edit set, which would show Finding A's noise propagated past
+    training rather than being learned away; (2) an untargeted
+    perturbation-robustness sweep (simulated ASR noise on the 74
+    official-caption videos, synonym substitution) as the
+    dataset-appropriate proxy for adversarial robustness -- there is no
+    real adversary submitting transcripts to evade this classifier in
+    production, so a full gradient-based adversarial-attack framework is
+    disproportionate; the actual risk surface is ASR noise and
+    channel-style variation. Combined with Section~\ref{sec:ood}'s
+    temporal-emergence and leave-rare-family-out setups, these three
+    pieces together are the paper's answer to ``how does this handle
+    evolving, new, and adversarial patterns,'' not three separate open
+    questions.}
+
+\section{Limitations and Ethics}
+\label{sec:limitations}
+
+\todo[inline]{Expand into full prose; bullets below are the content, not
+    the final form.}
+\begin{itemize}
+  \item \textbf{Sampling bias.} The corpus is conditioned on which
+    channels operators chose to run, which videos they chose to title and
+    describe in keyword-matchable ways, and YouTube's own recommendation
+    and search surfacing -- not a random or exhaustive sample of
+    ransomware-relevant discourse.
+  \item \textbf{ASR noise.} 92.7\% of transcripts are machine-transcribed,
+    mostly by \texttt{whisper\_base}. \Cref{sec:audit}'s Finding B and the
+    pending jargon spot-check (Section~\ref{sec:gold}) bound how much this
+    matters.
+  \item \textbf{Weak-label ceiling.} Every quantitative result prior to
+    gold-set verification is bounded by the Knowledge Agent's own
+    precision/recall, which Finding A shows is not perfect even after the
+    disambiguation fix.
+  \item \textbf{Dual use.} This is a corpus of ransomware tactics, tools,
+    and case studies extracted from public educational content. \todo{Add
+      a considered dual-use statement -- the underlying source material is
+      already public (YouTube videos aimed at defenders), but structuring
+      it may lower the effort to extract offense-relevant patterns; discuss
+      how this compares to existing public MITRE ATT\&CK mappings and
+      threat-intel reporting, which already aggregate similar information.}
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+\todo[inline]{Write last. Should state the gold-eval subset and audit
+    code as a second contribution alongside the transcripts themselves,
+    not just a validation step -- other weak-label security-NLP datasets
+    built the same way (keyword/regex extraction over scraped text) can
+    reuse the audit methodology, not just the corpus.}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\section{Keyword List}
+\label{app:keywords}
+\todo[inline]{Insert the full \texttt{KEYWORDS} list from
+    \texttt{Scripts/fetch\_transcripts.py} verbatim.}
+
+\clearpage
+\end{document}

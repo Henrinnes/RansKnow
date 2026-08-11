@@ -165,10 +165,34 @@ def _ka_families(rel_path: str) -> frozenset:
 
 
 @lru_cache(maxsize=4096)
-def _ka_dominant_tactic(rel_path: str) -> str:
+def _ka_tactic_counts(rel_path: str):
     text = _ka_text(rel_path)
-    cnts = {t: ka._count(text, pats) for t, pats in ka.TACTICS.items()}
+    return tuple(sorted({t: ka._count(text, pats) for t, pats in ka.TACTICS.items()}.items()))
+
+
+def _ka_dominant_tactic(rel_path: str) -> str:
+    cnts = dict(_ka_tactic_counts(rel_path))
     return max(cnts, key=cnts.get) if any(cnts.values()) else "None"
+
+
+@lru_cache(maxsize=4096)
+def _ka_platform_signal(rel_path: str) -> str:
+    text = _ka_text(rel_path)
+    cnts = {p: ka._count(text, pats) for p, pats in ka.PLATFORMS.items()}
+    return max(cnts, key=cnts.get) if any(cnts.values()) else "None"
+
+
+@lru_cache(maxsize=4096)
+def _ka_tools(rel_path: str) -> frozenset:
+    text = _ka_text(rel_path)
+    cnts = {t: ka._count(text, pats) for t, pats in ka.TOOLS.items()}
+    return frozenset(k for k, v in cnts.items() if v > 0)
+
+
+def _ka_relevant(rel_path: str) -> str:
+    fams = _ka_families(rel_path)
+    tactic_impact = dict(_ka_tactic_counts(rel_path)).get("Impact", 0)
+    return "Relevant" if (len(fams) > 0 or tactic_impact > 0) else "NotRelevant"
 
 
 class RuleBasedKAClassifier:
@@ -205,6 +229,19 @@ class RuleBasedKAClassifier:
 
         if self.task.name == "dominant_tactic":
             return np.array([_ka_dominant_tactic(rel_path) for rel_path in X["Transcript_Path"]])
+
+        if self.task.name == "platform":
+            return np.array([_ka_platform_signal(rel_path) for rel_path in X["Transcript_Path"]])
+
+        if self.task.name == "tool":
+            rows = []
+            for rel_path in X["Transcript_Path"]:
+                tools = _ka_tools(rel_path)
+                rows.append([1 if c in tools else 0 for c in self.task.classes])
+            return np.array(rows)
+
+        if self.task.name == "relevance":
+            return np.array([_ka_relevant(rel_path) for rel_path in X["Transcript_Path"]])
 
         raise NotImplementedError(f"Rule-based baseline not implemented for task '{self.task.name}'")
 
