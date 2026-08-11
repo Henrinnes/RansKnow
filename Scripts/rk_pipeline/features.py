@@ -81,20 +81,82 @@ class TfidfFeatureBuilder:
         return self.vec.transform(self._texts(df))
 
 
+_EMBEDDING_MODEL = None  # lazy singleton -- loading is the expensive part
+
+_EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+_EMBEDDING_CHUNK_WORDS = 200  # rough proxy for staying under the model's
+                              # 256-token max sequence length; transcripts
+                              # run well past that, so naive .encode() on
+                              # the raw text would silently truncate to
+                              # the opening ~200 words and throw away the
+                              # rest of the video.
+
+
+def _get_embedding_model():
+    global _EMBEDDING_MODEL
+    if _EMBEDDING_MODEL is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            import torch
+        except ImportError as e:
+            raise ImportError(
+                "sentence_transformers/torch not importable in the *current* "
+                "interpreter. This representation requires the dedicated venv: "
+                "run via .venv-embeddings/bin/python3, not the default "
+                "environment (torch 2.0.1 there can't satisfy transformers' "
+                "torch>=2.1 requirement -- see Scripts/rk_pipeline/features.py)."
+            ) from e
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        _EMBEDDING_MODEL = SentenceTransformer(_EMBEDDING_MODEL_NAME, device=device)
+    return _EMBEDDING_MODEL
+
+
+def _chunk_words(text: str, chunk_words: int):
+    words = text.split()
+    if not words:
+        return [""]
+    return [" ".join(words[i:i + chunk_words]) for i in range(0, len(words), chunk_words)]
+
+
+_EMBEDDING_CACHE: dict = {}  # Transcript_Path -> np.ndarray(384,)
+
+
+def _embed_document_cached(rel_path: str, model) -> np.ndarray:
+    # The representation is stateless (no fitting), so the same document
+    # produces the same vector regardless of which fold or model is
+    # currently using it. Without this cache, a 5-fold split evaluated
+    # across 2 models re-encodes every document up to 10x over -- this is
+    # the embedding-representation analogue of the rule-based-baseline
+    # caching fix in models.py, and without it a single task/split
+    # smoke test didn't finish inside a 100s budget.
+    if rel_path not in _EMBEDDING_CACHE:
+        text = load_transcript(rel_path)
+        chunks = _chunk_words(text, _EMBEDDING_CHUNK_WORDS)
+        chunk_vecs = model.encode(chunks, show_progress_bar=False)
+        _EMBEDDING_CACHE[rel_path] = np.asarray(chunk_vecs).mean(axis=0)
+    return _EMBEDDING_CACHE[rel_path]
+
+
 class EmbeddingFeatureBuilder:
-    """Stub -- sentence_transformers import is currently broken in this
-    environment. Raises on use rather than silently no-op."""
+    """Mean-pooled sentence embeddings over chunked transcript text
+    (all-MiniLM-L6-v2, 384-dim). Chunked rather than encoded whole
+    because the model's ~256-token limit would otherwise silently
+    truncate every transcript to its opening ~200 words.
 
-    def fit_transform(self, train_df: pd.DataFrame):
-        raise NotImplementedError(
-            "Embedding representation not available: sentence_transformers "
-            "fails to import in this environment (torch 2.0.1 / transformers "
-            "4.57 mismatch). Either pin compatible versions or implement "
-            "mean-pooling directly over transformers.AutoModel."
-        )
+    Requires the dedicated .venv-embeddings/ virtualenv -- the default
+    environment's torch 2.0.1 can't satisfy transformers' torch>=2.1
+    requirement. Stateless (no fitting), same representation for train
+    and test, so fit_transform/transform do the same thing.
+    """
 
-    def transform(self, df: pd.DataFrame):
-        raise NotImplementedError("see fit_transform")
+    def fit_transform(self, train_df: pd.DataFrame) -> np.ndarray:
+        return self.transform(train_df)
+
+    def transform(self, df: pd.DataFrame) -> np.ndarray:
+        model = _get_embedding_model()
+        return np.vstack([
+            _embed_document_cached(p, model) for p in df["Transcript_Path"]
+        ])
 
 
 FEATURES.register("structured")(StructuredFeatureBuilder)
