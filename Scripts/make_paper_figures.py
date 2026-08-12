@@ -8,6 +8,7 @@ Usage:
     python3 Scripts/make_paper_figures.py
 """
 
+import glob
 import json
 from pathlib import Path
 
@@ -15,6 +16,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 FIGDIR = ROOT / "paper" / "figures"
@@ -139,7 +141,99 @@ def fig_ood_radar():
     print(f"Wrote {out.relative_to(ROOT)}")
 
 
+def fig_baselines_full_sweep():
+    dfs = [pd.read_csv(f) for f in sorted(glob.glob(str(ROOT / "outputs" / "experiments" / "phase1_*.csv")))]
+    df = pd.concat(dfs, ignore_index=True)
+    df = df[df["model"] != "rule_based_ka"]  # circular baseline, excluded from every reported comparison
+
+    splits = ["stratified_random", "channel_grouped", "temporal"]
+    split_label = {"stratified_random": "Stratified random", "channel_grouped": "Channel-grouped",
+                   "temporal": "Temporal (train pre-2024)"}
+    models = ["logreg", "svm", "random_forest", "gbm"]
+    model_label = {"logreg": "LogReg", "svm": "SVM", "random_forest": "RF", "gbm": "GBM"}
+
+    # pcolormesh + a dedicated colorbar axis (width_ratios), not a shared
+    # multi-axes fig.colorbar(ax=axes) call -- the latter produced a
+    # reproducible diagonal rendering artifact across the middle panel
+    # (present in the saved PDF itself, not just a viewer/DPI quirk;
+    # confirmed by re-rendering at 300 DPI) that this avoids entirely.
+    fig, axes = plt.subplots(1, 4, figsize=(11.3, 3.4),
+                              gridspec_kw={"width_ratios": [1, 1, 1, 0.05]})
+    cax = axes[3]
+    im = None
+    for ax, split in zip(axes[:3], splits):
+        sub = df[df["split"] == split]
+        best = sub.groupby(["task", "model"])["macro_f1"].max().unstack()
+        best = best.reindex(index=TASK_ORDER, columns=models)
+        n_rows, n_cols = best.shape
+        im = ax.pcolormesh(best.to_numpy(), vmin=0, vmax=1, cmap="YlOrRd",
+                            edgecolors="white", linewidth=1.5)
+        ax.set_xlim(0, n_cols)
+        ax.set_ylim(n_rows, 0)
+        ax.set_xticks(np.arange(n_cols) + 0.5)
+        ax.set_xticklabels([model_label[m] for m in models])
+        ax.set_yticks(np.arange(n_rows) + 0.5)
+        ax.set_yticklabels([TASK_LABEL[t] for t in TASK_ORDER] if split == splits[0] else [])
+        ax.set_title(split_label[split])
+        for i in range(n_rows):
+            for j in range(n_cols):
+                v = best.iloc[i, j]
+                if pd.notna(v):
+                    ax.text(j + 0.5, i + 0.5, f"{v:.2f}", ha="center", va="center",
+                            fontsize=7, color="black" if v < 0.6 else "white")
+    fig.colorbar(im, cax=cax, label="macro-F1 (best representation)")
+    fig.suptitle("Full baseline sweep: best-representation macro-F1 by task, model, and CV split "
+                  "(weak-label agreement, Section 4.3)", y=1.03, fontsize=9)
+    fig.tight_layout()
+    out = FIGDIR / "fig_baselines_full_sweep.pdf"
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Wrote {out.relative_to(ROOT)}")
+
+
+def fig_baselines_3d():
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 -- registers the '3d' projection
+
+    dfs = [pd.read_csv(f) for f in sorted(glob.glob(str(ROOT / "outputs" / "experiments" / "phase1_*.csv")))]
+    df = pd.concat(dfs, ignore_index=True)
+    df = df[(df["model"] != "rule_based_ka") & (df["split"] == "stratified_random")]
+    models = ["logreg", "svm", "random_forest", "gbm"]
+    model_label = {"logreg": "LogReg", "svm": "SVM", "random_forest": "RF", "gbm": "GBM"}
+    best = df.groupby(["task", "model"])["macro_f1"].max().unstack().reindex(index=TASK_ORDER, columns=models)
+
+    fig = plt.figure(figsize=(7, 5.5))
+    ax = fig.add_subplot(111, projection="3d")
+
+    n_tasks, n_models = best.shape
+    xpos, ypos = np.meshgrid(np.arange(n_models), np.arange(n_tasks))
+    xpos, ypos = xpos.ravel(), ypos.ravel()
+    zpos = np.zeros_like(xpos, dtype=float)
+    dz = best.to_numpy().ravel()
+    dx = dy = 0.7
+
+    cmap = plt.get_cmap("YlOrRd")
+    colors = cmap(dz / dz.max())
+
+    ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colors, shade=True, edgecolor="white", linewidth=0.4)
+    ax.set_xticks(np.arange(n_models) + dx / 2)
+    ax.set_xticklabels([model_label[m] for m in models])
+    ax.set_yticks(np.arange(n_tasks) + dy / 2)
+    ax.set_yticklabels([TASK_LABEL[t] for t in TASK_ORDER])
+    ax.set_zlabel("macro-F1")
+    ax.set_zlim(0, 1)
+    ax.view_init(elev=25, azim=-50)
+    ax.set_title("Baseline sweep in 3D: best-representation macro-F1 by task and model\n"
+                  "(stratified-random split, weak-label agreement, Section 4.3)", fontsize=9, y=1.0)
+    fig.tight_layout()
+    out = FIGDIR / "fig_baselines_3d.pdf"
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Wrote {out.relative_to(ROOT)}")
+
+
 if __name__ == "__main__":
+    fig_baselines_full_sweep()
+    fig_baselines_3d()
     fig_reliability()
     fig_conformal_coverage()
     fig_ood_radar()

@@ -36,13 +36,15 @@
 \documentclass{article}
 
 % Track options, mirroring the official shell's own commenting convention:
-%   (submission/default, current)   \usepackage[eandd]{neurips_2026}
-%   (arXiv/preprint)                \usepackage[eandd, preprint]{neurips_2026}
+%   (submission/default)            \usepackage[eandd]{neurips_2026}
+%   (arXiv/preprint, current)       \usepackage[eandd, preprint]{neurips_2026}
 %   (camera-ready, post-acceptance) \usepackage[eandd, final]{neurips_2026}
-% Default (no track option, no final/preprint) auto-anonymizes the
-% \author block below to "Anonymous Author(s)" -- do NOT hand-edit author
-% info for submission; the class handles it.
-\usepackage[eandd]{neurips_2026}
+% Currently in preprint mode for arXiv posting -- de-anonymized (real
+% author info below), no NeurIPS page-limit constraint. Switch back to
+% the default (no track option) before any anonymized NeurIPS
+% submission, which re-anonymizes the \author block automatically -- do
+% NOT hand-edit author info for that submission path; the class handles it.
+\usepackage[eandd, preprint]{neurips_2026}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -80,8 +82,14 @@ Transcripts with MITRE ATT\&CK Annotations}
 
 \author{
   Henry Kabuye \\
-  \texttt{[affiliation -- TODO before submission]} \\
-  \texttt{kabuyehenry2017@gmail.com}
+  School of Computer Science \\
+  Northumbria University, Newcastle upon Tyne, NE1 8ST, UK \\
+  \texttt{h.kabuye@northumbria.ac.uk} \\
+  \And
+  Biju Issac \\
+  School of Computer Science \\
+  Northumbria University, Newcastle upon Tyne, NE1 8ST, UK \\
+  \texttt{bissac@ieee.org}
 }
 
 \date{}
@@ -90,63 +98,171 @@ Transcripts with MITRE ATT\&CK Annotations}
 \maketitle
 
 \begin{abstract}
-\todo[inline]{Draft, not final. Should state: (1) what RansKnow is
-(1{,}128 video records, 1{,}034 transcripts, 92 cybersecurity YouTube
-channels, MITRE ATT\&CK-aligned regex features); (2) the paper's actual
-contribution is arguably the label-quality audit methodology as much as
-the corpus itself -- Section~\ref{sec:audit} found that a naive
-keyword-matched family label collided with ordinary English words
-(\texttt{play}, \texttt{hive}, \texttt{cactus}, \dots) badly enough to
-inflate the single most-detected ransomware family by $\sim$3.5$\times$,
-and Section~\ref{sec:interpretability}'s counterfactual analysis shows a
-trained classifier partially inherited that same word-level fragility
-even after the fix; (3) state plainly, in the abstract itself, not just
-in a limitations section: baseline results (Section~\ref{sec:baselines})
-are weak-label agreement scores, not independently verified accuracy --
-this project does not include human-annotated ground truth (see the
-scope note in Section~\ref{sec:gold-scope}); (4) headline OOD-robustness
-numbers, which don't depend on that caveat.}
+We present RansKnow, an open corpus of 1{,}128 ransomware-related
+YouTube video records (1{,}034 with extracted transcripts) drawn from
+92 cybersecurity channels, with MITRE ATT\&CK-aligned structured
+features -- ransomware family, tactic, tool, and platform mentions --
+produced by a deterministic regex-based extraction pipeline. This
+paper's contribution is not the corpus alone: a systematic label-quality
+audit found that 9 of 41 ransomware-family aliases collide with ordinary
+English or business words (e.g.\ \texttt{play}, \texttt{hive},
+\texttt{cactus}) badly enough to inflate the single most-detected family
+by roughly $3.5\times$ before a context-based disambiguation fix, and a
+counterfactual-explanation analysis later in the paper shows a trained
+classifier partially inherited that same word-level fragility even
+after the fix. We state plainly here, not only in a limitations section,
+that this project does not include an independently human-annotated
+evaluation set: every baseline, calibration, and conformal-prediction
+result we report is agreement with this audited-but-imperfect extraction
+pipeline, not verified real-world accuracy, and we frame every such
+number accordingly throughout. Under that scope, weak-label baselines
+reach macro-F1 0.90 on a binary relevance screen and 0.81 on dominant-
+tactic classification, but remain weak (macro-F1 $\leq$0.20) on the
+higher-cardinality family and tool taxonomies; calibration against the
+weak labels is moderate (Expected Calibration Error 0.02--0.11) with a
+Random Forest tree-vote-entropy signal that separates label agreement
+from disagreement well (AUROC up to 0.98); and split conformal
+prediction achieves close to its 90\% target coverage with no severe
+conditional-coverage collapse on two out-of-calibration-distribution
+slices tested. Out-of-distribution detection, which does not depend on
+label correctness, tells a more cautionary story: standard softmax-
+confidence-based methods perform near chance across four realistic
+distribution-shift setups, including a diagnosed domain-specific failure
+mode where the classifier's most confident predictions coincide with
+exactly the signature that off-topic input also produces; only
+embedding-based Mahalanobis distance clears chance, and only on one of
+the four setups. We release the corpus, the full extraction and audit
+pipeline, and all experiment code openly, and argue that the audit
+methodology -- not just its findings -- is reusable by any weak-label
+security-NLP dataset built the same way.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:intro}
 
-\todo[inline]{The gap: no open, transcript-level ransomware knowledge
-corpus with MITRE ATT\&CK-aligned annotations. Motivate why YouTube
-security content specifically (volume, diversity of source -- vendor
-threat-intel channels, DFIR conferences, independent researchers -- versus
-e.g. only vendor blog posts). State the paper's contributions as a list:
-(1) the corpus; (2) the label-quality audit methodology and its concrete
-findings (Section~\ref{sec:audit}); (3) the experiment framework and
-weak-label baseline results (Section~\ref{sec:baselines}), reported as
-agreement with the audited extraction pipeline -- state directly here,
-not just in Limitations, that no independent human-annotated ground
-truth was collected for this project (Section~\ref{sec:gold-scope}); (4)
-out-of-distribution robustness results (Section~\ref{sec:ood}), which are
-not subject to that caveat; (5) counterfactual and perturbation-robustness
-interpretability results (Section~\ref{sec:interpretability}).}
+Ransomware knowledge is scattered across the same kind of source
+material that generated it in the first place: incident-response
+writeups, conference talks, and vendor threat-intelligence reporting,
+almost none of it structured for downstream NLP or ML use. Structured
+resources do exist -- the MITRE ATT\&CK framework itself
+\citep{strom2018attack}, and datasets built against it from written CTI
+text (\Cref{sec:related}) -- but no open, transcript-level corpus
+covers the specific and large body of ransomware knowledge that
+security professionals communicate \emph{by speaking}: conference
+talks, vendor webinars, and independent-researcher walkthroughs
+published as video. YouTube specifically is a useful aggregation point
+for this material precisely because of its source diversity: DFIR
+vendors publishing incident retrospectives, security conferences
+publishing full talk recordings, and independent researchers publishing
+technical walkthroughs all use the same platform, under different
+incentives and house styles, in a way no single vendor blog or CTI feed
+replicates. That diversity is also why transcribing it is nontrivial --
+92.7\% of this corpus required automatic speech recognition rather than
+official captions (\Cref{sec:transcripts}), which turns out to matter
+for downstream label quality, not just as a data-engineering footnote
+(\Cref{sec:finding-a}).
+
+This paper makes five contributions. First, RansKnow itself: 1{,}128
+video records, 1{,}034 with extracted transcripts, from 92 cybersecurity
+YouTube channels, with MITRE ATT\&CK-aligned structured features
+(\Cref{sec:construction}). Second, a label-quality audit methodology
+and its concrete findings (\Cref{sec:audit}): a systematic,
+dictionary-driven search for generic-word alias collisions in the
+regex-based extraction pipeline, which found that 9 of 41 family
+aliases collide with ordinary English or business words badly enough to
+inflate the single most-detected family by roughly $3.5\times$ before a
+disambiguation fix (\Cref{tab:alias-audit}). Third, an experiment
+framework and weak-label baseline results across five prediction tasks,
+three feature representations, and five models (\Cref{sec:baselines}),
+reported throughout -- here in the introduction, not only in
+\Cref{sec:limitations} where a reader could miss it -- as agreement
+with the audited extraction pipeline, \emph{not} as independently
+verified accuracy: this project does not include a human-annotated
+evaluation set held out from the labeling pipeline
+(\Cref{sec:gold-scope}), and every quantitative claim from
+\Cref{sec:baselines} through \Cref{sec:conformal} should be read with
+that scope in mind. Fourth, out-of-distribution robustness results
+(\Cref{sec:ood}) that are explicitly \emph{not} subject to that caveat,
+since they measure whether a model's own confidence or embedding
+behavior differs on distributionally shifted input, which is answerable
+without knowing whether any label is correct. Fifth, counterfactual and
+perturbation-robustness interpretability results
+(\Cref{sec:interpretability}) that connect back to the audit: a trained
+classifier is shown to have partially inherited the same word-level
+fragility Finding A identifies in the labeling pipeline itself, evidence
+that the audit's concerns are not confined to the raw labels but
+propagate into what gets learned from them.
 
 \section{Related Work}
 \label{sec:related}
 
-\todo[inline]{Three threads: (a) existing ransomware/threat-intel datasets
-(structured IOC feeds, MITRE ATT\&CK mapping efforts, prior ransomware
-incident corpora -- note what's specific to RansKnow: raw natural-language
-transcripts rather than structured feeds); (b) weak/distant supervision in
-security NLP (keyword/regex-based labeling, its known failure modes); (c)
-conformal prediction and OOD detection in NLP, as background for
-Sections~\ref{sec:conformal} and~\ref{sec:ood} once written.}
+\textbf{Ransomware and cyber-threat-intelligence datasets.} The MITRE
+ATT\&CK framework \citep{strom2018attack} that RansKnow's tactic
+taxonomy is aligned to was designed for exactly this kind of
+cross-source mapping, and prior datasets have built structured
+resources against it from written cyber-threat-intelligence (CTI) text:
+MalwareTextDB \citep{lim2017malwaretextdb} provides span-level
+annotations (39 APT reports, 6{,}819 sentences) for malware
+characteristics, and the more recent AnnoCTR \citep{lange2024annoctr}
+links entities, tactics, and techniques across 400 commercial CTI
+reports, with human annotation throughout. Both are built from written
+prose -- vendor blog posts and reports, produced already in
+structured-adjacent form for a threat-intelligence-consuming audience.
+RansKnow's source material is instead spoken narration, transcribed at
+92.7\% via ASR (\Cref{sec:transcripts}), from a broader and more
+heterogeneous set of speakers (vendor analysts, conference presenters,
+independent researchers) than a CTI report's house style, and its
+structured features are produced entirely by an audited regex/keyword
+pipeline (\Cref{sec:audit}) rather than human annotation -- a different,
+explicitly weaker, point on the label-quality spectrum those two
+datasets occupy, traded for scale and openness (no comparable open,
+transcript-level, MITRE-aligned video corpus exists at the time of
+writing).
+
+\textbf{Weak and distant supervision.} Using an automated heuristic
+in place of human labels is a well-studied tradeoff, not a shortcut
+unique to this project: \citet{mintz2009distant} formalized distant
+supervision for relation extraction by aligning text against a
+knowledge base rather than hand-labeling it, accepting a known noise
+ceiling in exchange for scale, and \citet{ratner2017snorkel}'s Snorkel
+generalizes the idea to multiple, possibly conflicting, weak labeling
+functions combined probabilistically. The Knowledge Agent
+(\Cref{sec:audit}) is a single deterministic labeling function rather
+than an ensemble of weak sources, which makes it simpler to audit (the
+alias-collision analysis in \Cref{sec:finding-a} would be considerably
+harder against a black-box combination of many weak labelers) but
+removes Snorkel-style noise-cancellation-via-redundancy as a mitigation
+--- a tradeoff made explicit rather than left implicit, and the direct
+motivation for \Cref{sec:gold-scope}'s scope note running through every
+downstream section.
+
+\textbf{Conformal prediction and out-of-distribution detection.} Split
+conformal prediction \citep{vovk2005algorithmic, lei2018distribution}
+and its distribution-free coverage guarantee (\Cref{sec:conformal})
+have seen growing NLP and security application as a distribution-free
+alternative to ad hoc confidence thresholds; \citet{angelopoulos2023gentle}
+survey the modern toolkit this paper's \Cref{sec:conformal-method} draws
+on directly. Out-of-distribution detection (\Cref{sec:ood}) via
+softmax-confidence baselines \citep{hendrycks2017baseline}, energy
+scores \citep{liu2020energy}, and class-conditional embedding distance
+\citep{lee2018simple} is comparatively less explored specifically for
+weak-label security-NLP classifiers, where -- as \Cref{sec:ood-results}
+shows concretely -- the usual confidence-based methods can fail in a
+domain-specific way (a classifier's most confident predictions
+coinciding with exactly the ``nothing detected'' signature that
+off-topic input also produces).
 
 \section{Dataset Construction}
 \label{sec:construction}
 
 RansKnow \citep{ransknow_kaggle} consists of 1{,}128 video records sourced
 from 92 cybersecurity YouTube channels, of which 1{,}034 have an extracted
-transcript with real content; the remaining 94\footnote{\todo{Verify this figure against the
-    live dataset before submission -- $1128 - 1034 = 94$, but confirm this
-    is failed transcript extraction and not something else, e.g. videos
-    excluded post-fetch.}} could not be transcribed by any method in the
-fetch cascade.
+transcript with real content; the remaining 94\footnote{Verified directly
+  against the released \texttt{transcripts/} tree, not assumed from
+  $1128-1034$: all 94 are confirmed failed transcript extraction (no
+  method in the fetch cascade, \Cref{sec:transcripts}, produced usable
+  text), not videos excluded post-fetch for another reason.} could not be
+transcribed by any method in the fetch cascade.
 
 \subsection{Channel selection}
 Channels were curated in two batches. Batch 1 (50 channels, \texttt{C01}--\texttt{C50})
@@ -157,20 +273,33 @@ and OT/ICS-security and government channels; 42 of the 51 candidates
 yielded usable transcripts, 1 was a confirmed duplicate of an existing
 Batch 1 channel, 4 had no discoverable dedicated YouTube channel, and 4
 resolved to real channels with zero ransomware-keyword-matching content in
-their upload history. \todo{Cite the specific channel registry files
-    (\texttt{rubrics/Dataset\_Channel\_Registry\_*.xlsx}) and consider a
-    full channel table as a supplementary table rather than inline.}
+their upload history. Full channel-level provenance for both batches is in
+\texttt{rubrics/Dataset\_Channel\_Registry\_Updated\_50\_fixed\_urls.xlsx}
+(Batch 1) and \texttt{rubrics/Dataset\_Channel\_Registry\_Batch2.xlsx}
+(Batch 2), released alongside the corpus rather than reproduced inline as
+a 92-row table.
 
 \subsection{Video selection}
 Within each channel, videos were selected by scanning recent uploads for a
-fixed keyword list (\texttt{ransomware}, \texttt{extortion},
+fixed 21-term keyword list (\texttt{ransomware}, \texttt{extortion},
 \texttt{lockbit}, \texttt{incident response}, \dots; full list in
 Appendix~\ref{app:keywords}) matched against title and description, capped
-at 20 videos per channel and a minimum duration of 5 minutes. \todo{Report
-    the actual keyword list and discuss selection bias explicitly: this
-    is a convenience sample conditioned on channel operators' own titling
-    and description-writing behavior, not a random sample of ransomware
-    discourse.}
+at 20 videos per channel and a minimum duration of 5 minutes (short clips
+and trailers excluded). This is a convenience sample, not a random or
+exhaustive one, and the selection mechanism itself introduces bias worth
+naming rather than assuming away: a video is only in scope if its
+\emph{title or description} happens to contain one of the 20 terms, which
+conditions the corpus on each channel operator's own titling and
+SEO/description-writing habits. A channel that discusses ransomware
+extensively but titles episodes generically (e.g.\ by client-engagement
+number rather than threat name) would be under-represented regardless of
+its actual content relevance, and channels that lean on a small number of
+high-profile named families (\texttt{lockbit}, \texttt{conti}, \dots) in
+titles for engagement will be over-represented relative to channels
+discussing less headline-grabbing groups. This compounds with
+\Cref{sec:limitations}'s broader sampling-bias point: keyword-based
+inclusion is a second, independent bias layer on top of channel curation,
+not a neutral technical filtering step.
 
 \subsection{Transcript acquisition}
 \label{sec:transcripts}
@@ -181,11 +310,10 @@ auto-generated captions; (3) local Whisper transcription as a fallback.
 transcripts (7.2\%) came from official captions. 959 (92.7\%) are ASR
 output -- 554 from \texttt{whisper\_base} (the smallest, least accurate
 Whisper checkpoint) and 405 from a local Whisper fallback, 1 from
-\texttt{yt-dlp} captions. \todo{This is Finding B from the label-quality
-    audit (Section~\ref{sec:audit}). Decide whether to present it once,
-    here, or duplicate the framing in both sections -- probably present the
-    raw fact here and the downstream implication (jargon
-    mistranscription risk) in Section~\ref{sec:audit}.}
+\texttt{yt-dlp} captions. This raw composition is Finding B of the
+label-quality audit (\Cref{sec:audit}); the downstream implication --
+what an ASR-dominated corpus does to jargon-term detection specifically
+-- is reported there rather than duplicated here.
 
 \section{Label-Quality Audit}
 \label{sec:audit}
@@ -369,18 +497,39 @@ checks rule out two of the more common alternative explanations for weak
 tabular/text-classification performance, leaving weak-label ceiling
 (\S\ref{sec:gold-scope}) and genuine class sparsity (Section~\ref{sec:baselines}'s
 18-class family / 7-class tool taxonomies, several classes with single-digit
-support) as the remaining candidate explanations. \todo{Full
-    task$\times$representation$\times$model$\times$split table as
-    supplementary material, or as a figure once uncommented below; cite
-    \texttt{outputs/experiments/phase1\_*.csv} directly.}
+support) as the remaining candidate explanations.
 
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=0.9\textwidth]{figures/fig_baselines_macro_f1.pdf}
-%   \caption{Macro-F1 by task, model, and CV protocol (weak-label agreement,
-%     \S\ref{sec:gold-scope}).}
-%   \label{fig:baselines}
-% \end{figure}
+\Cref{tab:results} reports only the single best (representation, model)
+cell per task; the full sweep -- 5 tasks $\times$ 3 representations
+$\times$ 4 trained models $\times$ 3 CV protocols, 180 combinations in
+total (\texttt{outputs/experiments/phase1\_*.csv}) -- is summarized in
+\Cref{fig:baselines-heatmap}, collapsing the representation axis by
+taking the best of the three for each (task, model, split) cell so the
+figure stays legible. The same values, viewed as a 3D bar chart for the
+stratified-random split specifically, are in
+\Cref{fig:baselines-3d}: the two low-scoring tasks (\texttt{family},
+\texttt{tool}) are visibly a different regime from the other three
+across every model, not just weaker on average, which is easier to see
+as a height discontinuity than to read off a table of numbers.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fig_baselines_full_sweep.pdf}
+  \caption{Best-representation macro-F1 for every (task, model) pair,
+    one panel per CV protocol (weak-label agreement,
+    \S\ref{sec:gold-scope}). \texttt{family}/\texttt{tool} stay weak
+    under every model and every split; \texttt{relevance} is both the
+    strongest task and the most split-robust.}
+  \label{fig:baselines-heatmap}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/fig_baselines_3d.pdf}
+  \caption{The stratified-random slice of \Cref{fig:baselines-heatmap}
+    as a 3D bar chart, best representation per (task, model) cell.}
+  \label{fig:baselines-3d}
+\end{figure}
 
 \section{Uncertainty Quantification}
 \label{sec:uncertainty}
@@ -960,10 +1109,15 @@ adversarial-adjacent input -- not three separate open questions.
 \section{Limitations and Ethics}
 \label{sec:limitations}
 
-\todo[inline]{Expand into full prose; bullets below are the content, not
-    the final form. The first bullet is the paper's central limitation and
-    should probably open this section as prose, not sit inside a list with
-    four other items of noticeably smaller consequence.}
+This paper's single most consequential limitation is the absence of
+independent ground truth, discussed at length below; it opens this
+section as prose, not because the remaining limitations are
+unimportant, but because they are all of a smaller and more familiar
+kind (sampling bias, ASR noise, dual use) that most empirical NLP
+papers carry in some form, whereas the ground-truth gap changes what
+every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
+\emph{means}, not merely how confidently it can be stated.
+
 \begin{itemize}
   \item \textbf{No independent ground truth.} This is the paper's central
     limitation, not one bullet among several, and is why it is stated
@@ -1003,36 +1157,81 @@ adversarial-adjacent input -- not three separate open questions.
     Section~\ref{sec:counterfactual} shows partially propagated into at
     least one trained model.
   \item \textbf{Dual use.} This is a corpus of ransomware tactics, tools,
-    and case studies extracted from public educational content. \todo{Add
-      a considered dual-use statement -- the underlying source material is
-      already public (YouTube videos aimed at defenders), but structuring
-      it may lower the effort to extract offense-relevant patterns; discuss
-      how this compares to existing public MITRE ATT\&CK mappings and
-      threat-intel reporting, which already aggregate similar information.}
+    and case studies extracted from public educational content, and it is
+    worth being direct about what that does and does not change. Every
+    underlying video is already public, already indexed by YouTube's own
+    search, and produced by defenders (vendors, DFIR practitioners,
+    conference speakers) specifically to be watched by other defenders;
+    RansKnow discloses no technique, tool, or tactic that is not already
+    public, and the source material is materially less operationally
+    detailed than existing public resources built for exactly this kind
+    of aggregation -- the MITRE ATT\&CK knowledge base itself, and the
+    CTI reporting datasets in Section~\ref{sec:related}
+    \citep{lim2017malwaretextdb, lange2024annoctr}, both already
+    structure comparable tactic/technique/tool information at finer
+    granularity and higher label quality than RansKnow's weak-label
+    extraction achieves (\Cref{sec:gold-scope}). What RansKnow adds is
+    not new operational detail but a different modality (transcribed
+    spoken narration rather than written reports) and different scale
+    accessible without specialized CTI tooling. The realistic marginal
+    risk is a small reduction in the effort needed to \emph{aggregate}
+    already-scattered public information into one structured, searchable
+    place, rather than any disclosure of non-public technique detail;
+    this is the same tradeoff every public threat-intelligence
+    aggregation resource makes; and the corpus's actual utility, given
+    \Cref{sec:gold-scope}'s weak-label ceiling and Section~\ref{sec:baselines}'s
+    weak family/tool classification performance, currently favors
+    defensive research uses (weak-supervision methodology, corpus-level
+    trend analysis) far more than it favors any operational offensive
+    use, for which primary-source technical documentation would be a far
+    more direct and reliable starting point than this corpus's noisy,
+    ASR-transcribed, regex-extracted labels.
 \end{itemize}
 
 \section{Conclusion}
 \label{sec:conclusion}
-\todo[inline]{Write last. Should state the label-quality audit
-    methodology and code (Section~\ref{sec:audit}, Section~\ref{sec:interpretability})
-    as a second contribution alongside the transcripts themselves -- other
-    weak-label security-NLP datasets built the same way (keyword/regex
-    extraction over scraped text) can reuse the audit methodology even
-    without reusing the corpus. Should also state candidly that the most
-    valuable open follow-up to this specific paper is independent
-    human-annotated verification (Section~\ref{sec:limitations}), not
-    further modeling -- and should say why explicitly rather than
-    trailing off: every result this paper reports beyond
-    Section~\ref{sec:ood} would change in \emph{meaning}, not just in
-    number, the day that verification exists.}
+RansKnow is a 1{,}128-video, 1{,}034-transcript, MITRE ATT\&CK-aligned
+corpus of ransomware-related YouTube content, and this paper's
+contribution is not the corpus alone. The label-quality audit
+methodology (Section~\ref{sec:audit}) and the interpretability
+diagnostics that verify it against a trained model's actual behavior
+(Section~\ref{sec:interpretability}) are a second, reusable
+contribution: any weak-label security-NLP dataset built the same way
+(keyword or regex extraction over scraped or transcribed text) can
+reuse the alias-collision-audit methodology and the counterfactual/
+perturbation checks even without reusing this specific corpus, and
+should -- Finding A demonstrates concretely that a plausible-looking
+regex label can be dominated by false positives (\Cref{tab:alias-audit}:
+78\% of pre-fix \texttt{Play} detections), which is precisely the class
+of error a corpus released without this kind of audit would carry
+silently.
+
+The most valuable open follow-up to this specific paper is not further
+modeling. It is independent, human-annotated verification of a subset
+of RansKnow's labels (Section~\ref{sec:limitations}), and it is worth
+being explicit about why that ranks above any modeling extension:
+every quantitative result this paper reports outside
+Section~\ref{sec:ood} would change in \emph{meaning}, not just in
+number, the day that verification exists. A macro-F1 of 0.813 on
+\texttt{dominant\_tactic} currently means ``a LightGBM classifier
+reproduces the Knowledge Agent's own regex output at this rate''; the
+same number, computed against even a modest independently-annotated
+subset, would mean something closer to what a reader of an ML paper's
+results table normally assumes a reported score means. Closing that
+gap changes the paper's central claim, not just its confidence
+interval, which is why it is listed first among follow-ups rather than
+alongside ordinary future-work suggestions like additional model
+architectures or task definitions.
 
 \begin{ack}
-\todo[inline]{Funding and competing-interest disclosure required here
-    per NeurIPS 2026 policy (\url{https://neurips.cc/Conferences/2026/PaperInformation/FundingDisclosure}).
-    This section is auto-hidden in the anonymized submission by the
-    \texttt{ack} environment (see \texttt{neurips\_2026.sty}) -- do not
-    remove it or move this content elsewhere expecting the same
-    behavior.}
+This work was supported in part by the Pro:NE (Pronortheast) Network
+under Grant RDF22/proNE/JHA. The authors thank the members of the
+CyberNets Research Group, Northumbria University, for their insightful
+discussions and useful feedback throughout this research project. The
+opinions, findings, conclusions, or recommendations expressed in this
+material are solely those of the authors and do not necessarily
+represent the views of the supporting team. The authors declare no
+competing interests.
 \end{ack}
 
 \bibliographystyle{plainnat}
@@ -1041,8 +1240,21 @@ adversarial-adjacent input -- not three separate open questions.
 \appendix
 \section{Keyword List}
 \label{app:keywords}
-\todo[inline]{Insert the full \texttt{KEYWORDS} list from
-    \texttt{Scripts/fetch\_transcripts.py} verbatim.}
+The 21-term inclusion keyword list, matched case-insensitively against
+video title and description (\Cref{sec:construction}), verbatim from
+\texttt{Scripts/fetch\_transcripts.py}'s \texttt{KEYWORDS} constant:
+
+\begin{quote}
+\ttfamily
+ransomware, extortion, double extortion, encrypt, encryption, decrypt,
+data leak, incident response, ``\,ir\,'', lockbit, alphv, blackcat,
+conti, ryuk, cl0p, clop, akira, revil, sodinokibi,
+ransomware-as-a-service, raas
+\end{quote}
+
+The bare token ``\texttt{ir}'' is matched with surrounding spaces
+(\texttt{"\ ir\ "}) specifically to avoid matching it as a substring of
+unrelated words.
 
 \newpage
 \input{checklist.tex}
