@@ -55,6 +55,9 @@
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \usepackage[capitalize]{cleveref}
 % Do NOT load geometry separately -- neurips_2026.sty sets margins itself
 % via \newgeometry{...}; loading it again risks exactly the "tweaking the
@@ -307,11 +310,13 @@ Ransomware-relevant   & binary                 &  2 & derived \\
 
 \subsection{Model ladder and validation protocol}
 Each task is evaluated over three feature representations (structured
-Knowledge Agent columns, TF-IDF, embeddings\footnote{\todo{Embedding
-    representation is currently blocked in the reference implementation:
-    \texttt{sentence\_transformers} fails to import due to a
-    torch/transformers version mismatch. Resolve before this table can
-    include embedding-representation numbers.}}) and five models (the
+Knowledge Agent columns, TF-IDF, mean-pooled sentence embeddings\footnote{384-dim
+  \texttt{all-MiniLM-L6-v2}, chunked at $\sim$200 words per chunk and
+  mean-pooled, computed via a dedicated Python environment
+  (\texttt{torch}~2.5.1) since the reference implementation's default
+  environment ships an older \texttt{torch} that cannot satisfy
+  \texttt{sentence\_transformers}' requirements; see
+  \texttt{Scripts/precompute\_embeddings.py}.}) and five models (the
 rule-based Knowledge Agent itself as baseline 0, Logistic Regression,
 Linear SVM, Random Forest, LightGBM), under three cross-validation
 protocols: stratified random $k$-fold, \texttt{GroupKFold} by
@@ -394,14 +399,150 @@ answering: does a model's confidence track its \emph{agreement with the
 extraction pipeline}, or is it uniformly overconfident regardless of
 agreement. The latter would be a red flag on its own.
 
-\todo[inline]{Not implemented yet (Phase 2, weak-label-calibration
-    version). Plan: reliability diagrams + Expected Calibration Error per
-    task/model against weak labels, reported explicitly as such. Random
-    Forest tree-vote entropy as a free uncertainty proxy; MC-Dropout /
-    small deep ensemble for the eventual transformer model. Headline
-    metric: rate of confident (\textgreater90\%) disagreement with the
-    weak label -- the closest analogue available to a
-    ``confidently-wrong'' rate without ground truth.}
+\subsection{Calibration against weak labels}
+\label{sec:uncertainty-calibration}
+For a multiclass task, let $\hat p(\cdot \mid x)$ be the trained model's
+predicted class distribution for input $x$, and let $\hat c(x) =
+\arg\max_c \hat p(c\mid x)$ with confidence $\hat p_{\max}(x) =
+\max_c \hat p(c\mid x)$. Agreement with the weak label $y^{\mathrm{KA}}(x)$
+(the Knowledge Agent's own extraction) is $a(x) = \mathbb{1}[\hat c(x) =
+y^{\mathrm{KA}}(x)]$. For the two multi-label tasks (\texttt{family},
+\texttt{tool}), whose models are independent per-class binary
+classifiers (\Cref{sec:baselines}), each (sample, class) pair
+$(x,k)$ is treated as its own calibration point, with confidence
+$\hat p_{\max}(x,k) = \max\bigl(\hat p_k(x), 1-\hat p_k(x)\bigr)$ and
+agreement against the binary weak label thresholded at $0.5$.
+
+Reliability is summarized with $B{=}10$ equal-width confidence bins
+$\{I_b\}_{b=1}^{B}$ and the standard Expected Calibration Error,
+\begin{equation}
+\label{eq:ece}
+\mathrm{ECE} \;=\; \sum_{b=1}^{B} \frac{|S_b|}{N}
+  \left\lvert \operatorname{acc}(S_b) - \operatorname{conf}(S_b) \right\rvert,
+\qquad
+S_b = \{x : \hat p_{\max}(x) \in I_b\},
+\end{equation}
+where $\operatorname{acc}(S_b) = \frac{1}{|S_b|}\sum_{x \in S_b} a(x)$ and
+$\operatorname{conf}(S_b) = \frac{1}{|S_b|}\sum_{x \in S_b} \hat p_{\max}(x)$.
+Per the scope note above, $a(x)$ measures agreement with $y^{\mathrm{KA}}$,
+not correctness, so \cref{eq:ece} is a \emph{weak-label ECE}. The
+headline number below the scope note is the confident-disagreement
+rate at threshold $\tau=0.9$,
+\begin{equation}
+\label{eq:cdr}
+\mathrm{CDR}_\tau \;=\; \frac{1}{N}\sum_{i=1}^N
+  \mathbb{1}\!\left[\hat p_{\max}(x_i) > \tau\right]\cdot\bigl(1-a(x_i)\bigr),
+\end{equation}
+the closest available analogue to a ``confidently wrong'' rate without
+independently verified labels to actually be wrong against.
+
+Each task is evaluated on the 5-fold stratified out-of-fold predictions
+of its best (feature, model) combination from \Cref{tab:results}, except
+\texttt{family}, whose best combination (embedding representation) needs
+the dedicated environment described in \Cref{sec:baselines}'s footnote
+and is reported without a calibration curve here.
+
+\begin{table}[htbp]
+\centering
+\caption{Weak-label calibration (\Cref{eq:ece,eq:cdr}) and the RF
+  tree-vote entropy proxy (\Cref{eq:entropy}), best (feature, model) per
+  task. $N$ is the number of (sample) or (sample, class) calibration
+  points. Entropy AUROC is how well entropy alone separates agreement
+  from disagreement with the weak label (\Cref{alg:rf-entropy}).}
+\label{tab:calibration}
+\begin{tabular}{lrrrrr}
+\toprule
+Task & $N$ & ECE & $\mathrm{CDR}_{0.9}$ & Entropy (agree/disagree) & Entropy AUROC \\
+\midrule
+Relevance        & 1034 & 0.079 & 0.071 & 0.910 / 0.980 & 0.769 \\
+Dominant tactic   & 1034 & 0.051 & 0.043 & 0.275 / 0.551 & 0.860 \\
+Platform          & 1034 & 0.110 & 0.104 & 0.717 / 0.769 & 0.675 \\
+Tool (per-label)  & 7238 & 0.016 & 0.016 & 0.121 / 0.271 & 0.977 \\
+Family (per-label)& 1034 & --    & --    & 0.095 / --     & --    \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{fig:reliability} plots the reliability curves underlying
+\Cref{tab:calibration}. Two things worth naming honestly rather than
+smoothing over: first, per-bin counts are small (single digits to low
+tens per bin at $N{=}1034$), so individual bin heights are noisy --
+the curves are directionally informative, not point-estimate-precise.
+Second, \texttt{family}'s row has no ECE/CDR: its calibration point is
+unavailable in this environment (as above), so only the RF tree-vote
+entropy proxy, computed on the TF-IDF fallback representation, is
+reported for it, and even that proxy has no ``disagree'' entries to
+average -- at the per-(sample, class) level, most of \texttt{family}'s
+18 classes are negative for most samples, so the majority-class
+prediction (``absent'') agrees with the weak label on essentially every
+RF-on-TF-IDF calibration point despite the task's low macro-F1 in
+\Cref{tab:results}, which weights all 18 classes equally rather than by
+prevalence. Both readings are correct simultaneously; they are just
+answering different questions (per-pair agreement vs.\ per-class
+balanced performance).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fig_uncertainty_reliability.pdf}
+  \caption{Reliability diagrams against weak labels, one panel per task
+    with a usable calibration curve (\Cref{tab:calibration}). Diagonal
+    is perfect calibration.}
+  \label{fig:reliability}
+\end{figure}
+
+\subsection{A free uncertainty proxy: Random Forest tree-vote entropy}
+\label{sec:uncertainty-rf}
+Reliability diagrams need a held-out calibration protocol; a Random
+Forest offers a per-prediction uncertainty signal with no separate
+calibration step. For an input $x$ and a forest of $T$ trees producing
+individual (hard) predictions $t_1(x),\dots,t_T(x)$ over $K$ classes, let
+$\pi_c(x) = \frac{1}{T}\sum_{j=1}^T \mathbb{1}[t_j(x)=c]$ be the empirical
+vote share for class $c$. The normalized tree-vote entropy is
+\begin{equation}
+\label{eq:entropy}
+H(x) \;=\; -\frac{1}{\log K}\sum_{c=1}^{K} \pi_c(x)\,\log \pi_c(x)
+  \;\in\; [0,1],
+\end{equation}
+with $H(x){=}0$ when every tree agrees and $H(x){=}1$ at a uniform split
+across all $K$ classes. For the multi-label tasks, $K{=}2$ per class and
+$H(x,k)$ is averaged over classes $k$ for a per-sample summary.
+\Cref{alg:rf-entropy} is the exact out-of-fold procedure used to produce
+\Cref{tab:calibration}'s entropy columns.
+
+\begin{algorithm}[htbp]
+\caption{RF tree-vote entropy, 5-fold out-of-fold}
+\label{alg:rf-entropy}
+\begin{algorithmic}[1]
+\Require dataset $\mathcal{D}$, task with label function $y(\cdot)$, feature builder $\phi$
+\State $\mathcal{F} \gets$ 5 stratified folds of $\mathcal{D}$
+\For{fold $(\mathcal{D}_{\mathrm{train}}, \mathcal{D}_{\mathrm{test}}) \in \mathcal{F}$}
+  \State fit $\phi$ on $\mathcal{D}_{\mathrm{train}}$; fit Random Forest $\{t_j\}_{j=1}^T$ on $\phi(\mathcal{D}_{\mathrm{train}})$
+  \For{$x \in \mathcal{D}_{\mathrm{test}}$}
+    \State $t_j(x) \gets$ individual tree prediction, $j=1,\dots,T$ \Comment{sklearn returns internal integer-encoded classes here, not the original label strings -- see note below}
+    \State recover original class labels via the fitted forest's class index before comparing to $y(x)$
+    \State compute $H(x)$ via \Cref{eq:entropy}; record $a(x) = \mathbb{1}[\text{forest majority vote} = y(x)]$
+  \EndFor
+\EndFor
+\State \Return $\{(H(x), a(x))\}_{x \in \mathcal{D}}$, pooled across folds
+\end{algorithmic}
+\end{algorithm}
+
+The in-line comment in \Cref{alg:rf-entropy} records a real implementation
+pitfall, not a hypothetical one: scikit-learn fits each tree in a
+\texttt{RandomForestClassifier} on internally label-encoded integer
+targets, so \texttt{tree.predict()} returns class \emph{indices}, not the
+original label strings the ensemble's own \texttt{.predict()} returns.
+Comparing tree-level votes directly against string labels without
+mapping back through the fitted forest's class index silently produces
+0\% apparent agreement on every multiclass task -- caught in this
+project's own Phase~2 run (initial numbers showed exactly that pattern
+across all three multiclass tasks simultaneously, which is what made it
+legible as a bug rather than a real result) and is recorded here as a
+concrete instance of the caution \Cref{sec:limitations} urges about
+verifying rather than assuming standard library internals.
+\Cref{tab:calibration}'s entropy AUROC column shows the proxy works well
+once fixed: $0.68$--$0.98$ across tasks, best on \texttt{tool} (many
+easy true negatives) and weakest on \texttt{platform}.
 
 \section{Conformal Prediction}
 \label{sec:conformal}
@@ -416,15 +557,128 @@ against the Knowledge Agent's labels is a well-defined, honestly
 reportable number, but it validates agreement with the extraction
 pipeline, not correctness. Reported as such.
 
-\todo[inline]{Not implemented yet (Phase 3, weak-label-calibrated
-    version). Plan: split conformal on \texttt{dominant\_tactic}/\texttt{platform}
-    at 90\% target coverage against weak labels; per-label conformal
-    calibration (or conformal risk control) for \texttt{family}/\texttt{tool}.
-    Conditional-coverage stress test on post-2025 videos and
-    conference-channel videos (the gold-subset slice from the original
-    design is no longer available, \S\ref{sec:gold-scope}) -- coverage
-    collapse on either remaining slice is itself the result, and feeds
-    directly into the OOD setups below via the nonconformity score.}
+\subsection{Method: split conformal with the LAC score}
+\label{sec:conformal-method}
+Split conformal prediction (\citealp{vovk2005algorithmic, lei2018distribution};
+see \citealp{angelopoulos2023gentle} for a tutorial treatment) uses a
+nonconformity score $s(x,y)$ that is small when $y$ is a plausible label
+for $x$. This paper uses the least-ambiguous-set (LAC) score,
+\begin{equation}
+\label{eq:lac}
+s(x,y) \;=\; 1 - \hat p(y \mid x),
+\end{equation}
+calibrated on a held-out split $\mathcal{D}_{\mathrm{calib}}$ of size $n$
+disjoint from both the training and test data. The calibration threshold
+uses the standard finite-sample correction,
+\begin{equation}
+\label{eq:qhat}
+\hat q \;=\; \operatorname{Quantile}\!\left(
+  \left\{s(x_i,y_i)\right\}_{i=1}^{n} ;\;
+  \frac{\lceil (n+1)(1-\alpha)\rceil}{n}\right),
+\end{equation}
+and the prediction set for a new input $x$ is
+\begin{equation}
+\label{eq:predset}
+C(x) \;=\; \bigl\{\, y \;:\; \hat p(y\mid x) \geq 1-\hat q \,\bigr\}.
+\end{equation}
+Under exchangeability of $\mathcal{D}_{\mathrm{calib}}$ and the test
+point, this construction guarantees
+\begin{equation}
+\label{eq:coverage}
+\mathbb{P}\!\left[\, y_{\mathrm{test}} \in C(x_{\mathrm{test}}) \,\right]
+  \;\geq\; 1-\alpha,
+\end{equation}
+with $\alpha{=}0.10$ (90\% target coverage) throughout. As the scope
+note above states, $y_{\mathrm{test}}$ here is the weak label
+$y^{\mathrm{KA}}$: \Cref{eq:coverage} is a real, distribution-free
+guarantee about agreement with the extraction pipeline, not about
+real-world correctness. For \texttt{dominant\_tactic} and
+\texttt{platform}, \Cref{eq:lac,eq:qhat,eq:predset} apply directly over
+the task's full class vocabulary. \texttt{family} and \texttt{tool} have
+no single multiclass structure to conformalize -- each is an independent
+per-class binary classifier (\Cref{sec:baselines}) -- so each class $k$
+gets its own binary LAC calibration and its own $\hat q_k$, and a
+sample's per-label prediction sets are reported both individually and
+jointly (all labels simultaneously covered).
+
+\Cref{alg:conformal} is run for $5$ repeated random $60/20/20$
+train/calibration/test splits per task, results averaged across repeats
+rather than reported from one arbitrary split -- a single 20\%
+calibration set at this sample size ($n{\approx}200$) is not a reliable
+enough estimate of $\hat q$ to report alone.
+
+\begin{algorithm}[htbp]
+\caption{Split conformal calibration and coverage evaluation}
+\label{alg:conformal}
+\begin{algorithmic}[1]
+\Require dataset $\mathcal{D}$, task, target coverage $1-\alpha$, repeats $R$
+\For{$r = 1,\dots,R$}
+  \State split $\mathcal{D}$ into $\mathcal{D}_{\mathrm{train}}$ (60\%), $\mathcal{D}_{\mathrm{calib}}$ (20\%), $\mathcal{D}_{\mathrm{test}}$ (20\%), stratified
+  \State fit model on $\mathcal{D}_{\mathrm{train}}$
+  \State compute $\hat q$ on $\mathcal{D}_{\mathrm{calib}}$ via \Cref{eq:lac,eq:qhat}
+  \For{$x \in \mathcal{D}_{\mathrm{test}}$}
+    \State build $C(x)$ via \Cref{eq:predset}; record $\mathbb{1}[y^{\mathrm{KA}}(x) \in C(x)]$ and $|C(x)|$
+  \EndFor
+\EndFor
+\State pool test-set coverage indicators across all $R$ repeats
+\State report marginal coverage, and coverage restricted to the Year${\geq}2026$ and Conference-channel slices
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Results}
+\label{sec:conformal-results}
+\begin{table}[htbp]
+\centering
+\caption{Split-conformal coverage at 90\% target ($\alpha{=}0.10$), pooled
+  over 5 repeats, $n{\approx}1035$ pooled test predictions per task.
+  \texttt{family}/\texttt{tool} report mean per-label coverage and the
+  stricter all-labels-jointly-covered rate. Set size is out of the
+  task's class count ($K$) for \texttt{dominant\_tactic}/\texttt{platform},
+  or out of 2 (per label) for \texttt{family}/\texttt{tool}.}
+\label{tab:conformal}
+\begin{tabular}{lrrrrr}
+\toprule
+Task & $K$ & Coverage (marginal) & Avg.\ set size & Slice: Yr$\geq$26 & Slice: Conf. \\
+\midrule
+Dominant tactic & 11 & 0.877 & 0.94/11 & 0.890 & 0.870 \\
+Platform          &  4 & 0.925 & 1.19/4  & 0.932 & 0.899 \\
+Family (per-label)  & 18 & 0.912 (joint: 0.446) & 0.93/2 & 0.487\textsuperscript{joint} & 0.572\textsuperscript{joint} \\
+Tool (per-label)    &  7 & 0.909 (joint: 0.650) & 0.92/2 & 0.640\textsuperscript{joint} & 0.752\textsuperscript{joint} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{fig:conformal} plots \Cref{tab:conformal} directly. Reading the
+results against the two questions this section set out to answer:
+first, does the guarantee hold empirically -- \texttt{dominant\_tactic}
+and \texttt{platform}'s marginal coverage (0.877, 0.925) both sit close
+to the 0.90 target, with set sizes well under one class on average
+(0.94/11, 1.19/4), i.e.\ the conformal sets are usually a single class or
+empty, not the whole vocabulary hedged defensively. Second, the
+conditional-coverage stress test: neither the Year${\geq}2026$ nor the
+Conference-channel slice shows the kind of collapse that would flag a
+real distribution-shift problem for these two tasks (all four slice
+numbers stay within about 3 points of the marginal rate). \texttt{family}
+and \texttt{tool}'s per-label coverage (0.91, 0.91) is equally close to
+target, but their \emph{joint} (all-labels-simultaneously) coverage is
+far lower (0.45, 0.65) -- an expected consequence of compounding
+per-label error rates across 18 and 7 largely-independent binary
+calibrations respectively, not a failure of \Cref{eq:coverage} (which
+was never a joint guarantee to begin with) and not itself evidence of
+conditional-coverage collapse, since the joint-coverage slices track the
+joint-coverage marginal about as closely as the multiclass tasks' slices
+track theirs. Per \Cref{sec:conformal-method}, all of the above describes
+agreement with $y^{\mathrm{KA}}$, and \Cref{sec:ood} below is the
+complementary analysis that does not carry that caveat.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/fig_conformal_coverage.pdf}
+  \caption{Empirical conformal coverage, marginal vs.\ the two
+    conditional-coverage stress-test slices, against the 90\% target
+    (\Cref{tab:conformal}).}
+  \label{fig:conformal}
+\end{figure}
 
 \section{Out-of-Distribution Detection}
 \label{sec:ood}
@@ -435,14 +689,178 @@ confidence or embedding-space behavior differs between in-distribution
 and out-of-distribution input, which is answerable without knowing
 whether either input's \emph{label} is correct.
 
-\todo[inline]{Not implemented yet (Phase 4). Four setups already grounded
-    in real splits: temporal emergence (train pre-2024, test on
-    Qilin/DragonForce/Black Basta, which only appear post-2023 in this
-    corpus), channel-type shift (Vendor+DFIR vs. Conference+Independent),
-    leave-rare-family-out, and an external non-security corpus as a sanity
-    check. Methods to compare: max-softmax-probability, Mahalanobis
-    distance on pooled embeddings, energy score, and the Section
-    \ref{sec:conformal} nonconformity score used directly as an OOD flag.}
+\subsection{Setups and methods}
+\label{sec:ood-setups}
+Four setups, each with a known-by-construction in-distribution
+(ID)/out-of-distribution (OOD) split, drawn from real structure in the
+corpus rather than synthetic corruption:
+
+\begin{enumerate}
+\item \textbf{Temporal emergence.} ID: pre-2024 videos. OOD: post-2024
+  videos mentioning a family whose first appearance in this corpus is
+  2024 or later -- verified directly against per-family first-occurrence
+  year rather than assumed (Maze, Medusa, Black Basta, INC: 2024;
+  Cactus: 2025), at \Cref{alg:ood-verify}'s assertion step.
+\item \textbf{Channel-type shift.} ID: Vendor + DFIR channels. OOD:
+  Conference + Independent channels.
+\item \textbf{Leave-rare-family-out.} ID: videos never mentioning
+  ``Cl0p'' (11 occurrences total -- long-tailed, unlike Conti/LockBit/
+  Qilin/Akira, each with 19+). OOD: the 11 Cl0p-mentioning videos.
+\item \textbf{External corpus.} ID: RansKnow transcripts. OOD: 20
+  Newsgroups (\texttt{rec.sport.baseball} + \texttt{sci.space}), included
+  as a sanity check that the methods below can detect an obviously
+  unrelated domain before trusting them on setups 1--3.
+\end{enumerate}
+
+Four detection methods, computed from a shared \texttt{dominant\_tactic}
+classifier (structured features, LightGBM -- \Cref{tab:results}'s
+strongest non-circular result, and a natural multiclass fit for the
+softmax-family methods below), refit fresh on each setup's ID-only
+training pool so that no OOD signal leaks into fitting:
+\begin{align}
+  s_{\mathrm{MSP}}(x) &= 1 - \max_c \hat p(c\mid x)
+    \label{eq:msp}\\
+  s_{\mathrm{energy}}(x) &= -\log\sum_c \exp\bigl(f_c(x)\bigr)
+    \label{eq:energy}\\
+  s_{\mathrm{maha}}(x) &= \min_c \bigl(\phi(x)-\mu_c\bigr)^{\!\top} \Sigma^{-1} \bigl(\phi(x)-\mu_c\bigr)
+    \label{eq:maha}\\
+  s_{\mathrm{conf}}(x) &= 1 - \hat p\bigl(\hat c(x) \mid x\bigr) \qquad\text{(\Cref{eq:lac} at the predicted class)}
+    \label{eq:conf-ood}
+\end{align}
+\Cref{eq:msp} is Hendrycks and Gimpel's max-softmax-probability baseline
+\citep{hendrycks2017baseline}. \Cref{eq:energy} is the energy score
+\citep{liu2020energy}, computed from LightGBM's raw pre-softmax margins
+$f_c(x)$ (\emph{not} from $\hat p(c\mid x)$: probabilities already sum to
+$1$, which makes \Cref{eq:energy} degenerate to a constant if computed
+from them directly -- a real pitfall caught while implementing this
+section, not a hypothetical one). \Cref{eq:maha} is the class-conditional
+Gaussian Mahalanobis distance of \citet{lee2018simple}, with $\phi(x)$ the
+384-dim mean-pooled sentence embedding (\Cref{sec:baselines}'s footnote)
+and $\mu_c,\Sigma$ the ID-train class-conditional means and pooled
+covariance, using the classifier's own \emph{predicted} classes to form
+groups (consistent with \Cref{sec:gold-scope}: no independently verified
+labels exist to group by instead). \Cref{eq:conf-ood} reuses
+\Cref{sec:conformal}'s LAC score, evaluated at the predicted rather than
+true class for OOD flagging -- this is deliberately, not accidentally,
+the same quantity as \Cref{eq:msp}; the two are reported separately for
+comparability with \Cref{eq:qhat}'s calibrated threshold (does a point's
+own score exceed the 90\%-target $\hat q$), which is the operationally
+distinct number.
+
+\begin{algorithm}[htbp]
+\caption{OOD setup evaluation}
+\label{alg:ood-verify}
+\begin{algorithmic}[1]
+\Require corpus $\mathcal{D}$, ID/OOD partition rule for the setup
+\State \textbf{assert} every claimed-emerging family's first-occurrence year matches the setup's stated cutoff \Comment{caught a factual error at this step -- see note below}
+\State split ID pool into $\mathcal{D}_{\mathrm{train}}$ (75\%) / $\mathcal{D}_{\mathrm{test}}^{\mathrm{ID}}$ (25\%)
+\State fit \texttt{dominant\_tactic}/structured/LightGBM on $\mathcal{D}_{\mathrm{train}}$
+\State score $\mathcal{D}_{\mathrm{test}}^{\mathrm{ID}}$ and $\mathcal{D}_{\mathrm{OOD}}$ under \Cref{eq:msp,eq:energy,eq:maha,eq:conf-ood}
+\State report AUROC(ID vs.\ OOD) per method, plus the conformal exceedance-rate contrast
+\end{algorithmic}
+\end{algorithm}
+
+The assertion in \Cref{alg:ood-verify} is not decorative: the temporal-
+emergence setup's family list was originally drafted from memory as
+``Qilin, DragonForce, Black Basta,'' before checking actual
+first-occurrence years against the corpus. Qilin's first real occurrence
+is 2019, not post-2023, and DragonForce does not appear in this corpus at
+all -- both would have silently produced a meaningless setup (there is no
+real ID/OOD separation if the ``emerging'' families already appear
+throughout the ID training period). The corrected list (Maze, Medusa,
+Black Basta, INC, Cactus) is the one actually used in \Cref{tab:ood} and
+is verified by \Cref{alg:ood-verify} on every run, not just checked once
+by hand.
+
+\subsection{Results}
+\label{sec:ood-results}
+\begin{table}[htbp]
+\centering
+\caption{OOD-detection AUROC by setup and method (\Cref{eq:msp,eq:energy,eq:maha,eq:conf-ood}).
+  $n_{\mathrm{ID}}$/$n_{\mathrm{OOD}}$ are ID-test/OOD sample counts.
+  Mahalanobis is unavailable for \texttt{external\_corpus} (20
+  Newsgroups has no entry in the RansKnow-only embedding cache).}
+\label{tab:ood}
+\begin{tabular}{lrrrrrr}
+\toprule
+Setup & $n_{\mathrm{ID}}$ & $n_{\mathrm{OOD}}$ & MSP & Energy & Mahalanobis & Conformal \\
+\midrule
+Temporal emergence     &  55 &   31 & 0.561 & 0.360 & 0.223 & 0.533 \\
+Channel-type shift       & 156 &  353 & 0.477 & 0.487 & 0.666 & 0.487 \\
+Leave-rare-family-out    & 256 &   11 & 0.377 & 0.350 & 0.145 & 0.376 \\
+External corpus (sanity) & 259 & 1190 & 0.625 & 0.476 & --    & 0.631 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{fig:ood-radar} plots \Cref{tab:ood}. The honest reading is a mixed
+and mostly negative one, which is itself the finding worth reporting
+rather than a result to explain away. Three observations:
+
+\textbf{The confidence-based methods (MSP, energy, conformal) hover near
+chance (0.5) on every setup, including the sanity check.} Diagnosing
+\emph{why} on \texttt{external\_corpus} is informative: 99.6\% of 20
+Newsgroups documents are classified \texttt{None} (no dominant tactic
+detected) by the shared classifier, and with \emph{higher} average
+confidence than the real in-distribution test set (mean $\hat
+p_{\max}$: 0.921 OOD vs.\ 0.895 ID). A near-empty, off-topic TF-IDF
+vector and a genuinely tactic-free ransomware transcript both produce
+the same signature -- confidently ``no tactics detected'' -- so a
+classifier whose decision function is fundamentally an argmax over
+small keyword-mention counts has no way to distinguish ``nothing here''
+from ``wrong domain entirely.'' This is a known blind spot of
+softmax/probability-based OOD detection in general
+\citep{hendrycks2017baseline}, reproduced concretely here rather than
+assumed from the literature.
+
+\textbf{Mahalanobis distance on real sentence embeddings is the one
+method that separates classes at all, and only partially.} It reaches
+$0.666$ on channel-type shift -- Conference/Independent channels differ
+enough in embedding space (production style, framing, audience) to be
+mildly detectable -- but performs \emph{worse} than chance on temporal
+emergence (0.223) and leave-rare-family-out (0.145). Both of those
+setups' OOD population describes the same underlying phenomenon
+(ransomware incidents, attacker tradecraft) as the ID population, just
+naming a different or newer group -- exactly the case where sentence
+embeddings, which encode semantic content rather than proper nouns,
+would \emph{not} be expected to separate the two populations well. The
+small OOD sample sizes in these two setups ($n{=}31$, $n{=}11$) also mean
+each AUROC estimate carries substantial variance on its own; with
+$n_{\mathrm{OOD}}{=}11$, a single re-ordered pair moves the estimate by
+roughly $1/11$.
+
+\textbf{The conformal exceedance-rate contrast (\Cref{eq:qhat}'s $\hat
+q$) is uninformative in this corpus specifically.} In every setup, the
+calibrated threshold $\hat q$ lands so close to the maximum possible
+score ($\hat q \geq 0.99$ in three of four setups) that essentially no
+point, ID or OOD, exceeds it -- a consequence of the classifier being
+very confidently correct on the bulk of its small ($n{\approx}115$)
+calibration split, which pushes the $90$th-percentile score to an
+extreme value. \Cref{eq:conf-ood}'s AUROC column is the more informative
+number from this method here; the exceedance-rate contrast is reported
+in the released JSON (\texttt{outputs/phase4\_ood.json}) for
+completeness but is not a useful discriminator at this sample size.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figures/fig_ood_radar.pdf}
+  \caption{OOD-detection AUROC by method (color) and setup (axis),
+    against the chance line at 0.5 (\Cref{tab:ood}). Mahalanobis is the
+    only method to clear chance by a wide margin, and only on one of
+    four setups.}
+  \label{fig:ood-radar}
+\end{figure}
+
+Taken together, \Cref{sec:ood-results} does not support a general claim
+that this pipeline's models reliably detect distributional shift; it
+supports a narrower, still useful one: OOD detection here is hard,
+softmax-confidence-based methods have an identifiable and reproducible
+blind spot on this specific classifier (the ``no signal'' vs.\
+``wrong domain'' confusion above), and embedding-distance methods help
+only when the shift is stylistic rather than topical. Unlike
+\Cref{sec:baselines,sec:uncertainty,sec:conformal}, none of this depends
+on whether $y^{\mathrm{KA}}$ is correct (\Cref{sec:gold-scope}) -- it is
+a direct, if modest, empirical finding about model behavior.
 
 \section{Interpretability and Perturbation Robustness}
 \label{sec:interpretability}
