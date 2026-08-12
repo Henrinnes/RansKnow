@@ -260,4 +260,7 @@ The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`
 
 ## License
 
-This dataset is released under the [CC0 1.0 Universal (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/) licence.
+This repository has two license scopes:
+
+- **Dataset** (transcripts, metadata, feature CSVs under `transcripts/`, `outputs/`, `RansKnow_v1/`, and the Kaggle-hosted copy): released under the [CC0 1.0 Universal (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/) licence.
+- **Code** (everything under `Scripts/`, including the fetch pipeline, Knowledge Agent, `rk_pipeline` experiment framework, and audit/diagnostic scripts): released under the [MIT License](LICENSE).
