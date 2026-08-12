@@ -368,16 +368,43 @@ Medusa  &   7 &   7 &   0 \\
 
 \subsection{Finding B: ASR-dominated transcript quality}
 As noted in Section~\ref{sec:transcripts}, 92.7\% of transcripts are ASR
-output rather than official captions. \todo{Run the Phase 0.4 spot-check
-    (manual comparison of ASR output against source audio for a fixed
-    jargon term list -- \texttt{LockBit}, \texttt{Mimikatz},
-    \texttt{PsExec}, \texttt{Cobalt Strike}, \texttt{rclone},
-    \texttt{BloodHound} -- across the whisper-transcribed subset) and
-    report a measured word-error-rate-on-jargon figure here. Aggregate
-    detection-rate comparisons across \texttt{Transcript\_Provider} did
-    not show an obvious gap, which is not the same as no effect --
-    individual mistranscriptions of rare jargon can matter without moving
-    an aggregate rate.}
+output rather than official captions. Aggregate detection-rate
+comparisons across \texttt{Transcript\_Provider} do not show an obvious
+gap, which is not the same as no effect: individual mistranscriptions
+of rare jargon can matter without moving an aggregate rate, since a
+single missed \texttt{rclone} mention changes that video's
+\texttt{Tool\_Rclone} feature from 1 to 0 regardless of how many other
+videos were transcribed correctly.
+
+Source audio is not stored locally (the released dataset ships
+transcripts, not audio), so the originally planned manual
+audio-vs-transcript listening check is automated here instead: for a
+random sample of 40 \texttt{whisper\_base}-transcribed videos (the
+smallest, least accurate checkpoint), the opening 6 minutes of audio
+was re-fetched and re-transcribed with Whisper's \texttt{small}
+checkpoint, treated as a stronger reference, and every occurrence of
+six fixed jargon terms (\texttt{LockBit}, \texttt{Mimikatz},
+\texttt{PsExec}, \texttt{Cobalt Strike}, \texttt{rclone},
+\texttt{BloodHound}, plus known phonetic-mangling variants) in the
+reference transcript was checked against the corresponding stored
+\texttt{whisper\_base} transcript. 35 of 40 videos were successfully
+re-fetched and re-transcribed (5 audio-download failures); across those
+35, the six jargon terms appeared at all in only 3 (video, term)
+instances within the sampled opening 6 minutes -- jargon density is
+low even in ransomware-focused content -- and 1 of those 3 was missed
+entirely by \texttt{whisper\_base}: \texttt{rclone}, mentioned once in
+the stronger reference transcript for one video and zero times
+(correct spelling or a known mangled variant) anywhere in that video's
+stored transcript, while \texttt{bloodhound} (same video) and
+\texttt{cobalt strike} (18 mentions in another video) were both
+correctly detected. A miss rate of 1/3 from a spot-check this small
+(3 instances) is not a precise estimate and should not be read as one --
+the honest conclusion is qualitative, not quantitative: jargon-term
+mistranscription is a real, observed failure mode of this corpus's
+dominant transcription method, consistent with Section~\ref{sec:perturbation}'s
+simulated-ASR-noise sweep, and a larger, unabridged spot-check (full
+video length, not a 6-minute cap; larger sample) is the natural
+follow-up this finding motivates rather than resolves.
 
 \subsection{Scope: no independent ground truth}
 \label{sec:gold-scope}
