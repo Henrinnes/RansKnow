@@ -191,9 +191,13 @@ def fig_baselines_full_sweep():
     print(f"Wrote {out.relative_to(ROOT)}")
 
 
-def fig_baselines_3d():
+def fig_baselines_3d_stem():
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 -- registers the '3d' projection
 
+    # Stem/lollipop, not solid bar3d: opaque bars from earlier tasks
+    # occluded shorter bars behind them from every viewing angle tried --
+    # a thin line + marker has essentially no silhouette to occlude with,
+    # so every point stays readable regardless of view angle.
     dfs = [pd.read_csv(f) for f in sorted(glob.glob(str(ROOT / "outputs" / "experiments" / "phase1_*.csv")))]
     df = pd.concat(dfs, ignore_index=True)
     df = df[(df["model"] != "rule_based_ka") & (df["split"] == "stratified_random")]
@@ -201,27 +205,27 @@ def fig_baselines_3d():
     model_label = {"logreg": "LogReg", "svm": "SVM", "random_forest": "RF", "gbm": "GBM"}
     best = df.groupby(["task", "model"])["macro_f1"].max().unstack().reindex(index=TASK_ORDER, columns=models)
 
-    fig = plt.figure(figsize=(7, 5.5))
-    ax = fig.add_subplot(111, projection="3d")
-
     n_tasks, n_models = best.shape
     xpos, ypos = np.meshgrid(np.arange(n_models), np.arange(n_tasks))
-    xpos, ypos = xpos.ravel(), ypos.ravel()
-    zpos = np.zeros_like(xpos, dtype=float)
+    xpos, ypos = xpos.ravel().astype(float), ypos.ravel().astype(float)
     dz = best.to_numpy().ravel()
-    dx = dy = 0.7
 
     cmap = plt.get_cmap("YlOrRd")
-    colors = cmap(dz / dz.max())
+    colors = cmap(0.15 + 0.85 * dz / dz.max())
 
-    ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color=colors, shade=True, edgecolor="white", linewidth=0.4)
-    ax.set_xticks(np.arange(n_models) + dx / 2)
+    fig = plt.figure(figsize=(7, 5.5))
+    ax = fig.add_subplot(111, projection="3d")
+    for x, y, z, c in zip(xpos, ypos, dz, colors):
+        ax.plot([x, x], [y, y], [0, z], color=c, linewidth=2.2, solid_capstyle="round")
+        ax.scatter([x], [y], [z], color=c, s=45, edgecolor="black", linewidth=0.4, depthshade=True)
+
+    ax.set_xticks(np.arange(n_models))
     ax.set_xticklabels([model_label[m] for m in models])
-    ax.set_yticks(np.arange(n_tasks) + dy / 2)
+    ax.set_yticks(np.arange(n_tasks))
     ax.set_yticklabels([TASK_LABEL[t] for t in TASK_ORDER])
     ax.set_zlabel("macro-F1")
     ax.set_zlim(0, 1)
-    ax.view_init(elev=25, azim=-50)
+    ax.view_init(elev=22, azim=-55)
     ax.set_title("Baseline sweep in 3D: best-representation macro-F1 by task and model\n"
                   "(stratified-random split, weak-label agreement, Section 4.3)", fontsize=9, y=1.0)
     fig.tight_layout()
@@ -233,7 +237,7 @@ def fig_baselines_3d():
 
 if __name__ == "__main__":
     fig_baselines_full_sweep()
-    fig_baselines_3d()
+    fig_baselines_3d_stem()
     fig_reliability()
     fig_conformal_coverage()
     fig_ood_radar()
