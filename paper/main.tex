@@ -495,20 +495,43 @@ accordingly.
 \caption{Best stratified-CV macro-F1 per task, across every representation
   (structured / TF-IDF / embedding) and trained model (LogReg, Linear SVM,
   Random Forest, GBM) tried. Weak-label agreement, not verified accuracy
-  (\S\ref{sec:gold-scope}).}
+  (\S\ref{sec:gold-scope}). Mean~$\pm$~std is across 5 stratified-random
+  split seeds (0--4) at the reported (representation, model) cell, model
+  \texttt{random\_state} held fixed -- see the paragraph below the table.}
 \label{tab:results}
 \begin{tabular}{lllr}
 \toprule
-Task & Best representation & Best model & Macro-F1 \\
+Task & Best representation & Best model & Macro-F1 (mean $\pm$ std, 5 seeds) \\
 \midrule
-Ransomware-relevant & TF-IDF     & GBM    & 0.903 \\
-Dominant tactic      & structured & GBM    & 0.813 \\
-Platform signal       & TF-IDF     & GBM    & 0.606 \\
-Tool mentions         & TF-IDF     & LogReg & 0.200 \\
-Family                 & embedding  & LogReg & 0.129 \\
+Ransomware-relevant & TF-IDF     & GBM    & $0.897 \pm 0.006$ \\
+Dominant tactic      & structured & GBM    & $0.806 \pm 0.012$ \\
+Platform signal       & TF-IDF     & GBM    & $0.616 \pm 0.008$ \\
+Tool mentions         & TF-IDF     & LogReg & $0.166 \pm 0.032$ \\
+Family                 & embedding  & LogReg & $0.115 \pm 0.019$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The single-seed point estimates used everywhere else in this paper
+(e.g.\ the 0.813 quoted for \texttt{dominant\_tactic} elsewhere) are
+each the seed-0 value above, which matches its 5-seed mean closely in
+every case ($\leq$0.02 absolute difference) -- the reported numbers
+were not outliers relative to the seed distribution. Std is smallest
+for \texttt{relevance} (0.006) and largest for \texttt{tool} (0.032,
+$\sim$20\% of its own mean), consistent with \texttt{tool}'s
+already-noted instability across CV protocols (\Cref{tab:baselines-full}).
+Only the stratified-random split's train/test partition varies with the
+seed here; \texttt{channel\_grouped} (\texttt{GroupKFold}) and
+\texttt{temporal} (a fixed pre/post-2024 cutoff) are both deterministic
+single partitions with no random component
+(\texttt{Scripts/rk\_pipeline/splits.py}), so a seed sweep is not a
+meaningful question for those two and is not computed for them. Model
+\texttt{random\_state} (RF/GBM) is likewise held fixed at 0 throughout:
+this table isolates variance from which videos land in train vs.\ test
+under 5 different stratified partitions specifically, not full
+stochastic-training variance, and is reported as exactly that rather
+than a broader claim (\texttt{outputs/experiments/phase1\_multiseed.json},
+\texttt{Scripts/phase1\_multiseed.py}).
 
 Two patterns worth naming, both consistent with Section~\ref{sec:interpretability}'s
 independent checks: (1) tree models (GBM in particular) are the strongest
