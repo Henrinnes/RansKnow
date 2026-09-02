@@ -10,6 +10,8 @@ Ransomware attacks are one of the most damaging categories of cyber threats, yet
 
 Videos were selected using keyword-based inclusion criteria (ransomware-relevant terms), filtered for technical depth, and processed through a Knowledge Agent pipeline to extract structured features aligned with the MITRE ATT&CK framework.
 
+Beyond the corpus itself, the project includes a full modeling and audit pipeline — baselines, calibration, conformal prediction, out-of-distribution detection, a label-quality audit of the family-alias extraction, and a robustness analysis — written up as a NeurIPS 2026 Datasets & Benchmarks Track submission (`paper/`). See [Modeling, Audits & Paper](#modeling-audits--paper) below.
+
 ---
 
 ## Repository Structure
@@ -35,9 +37,36 @@ RansKnow/
 ├── RansKnow_v1/
 │   └── Knowledge_Agent_Features_v1.csv   # v1 feature CSV (307 rows)
 │
-├── Scripts/                      # Data pipeline notebooks and scripts
+├── paper/                         # NeurIPS 2026 D&B Track submission
+│   ├── main.tex / main.pdf                # Paper source and compiled PDF
+│   ├── checklist.tex                      # NeurIPS paper checklist (fully answered)
+│   ├── references.bib
+│   └── figures/
+│
+├── Scripts/                      # Data pipeline, modeling, and audit scripts
 │   ├── knowledge_agent.py                # v3 feature extraction pipeline (current)
 │   ├── fetch_transcripts.py              # Transcript fetcher with Whisper ASR fallback
+│   ├── rk_pipeline/                      # Experiment framework (tasks, features, models,
+│   │                                      #   splits, metrics, explainers, augmenters)
+│   ├── run_experiment.py                 # CLI: baseline ladder runner (tasks x features x models x splits)
+│   ├── audit_family_aliases.py           # Phase 0.2 — family-alias dictionary-collision audit
+│   ├── build_gold_eval_set.py            # Phase 0.3 — stratified gold-annotation sample
+│   ├── merge_gold_annotations.py
+│   ├── build_gold_annotation_tool.py     # Builds outputs/Gold_Annotation_Tool.html
+│   ├── phase0_4_asr_spotcheck.py         # Phase 0.4 — ASR transcript quality spot-check
+│   ├── phase1_multiseed.py               # Phase 1 — multi-seed split variance for Table 3
+│   ├── phase2_calibration.py             # Phase 2 — calibration vs. weak labels
+│   ├── phase3_conformal.py               # Phase 3 — split conformal prediction
+│   ├── phase4_ood_detection.py           # Phase 4 — out-of-distribution detection
+│   ├── phase5_channel_leakage.py         # Phase 5.1 — channel-identity leakage check
+│   ├── phase5_length_confound.py         # Phase 5.1 — transcript-length confound check
+│   ├── phase5_counterfactual_explanations.py  # Phase 5.2 — counterfactual explanations
+│   ├── phase5_perturbation_robustness.py # Phase 5.3 — perturbation-robustness sweep
+│   ├── precompute_embeddings.py          # Sentence-embedding cache for embedding features
+│   ├── make_paper_figures.py / make_ood_distribution_figure.py / make_ood_tsne_figure.py
+│   ├── export_rulebased_patterns.py / export_demo_models.py
+│   ├── build_inference_demo.py           # Builds outputs/Inference_Demo.html (JS demo)
+│   ├── validate_inference_engine.js      # Cross-checks JS demo engine vs. Python pipeline
 │   ├── ransknow-getting-started.ipynb    # Getting Started notebook (Kaggle-ready)
 │   ├── 01_Transcript_Dataset_Construction.ipynb
 │   ├── fetch_transcripts_keywords.ipynb
@@ -57,6 +86,7 @@ RansKnow/
 ├── Figures/                      # Visualisations
 ├── Progress_Mapping/             # Weekly progress tracking
 ├── Channel_Registry_1.xlsx       # Master registry — Batch 1 channels (C01–C50)
+├── croissant.json                # Croissant metadata (dataset schema + Responsible AI fields)
 ├── Family_Coverage_Targets_Rules.docx
 ├── Ransomware_Transcript_Dataset_Summary.pdf
 └── Video_Selection_Rubric_AutoScore_Filled_6.xlsx
@@ -246,6 +276,28 @@ The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`
 
 ---
 
+## Modeling, Audits & Paper
+
+The dataset is accompanied by a full experiment and audit pipeline, written up in a NeurIPS 2026 Datasets & Benchmarks Track submission at `paper/main.pdf` (source in `paper/main.tex`). Its central argument: the corpus's contribution isn't the transcripts alone, but a label-quality audit of the weak-label extraction pipeline, plus a demonstration of how that weak-label scope propagates through every downstream result.
+
+**Label-quality audit** — `Scripts/audit_family_aliases.py` found 9 of 41 ransomware-family aliases collide with ordinary English/business words (e.g. `play`, `hive`, `cactus`), inflating the top-detected family by roughly 3.5x before a context-window disambiguation fix.
+
+**Baselines (Phase 1)** — `run_experiment.py` sweeps tasks (relevance, dominant tactic, platform, tool, family) x features (structured, TF-IDF, sentence embeddings) x models (rule-based, logistic regression, random forest, GBM) x splits (stratified-random, channel-grouped, temporal). Weak-label macro-F1 reaches 0.90 on binary relevance and 0.81 on dominant-tactic, but stays weak (≤0.20) on the higher-cardinality family/tool taxonomies. `phase1_multiseed.py` re-runs the best combo per task across 5 stratified-random seeds to report variance.
+
+**Calibration & conformal prediction (Phases 2–3)** — `phase2_calibration.py` / `phase3_conformal.py` measure calibration against weak labels (ECE 0.02–0.11; a Random Forest tree-vote-entropy signal separates label agreement from disagreement with AUROC up to 0.98) and split conformal prediction (close to 90% target coverage, no severe conditional-coverage collapse on two tested distribution-shift slices).
+
+**Out-of-distribution detection (Phase 4)** — `phase4_ood_detection.py` tests four distribution-shift setups. Standard softmax-confidence OOD detection performs near chance, including a diagnosed failure mode where the classifier's most-confident predictions coincide with the same signature off-topic input produces; only embedding-based Mahalanobis distance clears chance, and only on one of four setups.
+
+**Robustness (Phase 5)** — channel-identity leakage (`phase5_channel_leakage.py`), transcript-length confounds (`phase5_length_confound.py`), counterfactual explanations probing the Family=Play word-collision fragility (`phase5_counterfactual_explanations.py`), and an untargeted perturbation-robustness sweep (`phase5_perturbation_robustness.py`).
+
+**Scope caveat, stated explicitly in the paper**: there is no independently human-annotated gold evaluation set. Every baseline, calibration, and conformal-prediction number is agreement with the audited-but-imperfect extraction pipeline, not verified real-world accuracy — OOD detection results are the exception, since they don't depend on label correctness.
+
+**Interactive demo** — `outputs/Inference_Demo.html` (built by `build_inference_demo.py`) runs the rule-based + TF-IDF extraction engine client-side in JS, numerically cross-validated against the Python pipeline via `validate_inference_engine.js`.
+
+All experiment code, the checklist, and the paper are released alongside the dataset — see [License](#license).
+
+---
+
 ## Version History
 
 | Version | Date | Description |
@@ -255,6 +307,7 @@ The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`
 | v3 | July 2026 | Whisper ASR fallback — 718 transcripts recovered (94% coverage) across all 761 video records |
 | v4 | July 2026 | Knowledge Agent v2 — 718-row feature CSV (`Knowledge_Agent_Features_718.csv`), fixed tool detection, added Year/DurationSeconds/Transcript_Provider columns |
 | v5 | August 2026 | Batch 2 expansion — 42 new channels (C51–C101), bringing the dataset to 92 channels / 1128 video records / 1034 transcripts; fixed several stale channel URLs; Knowledge Agent v3 — 1034-row feature CSV (`Knowledge_Agent_Features_1034.csv`) |
+| v6 | August 2026 | Modeling & audit pipeline (`rk_pipeline`), family-alias collision audit, Phases 1–5 (baselines, calibration, conformal prediction, OOD detection, robustness), JS inference demo, Croissant metadata, and the NeurIPS 2026 D&B Track paper submission (`paper/`) |
 
 ---
 
