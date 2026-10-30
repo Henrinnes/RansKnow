@@ -10,7 +10,7 @@ Ransomware attacks are one of the most damaging categories of cyber threats, yet
 
 Videos were selected using keyword-based inclusion criteria (ransomware-relevant terms), filtered for technical depth, and processed through a Knowledge Agent pipeline to extract structured features aligned with the MITRE ATT&CK framework.
 
-Beyond the corpus itself, the project includes a full modeling and audit pipeline — baselines, calibration, conformal prediction, out-of-distribution detection, a label-quality audit of the family-alias extraction, and a robustness analysis — written up as a NeurIPS 2026 Datasets & Benchmarks Track submission (`paper/`). See [Modeling, Audits & Paper](#modeling-audits--paper) below.
+Beyond the corpus itself, the project includes a full modeling and audit pipeline (baselines, calibration, conformal prediction, out-of-distribution detection, a label-quality audit of the family-alias extraction, and a robustness analysis), written up as a manuscript for *Computers & Security* (Elsevier) in `paper/`. See [Modeling, Audits & Paper](#modeling-audits--paper) below.
 
 ---
 
@@ -37,9 +37,8 @@ RansKnow/
 ├── RansKnow_v1/
 │   └── Knowledge_Agent_Features_v1.csv   # v1 feature CSV (307 rows)
 │
-├── paper/                         # NeurIPS 2026 D&B Track submission
+├── paper/                         # Computers & Security manuscript (Elsevier elsarticle)
 │   ├── main.tex / main.pdf                # Paper source and compiled PDF
-│   ├── checklist.tex                      # NeurIPS paper checklist (fully answered)
 │   ├── references.bib
 │   └── figures/
 │
@@ -278,7 +277,7 @@ The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`
 
 ## Modeling, Audits & Paper
 
-The dataset is accompanied by a full experiment and audit pipeline, written up in a NeurIPS 2026 Datasets & Benchmarks Track submission at `paper/main.pdf` (source in `paper/main.tex`). Its central argument: the corpus's contribution isn't the transcripts alone, but a label-quality audit of the weak-label extraction pipeline, plus a demonstration of how that weak-label scope propagates through every downstream result.
+The dataset is accompanied by a full experiment and audit pipeline, written up in a manuscript for *Computers & Security* at `paper/main.pdf` (source in `paper/main.tex`). Its central argument: the corpus's contribution isn't the transcripts alone, but a label-quality audit of the weak-label extraction pipeline, plus a demonstration of how that weak-label scope propagates through every downstream result. The earlier NeurIPS 2026 Datasets & Benchmarks Track version, including its paper checklist, is preserved in commit `9682a6d`.
 
 **Label-quality audit** — `Scripts/audit_family_aliases.py` found 9 of 41 ransomware-family aliases collide with ordinary English/business words (e.g. `play`, `hive`, `cactus`), inflating the top-detected family by roughly 3.5x before a context-window disambiguation fix.
 
@@ -294,7 +293,7 @@ The dataset is accompanied by a full experiment and audit pipeline, written up i
 
 **Interactive demo** — `outputs/Inference_Demo.html` (built by `build_inference_demo.py`) runs the rule-based + TF-IDF extraction engine client-side in JS, numerically cross-validated against the Python pipeline via `validate_inference_engine.js`.
 
-All experiment code, the checklist, and the paper are released alongside the dataset — see [License](#license).
+All experiment code and the paper are released alongside the dataset; see [License](#license).
 
 ---
 
@@ -308,6 +307,7 @@ All experiment code, the checklist, and the paper are released alongside the dat
 | v4 | July 2026 | Knowledge Agent v2 — 718-row feature CSV (`Knowledge_Agent_Features_718.csv`), fixed tool detection, added Year/DurationSeconds/Transcript_Provider columns |
 | v5 | August 2026 | Batch 2 expansion — 42 new channels (C51–C101), bringing the dataset to 92 channels / 1128 video records / 1034 transcripts; fixed several stale channel URLs; Knowledge Agent v3 — 1034-row feature CSV (`Knowledge_Agent_Features_1034.csv`) |
 | v6 | August 2026 | Modeling & audit pipeline (`rk_pipeline`), family-alias collision audit, Phases 1–5 (baselines, calibration, conformal prediction, OOD detection, robustness), JS inference demo, Croissant metadata, and the NeurIPS 2026 D&B Track paper submission (`paper/`) |
+| v7 | October 2026 | Paper moved to Elsevier's `elsarticle` template for *Computers & Security*, with highlights, keywords, and the Elsevier declaration sections; NeurIPS checklist removed |
 
 ---
 
