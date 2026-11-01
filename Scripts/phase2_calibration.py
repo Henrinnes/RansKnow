@@ -62,19 +62,17 @@ N_BINS = 10
 
 # Best (feature, model) per task from the Phase 1 sweep
 # (outputs/experiments/phase1_*.csv, stratified_random, rule_based_ka
-# excluded as circular). Matches the results table in the paper.
+# excluded as circular, as is structured/dominant_tactic: its features
+# include the tactic counts the label is the argmax of). Matches the results
+# table in the paper. Run with an interpreter that has sentence_transformers,
+# since family's best combo is the embedding representation.
 BEST_COMBO = {
     "relevance": ("tfidf", "gbm"),
-    "dominant_tactic": ("structured", "gbm"),
+    "dominant_tactic": ("tfidf", "gbm"),
     "platform": ("tfidf", "gbm"),
     "tool": ("tfidf", "logreg"),
     "family": ("embedding", "logreg"),
 }
-
-# family/embedding requires the dedicated torch venv; running that combo
-# from the default interpreter raises ImportError inside FEATURES.get.
-# Skipped here (not silently) and reported in the output.
-SKIP_COMBOS = {("embedding",)}
 
 
 def _oof_proba(task, feature_name, model_name, df):
@@ -263,30 +261,22 @@ def main():
         print(f"\n=== {task_name} (best combo: {feature_name}/{model_name}) ===")
         task = TASKS.get(task_name)
 
-        if feature_name == "embedding":
-            print("  Skipping predict_proba calibration for the embedding representation: "
-                  "requires the dedicated .venv-embeddings interpreter, not importable here. "
-                  "Reported as a known gap, not silently omitted.")
-            calib_block = {"skipped": True,
-                            "reason": "embedding feature requires .venv-embeddings; "
-                                      "not run from the default interpreter"}
+        y_true, proba, classes_ref = _oof_proba(task, feature_name, model_name, df)
+        if task.label_type == "multilabel":
+            confidence, correct = _reliability_multilabel(y_true, proba)
         else:
-            y_true, proba, classes_ref = _oof_proba(task, feature_name, model_name, df)
-            if task.label_type == "multilabel":
-                confidence, correct = _reliability_multilabel(y_true, proba)
-            else:
-                confidence, correct = _reliability_multiclass(y_true, proba, classes_ref)
+            confidence, correct = _reliability_multiclass(y_true, proba, classes_ref)
 
-            ece, bins = _ece_and_bins(confidence, correct)
-            conf_disagree = _confident_disagreement(confidence, correct)
-            print(f"  ECE={ece:.4f}  n={len(confidence)}  "
-                  f"confident(>90%)_disagreement_rate_of_all={conf_disagree['rate_of_all']:.3f}")
-            calib_block = {
-                "feature": feature_name, "model": model_name,
-                "n_predictions": int(len(confidence)),
-                "ece": ece, "reliability_bins": bins,
-                "confident_disagreement": conf_disagree,
-            }
+        ece, bins = _ece_and_bins(confidence, correct)
+        conf_disagree = _confident_disagreement(confidence, correct)
+        print(f"  ECE={ece:.4f}  n={len(confidence)}  "
+              f"confident(>90%)_disagreement_rate_of_all={conf_disagree['rate_of_all']:.3f}")
+        calib_block = {
+            "feature": feature_name, "model": model_name,
+            "n_predictions": int(len(confidence)),
+            "ece": ece, "reliability_bins": bins,
+            "confident_disagreement": conf_disagree,
+        }
 
         # RF tree-vote entropy always runs (RF works fine on tfidf/structured;
         # for the family task -- whose best combo is embedding -- this still

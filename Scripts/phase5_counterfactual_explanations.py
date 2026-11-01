@@ -5,15 +5,14 @@ The plan's original framing: does a trained model's Family=Play
 prediction bottom out on removing the word "play" alone? That's a
 question about a model that predicts Play. This script asks a sharper
 version: take the 275 videos where the OLD (pre-fix) regex said Play but
-Phase 0.2's context-gating fix correctly removed it (real false
-positives, confirmed by manual review at the time) -- these are NOT
-labeled Play in the data the model trains on today. Does a TF-IDF+LogReg
-model trained on the *fixed* labels still assign these videos a high
-P(Play) anyway? If so, that's independent evidence (from a completely
-different model class than the regex) that the same word-collision
-pattern is discoverable from the raw text, not an artifact of the old
-regex's specific bug -- and the counterfactual search then asks whether
-"play" alone is what's driving it.
+Phase 0.2's context-gating fix removed it -- these are NOT labeled Play in
+the data the model trains on today. Does a TF-IDF+LogReg model trained on
+the *fixed* labels, and scored only on videos it did not train on, still
+rank these videos above other not-Play videos? If so, that's independent
+evidence (from a completely different model class than the regex) that the
+same word-collision pattern is discoverable from the raw text, not an
+artifact of the old regex's specific bug -- and the counterfactual search
+then asks whether "play" alone is what's driving it.
 
 Usage:
     python3 Scripts/phase5_counterfactual_explanations.py
@@ -25,6 +24,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -49,65 +50,77 @@ def main():
     y = task.build_y(df)
     y_play = y[:, play_idx]
 
-    print("Fitting TF-IDF + LogReg for 'Play' on full current (fixed) labels...")
+    # Every score below comes from a model that did not train on that video.
+    # The removed videos are labeled not-Play in the training data, so a
+    # model that had seen them would score them low regardless of whether it
+    # learned the word collision.
+    print("Fitting 5-fold TF-IDF + LogReg for 'Play' on current (fixed) labels...")
     texts = [load_transcript(p) for p in df["Transcript_Path"]]
-    vec = TfidfVectorizer(max_features=3000, ngram_range=(1, 2), min_df=2)
-    X = vec.fit_transform(texts)
-    pipe = _logreg_pipeline()
-    pipe.fit(X, y_play)
+    text_by_id = dict(zip(df["Video_ID"], texts))
+    fold_of = {}
+    fold_models = []
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+    for fold, (train_idx, test_idx) in enumerate(skf.split(texts, y_play)):
+        vec = TfidfVectorizer(max_features=3000, ngram_range=(1, 2), min_df=2)
+        X = vec.fit_transform([texts[i] for i in train_idx])
+        pipe = _logreg_pipeline()
+        pipe.fit(X, y_play[train_idx])
+        vocab = set(vec.vocabulary_.keys())
+        # also include unigram components of bigram vocab entries
+        for term in list(vocab):
+            if " " in term:
+                vocab.update(term.split(" "))
+        fold_models.append((vec, pipe, vocab))
+        for i in test_idx:
+            fold_of[df["Video_ID"].iloc[i]] = fold
 
-    def predict_proba(text: str) -> float:
-        Xt = vec.transform([text])
-        return float(pipe.predict_proba(Xt)[0, 1])
+    def proba_fn(vid):
+        vec, pipe, _ = fold_models[fold_of[vid]]
+        return lambda text: float(pipe.predict_proba(vec.transform([text]))[0, 1])
 
-    # The 275 videos Phase 0.2 confirmed were false positives under the
-    # old regex -- load directly rather than re-deriving, so this stays
-    # anchored to the actual audited set.
+    oof = {vid: proba_fn(vid)(text_by_id[vid]) for vid in df["Video_ID"]}
+
+    # The videos the Phase 0.2 context fix removed from Play. "Removed" is
+    # what this set is: the fix's own judgment, not a per-video human review.
     audit = pd.read_csv(ROOT / "outputs" / "Family_Alias_Audit.csv")
     lost_play_ids = set(audit[audit["lost"].fillna("").str.contains("Play")]["Video_ID"])
 
-    path_by_id = dict(zip(df["Video_ID"], df["Transcript_Path"]))
-    text_by_id = dict(zip(df["Video_ID"], texts))
-
-    print(f"\nScoring {len(lost_play_ids)} confirmed-false-positive videos with the TRAINED model...")
-    probs = []
-    for vid in lost_play_ids:
-        if vid not in text_by_id:
-            continue
-        p = predict_proba(text_by_id[vid])
-        probs.append((vid, p))
-    probs.sort(key=lambda x: -x[1])
+    print(f"\nHeld-out scores for the {len(lost_play_ids)} videos the fix removed from Play...")
+    probs = sorted(((vid, oof[vid]) for vid in lost_play_ids if vid in oof), key=lambda x: -x[1])
 
     high_conf = [(v, p) for v, p in probs if p >= 0.5]
-    print(f"Of those, the trained model STILL predicts Play (P>=0.5) for: "
+    print(f"Of those, the held-out model predicts Play (P>=0.5) for: "
           f"{len(high_conf)} / {len(probs)} ({len(high_conf)/len(probs):.0%})")
     print(f"Probability distribution: min={min(p for _,p in probs):.3f} "
           f"median={np.median([p for _,p in probs]):.3f} max={max(p for _,p in probs):.3f}")
 
-    vocab = set(vec.vocabulary_.keys())
-    # also include unigram components of bigram vocab entries
-    for term in list(vocab):
-        if " " in term:
-            vocab.update(term.split(" "))
+    # The inheritance question: among videos the fixed labels call not-Play,
+    # does the model rate the ones containing the colliding use of "play"
+    # above the rest? 0.5 would mean it does not tell them apart.
+    other_neg = [oof[vid] for vid, y_i in zip(df["Video_ID"], y_play)
+                 if y_i == 0 and vid not in lost_play_ids]
+    lost_scores = [p for _, p in probs]
+    removed_vs_other = float(roc_auc_score(
+        [1] * len(lost_scores) + [0] * len(other_neg), lost_scores + other_neg))
+    positive_scores = [oof[vid] for vid, y_i in zip(df["Video_ID"], y_play) if y_i == 1]
+    print(f"AUROC removed vs. other not-Play videos: {removed_vs_other:.3f}")
+    print(f"Median P(Play): removed={np.median(lost_scores):.3f} "
+          f"other_not_play={np.median(other_neg):.3f} labeled_play={np.median(positive_scores):.3f}")
 
-    # The false-positive set turned out entirely negative under the
-    # trained model (max P=0.013) -- nothing there for a counterfactual
-    # search to explain away. Pivot to the complementary question: for
-    # videos the model DOES confidently predict Play on, what vocabulary
-    # is it actually relying on? If removal sets are dominated by the
-    # bare word "play" with nothing else, that's still a concern even
-    # though the false-positive set came back clean. If removal sets
-    # pull in ransomware-specific vocabulary, that's evidence of a
-    # genuine learned signal.
-    print(f"\n=== Counterfactual search: what drives the model's actual positive Play predictions? ===")
-    true_positive_mask = y_play == 1
-    tp_ids = df.loc[true_positive_mask, "Video_ID"].tolist()
-    tp_probs = [(vid, predict_proba(text_by_id[vid])) for vid in tp_ids if vid in text_by_id]
-    tp_probs.sort(key=lambda x: -x[1])
+    # The complementary question: for videos the fixed labels call Play and
+    # the held-out model ranks highest, what vocabulary is it relying on?
+    # If removal sets are dominated by the bare word "play" with nothing
+    # else, that's a concern. If removal sets pull in ransomware-specific
+    # vocabulary, that's evidence of a genuine learned signal.
+    print(f"\n=== Counterfactual search: what drives held-out positive Play predictions? ===")
+    tp_ids = df.loc[y_play == 1, "Video_ID"].tolist()
+    tp_probs = sorted(((vid, oof[vid]) for vid in tp_ids), key=lambda x: -x[1])
 
     cases = []
     for vid, p0 in tp_probs[:N_CASES_TO_EXPLAIN]:
         text = text_by_id[vid]
+        predict_proba = proba_fn(vid)
+        vocab = fold_models[fold_of[vid]][2]
         result = word_removal_counterfactual(
             text, "Play", predict_proba, max_removals=15, candidate_vocab=vocab
         )
@@ -132,10 +145,17 @@ def main():
     import json
     OUT.write_text(json.dumps({
         "false_positive_check": {
-            "n_confirmed_false_positives": len(probs),
-            "n_still_predicted_play": len(high_conf),
-            "share_still_predicted": len(high_conf) / len(probs),
+            "scoring": "out-of-fold, 5-fold stratified",
+            "n_removed_by_fix": len(probs),
+            "n_predicted_play": len(high_conf),
+            "share_predicted_play": len(high_conf) / len(probs),
             "max_prob": max(p for _, p in probs),
+            "median_prob_removed": float(np.median(lost_scores)),
+            "median_prob_other_not_play": float(np.median(other_neg)),
+            "median_prob_labeled_play": float(np.median(positive_scores)),
+            "auroc_removed_vs_other_not_play": removed_vs_other,
+            "n_labeled_play": len(positive_scores),
+            "share_labeled_play_predicted_play": float(np.mean(np.array(positive_scores) >= 0.5)),
         },
         "true_positive_explanations": cases,
         "n_flipped_on_bare_play_alone": bare_play_only,

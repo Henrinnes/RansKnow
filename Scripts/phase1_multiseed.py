@@ -20,9 +20,13 @@ under 5 different stratified partitions, not full stochastic-training
 variance, and is reported as such rather than overclaimed.
 
 Usage:
-    python3 Scripts/phase1_multiseed.py
+    python3 Scripts/phase1_multiseed.py [--tasks dominant_tactic ...]
+
+--tasks reruns only those tasks and keeps the other entries already in the
+output file.
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -43,13 +47,15 @@ from rk_pipeline.tasks import register_tasks, TASKS  # noqa: E402
 OUT = ROOT / "outputs" / "experiments" / "phase1_multiseed.json"
 SEEDS = [0, 1, 2, 3, 4]
 
-# Best (feature, model) per task from Table 3. family's true best combo
+# Best (feature, model) per task from Table 3, with dominant_tactic limited
+# to representations that don't include the tactic counts its label is the
+# argmax of. family's true best combo
 # (embedding/logreg) needs the dedicated .venv-embeddings interpreter,
 # same documented fallback used everywhere else in this project when
 # run from the default environment.
 BEST_COMBO = {
     "relevance": ("tfidf", "gbm"),
-    "dominant_tactic": ("structured", "gbm"),
+    "dominant_tactic": ("tfidf", "gbm"),
     "platform": ("tfidf", "gbm"),
     "tool": ("tfidf", "logreg"),
     "family": ("tfidf", "logreg"),
@@ -69,12 +75,14 @@ def run_seed(task, feature_name, model_name, df, seed):
     return float(np.mean(fold_scores))
 
 
-def main():
+def main(only_tasks=None):
     df = load_features()
     register_tasks(df)
 
-    results = {}
+    results = json.loads(OUT.read_text()) if only_tasks else {}
     for task_name, (feature_name, model_name) in BEST_COMBO.items():
+        if only_tasks and task_name not in only_tasks:
+            continue
         task = TASKS.get(task_name)
         print(f"\n=== {task_name} ({feature_name}/{model_name}) ===")
         seed_scores = []
@@ -98,4 +106,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tasks", nargs="*")
+    main(parser.parse_args().tasks)

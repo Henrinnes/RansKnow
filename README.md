@@ -52,6 +52,9 @@ RansKnow/
 │   ├── build_gold_eval_set.py            # Phase 0.3 — stratified gold-annotation sample
 │   ├── merge_gold_annotations.py
 │   ├── build_gold_annotation_tool.py     # Builds outputs/Gold_Annotation_Tool.html
+│   ├── score_gold_against_pipeline.py    # Phase 0.3: Knowledge Agent precision/recall against human labels
+│   ├── precompute_external_embeddings.py # Phase 4: sentence embeddings for the 20 Newsgroups sanity check
+│   ├── phase4_leakage_audit.py           # Phase 4: leakage and confound checks on the OOD results
 │   ├── phase0_4_asr_spotcheck.py         # Phase 0.4 — ASR transcript quality spot-check
 │   ├── phase1_multiseed.py               # Phase 1 — multi-seed split variance for Table 3
 │   ├── phase2_calibration.py             # Phase 2 — calibration vs. weak labels
@@ -281,11 +284,11 @@ The dataset is accompanied by a full experiment and audit pipeline, written up i
 
 **Label-quality audit** — `Scripts/audit_family_aliases.py` found 9 of 41 ransomware-family aliases collide with ordinary English/business words (e.g. `play`, `hive`, `cactus`), inflating the top-detected family by roughly 3.5x before a context-window disambiguation fix.
 
-**Baselines (Phase 1)** — `run_experiment.py` sweeps tasks (relevance, dominant tactic, platform, tool, family) x features (structured, TF-IDF, sentence embeddings) x models (rule-based, logistic regression, random forest, GBM) x splits (stratified-random, channel-grouped, temporal). Weak-label macro-F1 reaches 0.90 on binary relevance and 0.81 on dominant-tactic, but stays weak (≤0.20) on the higher-cardinality family/tool taxonomies. `phase1_multiseed.py` re-runs the best combo per task across 5 stratified-random seeds to report variance.
+**Baselines (Phase 1)** — `run_experiment.py` sweeps tasks (relevance, dominant tactic, platform, tool, family) x features (structured, TF-IDF, sentence embeddings) x models (rule-based, logistic regression, random forest, GBM) x splits (stratified-random, channel-grouped, temporal). Weak-label macro-F1 reaches 0.90 on binary relevance and 0.62 on platform, 0.38 on dominant-tactic once structured features are excluded (they contain the counts its label is the argmax of), and stays weak (≤0.20) on the family/tool taxonomies. `phase1_multiseed.py` re-runs the best combo per task across 5 stratified-random seeds to report variance.
 
-**Calibration & conformal prediction (Phases 2–3)** — `phase2_calibration.py` / `phase3_conformal.py` measure calibration against weak labels (ECE 0.02–0.11; a Random Forest tree-vote-entropy signal separates label agreement from disagreement with AUROC up to 0.98) and split conformal prediction (close to 90% target coverage, no severe conditional-coverage collapse on two tested distribution-shift slices).
+**Calibration & conformal prediction (Phases 2–3)** — `phase2_calibration.py` / `phase3_conformal.py` measure calibration against weak labels (ECE 0.02–0.18; a Random Forest tree-vote-entropy signal separates label agreement from disagreement with AUROC 0.68–0.98) and split conformal prediction (0.91–0.93 coverage at a 90% target on the multiclass tasks, within 3 points on two corpus subsets).
 
-**Out-of-distribution detection (Phase 4)** — `phase4_ood_detection.py` tests four distribution-shift setups. Standard softmax-confidence OOD detection performs near chance, including a diagnosed failure mode where the classifier's most-confident predictions coincide with the same signature off-topic input produces; only embedding-based Mahalanobis distance clears chance, and only on one of four setups.
+**Out-of-distribution detection (Phase 4)** — `phase4_ood_detection.py` tests four distribution-shift setups. Softmax-confidence detectors fail the sanity check against off-topic text (AUROC 0.62), because the classifier confidently labels that text as containing no tactic. Embedding-based Mahalanobis distance passes it (0.94 after controlling for length and formatting) and detects a channel-type shift (0.64 with ID channels held out), but scores well below chance on the two setups whose OOD videos are selected for naming a family. `phase4_leakage_audit.py` checks these results for shared channels, duplicates, unmatched family mentions, and length and formatting effects.
 
 **Robustness (Phase 5)** — channel-identity leakage (`phase5_channel_leakage.py`), transcript-length confounds (`phase5_length_confound.py`), counterfactual explanations probing the Family=Play word-collision fragility (`phase5_counterfactual_explanations.py`), and an untargeted perturbation-robustness sweep (`phase5_perturbation_robustness.py`).
 

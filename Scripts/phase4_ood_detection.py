@@ -1,15 +1,14 @@
 """
 RansKnow Phase 4 -- out-of-distribution (OOD) detection.
 
-Unlike Phases 1-3 (paper Sections 5-6), this phase's results are NOT
-subject to the weak-label scope note (Section sec:gold-scope): OOD
-detection asks whether a model's own confidence or embedding-space
+OOD detection asks whether a model's own confidence or embedding-space
 behavior differs between in-distribution (ID) and out-of-distribution
-(OOD) input, which is answerable without knowing whether either input's
-*label* is correct. Ground truth here is "which population did this
-input come from," which is known by construction in every setup below.
+(OOD) input. Scoring it does not need a correct dominant-tactic label, but
+the weak labels are not fully out of the picture: the shared classifier is
+trained on them, and setups 1 and 3 define their OOD populations using the
+regex's Family_List. Only setups 2 and 4 are free of it.
 
-Four setups, each with a clean, known ID/OOD split:
+Four setups:
 
 1. temporal_emergence -- ID: pre-2024 videos. OOD: post-2024 videos
    mentioning a ransomware family that never appears before 2024 in this
@@ -27,9 +26,9 @@ Four setups, each with a clean, known ID/OOD split:
    input at all before trusting them on the harder setups 1-3.
 
 Four detection methods, all built from a single shared classifier
-(dominant_tactic, structured features, LightGBM -- the paper's
-strongest non-circular result and a natural multiclass fit), refit
-fresh on each setup's ID-only training pool:
+(dominant_tactic, TF-IDF features, LightGBM -- the best dominant_tactic
+result that does not hand the model the tactic counts its label is the
+argmax of), refit fresh on each setup's ID-only training pool:
 
 - max_softmax_probability (MSP): score = 1 - max_c p(c|x). Higher = more OOD.
 - energy: score = -logsumexp(raw pre-softmax margins). Higher = more OOD.
@@ -41,8 +40,11 @@ fresh on each setup's ID-only training pool:
   via Scripts/precompute_embeddings.py under .venv-embeddings and cached
   to outputs/embedding_cache_1034.npz -- loaded here as a plain array,
   no torch dependency at OOD-detection time). Score = min over classes
-  of Mahalanobis distance to that class's ID-train mean, using the
-  pooled ID-train covariance (Lee et al. 2018).
+  of Mahalanobis distance to that class's ID-train mean, using a
+  Ledoit-Wolf shrinkage estimate of the pooled ID-train covariance (Lee
+  et al. 2018). Shrinkage matters here: the temporal setup has 162 training
+  videos in 384 dimensions, so the sample covariance is singular. The
+  earlier pinv-plus-tiny-ridge estimate is kept as "mahalanobis_pinv".
 - conformal_nonconformity: Section 6's LAC score, s(x) = 1 - p(predicted
   class | x), calibrated to a 90%-target-coverage threshold q_hat on a
   held-out ID calibration split. Reported two ways: AUROC (for direct
@@ -53,9 +55,8 @@ fresh on each setup's ID-only training pool:
   construction; OOD populations exceeding well above that rate is the
   conformal-specific signal).
 
-For setups 1-3, "external_corpus" for that setup's classifier is the
-withheld RansKnow test split, not 20 Newsgroups -- see external_corpus
-setup for the cross-corpus check specifically.
+Every AUROC gets a stratified bootstrap 95% interval. Setups 1-3 also
+report diagnostics for why Mahalanobis might invert (see _diagnostics).
 
 Usage:
     python3 Scripts/phase4_ood_detection.py
@@ -68,6 +69,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
+from scipy.stats import spearmanr
+from sklearn.covariance import LedoitWolf
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import roc_auc_score
@@ -83,10 +86,12 @@ from rk_pipeline.tasks import register_tasks, TASKS  # noqa: E402
 
 OUT = ROOT / "outputs" / "phase4_ood.json"
 EMBED_CACHE = ROOT / "outputs" / "embedding_cache_1034.npz"
+EXTERNAL_EMBED_CACHE = ROOT / "outputs" / "embedding_cache_20newsgroups.npz"
+N_BOOTSTRAP = 2000
 ALPHA = 0.10
 SEED = 0
 
-TASK_NAME, FEATURE_NAME = "dominant_tactic", "structured"
+TASK_NAME, FEATURE_NAME = "dominant_tactic", "tfidf"
 
 POST2023_EMERGING_FAMILIES = ["Maze", "Medusa", "Black Basta", "INC", "Cactus"]
 RARE_FAMILY = "Cl0p"
@@ -102,7 +107,7 @@ def _has_family(df, name):
 
 
 def _fit_classifier(train_df):
-    """Fresh dominant_tactic/structured/GBM fit on an ID-only pool.
+    """Fresh dominant_tactic/TF-IDF/GBM fit on an ID-only pool.
     Returns (estimator, feature_builder, classes)."""
     task = TASKS.get(TASK_NAME)
     builder = FEATURES.get(FEATURE_NAME)()
@@ -131,33 +136,38 @@ def _msp_and_energy(est, builder, df):
     return msp_score, energy_score, proba
 
 
-def _mahalanobis_setup(train_df, id_test_df, ood_df, est, builder, embeddings):
+def _mahalanobis_scores(E_train, train_pred, E_id, E_ood, method="ledoit_wolf"):
     """Class-conditional Gaussian Mahalanobis distance on real sentence
     embeddings, using the shared classifier's predicted class on the
     ID-train pool to define class-conditional groups (Lee et al. 2018),
     since these tasks don't have independently-verified labels either
     (see scope note) -- using predicted rather than weak-label classes
     keeps this method's assumptions consistent with the rest of the paper."""
-    def emb_matrix(d):
-        return np.stack([embeddings[vid] for vid in d["Video_ID"]])
-
-    train_pred = est.predict(builder.transform(train_df))
-    E_train = emb_matrix(train_df)
-
     classes = np.unique(train_pred)
     means = {c: E_train[train_pred == c].mean(axis=0) for c in classes if (train_pred == c).sum() > 1}
     centered = np.vstack([E_train[train_pred == c] - means[c] for c in means])
-    cov = np.cov(centered, rowvar=False) + 1e-6 * np.eye(centered.shape[1])
-    cov_inv = np.linalg.pinv(cov)
+    if method == "ledoit_wolf":
+        cov_inv = LedoitWolf(assume_centered=True).fit(centered).precision_
+    else:
+        cov = np.cov(centered, rowvar=False) + 1e-6 * np.eye(centered.shape[1])
+        cov_inv = np.linalg.pinv(cov)
 
-    def score(d):
-        E = emb_matrix(d)
+    def score(E):
         dists = np.stack([
             np.einsum("ij,jk,ik->i", E - mu, cov_inv, E - mu) for mu in means.values()
         ], axis=1)
         return dists.min(axis=1)
 
-    return score(id_test_df), score(ood_df)
+    return score(E_id), score(E_ood)
+
+
+def _mahalanobis_setup(train_df, id_test_df, ood_df, est, builder, embeddings, method="ledoit_wolf"):
+    def emb_matrix(d):
+        return np.stack([embeddings[vid] for vid in d["Video_ID"]])
+
+    train_pred = est.predict(builder.transform(train_df))
+    return _mahalanobis_scores(emb_matrix(train_df), train_pred, emb_matrix(id_test_df),
+                               emb_matrix(ood_df), method)
 
 
 def _conformal_flags(train_df, calib_df, id_test_df, ood_df, est, builder):
@@ -194,6 +204,53 @@ def _auroc(id_scores, ood_scores):
         return None
 
 
+def _auroc_ci(id_scores, ood_scores):
+    """Stratified bootstrap 95% interval (ID and OOD resampled separately)."""
+    rng = np.random.default_rng(SEED)
+    stats = []
+    for _ in range(N_BOOTSTRAP):
+        a = rng.choice(id_scores, size=len(id_scores), replace=True)
+        b = rng.choice(ood_scores, size=len(ood_scores), replace=True)
+        stats.append(_auroc(a, b))
+    return [float(np.percentile(stats, 2.5)), float(np.percentile(stats, 97.5))]
+
+
+def _diagnostics(id_test_df, ood_df, id_maha, ood_maha):
+    """Two candidate explanations for a below-chance Mahalanobis AUROC.
+
+    Selection: setups 1 and 3 pick OOD videos for naming a family, while
+    their ID pools include videos that name none. Re-scoring against only
+    family-naming ID videos removes that difference.
+
+    Length: mean-pooling more chunks averages out more variation, which
+    pulls long videos toward the class means. Regressing log distance on
+    log word count (fit on ID only) removes that dependence."""
+    def words(d):
+        return np.array([len(load_transcript(p).split()) for p in d["Transcript_Path"]])
+
+    w_id, w_ood = words(id_test_df), words(ood_df)
+    fam_id = (id_test_df["Family_Count"] > 0).to_numpy()
+    fam_ood = (ood_df["Family_Count"] > 0).to_numpy()
+    rho, _ = spearmanr(np.concatenate([w_id, w_ood]), np.concatenate([id_maha, ood_maha]))
+
+    slope, intercept = np.polyfit(np.log(np.maximum(w_id, 1)), np.log(id_maha), 1)
+    resid = lambda d, w: np.log(d) - (slope * np.log(np.maximum(w, 1)) + intercept)
+    r_id, r_ood = resid(id_maha, w_id), resid(ood_maha, w_ood)
+
+    out = {
+        "median_words_id": float(np.median(w_id)), "median_words_ood": float(np.median(w_ood)),
+        "share_naming_a_family_id": float(fam_id.mean()), "share_naming_a_family_ood": float(fam_ood.mean()),
+        "spearman_distance_vs_words": float(rho),
+        "auroc_length_adjusted": _auroc(r_id, r_ood),
+        "auroc_length_adjusted_ci95": _auroc_ci(r_id, r_ood),
+        "n_id_naming_a_family": int(fam_id.sum()),
+    }
+    if fam_id.sum() >= 5:
+        out["auroc_family_matched_id"] = _auroc(id_maha[fam_id], ood_maha)
+        out["auroc_family_matched_id_ci95"] = _auroc_ci(id_maha[fam_id], ood_maha)
+    return out
+
+
 def run_setup(name, train_df, id_test_df, ood_df, embeddings):
     print(f"\n=== {name} === (ID train n={len(train_df)}, ID test n={len(id_test_df)}, OOD n={len(ood_df)})")
     est, builder, classes = _fit_classifier(train_df)
@@ -209,6 +266,9 @@ def run_setup(name, train_df, id_test_df, ood_df, embeddings):
     id_maha, ood_maha = _mahalanobis_setup(train_df, id_test_df, ood_df, est, builder, embeddings)
     auroc_maha = _auroc(id_maha, ood_maha)
     print(f"  Mahalanobis AUROC={auroc_maha}")
+    id_pinv, ood_pinv = _mahalanobis_setup(train_df, id_test_df, ood_df, est, builder, embeddings, method="pinv")
+    diagnostics = _diagnostics(id_test_df, ood_df, id_maha, ood_maha)
+    print(f"  Diagnostics: {diagnostics}")
 
     train_idx, calib_idx = train_test_split(np.arange(len(train_df)), test_size=0.25, random_state=SEED)
     calib_df = train_df.iloc[calib_idx].reset_index(drop=True)
@@ -225,6 +285,10 @@ def run_setup(name, train_df, id_test_df, ood_df, embeddings):
         "n_id_train": len(train_df), "n_id_test": len(id_test_df), "n_ood": len(ood_df),
         "auroc": {"max_softmax_probability": auroc_msp, "energy": auroc_energy,
                   "mahalanobis": auroc_maha, "conformal_nonconformity": auroc_conf},
+        "auroc_ci95": {"max_softmax_probability": _auroc_ci(id_msp, ood_msp), "energy": _auroc_ci(id_energy, ood_energy),
+                       "mahalanobis": _auroc_ci(id_maha, ood_maha), "conformal_nonconformity": _auroc_ci(id_conf, ood_conf)},
+        "mahalanobis_pinv": _auroc(id_pinv, ood_pinv),
+        "mahalanobis_diagnostics": diagnostics,
         "conformal_qhat": qhat, "conformal_id_exceed_rate": id_exceed, "conformal_ood_exceed_rate": ood_exceed,
     }
 
@@ -265,12 +329,11 @@ def setup_leave_rare_family_out(df, embeddings):
 
 
 def setup_external_corpus(df, embeddings):
-    """Sanity check only -- uses a dedicated TF-IDF classifier (not the
-    shared structured-feature one) since 20 Newsgroups text has no
-    Knowledge Agent structured columns. Mahalanobis/conformal need the
-    same fitted classifier's embedding/probability space, so this setup
-    reimplements MSP/energy/conformal on TF-IDF and skips Mahalanobis
-    (20 Newsgroups has no precomputed sentence embedding in the cache)."""
+    """Sanity check only. Same classifier type as setups 1-3, fit directly
+    on text because 20 Newsgroups has no Transcript_Path. Mahalanobis uses
+    outputs/embedding_cache_20newsgroups.npz (see
+    Scripts/precompute_external_embeddings.py), which also defines which
+    documents count as non-empty."""
     print(f"\n=== external_corpus === (sanity check: RansKnow vs 20 Newsgroups)")
     task = TASKS.get(TASK_NAME)
     train_idx, test_idx = train_test_split(np.arange(len(df)), test_size=0.25, random_state=SEED)
@@ -289,7 +352,8 @@ def setup_external_corpus(df, embeddings):
 
     news = fetch_20newsgroups(subset="train", categories=["rec.sport.baseball", "sci.space"],
                                remove=("headers", "footers", "quotes"))
-    ood_texts = list(news.data)
+    ext = np.load(EXTERNAL_EMBED_CACHE)
+    ood_texts = [news.data[i] for i in ext["doc_index"]]
     X_ood = vec.transform(ood_texts)
 
     proba_id = est.predict_proba(X_id)
@@ -303,6 +367,27 @@ def setup_external_corpus(df, embeddings):
     auroc_energy = _auroc(id_energy, ood_energy)
     print(f"  MSP    AUROC={auroc_msp}")
     print(f"  Energy AUROC={auroc_energy}")
+
+    classes = np.array(est.classes_)
+    top_ood = classes[proba_ood.argmax(axis=1)]
+    values, counts = np.unique(top_ood, return_counts=True)
+    top_class = str(values[counts.argmax()])
+    confidence = {
+        "most_predicted_class_on_ood": top_class,
+        "share_of_ood_predicted_as_it": float(counts.max() / len(top_ood)),
+        "share_of_id_predicted_as_it": float((classes[proba_id.argmax(axis=1)] == top_class).mean()),
+        "mean_pmax_id": float(proba_id.max(axis=1).mean()),
+        "mean_pmax_ood": float(proba_ood.max(axis=1).mean()),
+    }
+    print(f"  {confidence}")
+
+    def emb_matrix(d):
+        return np.stack([embeddings[vid] for vid in d["Video_ID"]])
+
+    id_maha, ood_maha = _mahalanobis_scores(emb_matrix(train_df), est.predict(X_train), emb_matrix(id_test_df), ext["embedding"])
+    id_pinv, ood_pinv = _mahalanobis_scores(emb_matrix(train_df), est.predict(X_train), emb_matrix(id_test_df), ext["embedding"], method="pinv")
+    auroc_maha = _auroc(id_maha, ood_maha)
+    print(f"  Mahalanobis AUROC={auroc_maha}")
 
     fit_idx, calib_idx = train_test_split(np.arange(len(train_df)), test_size=0.25, random_state=SEED)
     fit_texts = [train_texts[i] for i in fit_idx]
@@ -338,10 +423,13 @@ def setup_external_corpus(df, embeddings):
     return {
         "n_id_train": len(train_df), "n_id_test": len(id_test_df), "n_ood": len(ood_texts),
         "auroc": {"max_softmax_probability": auroc_msp, "energy": auroc_energy,
-                  "mahalanobis": None, "conformal_nonconformity": auroc_conf},
+                  "mahalanobis": auroc_maha, "conformal_nonconformity": auroc_conf},
+        "auroc_ci95": {"max_softmax_probability": _auroc_ci(id_msp, ood_msp), "energy": _auroc_ci(id_energy, ood_energy),
+                       "mahalanobis": _auroc_ci(id_maha, ood_maha), "conformal_nonconformity": _auroc_ci(id_conf, ood_conf)},
+        "mahalanobis_pinv": _auroc(id_pinv, ood_pinv),
+        "confidence_on_external": confidence,
+        "n_empty_documents_dropped": len(news.data) - len(ood_texts),
         "conformal_qhat": qhat, "conformal_id_exceed_rate": id_exceed, "conformal_ood_exceed_rate": ood_exceed,
-        "note": "Mahalanobis skipped -- 20 Newsgroups has no precomputed sentence embedding "
-                "in outputs/embedding_cache_1034.npz (RansKnow-only cache).",
     }
 
 

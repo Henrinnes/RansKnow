@@ -14,14 +14,13 @@
 % accordingly -- their formal properties still hold relative to the
 % weak-label distribution, just with a correspondingly weaker
 % interpretation, stated explicitly rather than implied. OOD Detection
-% (Sec 7) needs no such caveat: it doesn't depend on label correctness at
-% all, only on whether the model's own confidence/embedding behavior
-% differs on distributionally-shifted input. Remaining \todo{} markers are
-% real open items, not silent gaps.
+% (Sec 8) needs no correct dominant-tactic label to score, but two of its
+% four setups define their OOD populations with the regex. Remaining
+% \todo{} markers are real open items, not silent gaps.
 %
 % Target: Computers & Security (Elsevier), using the standard elsarticle
 % class that Elsevier provides for all its journals. The NeurIPS 2026
-% E&D Track version of this paper is preserved on the main branch.
+% E&D Track version of this paper is preserved in commit 9682a6d.
 %
 % Class options: [preprint,12pt] is the single-column manuscript layout
 % for submission; Elsevier typesets the final two-column version itself
@@ -47,8 +46,18 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage[capitalize]{cleveref}
+\usepackage[export]{adjustbox}
 
 \hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+% Long file paths and URLs break at these characters instead of running
+% into the margin; \emergencystretch does the same for long \texttt terms.
+\def\UrlBreaks{\do\/\do\_\do\-\do\.}
+\emergencystretch=2em
+
+% Every table scales down to the text width only if it would otherwise
+% overflow it.
+\newenvironment{fittable}{\begin{adjustbox}{max width=\textwidth}}{\end{adjustbox}}
 
 % Deliberately not using the todonotes package: its margin-note/inline
 % float mechanism collided with this document's real tables and produced
@@ -67,7 +76,7 @@
 \begin{frontmatter}
 
 \title{RansKnow: An Open Dataset of Ransomware-Related YouTube
-Transcripts with MITRE ATT\&CK Annotations}
+Transcripts with Regex-Extracted MITRE ATT\&CK Features}
 
 \author[nu]{Henry Kabuye\corref{cor1}}
 \ead{h.kabuye@northumbria.ac.uk}
@@ -92,30 +101,31 @@ audit found that 9 of 41 ransomware-family aliases collide with ordinary
 English or business words (e.g.\ \texttt{play}, \texttt{hive},
 \texttt{cactus}) badly enough to inflate the single most-detected family
 by roughly $3.5\times$ before a context-based disambiguation fix, and a
-counterfactual-explanation analysis later in the paper shows a trained
-classifier partially inherited that same word-level fragility even
-after the fix. We state plainly here, not only in a limitations section,
+held-out counterfactual analysis finds a weak trace of the same
+word-level fragility in a classifier trained after the fix. We state plainly here, not only in a limitations section,
 that this project does not include an independently human-annotated
 evaluation set: every baseline, calibration, and conformal-prediction
 result we report is agreement with this audited-but-imperfect extraction
 pipeline, not verified real-world accuracy, and we frame every such
 number accordingly throughout. Under that scope, weak-label baselines
-reach macro-F1 0.90 on a binary relevance screen and 0.81 on dominant-
-tactic classification, but remain weak (macro-F1 $\leq$0.20) on the
-higher-cardinality family and tool taxonomies; calibration against the
-weak labels is moderate (Expected Calibration Error 0.02--0.11) with a
-Random Forest tree-vote-entropy signal that separates label agreement
-from disagreement well (AUROC up to 0.98); and split conformal
-prediction achieves close to its 90\% target coverage with no severe
-conditional-coverage collapse on two out-of-calibration-distribution
-slices tested. Out-of-distribution detection, which does not depend on
-label correctness, tells a more cautionary story: standard softmax-
-confidence-based methods perform near chance across four realistic
-distribution-shift setups, including a diagnosed domain-specific failure
-mode where the classifier's most confident predictions coincide with
-exactly the signature that off-topic input also produces; only
-embedding-based Mahalanobis distance clears chance, and only on one of
-the four setups. We release the corpus, the full extraction and audit
+reach macro-F1 0.90 on a binary relevance screen and 0.62 on platform,
+but only 0.38 on dominant-tactic classification once the model is denied
+the tactic counts its label is computed from, and remain weak
+($\leq$0.20) on the family and tool taxonomies. Expected Calibration
+Error against the weak labels ranges from 0.02 to 0.18, a Random Forest
+tree-vote-entropy signal separates label agreement from disagreement
+with AUROC 0.68--0.98, and split conformal prediction reaches
+0.91--0.93 coverage at its 90\% target on the two multiclass tasks,
+holding within 3 points on two corpus subsets. Out-of-distribution
+detection tells a more cautionary story: softmax-confidence methods fail
+an obvious sanity check (AUROC 0.62 against off-topic news posts, 99\%
+of which are confidently classified as containing no tactic), while
+embedding-based Mahalanobis distance passes it (AUROC 0.94 after
+controlling for document length and transcript formatting) and detects a
+channel-type shift (0.64 with in-distribution channels held out) but
+scores well below chance on two setups
+whose out-of-distribution videos are selected for naming a ransomware
+family. We release the corpus, the full extraction and audit
 pipeline, and all experiment code openly, and argue that the audit
 methodology -- not just its findings -- is reusable by any weak-label
 security-NLP dataset built the same way.
@@ -126,8 +136,8 @@ security-NLP dataset built the same way.
 \begin{highlights}
 \item Open corpus of 1,128 ransomware-related YouTube video records from 92 channels
 \item 9 of 41 ransomware family aliases collide with ordinary English or business words
-\item Weak-label baselines reach macro-F1 0.90 on relevance and 0.81 on dominant tactic
-\item Softmax-confidence OOD detectors perform near chance on four distribution shifts
+\item Weak-label baselines reach macro-F1 0.90 on relevance and 0.38 on dominant tactic
+\item Softmax OOD detectors fail a sanity check that embedding distance passes at 0.94
 \item Corpus, extraction pipeline, audit and experiment code are released openly
 \end{highlights}
 
@@ -167,7 +177,8 @@ for downstream label quality, not just as a data-engineering footnote
 This paper makes five contributions. First, RansKnow itself: 1{,}128
 video records, 1{,}034 with extracted transcripts, from 92 cybersecurity
 YouTube channels, with MITRE ATT\&CK-aligned structured features
-(\Cref{sec:construction}). Second, a label-quality audit methodology
+(\Cref{sec:construction}), released with its code at
+\url{https://github.com/Henrinnes/RansKnow}. Second, a label-quality audit methodology
 and its concrete findings (\Cref{sec:audit}): a systematic,
 dictionary-driven search for generic-word alias collisions in the
 regex-based extraction pipeline, which found that 9 of 41 family
@@ -184,19 +195,39 @@ evaluation set held out from the labeling pipeline
 (\Cref{sec:gold-scope}), and every quantitative claim from
 \Cref{sec:baselines} through \Cref{sec:conformal} should be read with
 that scope in mind. Fourth, out-of-distribution robustness results
-(\Cref{sec:ood}) that are explicitly \emph{not} subject to that caveat,
-since they measure whether a model's own confidence or embedding
-behavior differs on distributionally shifted input, which is answerable
-without knowing whether any label is correct. Fifth, counterfactual and
+(\Cref{sec:ood}), which need no correct dominant-tactic label to score,
+although two of the four setups define their out-of-distribution
+populations with the regex. Fifth, counterfactual and
 perturbation-robustness interpretability results
-(\Cref{sec:interpretability}) that connect back to the audit: a trained
-classifier is shown to have partially inherited the same word-level
-fragility Finding A identifies in the labeling pipeline itself, evidence
-that the audit's concerns are not confined to the raw labels but
-propagate into what gets learned from them.
+(\Cref{sec:interpretability}) that connect back to the audit: a
+classifier trained on the fixed labels, scored only on videos it did not
+train on, still ranks the videos the fix removed slightly above other
+negative videos (AUROC 0.58), a weak trace of the word-level fragility
+Finding A identifies in the labeling pipeline itself.
 
 \section{Related Work}
 \label{sec:related}
+
+\textbf{Ransomware research.} Recent surveys concentrate on ransomware
+behavior and defense: \citet{beaman2021ransomware} review advances in
+prevention and detection, and \citet{oz2022survey} survey ransomware
+evolution, taxonomy, and defense solutions. \citet{meland2020raas} study
+the ransomware-as-a-service economy through two years of observation of
+darknet markets and forums. RansKnow addresses a different question: how
+practitioners describe ransomware in public talks and walkthroughs, and
+how reliably that description can be turned into structured data.
+
+\textbf{Mapping threat reports to ATT\&CK.} A related line of work
+extracts structured behavior from written reports. TTPDrill
+\citep{husari2017ttpdrill} extracts threat actions from threat reports
+and aligns them with attack patterns, rcATT \citep{legoy2020rcatt}
+compares classifiers for retrieving ATT\&CK tactics and techniques from
+reports and releases a tool based on the results, and
+\citet{orbinato2022mapping} report an experimental study of
+machine-learning classification of unstructured threat intelligence into
+attack techniques. These works take written text as input. RansKnow
+applies a deterministic regex method to mostly ASR transcripts and audits
+the labels that method produces.
 
 \textbf{Ransomware and cyber-threat-intelligence datasets.} The MITRE
 ATT\&CK framework \citep{strom2018attack} that RansKnow's tactic
@@ -217,9 +248,9 @@ independent researchers) than a CTI report's house style, and its
 structured features are produced entirely by an audited regex/keyword
 pipeline (\Cref{sec:audit}) rather than human annotation -- a different,
 explicitly weaker, point on the label-quality spectrum those two
-datasets occupy, traded for scale and openness (no comparable open,
-transcript-level, MITRE-aligned video corpus exists at the time of
-writing).
+datasets occupy, traded for scale and openness (we are not aware of a
+comparable open, transcript-level, MITRE-aligned video corpus, although
+our search was not a systematic review).
 
 \textbf{Weak and distant supervision.} Using an automated heuristic
 in place of human labels is a well-studied tradeoff, not a shortcut
@@ -236,7 +267,14 @@ harder against a black-box combination of many weak labelers) but
 removes Snorkel-style noise-cancellation-via-redundancy as a mitigation
 --- a tradeoff made explicit rather than left implicit, and the direct
 motivation for \Cref{sec:gold-scope}'s scope note running through every
-downstream section.
+downstream section. Label-quality research reaches similar concerns from
+the model side: confident learning \citep{northcutt2021confident}
+characterizes and identifies label errors in datasets, and
+\citet{northcutt2021pervasive} estimate an average of 3.3\% label errors
+across the test sets of 10 widely used benchmarks and show that such
+errors can destabilize benchmark results. RansKnow's audit starts from
+the labeling function instead, searching its alias list for collisions
+with ordinary vocabulary.
 
 \textbf{Conformal prediction and out-of-distribution detection.} Split
 conformal prediction \citep{vovk2005algorithmic, lei2018distribution}
@@ -257,9 +295,11 @@ off-topic input also produces).
 \section{Dataset Construction}
 \label{sec:construction}
 
-RansKnow \citep{ransknow_kaggle} consists of 1{,}128 video records sourced
+RansKnow \citep{ransknow_kaggle, ransknow_github} consists of 1{,}128 video records sourced
 from 92 cybersecurity YouTube channels, of which 1{,}034 have an extracted
-transcript with real content; the remaining 94\footnote{Verified directly
+transcript with real content (four of these videos are listed twice, under
+two registry entries for the same organization, so the 1{,}034 transcripts
+cover 1{,}030 distinct videos); the remaining 94\footnote{Verified directly
   against the released \texttt{transcripts/} tree, not assumed from
   $1128-1034$: all 94 are confirmed failed transcript extraction (no
   method in the fetch cascade, \Cref{sec:transcripts}, produced usable
@@ -276,8 +316,8 @@ yielded usable transcripts, 1 was a confirmed duplicate of an existing
 Batch 1 channel, 4 had no discoverable dedicated YouTube channel, and 4
 resolved to real channels with zero ransomware-keyword-matching content in
 their upload history. Full channel-level provenance for both batches is in
-\texttt{rubrics/Dataset\_Channel\_Registry\_Updated\_50\_fixed\_urls.xlsx}
-(Batch 1) and \texttt{rubrics/Dataset\_Channel\_Registry\_Batch2.xlsx}
+\path{rubrics/Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx}
+(Batch 1) and \path{rubrics/Dataset_Channel_Registry_Batch2.xlsx}
 (Batch 2), released alongside the corpus rather than reproduced inline as
 a 92-row table.
 
@@ -285,12 +325,12 @@ a 92-row table.
 Within each channel, videos were selected by scanning recent uploads for a
 fixed 21-term keyword list (\texttt{ransomware}, \texttt{extortion},
 \texttt{lockbit}, \texttt{incident response}, \dots; full list in
-Appendix~\ref{app:keywords}) matched against title and description, capped
+\ref{app:keywords}) matched against title and description, capped
 at 20 videos per channel and a minimum duration of 5 minutes (short clips
 and trailers excluded). This is a convenience sample, not a random or
 exhaustive one, and the selection mechanism itself introduces bias worth
 naming rather than assuming away: a video is only in scope if its
-\emph{title or description} happens to contain one of the 20 terms, which
+\emph{title or description} happens to contain one of the 21 terms, which
 conditions the corpus on each channel operator's own titling and
 SEO/description-writing habits. A channel that discusses ransomware
 extensively but titles episodes generically (e.g.\ by client-engagement
@@ -307,7 +347,8 @@ not a neutral technical filtering step.
 \label{sec:transcripts}
 Transcripts were acquired via a three-stage cascade: (1) the YouTube Data
 API's official captions where available; (2) \texttt{yt-dlp}'s
-auto-generated captions; (3) local Whisper transcription as a fallback.
+auto-generated captions; (3) local Whisper transcription
+\citep{radford2023whisper} as a fallback.
 \textbf{This cascade matters more than a footnote}: only 74 of 1{,}034
 transcripts (7.2\%) came from official captions. 959 (92.7\%) are ASR
 output -- 554 from \texttt{whisper\_base} (the smallest, least accurate
@@ -343,13 +384,17 @@ $\sim$15 tokens of the match) was applied and reduces false-positive
 volume substantially without eliminating it -- residual false positives
 still occur when context vocabulary is itself dense (see
 \texttt{Scripts/audit\_family\_aliases.py} for the audit methodology and
-\Cref{tab:alias-audit} for before/after counts).
+\Cref{tab:alias-audit} for before/after counts). The precision and recall
+of the fixed labels have not been measured against human judgment, so
+\Cref{tab:alias-audit} shows how many detections the fix removed, not how
+many of the remaining detections are correct.
 
 \begin{table}[htbp]
 \centering
 \caption{Before/after family mention counts for the 9 flagged aliases,
   windowed-context disambiguation applied. \texttt{Play} alone accounted
-  for 386 of 494 (78\%) of all family-tagged videos before the fix.}
+  for 386 of 465 (83\%) of the family-tagged videos in the audit before
+  the fix.}
 \label{tab:alias-audit}
 \begin{tabular}{lrrr}
 \toprule
@@ -420,11 +465,18 @@ project; a single-investigator pass was considered as a fallback and
 rejected as still too close to the system under evaluation to serve as
 independent ground truth in a way worth claiming in a paper.
 
+\todo{Decide before submission. If the blind two-annotator pass is
+completed (\texttt{Scripts/score\_gold\_against\_pipeline.py}), report its
+agreement and precision figures here and revise this section, the
+abstract, the introduction, the limitations, and the conclusion to match.
+Otherwise delete this note and keep the scope statement below.}
+
 The consequence is stated here plainly, and repeated at the point every
 affected result is reported, rather than left as a single Limitations
 bullet a reader could miss: \textbf{every quantitative result in
-Section~\ref{sec:baselines} onward, with the explicit exception of
-Section~\ref{sec:ood}'s out-of-distribution results, measures agreement
+Section~\ref{sec:baselines} onward, apart from the population-separation
+scores in Section~\ref{sec:ood} and the behavioral checks in
+Section~\ref{sec:interpretability}, measures agreement
 with the audited Knowledge Agent extraction pipeline (Section~\ref{sec:audit}),
 not verified accuracy against human judgment.} Section~\ref{sec:audit}
 demonstrates concretely that this pipeline's labels contain real,
@@ -452,30 +504,34 @@ occurrences in the corpus), and a ransomware-relevance binary screen
 \centering
 \caption{Task taxonomy.}
 \label{tab:tasks}
+\begin{fittable}
 \begin{tabular}{llrl}
 \toprule
 Task & Type & Classes & Label source \\
 \midrule
-Family              & multi-label            & 18 & alias regex match (audited, \S\ref{sec:finding-a}) \\
-Dominant tactic      & multi-class (+none)    & 11 & max of 10 tactic-pattern counts \\
-Platform signal      & multi-class (+none)    &  4 & max of 3 platform-pattern counts \\
-Tool mentions        & multi-label            &  7 & per-tool regex match \\
+Family              & multi-label            & 18 & alias regex (\S\ref{sec:finding-a}) \\
+Dominant tactic      & multi-class (+none)    & 11 & max of 10 tactic counts \\
+Platform signal      & multi-class (+none)    &  4 & max of 3 platform counts \\
+Tool mentions        & multi-label            &  7 & per-tool regex \\
 Ransomware-relevant   & binary                 &  2 & derived \\
 \bottomrule
 \end{tabular}
+\end{fittable}
 \end{table}
 
 \subsection{Model ladder and validation protocol}
-Each task is evaluated over three feature representations (structured
-Knowledge Agent columns, TF-IDF, mean-pooled sentence embeddings\footnote{384-dim
+Each task is evaluated over two feature representations (TF-IDF and
+mean-pooled sentence embeddings\footnote{384-dim
   \texttt{all-MiniLM-L6-v2}, chunked at $\sim$200 words per chunk and
   mean-pooled, computed via a dedicated Python environment
   (\texttt{torch}~2.5.1) since the reference implementation's default
   environment ships an older \texttt{torch} that cannot satisfy
-  \texttt{sentence\_transformers}' requirements; see
-  \texttt{Scripts/precompute\_embeddings.py}.}) and five models (the
+  \texttt{sentence\_transformers}' \citep{reimers2019sbert} requirements; see
+  \texttt{Scripts/precompute\_embeddings.py}.}), with structured Knowledge
+Agent columns added for \texttt{family} and \texttt{dominant\_tactic}
+only, and five models (the
 rule-based Knowledge Agent itself as baseline 0, Logistic Regression,
-Linear SVM, Random Forest, LightGBM), under three cross-validation
+Linear SVM, Random Forest, LightGBM \citep{ke2017lightgbm}), under three cross-validation
 protocols: stratified random $k$-fold, \texttt{GroupKFold} by
 \texttt{Channel\_ID} (to detect channel-style leakage -- a model can learn
 ``this is CrowdStrike's narration style'' instead of the content), and a
@@ -490,35 +546,40 @@ Agent's own extraction, not verified accuracy. The rule-based Knowledge
 Agent baseline scores a tautological macro-F1 of 1.000 on every task
 (checked against its own labels by construction; included as baseline 0,
 not as evidence of anything) and is omitted from \Cref{tab:results}
-accordingly.
+accordingly. Structured features are excluded from the dominant-tactic
+comparison for a related reason: they contain the tactic counts its label
+is the argmax of. That combination scores 0.813 with LightGBM, which
+measures how well a tree model learns an argmax over its own inputs, so
+\Cref{tab:results} reports the best representation without those counts.
 
 \begin{table}[htbp]
 \centering
-\caption{Best stratified-CV macro-F1 per task, across every representation
-  (structured / TF-IDF / embedding) and trained model (LogReg, Linear SVM,
-  Random Forest, GBM) tried. Weak-label agreement, not verified accuracy
+\caption{Best stratified-CV macro-F1 per task, across the eligible
+  representations and trained models (LogReg, Linear SVM, Random Forest,
+  GBM). Weak-label agreement, not verified accuracy
   (\S\ref{sec:gold-scope}). Mean~$\pm$~std is across 5 stratified-random
   split seeds (0--4) at the reported (representation, model) cell, model
   \texttt{random\_state} held fixed -- see the paragraph below the table.}
 \label{tab:results}
+\begin{fittable}
 \begin{tabular}{lllr}
 \toprule
-Task & Best representation & Best model & Macro-F1 (mean $\pm$ std, 5 seeds) \\
+Task & Representation & Model & Macro-F1 (mean $\pm$ std) \\
 \midrule
 Ransomware-relevant & TF-IDF     & GBM    & $0.897 \pm 0.006$ \\
-Dominant tactic      & structured & GBM    & $0.806 \pm 0.012$ \\
 Platform signal       & TF-IDF     & GBM    & $0.616 \pm 0.008$ \\
+Dominant tactic      & TF-IDF     & GBM    & $0.377 \pm 0.009$ \\
 Tool mentions         & TF-IDF     & LogReg & $0.166 \pm 0.032$ \\
 Family                 & embedding  & LogReg & $0.115 \pm 0.019$ \\
 \bottomrule
 \end{tabular}
+\end{fittable}
 \end{table}
 
-The single-seed point estimates used everywhere else in this paper
-(e.g.\ the 0.813 quoted for \texttt{dominant\_tactic} elsewhere) are
-each the seed-0 value above, which matches its 5-seed mean closely in
-every case ($\leq$0.02 absolute difference) -- the reported numbers
-were not outliers relative to the seed distribution. Std is smallest
+The single-seed point estimates used elsewhere in this paper are each
+the seed-0 value of the same cell, within 0.015 of the 5-seed mean for
+every task except \texttt{tool}, whose seed-0 value (0.200) sits 0.034
+above its mean. Std is smallest
 for \texttt{relevance} (0.006) and largest for \texttt{tool} (0.032,
 $\sim$20\% of its own mean), consistent with \texttt{tool}'s
 already-noted instability across CV protocols (\Cref{tab:baselines-full}).
@@ -535,30 +596,26 @@ stochastic-training variance, and is reported as exactly that rather
 than a broader claim (\texttt{outputs/experiments/phase1\_multiseed.json},
 \texttt{Scripts/phase1\_multiseed.py}).
 
-Two patterns worth naming, both consistent with Section~\ref{sec:interpretability}'s
-independent checks: (1) tree models (GBM in particular) are the strongest
-model wherever tested, and structured features remain the strongest
-representation specifically for \texttt{dominant\_tactic} -- unsurprising,
-since those features are numerically close to the counts the label itself
-was derived from; (2) \texttt{family} and \texttt{tool} are weak under
-every representation and model combination tried (family never exceeds
-0.13 macro-F1; tool is additionally unstable across CV splits, ranging
-0.03--0.20). This is not obviously a framework or tuning limitation --
-Section~\ref{sec:interpretability}'s length and channel-identity confound
-checks rule out two of the more common alternative explanations for weak
-tabular/text-classification performance, leaving weak-label ceiling
-(\S\ref{sec:gold-scope}) and genuine class sparsity (Section~\ref{sec:baselines}'s
-18-class family / 7-class tool taxonomies, several classes with single-digit
-support) as the remaining candidate explanations.
+Two patterns stand out: (1) GBM is the strongest model on relevance,
+dominant tactic, and platform, and logistic regression on tool and family;
+(2) \texttt{family} and \texttt{tool} are weak under every combination
+tried (family never exceeds 0.13 macro-F1; tool peaks at 0.20 on the
+stratified split and reaches only 0.08 on the other two).
+Section~\ref{sec:confounds}'s channel-identity check makes literal channel
+naming an unlikely explanation for the family result, leaving the
+weak-label ceiling (\S\ref{sec:gold-scope}) and class sparsity (18-class
+family and 7-class tool taxonomies, several classes with single-digit
+support) as the remaining candidates, neither of which this paper isolates.
 
 \Cref{tab:results} reports only the single best (representation, model)
-cell per task; the full sweep -- 5 tasks $\times$ 3 representations
-$\times$ 4 trained models $\times$ 3 CV protocols, 180 combinations in
-total (\texttt{outputs/experiments/phase1\_*.csv}) -- is summarized
-visually in \Cref{fig:baselines-heatmap}, collapsing the representation
-axis by taking the best of the three for each (task, model, split) cell
-so the figure stays legible, and given in full, exact numbers for the
-stratified-random split in \Cref{tab:baselines-full}.
+cell per task. The full sweep has 144 trained combinations: TF-IDF and
+embeddings for all 5 tasks, plus structured features for family and
+dominant tactic, each with 4 trained models and 3 CV protocols
+(\path{outputs/experiments/phase1_*.csv}). \Cref{fig:baselines-heatmap}
+summarizes it, leaving out the circular dominant-tactic structured cells
+and taking the best remaining representation for each (task, model, split)
+cell so the figure stays legible, and \Cref{tab:baselines-full} gives
+exact numbers for the stratified-random split.
 
 \begin{figure}[htbp]
   \centering
@@ -574,16 +631,19 @@ stratified-random split in \Cref{tab:baselines-full}.
 \begin{table}[htbp]
 \centering
 \caption{Best-representation macro-F1 per (task, model), stratified-random
-  split (weak-label agreement, \S\ref{sec:gold-scope}). Channel-grouped
-  and temporal splits follow the same pattern with a modest across-the-board
-  drop, per \Cref{fig:baselines-heatmap}.}
+  split (weak-label agreement, \S\ref{sec:gold-scope}), excluding
+  dominant-tactic structured features. The temporal split costs some tasks
+  far more than others, per \Cref{fig:baselines-heatmap}: the best family
+  score falls from 0.13 to 0.04, tool from 0.20 to 0.08, and dominant
+  tactic from 0.37 to 0.21, while platform (0.53) and relevance (0.85)
+  hold up better.}
 \label{tab:baselines-full}
 \begin{tabular}{lrrrr}
 \toprule
 Task & LogReg & SVM & RF & GBM \\
 \midrule
 Relevance        & 0.71 & 0.68 & 0.82 & 0.90 \\
-Dominant tactic   & 0.74 & 0.80 & 0.67 & 0.81 \\
+Dominant tactic   & 0.26 & 0.25 & 0.15 & 0.37 \\
 Platform          & 0.41 & 0.39 & 0.40 & 0.61 \\
 Tool              & 0.20 & 0.18 & 0.04 & 0.07 \\
 Family            & 0.13 & 0.08 & 0.02 & 0.08 \\
@@ -661,30 +721,30 @@ the closest available analogue to a ``confidently wrong'' rate without
 independently verified labels to actually be wrong against.
 
 Each task is evaluated on the 5-fold stratified out-of-fold predictions
-of its best (feature, model) combination from \Cref{tab:results}, except
-\texttt{family}, whose best combination (embedding representation) needs
-the dedicated environment described in \Cref{sec:baselines}'s footnote
-and is reported without a calibration curve here.
+of its best (feature, model) combination from \Cref{tab:results}.
 
 \begin{table}[htbp]
 \centering
 \caption{Weak-label calibration (\Cref{eq:ece,eq:cdr}) and the RF
   tree-vote entropy proxy (\Cref{eq:entropy}), best (feature, model) per
   task. $N$ is the number of (sample) or (sample, class) calibration
-  points. Entropy AUROC is how well entropy alone separates agreement
-  from disagreement with the weak label (\Cref{alg:rf-entropy}).}
+  points. Entropy columns give mean entropy when the forest agrees and
+  disagrees with the weak label, and how well entropy alone separates the
+  two (AUROC, \Cref{alg:rf-entropy}).}
 \label{tab:calibration}
+\begin{fittable}
 \begin{tabular}{lrrrrr}
 \toprule
-Task & $N$ & ECE & $\mathrm{CDR}_{0.9}$ & Entropy (agree/disagree) & Entropy AUROC \\
+Task & $N$ & ECE & $\mathrm{CDR}_{0.9}$ & Entropy (agr./dis.) & AUROC \\
 \midrule
-Relevance        & 1034 & 0.079 & 0.071 & 0.910 / 0.980 & 0.769 \\
-Dominant tactic   & 1034 & 0.051 & 0.043 & 0.275 / 0.551 & 0.860 \\
-Platform          & 1034 & 0.110 & 0.104 & 0.717 / 0.769 & 0.675 \\
-Tool (per-label)  & 7238 & 0.016 & 0.016 & 0.121 / 0.271 & 0.977 \\
-Family (per-label)& 1034 & --    & --    & 0.095 / --     & --    \\
+Relevance        & 1034 & 0.079 & 0.071 & 0.910 / 0.980 & 0.763 \\
+Dominant tactic   & 1034 & 0.178 & 0.113 & 0.654 / 0.710 & 0.729 \\
+Platform          & 1034 & 0.110 & 0.104 & 0.716 / 0.770 & 0.682 \\
+Tool (per-label)  & 7238 & 0.016 & 0.016 & 0.121 / 0.275 & 0.977 \\
+Family (per-label)& 18612 & 0.018 & 0.019 & 0.095 / --     & --    \\
 \bottomrule
 \end{tabular}
+\end{fittable}
 \end{table}
 
 \Cref{fig:reliability} plots the reliability curves underlying
@@ -692,18 +752,16 @@ Family (per-label)& 1034 & --    & --    & 0.095 / --     & --    \\
 smoothing over: first, per-bin counts are small (single digits to low
 tens per bin at $N{=}1034$), so individual bin heights are noisy --
 the curves are directionally informative, not point-estimate-precise.
-Second, \texttt{family}'s row has no ECE/CDR: its calibration point is
-unavailable in this environment (as above), so only the RF tree-vote
-entropy proxy, computed on the TF-IDF fallback representation, is
-reported for it, and even that proxy has no ``disagree'' entries to
-average -- at the per-(sample, class) level, most of \texttt{family}'s
-18 classes are negative for most samples, so the majority-class
-prediction (``absent'') agrees with the weak label on essentially every
-RF-on-TF-IDF calibration point despite the task's low macro-F1 in
-\Cref{tab:results}, which weights all 18 classes equally rather than by
-prevalence. Both readings are correct simultaneously; they are just
-answering different questions (per-pair agreement vs.\ per-class
-balanced performance).
+Dominant tactic has the largest ECE (0.178): without the tactic counts,
+its model is markedly overconfident against the weak labels.
+Second, the low per-label ECE of \texttt{tool} and \texttt{family} reflects
+class imbalance more than skill. Most of their (sample, class) pairs are
+negative, so predicting ``absent'' agrees with the weak label almost
+everywhere, despite the low macro-F1 in \Cref{tab:results}, which weights
+classes equally rather than by prevalence. For the same reason
+\texttt{family}'s RF entropy proxy, which runs on TF-IDF rather than the
+task's best embedding representation, has no ``disagree'' entries to
+average.
 
 \begin{figure}[htbp]
   \centering
@@ -752,7 +810,7 @@ $H(x,k)$ is averaged over classes $k$ for a per-sample summary.
 \end{algorithm}
 
 The in-line comment in \Cref{alg:rf-entropy} records a real implementation
-pitfall, not a hypothetical one: scikit-learn fits each tree in a
+pitfall, not a hypothetical one: scikit-learn \citep{pedregosa2011scikit} fits each tree in a
 \texttt{RandomForestClassifier} on internally label-encoded integer
 targets, so \texttt{tree.predict()} returns class \emph{indices}, not the
 original label strings the ensemble's own \texttt{.predict()} returns.
@@ -858,42 +916,46 @@ enough estimate of $\hat q$ to report alone.
   \texttt{family}/\texttt{tool} report mean per-label coverage and the
   stricter all-labels-jointly-covered rate. Set size is out of the
   task's class count ($K$) for \texttt{dominant\_tactic}/\texttt{platform},
-  or out of 2 (per label) for \texttt{family}/\texttt{tool}.}
+  or out of 2 (per label) for \texttt{family}/\texttt{tool}. \texttt{family}
+  uses TF-IDF with logistic regression here rather than its best
+  embedding representation.}
 \label{tab:conformal}
+\begin{fittable}
 \begin{tabular}{lrrrrr}
 \toprule
-Task & $K$ & Coverage (marginal) & Avg.\ set size & Slice: Yr$\geq$26 & Slice: Conf. \\
+Task & $K$ & Coverage & Set size & Yr$\geq$26 & Conf. \\
 \midrule
-Dominant tactic & 11 & 0.877 & 0.94/11 & 0.890 & 0.870 \\
+Dominant tactic & 11 & 0.908 & 2.60/11 & 0.913 & 0.926 \\
 Platform          &  4 & 0.925 & 1.19/4  & 0.932 & 0.899 \\
-Family (per-label)  & 18 & 0.912 (joint: 0.446) & 0.93/2 & 0.487\textsuperscript{joint} & 0.572\textsuperscript{joint} \\
-Tool (per-label)    &  7 & 0.909 (joint: 0.650) & 0.92/2 & 0.640\textsuperscript{joint} & 0.752\textsuperscript{joint} \\
+Family (per-label)  & 18 & 0.911 (joint: 0.446) & 0.93/2 & 0.487\textsuperscript{joint} & 0.572\textsuperscript{joint} \\
+Tool (per-label)    &  7 & 0.907 (joint: 0.650) & 0.92/2 & 0.640\textsuperscript{joint} & 0.752\textsuperscript{joint} \\
 \bottomrule
 \end{tabular}
+\end{fittable}
 \end{table}
 
 \Cref{fig:conformal} plots \Cref{tab:conformal} directly. Reading the
 results against the two questions this section set out to answer:
 first, does the guarantee hold empirically -- \texttt{dominant\_tactic}
-and \texttt{platform}'s marginal coverage (0.877, 0.925) both sit close
-to the 0.90 target, with set sizes well under one class on average
-(0.94/11, 1.19/4), i.e.\ the conformal sets are usually a single class or
-empty, not the whole vocabulary hedged defensively. Second, the
-conditional-coverage stress test: neither the Year${\geq}2026$ nor the
-Conference-channel slice shows the kind of collapse that would flag a
-real distribution-shift problem for these two tasks (all four slice
-numbers stay within about 3 points of the marginal rate). \texttt{family}
-and \texttt{tool}'s per-label coverage (0.91, 0.91) is equally close to
-target, but their \emph{joint} (all-labels-simultaneously) coverage is
-far lower (0.45, 0.65) -- an expected consequence of compounding
-per-label error rates across 18 and 7 largely-independent binary
-calibrations respectively, not a failure of \Cref{eq:coverage} (which
-was never a joint guarantee to begin with) and not itself evidence of
-conditional-coverage collapse, since the joint-coverage slices track the
-joint-coverage marginal about as closely as the multiclass tasks' slices
-track theirs. Per \Cref{sec:conformal-method}, all of the above describes
-agreement with $y^{\mathrm{KA}}$, and \Cref{sec:ood} below is the
-complementary analysis that does not carry that caveat.
+and \texttt{platform}'s marginal coverage (0.908, 0.925) both meet the
+0.90 target. The sets differ in how much they say: platform sets average
+1.19 of 4 classes, while dominant-tactic sets average 2.60 of 11, which
+is the price of the target coverage for a model this weak. Second, the
+conditional-coverage stress test: all four multiclass slice numbers stay
+within about 3 points of the marginal rate. These slices are subsets of
+the same random splits, so they also appear in the calibration data; they
+test coverage on corpus subgroups, not under distribution shift.
+\texttt{family} and \texttt{tool}'s per-label coverage (0.91, 0.91) is
+close to target, but their \emph{joint} (all-labels-simultaneously)
+coverage is far lower (0.45, 0.65). That is an expected consequence of
+accumulating misses across 18 and 7 binary calibrations, not a failure of
+\Cref{eq:coverage}, which was never a joint guarantee. Both figures exceed
+what independent labels would give (about 0.19 and 0.51), so per-label
+misses are correlated. Joint coverage also varies more across slices than
+the multiclass rates do: on Conference channels it is 13 points above the
+marginal for \texttt{family} and 10 for \texttt{tool}. Per
+\Cref{sec:conformal-method}, all of the above describes agreement with
+$y^{\mathrm{KA}}$.
 
 \begin{figure}[htbp]
   \centering
@@ -906,39 +968,42 @@ complementary analysis that does not carry that caveat.
 
 \section{Out-of-Distribution Detection}
 \label{sec:ood}
-Unlike Sections~\ref{sec:baselines}--\ref{sec:conformal}, this section's
-results are not subject to the weak-label scope note in
-Section~\ref{sec:gold-scope}: OOD detection asks whether a model's own
-confidence or embedding-space behavior differs between in-distribution
-and out-of-distribution input, which is answerable without knowing
-whether either input's \emph{label} is correct.
+OOD detection asks whether a model's own confidence or embedding-space
+behavior differs between in-distribution and out-of-distribution input.
+Scoring that needs no correct dominant-tactic label, since the question is
+which population an input came from. The weak labels are still involved:
+the shared classifier is trained on them, and the temporal and
+leave-rare-family setups define their populations with the regex's family
+list. Only the channel-type and external-corpus partitions are free of it.
 
 \subsection{Setups and methods}
 \label{sec:ood-setups}
-Four setups, each with a known-by-construction in-distribution
+Four setups, each with a stated in-distribution
 (ID)/out-of-distribution (OOD) split, drawn from real structure in the
 corpus rather than synthetic corruption:
 
 \begin{enumerate}
-\item \textbf{Temporal emergence.} ID: pre-2024 videos. OOD: post-2024
-  videos mentioning a family whose first appearance in this corpus is
-  2024 or later -- verified directly against per-family first-occurrence
+\item \textbf{Temporal emergence.} ID: pre-2024 videos. OOD: videos from
+  2024 or later mentioning a family whose first appearance in this corpus
+  is 2024 or later -- verified directly against per-family first-occurrence
   year rather than assumed (Maze, Medusa, Black Basta, INC: 2024;
-  Cactus: 2025), at \Cref{alg:ood-verify}'s assertion step.
+  Cactus: 2025), at \Cref{alg:ood-verify}'s assertion step. This is a
+  family's first appearance in this corpus, not its real-world emergence.
 \item \textbf{Channel-type shift.} ID: Vendor + DFIR channels. OOD:
   Conference + Independent channels.
 \item \textbf{Leave-rare-family-out.} ID: videos never mentioning
   ``Cl0p'' (11 occurrences total -- long-tailed, unlike Conti/LockBit/
   Qilin/Akira, each with 19+). OOD: the 11 Cl0p-mentioning videos.
 \item \textbf{External corpus.} ID: RansKnow transcripts. OOD: 20
-  Newsgroups (\texttt{rec.sport.baseball} + \texttt{sci.space}), included
-  as a sanity check that the methods below can detect an obviously
-  unrelated domain before trusting them on setups 1--3.
+  Newsgroups \citep{lang1995newsweeder} (\texttt{rec.sport.baseball} + \texttt{sci.space},
+  excluding 38 documents left empty after header, footer, and quote
+  removal), included as a sanity check that the methods below can detect
+  an obviously unrelated domain before trusting them on setups 1--3.
 \end{enumerate}
 
 Four detection methods, computed from a shared \texttt{dominant\_tactic}
-classifier (structured features, LightGBM -- \Cref{tab:results}'s
-strongest non-circular result, and a natural multiclass fit for the
+classifier (TF-IDF features, LightGBM -- \Cref{tab:results}'s
+best dominant-tactic result, and a natural multiclass fit for the
 softmax-family methods below), refit fresh on each setup's ID-only
 training pool so that no OOD signal leaks into fitting:
 \begin{align}
@@ -963,7 +1028,9 @@ Gaussian Mahalanobis distance of \citet{lee2018simple}, with $\phi(x)$ the
 and $\mu_c,\Sigma$ the ID-train class-conditional means and pooled
 covariance, using the classifier's own \emph{predicted} classes to form
 groups (consistent with \Cref{sec:gold-scope}: no independently verified
-labels exist to group by instead). \Cref{eq:conf-ood} reuses
+labels exist to group by instead). $\Sigma$ is a Ledoit-Wolf shrinkage
+estimate, because the temporal setup has only 162 training videos in 384
+dimensions and its sample covariance is singular. \Cref{eq:conf-ood} reuses
 \Cref{sec:conformal}'s LAC score, evaluated at the predicted rather than
 true class for OOD flagging -- this is deliberately, not accidentally,
 the same quantity as \Cref{eq:msp}; the two are reported separately for
@@ -978,7 +1045,7 @@ distinct number.
 \Require corpus $\mathcal{D}$, ID/OOD partition rule for the setup
 \State \textbf{assert} every claimed-emerging family's first-occurrence year matches the setup's stated cutoff \Comment{caught a factual error at this step -- see note below}
 \State split ID pool into $\mathcal{D}_{\mathrm{train}}$ (75\%) / $\mathcal{D}_{\mathrm{test}}^{\mathrm{ID}}$ (25\%)
-\State fit \texttt{dominant\_tactic}/structured/LightGBM on $\mathcal{D}_{\mathrm{train}}$
+\State fit \texttt{dominant\_tactic}/TF-IDF/LightGBM on $\mathcal{D}_{\mathrm{train}}$
 \State score $\mathcal{D}_{\mathrm{test}}^{\mathrm{ID}}$ and $\mathcal{D}_{\mathrm{OOD}}$ under \Cref{eq:msp,eq:energy,eq:maha,eq:conf-ood}
 \State report AUROC(ID vs.\ OOD) per method, plus the conformal exceedance-rate contrast
 \end{algorithmic}
@@ -1002,110 +1069,109 @@ by hand.
 \centering
 \caption{OOD-detection AUROC by setup and method (\Cref{eq:msp,eq:energy,eq:maha,eq:conf-ood}).
   $n_{\mathrm{ID}}$/$n_{\mathrm{OOD}}$ are ID-test/OOD sample counts.
-  Mahalanobis is unavailable for \texttt{external\_corpus} (20
-  Newsgroups has no entry in the RansKnow-only embedding cache).}
+  Stratified bootstrap 95\% intervals for every cell are in
+  \texttt{outputs/phase4\_ood.json}.}
 \label{tab:ood}
+\begin{fittable}
 \begin{tabular}{lrrrrrr}
 \toprule
-Setup & $n_{\mathrm{ID}}$ & $n_{\mathrm{OOD}}$ & MSP & Energy & Mahalanobis & Conformal \\
+Setup & $n_{\mathrm{ID}}$ & $n_{\mathrm{OOD}}$ & MSP & Energy & Mahal. & Conf. \\
 \midrule
-Temporal emergence     &  55 &   31 & 0.561 & 0.360 & 0.223 & 0.533 \\
-Channel-type shift       & 156 &  353 & 0.477 & 0.487 & 0.666 & 0.487 \\
-Leave-rare-family-out    & 256 &   11 & 0.377 & 0.350 & 0.145 & 0.376 \\
-External corpus (sanity) & 259 & 1190 & 0.625 & 0.476 & --    & 0.631 \\
+Temporal emergence     &  55 &   31 & 0.425 & 0.341 & 0.220 & 0.422 \\
+Channel-type shift       & 156 &  353 & 0.600 & 0.582 & 0.672 & 0.578 \\
+Leave-rare-family-out    & 256 &   11 & 0.304 & 0.196 & 0.145 & 0.238 \\
+External corpus (sanity) & 259 & 1152 & 0.622 & 0.477 & 0.999 & 0.627 \\
 \bottomrule
 \end{tabular}
+\end{fittable}
 \end{table}
 
-\Cref{fig:ood-radar} plots \Cref{tab:ood}. The honest reading is a mixed
-and mostly negative one, which is itself the finding worth reporting
-rather than a result to explain away. Three observations:
+\Cref{fig:ood-radar} plots \Cref{tab:ood}. Three observations:
 
-\textbf{The confidence-based methods (MSP, energy, conformal) hover near
-chance (0.5) on every setup, including the sanity check.} Diagnosing
-\emph{why} on \texttt{external\_corpus} is informative: 99.6\% of 20
-Newsgroups documents are classified \texttt{None} (no dominant tactic
-detected) by the shared classifier, and with \emph{higher} average
-confidence than the real in-distribution test set (mean $\hat
-p_{\max}$: 0.921 OOD vs.\ 0.895 ID). A near-empty, off-topic TF-IDF
-vector and a genuinely tactic-free ransomware transcript both produce
-the same signature -- confidently ``no tactics detected'' -- so a
-classifier whose decision function is fundamentally an argmax over
-small keyword-mention counts has no way to distinguish ``nothing here''
-from ``wrong domain entirely.'' This is a known blind spot of
-softmax/probability-based OOD detection in general
-\citep{hendrycks2017baseline}, reproduced concretely here rather than
-assumed from the literature.
+\textbf{The confidence-based methods (MSP, energy, conformal) fail the
+sanity check.} On \texttt{external\_corpus}, MSP reaches only 0.622
+(95\% interval 0.573--0.672) and energy 0.477. Diagnosing \emph{why} is
+informative: 99.0\% of 20 Newsgroups documents are classified
+\texttt{None} (no dominant tactic detected) by the classifier, against
+18.5\% of the ID test set, and with \emph{higher} average confidence
+(mean $\hat p_{\max}$: 0.922 OOD vs.\ 0.895 ID). A sparse, off-topic
+TF-IDF vector and a tactic-free ransomware transcript both produce the
+same signature, confidently ``no tactics detected,'' so the classifier
+cannot distinguish ``nothing here'' from ``wrong domain entirely.'' This
+is a known blind spot of softmax/probability-based OOD detection in
+general \citep{hendrycks2017baseline}, reproduced concretely here. These
+methods reach 0.58--0.60 on channel-type shift and fall below 0.5 on the
+other two setups.
 
-\textbf{Mahalanobis distance on real sentence embeddings is the one
-method that separates classes at all, and only partially.} It reaches
-$0.666$ on channel-type shift -- Conference/Independent channels differ
-enough in embedding space (production style, framing, audience) to be
-mildly detectable -- but performs \emph{worse} than chance on temporal
-emergence (0.223) and leave-rare-family-out (0.145). Both of those
-setups' OOD population describes the same underlying phenomenon
-(ransomware incidents, attacker tradecraft) as the ID population, just
-naming a different or newer group -- exactly the case where sentence
-embeddings, which encode semantic content rather than proper nouns,
-would \emph{not} be expected to separate the two populations well. The
-small OOD sample sizes in these two setups ($n{=}31$, $n{=}11$) also mean
-each AUROC estimate carries substantial variance on its own; with
-$n_{\mathrm{OOD}}{=}11$, a single re-ordered pair moves the estimate by
-roughly $1/11$.
+\textbf{Mahalanobis distance on sentence embeddings passes the sanity
+check but inverts on the family-based setups.} It reaches 0.999 (95\%
+interval 0.996--1.000) on \texttt{external\_corpus} and 0.672
+(0.618--0.723) on channel-type shift, where Conference/Independent
+channels differ detectably in embedding space; \Cref{sec:ood-leakage} shows
+that both figures are flattered and gives the more conservative values. On temporal emergence
+(0.220, 0.130--0.324) and leave-rare-family-out (0.145, 0.065--0.244) it
+is below chance with intervals that exclude 0.5, so these are not noise:
+OOD videos sit \emph{closer} to the class means than ID videos do. The
+covariance estimate is not the cause, since the earlier pseudo-inverse
+estimate gives 0.223 and 0.145. We tested two explanations. The first is
+selection: every OOD video in these setups names a family, against 25\%
+and 20\% of their ID test sets. Restricting ID to family-naming videos
+($n{=}14$, $n{=}51$) raises the scores to 0.353 (0.191--0.532) and 0.257
+(0.119--0.417), so the temporal inversion is no longer distinguishable
+from chance, while the leave-rare-family inversion narrows but persists.
+The second is length: mean-pooling more chunks pulls long videos toward
+the class means (Spearman $\rho$ between distance and word count is
+$-0.66$ and $-0.71$), and OOD videos are longer (median 6{,}288 vs.\
+2{,}950 words and 6{,}480 vs.\ 5{,}036). Adjusting log distance for log
+word count leaves 0.256 and 0.148, so length does not explain the
+inversion by itself. The combined effect of the two remains untested, and
+with $n_{\mathrm{OOD}}{=}11$ the leave-rare-family interval stays wide.
+Because both populations are selected through the regex family list,
+these two setups are a weak test of whether a detector notices novel
+families.
 
 \textbf{The conformal exceedance-rate contrast (\Cref{eq:qhat}'s $\hat
-q$) is uninformative in this corpus specifically.} In every setup, the
-calibrated threshold $\hat q$ lands so close to the maximum possible
-score ($\hat q \geq 0.99$ in three of four setups) that essentially no
-point, ID or OOD, exceeds it -- a consequence of the classifier being
-very confidently correct on the bulk of its small ($n{\approx}115$)
-calibration split, which pushes the $90$th-percentile score to an
-extreme value. \Cref{eq:conf-ood}'s AUROC column is the more informative
-number from this method here; the exceedance-rate contrast is reported
-in the released JSON (\texttt{outputs/phase4\_ood.json}) for
-completeness but is not a useful discriminator at this sample size.
+q$) is uninformative here by construction.} The calibrated threshold is
+at least 0.997 in every setup, because the classifier assigns the weak
+label almost no probability on more than a tenth of its calibration
+points ($n$ between 41 and 194). The OOD-flagging score is taken at the
+\emph{predicted} class (\Cref{eq:conf-ood}), so it cannot exceed $1-1/K$,
+about 0.91 with 11 classes, and no point can cross the threshold.
+\Cref{eq:conf-ood}'s AUROC column is the more informative number from this
+method; the zero exceedance rates are in the released JSON
+(\path{outputs/phase4_ood.json}).
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.6\textwidth]{figures/fig_ood_radar.pdf}
   \caption{OOD-detection AUROC by method (color) and setup (axis),
     against the chance line at 0.5 (\Cref{tab:ood}). Mahalanobis is the
-    only method to clear chance by a wide margin, and only on one of
-    four setups.}
+    only method to clear chance by a wide margin, on the channel-type and
+    external setups, and falls well below it on the other two.}
   \label{fig:ood-radar}
 \end{figure}
 
 A single AUROC number per (method, setup) cell is a summary of a
 comparison between two full score \emph{distributions}, and the two
-figures below show those distributions directly rather than only their
-summary statistic. \Cref{fig:ood-distributions} plots the actual MSP
-score density for the ID-test and OOD populations, per setup, as a 3D
-ridgeline: the near-total overlap between the blue (ID) and red (OOD)
-curves in every setup is the direct visual counterpart of the
-near-chance AUROC numbers above, and makes concrete what ``the
-classifier's most confident predictions coincide with the
-off-topic-input signature'' actually looks like as two overlapping
-peaks near the same low-score, high-confidence region, not two
-separated ones. \Cref{fig:ood-tsne} shows the complementary picture in
-representation space rather than score space: a 3D t-SNE projection of
-the same 384-dim sentence embeddings the Mahalanobis method
-(\Cref{eq:maha}) computes its distances on, colored by ID/OOD
-membership. OOD points are visibly scattered throughout the ID cloud
-with no separable structure in \texttt{temporal\_emergence} and
-\texttt{leave\_rare\_family\_out} -- consistent with those setups'
-below-chance Mahalanobis AUROC (0.223, 0.145) -- while
-\texttt{channel\_type\_shift} shows OOD points modestly concentrated
-toward one region of the embedding cloud, consistent with that setup
-being the one case where Mahalanobis distance actually clears chance
-(0.666).
+figures below show more of that picture. \Cref{fig:ood-distributions}
+plots the MSP score density for the ID-test and OOD populations, per
+setup, as a 3D ridgeline: the blue (ID) and red (OOD) curves overlap
+heavily and both peak in the low-score, high-confidence region, the visual
+counterpart of MSP's weak AUROCs. \Cref{fig:ood-tsne} is a 3D t-SNE
+projection of the same 384-dim sentence embeddings the Mahalanobis method
+(\Cref{eq:maha}) computes its distances on, colored by ID/OOD membership.
+OOD points are scattered through the ID cloud in all three setups shown.
+t-SNE distorts distances, so this is illustrative only: it does not show
+the separation the Mahalanobis AUROCs measure on channel-type shift, and
+should not be read as evidence for or against it.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.75\textwidth]{figures/fig_ood_distributions_3d.pdf}
   \caption{ID-test vs.\ OOD max-softmax-probability score density per
     setup, as a 3D ridgeline (kernel density estimate, not binned
-    histograms). Overlap between the blue and red curves is the direct
-    visual counterpart of near-chance AUROC.}
+    histograms). Overlap between the blue and red curves is the visual
+    counterpart of MSP's weak AUROCs.}
   \label{fig:ood-distributions}
 \end{figure}
 
@@ -1113,23 +1179,59 @@ being the one case where Mahalanobis distance actually clears chance
   \centering
   \includegraphics[width=\textwidth]{figures/fig_ood_tsne_3d.pdf}
   \caption{3D t-SNE of the 384-dim sentence embeddings per setup,
-    colored by ID/OOD membership (\texttt{external\_corpus} omitted --
-    no cached embedding for 20 Newsgroups). No visible separation in the
-    two setups with near-chance Mahalanobis AUROC; modest clustering in
-    channel-type shift, the one setup where it clears chance.}
+    colored by ID/OOD membership, for the three within-corpus setups.
+    Illustrative only, since t-SNE distorts distances: no setup shows
+    visibly separated clusters.}
   \label{fig:ood-tsne}
 \end{figure}
 
+\subsection{Leakage and confound checks}
+\label{sec:ood-leakage}
+We audited these results for information shared between training and
+evaluation (\texttt{Scripts/phase4\_leakage\_audit.py}). No video or URL
+appears in both training and evaluation in any setup, and every fitted
+component (vectorizer, classifier, class means, covariance) uses training
+data only. Four indirect effects were tested.
+
+\emph{Shared channels.} The ID split is random by video, so 98--100\% of ID
+test videos share a channel with training, while the OOD channels of
+channel-type shift never do, which favors separation. Holding ID channels
+out lowers its mean Mahalanobis AUROC over 5 seeds from 0.677 to 0.644
+(range 0.608--0.688), so the 0.672 in \Cref{tab:ood} is modestly inflated
+but the effect survives. The inversions also survive: temporal emergence
+stays at 0.199, or 0.204 when OOD is limited to channels unseen in training,
+and leave-rare-family-out at 0.124. Every Cl0p video comes from a channel
+that also appears in training, so that setup cannot be held out on both sides.
+
+\emph{Duplicates.} Eight transcript pairs exceed 0.98 cosine similarity,
+including the four videos listed twice (\Cref{sec:construction}). Dropping
+evaluation videos with a near-duplicate in training changes no Mahalanobis
+AUROC by more than 0.004.
+
+\emph{Unmatched family mentions.} Four of the 217 pre-2024 ID videos contain
+a term matching an emerging family that the context-gated regex did not tag.
+Removing them moves temporal emergence's Mahalanobis AUROC from 0.220 to
+0.261, and no ID video contains a Cl0p term.
+
+\emph{Length and formatting in the sanity check.} The stored transcripts
+contain timestamp lines and have a median of 4{,}985 words, while the 20
+Newsgroups posts have no timestamps and a median of 74 words, and
+Mahalanobis distance falls as documents get longer. Removing timestamps from
+the corpus and re-embedding it moves the sanity check only from 0.999 to
+0.996. Truncating each ID test video to its first 200-word chunk as well
+lowers it to 0.943 (0.930--0.955), which we take as the fairer figure. It is
+conservative, because the same truncation alone separates ID videos from
+their own full-length versions at AUROC 0.994. Timestamp removal moves the
+other Mahalanobis AUROCs by at most 0.022. Effects of timestamps on the
+TF-IDF baselines in \Cref{sec:baselines} were not separately tested.
+
 Taken together, \Cref{sec:ood-results} does not support a general claim
-that this pipeline's models reliably detect distributional shift; it
-supports a narrower, still useful one: OOD detection here is hard,
-softmax-confidence-based methods have an identifiable and reproducible
-blind spot on this specific classifier (the ``no signal'' vs.\
-``wrong domain'' confusion above), and embedding-distance methods help
-only when the shift is stylistic rather than topical. Unlike
-\Cref{sec:baselines,sec:uncertainty,sec:conformal}, none of this depends
-on whether $y^{\mathrm{KA}}$ is correct (\Cref{sec:gold-scope}) -- it is
-a direct, if modest, empirical finding about model behavior.
+that this pipeline's models reliably detect distributional shift. It
+supports a narrower one: softmax-confidence methods have an identifiable
+blind spot on this classifier (the ``no signal'' vs.\ ``wrong domain''
+confusion above), embedding distance detects a change of domain and, more
+modestly, of channel type, and neither approach shows that it notices a
+video naming a family absent from training.
 
 \section{Interpretability and Perturbation Robustness}
 \label{sec:interpretability}
@@ -1138,24 +1240,25 @@ asks questions about model \emph{behavior} -- does it exploit shortcuts,
 what does it rely on, how much do its predictions move under
 semantically-irrelevant edits -- none of which require independent
 ground truth to answer, so Section~\ref{sec:gold-scope}'s scope note
-does not apply here.
+applies only where a model's training labels matter.
 
 \subsection{Confound checks}
 \label{sec:confounds}
 \textbf{Length.} Transcript word count correlates moderately with
-\texttt{Tactic\_Total\_Mentions} (Pearson $r=0.409$) and weakly with
+\path{Tactic_Total_Mentions} (Pearson $r=0.409$) and weakly with
 \texttt{Family\_Count} ($r=0.131$), but not at all with
-\texttt{Tool\_Total\_Mentions} ($r=0.043$, not significant) -- the
+\path{Tool_Total_Mentions} ($r=0.043$, not significant) -- the
 confound is not uniform across signal types. Because it is mathematically
 guaranteed that dividing every tactic's count for one video by that
 video's own word count cannot change which tactic has the highest count
 (argmax is scale-invariant per row), the confound cannot affect how the
-\texttt{Dominant\_Tactic} label itself was derived; the question that
-matters is whether it inflates \texttt{dominant\_tactic}'s strongest
-result (structured features, \Cref{tab:results}). Re-scoring with
-length-normalized (mentions per 1{,}000 words) instead of raw-count
-features gives 0.753 macro-F1 against the raw-count model's 0.764 -- a
-1.1-point difference, not a length-exploitation artifact.
+\texttt{Dominant\_Tactic} label itself was derived; the remaining question
+is whether it inflates a model given those counts. Re-scoring logistic
+regression on structured features with length-normalized (mentions per
+1{,}000 words) instead of raw counts gives 0.753 macro-F1 against 0.764, a
+1.1-point difference, not a length-exploitation artifact. This check covers
+only the structured representation, which \Cref{tab:results} excludes for
+this task as circular; length is not tested for the TF-IDF model.
 
 \textbf{Channel identity.} 486 of 1{,}034 transcripts (47\%) contain at
 least one literal mention of their own channel's name. Masking those
@@ -1171,28 +1274,33 @@ catch is stylistic or topical, not addressable by name-masking.
 \label{sec:counterfactual}
 Motivated directly by Finding A: does a classifier trained on the
 \emph{fixed} labels still show the regex's original word-collision
-fragility? A TF-IDF+LogReg model was trained on today's corrected
-\texttt{Family} labels and evaluated on the 275 videos Section~\ref{sec:finding-a}
-confirmed as false positives under the pre-fix regex (videos where
-``\texttt{play}'' appears without ransomware context). The trained model
-assigns essentially zero probability to \texttt{Play} on all 275
-(maximum $P=0.013$) -- it did not inherit the bare-word-collision bug.
+fragility? TF-IDF+LogReg models were trained on today's corrected
+\texttt{Family} labels in 5 stratified folds, and every video was scored
+only by a model that did not train on it, because the videos in question
+are labeled not-\texttt{Play} in the training data. The test set is the 275
+videos the Section~\ref{sec:finding-a} fix removed from \texttt{Play},
+meaning the fix's own judgment rather than a per-video human review. Of
+these, 8 (2.9\%) still reach $P(\text{Play})\geq 0.5$, with a maximum of
+0.999. Their median probability is 0.005, against 0.001 for the 648 other
+not-\texttt{Play} videos, and the model ranks them above those videos with
+AUROC 0.58 (standard error about 0.02). That is a weak trace of the
+collision rather than either a clean bill of health or wholesale
+inheritance. It should be read against a weak model: only 18.9\% of the 111
+videos labeled \texttt{Play} reach 0.5, with a median of 0.019.
 
-The complementary question -- what drives the model's actual positive
+The complementary question -- what drives the model's confident
 \texttt{Play} predictions -- was then asked with a greedy word-\emph{type}
 removal counterfactual search (remove the vocabulary word whose removal
 most reduces $P(\text{Play})$, repeat until the prediction flips or a
-budget is exhausted) on the 8 highest-confidence true positives.
-\texttt{play} appears in 5 of 8 removal sets and is consistently one of
-the highest-impact single removals when present, but \textbf{0 of 8
-cases flip on removing ``play'' alone} -- every flip required 4--10
-additional removals, most of them generic (function words, not
-ransomware-specific vocabulary). The model reduced, but did not
-eliminate, reliance on the single ambiguous trigger word, and the words
-it combines that reliance with are not obviously a clean, interpretable
-``ransomware vocabulary'' set -- worth flagging as its own finding about
-decision-boundary diffuseness, independent of the word-collision
-question it was designed to answer.
+budget is exhausted) on the 8 labeled \texttt{Play} videos with the highest
+held-out probability (all at least 0.97). \texttt{play} appears in 3 of 8
+removal sets, and \textbf{0 of 8 cases flip on removing ``play'' alone}.
+Every case flips within 1--8 removals, mostly generic words rather than
+ransomware-specific vocabulary: the ASR filler ``uh'' appears in 5 of 8
+sets, and one case flips on removing ``uh'' alone. So the model's confident
+predictions rest on a diffuse, easily disturbed set of words rather than
+one trigger word or a clean ``ransomware vocabulary,'' a finding about the
+decision boundary that is separate from the word-collision question.
 
 \subsection{Perturbation robustness}
 \label{sec:perturbation}
@@ -1233,7 +1341,7 @@ This paper's single most consequential limitation is the absence of
 independent ground truth, discussed at length below; it opens this
 section as prose, not because the remaining limitations are
 unimportant, but because they are all of a smaller and more familiar
-kind (sampling bias, ASR noise, dual use) that most empirical NLP
+kind (sampling bias, ASR noise, source rights, dual use) that most empirical NLP
 papers carry in some form, whereas the ground-truth gap changes what
 every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
 \emph{means}, not merely how confidently it can be stated.
@@ -1249,14 +1357,13 @@ every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
     still too close to the system under evaluation to count as independent
     evidence. Every result in Sections~\ref{sec:baselines}--\ref{sec:conformal}
     is consequently agreement with an audited but demonstrably imperfect
-    extraction pipeline (Finding A), not verified accuracy -- Section~\ref{sec:ood}'s
-    OOD results and Section~\ref{sec:interpretability}'s behavioral
-    diagnostics are the exceptions, since neither depends on label
-    correctness. Recruiting independent annotators, whether through formal
-    ethics approval or an unpaid collaborator arrangement that falls
-    outside whatever definition of human-subjects research applies at the
-    author's institution, is the single highest-value extension of this
-    work -- more valuable than any additional modeling in
+    extraction pipeline (Finding A), not verified accuracy.
+    Section~\ref{sec:ood}'s OOD scores and Section~\ref{sec:interpretability}'s
+    behavioral diagnostics are less directly affected, although two OOD
+    setups and the \texttt{Play} check are defined using the regex's labels.
+    Independent annotation, with whatever ethics review the
+    authors' institution requires, is the single highest-value extension
+    of this work. It is more valuable than any additional modeling in
     Sections~\ref{sec:baselines}--\ref{sec:conformal} would be, since none
     of that modeling can currently be checked against anything but itself.
   \item \textbf{Sampling bias.} The corpus is conditioned on which
@@ -1274,8 +1381,20 @@ every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
     Sections~\ref{sec:baselines}--\ref{sec:conformal} is bounded by the
     Knowledge Agent's own precision/recall, which Finding A shows is not
     perfect even after the disambiguation fix, and which
-    Section~\ref{sec:counterfactual} shows partially propagated into at
+    Section~\ref{sec:counterfactual} shows leaving a weak trace in at
     least one trained model.
+  \item \textbf{Source rights and platform terms.} The transcripts derive
+    from talks, webinars, and walkthroughs whose speakers and channel
+    operators hold their own rights, and they were obtained through the
+    YouTube Data API, \texttt{yt-dlp}, and audio download for Whisper
+    transcription. The release contains transcript text and metadata but
+    no audio or video. The repository currently offers the dataset under
+    CC0, and that dedication can cover only rights the authors hold: it
+    does not grant re-use rights in the underlying talks.
+    \todo{Replace with the outcome of institutional advice: whether the
+    full transcripts can stay public and under which licence, how the
+    collection relates to YouTube's terms of service, and how a channel
+    owner can request removal.}
   \item \textbf{Dual use.} This is a corpus of ransomware tactics, tools,
     and case studies extracted from public educational content, and it is
     worth being direct about what that does and does not change. Every
@@ -1321,10 +1440,10 @@ contribution: any weak-label security-NLP dataset built the same way
 reuse the alias-collision-audit methodology and the counterfactual/
 perturbation checks even without reusing this specific corpus, and
 should -- Finding A demonstrates concretely that a plausible-looking
-regex label can be dominated by false positives (\Cref{tab:alias-audit}:
-78\% of pre-fix \texttt{Play} detections), which is precisely the class
-of error a corpus released without this kind of audit would carry
-silently.
+regex label can be dominated by detections a simple context check rejects
+(\Cref{tab:alias-audit}: 71\% of pre-fix \texttt{Play} detections), which
+is precisely the class of error a corpus released without this kind of
+audit would carry silently.
 
 The most valuable open follow-up to this specific paper is not further
 modeling. It is independent, human-annotated verification of a subset
@@ -1332,8 +1451,8 @@ of RansKnow's labels (Section~\ref{sec:limitations}), and it is worth
 being explicit about why that ranks above any modeling extension:
 every quantitative result this paper reports outside
 Section~\ref{sec:ood} would change in \emph{meaning}, not just in
-number, the day that verification exists. A macro-F1 of 0.813 on
-\texttt{dominant\_tactic} currently means ``a LightGBM classifier
+number, the day that verification exists. A macro-F1 of 0.90 on
+\texttt{relevance} currently means ``a LightGBM classifier on TF-IDF
 reproduces the Knowledge Agent's own regex output at this rate''; the
 same number, computed against even a modest independently-annotated
 subset, would mean something closer to what a reader of an ML paper's
@@ -1351,10 +1470,14 @@ Methodology, Software, Writing -- original draft, Supervision).}
 The authors declare no competing interests.
 
 \section*{Data availability}
+\begingroup\raggedright
 The RansKnow corpus, the extraction and audit pipeline, and all
 experiment code are publicly available at
-\url{https://github.com/Henrinnes/RansKnow} and
+\url{https://github.com/Henrinnes/RansKnow} and on Kaggle at
 \url{https://www.kaggle.com/datasets/henrykabuye/ransknow-v1}.
+The transcripts derive from third-party videos; \Cref{sec:limitations}
+describes the rights that remain with their owners.
+\par\endgroup
 
 \section*{Declaration of generative AI use}
 \todo{State whether generative AI tools were used in preparing the
@@ -1362,8 +1485,7 @@ manuscript, and if so which tool and for what, as the Elsevier Guide
 for Authors requires. Delete this section if none were used.}
 
 \section*{Acknowledgements}
-This work was supported in part by the Pro:NE (Pronortheast) Network
-under Grant RDF22/proNE/JHA. The authors thank the members of the
+This work was supported in part by the Pro:NE (Pronortheast) Network through a Grant by UK Research and Innovation and Office for Students (Grant Number: RDF22/ProNE/JHA) through a PhD studentship. The authors thank the
 CyberNets Research Group, Northumbria University, for their insightful
 discussions and useful feedback throughout this research project. The
 opinions, findings, conclusions, or recommendations expressed in this
@@ -1378,10 +1500,10 @@ represent the views of the supporting team.
 \label{app:keywords}
 The 21-term inclusion keyword list, matched case-insensitively against
 video title and description (\Cref{sec:construction}), verbatim from
-\texttt{Scripts/fetch\_transcripts.py}'s \texttt{KEYWORDS} constant:
+\path{Scripts/fetch_transcripts.py}'s \texttt{KEYWORDS} constant:
 
 \begin{quote}
-\ttfamily
+\raggedright\small\ttfamily
 ransomware, extortion, double extortion, encrypt, encryption, decrypt,
 data leak, incident response, ``\,ir\,'', lockbit, alphv, blackcat,
 conti, ryuk, cl0p, clop, akira, revil, sodinokibi,

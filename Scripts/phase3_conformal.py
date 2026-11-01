@@ -67,7 +67,7 @@ N_REPEATS = 5
 # documented fallback, same choice Phase 2 made for its RF-entropy
 # signal on this task.
 COMBO = {
-    "dominant_tactic": ("structured", "gbm"),
+    "dominant_tactic": ("tfidf", "gbm"),
     "platform": ("tfidf", "gbm"),
     "family": ("tfidf", "logreg"),
     "tool": ("tfidf", "logreg"),

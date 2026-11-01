@@ -55,7 +55,7 @@ def fig_reliability():
         ax.set_ylim(0, 1)
     axes[0].set_ylabel("agreement with\nweak label")
     axes[-1].legend(loc="upper left", fontsize=6, frameon=False)
-    fig.suptitle("Reliability diagrams against weak labels (Section 5)", y=1.05, fontsize=9)
+    fig.suptitle("Reliability diagrams against weak labels", y=1.05, fontsize=9)
     fig.tight_layout()
     out = FIGDIR / "fig_uncertainty_reliability.pdf"
     fig.savefig(out, bbox_inches="tight")
@@ -91,7 +91,7 @@ def fig_conformal_coverage():
     ax.set_xticklabels(labels)
     ax.set_ylabel("empirical coverage")
     ax.set_ylim(0, 1.02)
-    ax.set_title("Split-conformal coverage: marginal vs. conditional slices (Section 6)")
+    ax.set_title("Split-conformal coverage: marginal vs. conditional slices")
     ax.legend(fontsize=7, ncol=2, loc="lower center", bbox_to_anchor=(0.5, -0.42), frameon=False)
     fig.tight_layout()
     out = FIGDIR / "fig_conformal_coverage.pdf"
@@ -132,7 +132,7 @@ def fig_ood_radar():
     ax.set_xticklabels([setup_label[s] for s in setups])
     ax.set_ylim(0, 1)
     ax.set_yticks([0.25, 0.5, 0.75, 1.0])
-    ax.set_title("OOD detection AUROC by method and setup (Section 7)", y=1.12)
+    ax.set_title("OOD detection AUROC by method and setup", y=1.12)
     ax.legend(loc="upper right", bbox_to_anchor=(1.35, 1.15), fontsize=7, frameon=False)
     fig.tight_layout()
     out = FIGDIR / "fig_ood_radar.pdf"
@@ -145,6 +145,8 @@ def fig_baselines_full_sweep():
     dfs = [pd.read_csv(f) for f in sorted(glob.glob(str(ROOT / "outputs" / "experiments" / "phase1_*.csv")))]
     df = pd.concat(dfs, ignore_index=True)
     df = df[df["model"] != "rule_based_ka"]  # circular baseline, excluded from every reported comparison
+    # also circular: these features include the counts the label is the argmax of
+    df = df[~((df["task"] == "dominant_tactic") & (df["feature"] == "structured"))]
 
     splits = ["stratified_random", "channel_grouped", "temporal"]
     split_label = {"stratified_random": "Stratified random", "channel_grouped": "Channel-grouped",
@@ -183,7 +185,7 @@ def fig_baselines_full_sweep():
                             fontsize=7, color="black" if v < 0.6 else "white")
     fig.colorbar(im, cax=cax, label="macro-F1 (best representation)")
     fig.suptitle("Full baseline sweep: best-representation macro-F1 by task, model, and CV split "
-                  "(weak-label agreement, Section 4.3)", y=1.03, fontsize=9)
+                  "(weak-label agreement)", y=1.03, fontsize=9)
     fig.tight_layout()
     out = FIGDIR / "fig_baselines_full_sweep.pdf"
     fig.savefig(out, bbox_inches="tight")
@@ -201,6 +203,7 @@ def fig_baselines_3d_stem():
     dfs = [pd.read_csv(f) for f in sorted(glob.glob(str(ROOT / "outputs" / "experiments" / "phase1_*.csv")))]
     df = pd.concat(dfs, ignore_index=True)
     df = df[(df["model"] != "rule_based_ka") & (df["split"] == "stratified_random")]
+    df = df[~((df["task"] == "dominant_tactic") & (df["feature"] == "structured"))]
     models = ["logreg", "svm", "random_forest", "gbm"]
     model_label = {"logreg": "LogReg", "svm": "SVM", "random_forest": "RF", "gbm": "GBM"}
     best = df.groupby(["task", "model"])["macro_f1"].max().unstack().reindex(index=TASK_ORDER, columns=models)
@@ -227,7 +230,7 @@ def fig_baselines_3d_stem():
     ax.set_zlim(0, 1)
     ax.view_init(elev=22, azim=-55)
     ax.set_title("Baseline sweep in 3D: best-representation macro-F1 by task and model\n"
-                  "(stratified-random split, weak-label agreement, Section 4.3)", fontsize=9, y=1.0)
+                  "(stratified-random split, weak-label agreement)", fontsize=9, y=1.0)
     fig.tight_layout()
     out = FIGDIR / "fig_baselines_3d.pdf"
     fig.savefig(out, bbox_inches="tight")

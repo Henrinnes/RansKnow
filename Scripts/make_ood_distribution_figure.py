@@ -4,7 +4,7 @@ plots the actual ID-test vs. OOD max-softmax-probability score
 *distributions* per setup, not just the summary AUROC number the radar
 chart (fig_ood_radar.pdf) already shows. Reuses phase4_ood_detection.py's
 setup logic directly rather than re-deriving it, so the underlying
-train/ID/OOD splits are identical to what produced Section 7's numbers.
+train/ID/OOD splits are identical to what produced the paper's OOD numbers.
 
 Usage:
     python3 Scripts/make_ood_distribution_figure.py
@@ -56,7 +56,7 @@ def _external_corpus_msp(df):
     X_id = vec.transform(id_texts)
     news = fetch_20newsgroups(subset="train", categories=["rec.sport.baseball", "sci.space"],
                                remove=("headers", "footers", "quotes"))
-    X_ood = vec.transform(news.data)
+    X_ood = vec.transform([t for t in news.data if t.strip()])
 
     id_msp = 1 - est.predict_proba(X_id).max(axis=1)
     ood_msp = 1 - est.predict_proba(X_ood).max(axis=1)
@@ -131,7 +131,7 @@ def main():
     ax.set_zlim(0, 1)
     ax.view_init(elev=22, azim=-60)
     ax.set_title("OOD score distributions by setup: in-distribution (blue) vs.\n"
-                  "out-of-distribution (red) -- Section 7", fontsize=9)
+                  "out-of-distribution (red)", fontsize=9)
 
     # Legend proxy
     from matplotlib.lines import Line2D
