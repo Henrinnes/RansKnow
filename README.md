@@ -316,7 +316,8 @@ All experiment code and the paper are released alongside the dataset; see [Licen
 
 ## License
 
-This repository has two license scopes:
+This repository has three license scopes:
 
-- **Dataset** (transcripts, metadata, feature CSVs under `transcripts/`, `outputs/`, `RansKnow_v1/`, and the Kaggle-hosted copy): released under the [CC0 1.0 Universal (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/) licence.
+- **Derived data** (extracted features, labels, and compiled metadata under `outputs/`, `RansKnow_v1/`, and the Kaggle-hosted copy): released under the [CC0 1.0 Universal (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/) licence.
+- **Transcript text** (under `transcripts/`, `RansKnow_v1/`, and the Kaggle-hosted copy): derived from third-party videos and not covered by the CC0 dedication. Rights remain with the speakers and channel owners, and the text is shared here for research use. Rights holders can request removal from future releases by opening an issue on this repository.
 - **Code** (everything under `Scripts/`, including the fetch pipeline, Knowledge Agent, `rk_pipeline` experiment framework, and audit/diagnostic scripts): released under the [MIT License](LICENSE).
