@@ -92,44 +92,29 @@ Transcripts with Regex-Extracted MITRE ATT\&CK Features}
   country={United Kingdom}}
 
 \begin{abstract}
-We present RansKnow, an open corpus of 1{,}128 ransomware-related
-YouTube video records (1{,}034 with extracted transcripts) drawn from
-92 cybersecurity channels, with MITRE ATT\&CK-aligned structured
-features -- ransomware family, tactic, tool, and platform mentions --
-produced by a deterministic regex-based extraction pipeline. This
-paper's contribution is not the corpus alone: a systematic label-quality
-audit found that 9 of 41 ransomware-family aliases collide with ordinary
-English or business words (e.g.\ \texttt{play}, \texttt{hive},
-\texttt{cactus}) badly enough to inflate the single most-detected family
-by roughly $3.5\times$ before a context-based disambiguation fix, and a
-held-out counterfactual analysis finds a weak trace of the same
-word-level fragility in a classifier trained after the fix. We state plainly here, not only in a limitations section,
-that this project does not include an independently human-annotated
-evaluation set: every baseline, calibration, and conformal-prediction
-result we report is agreement with this audited-but-imperfect extraction
-pipeline, not verified real-world accuracy, and we frame every such
-number accordingly throughout. Under that scope, weak-label baselines
-reach macro-F1 0.90 on a binary relevance screen and 0.62 on platform,
-but only 0.38 on dominant-tactic classification once the model is denied
-the tactic counts its label is computed from, and remain weak
-($\leq$0.20) on the family and tool taxonomies. Expected Calibration
-Error against the weak labels ranges from 0.02 to 0.18, a Random Forest
-tree-vote-entropy signal separates label agreement from disagreement
-with AUROC 0.68--0.98, and split conformal prediction reaches
-0.91--0.93 coverage at its 90\% target on the two multiclass tasks,
-holding within 3 points on two corpus subsets. Out-of-distribution
-detection tells a more cautionary story: softmax-confidence methods fail
-an obvious sanity check (AUROC 0.62 against off-topic news posts, 99\%
-of which are confidently classified as containing no tactic), while
-embedding-based Mahalanobis distance passes it (AUROC 0.94 after
-controlling for document length and transcript formatting) and detects a
-channel-type shift (0.64 with in-distribution channels held out) but
-scores well below chance on two setups
-whose out-of-distribution videos are selected for naming a ransomware
-family. We release the corpus, the full extraction and audit
-pipeline, and all experiment code openly, and argue that the audit
-methodology -- not just its findings -- is reusable by any weak-label
-security-NLP dataset built the same way.
+Security professionals share much of their ransomware knowledge in
+conference talks and vendor webinars, but we are not aware of an open
+transcript-level corpus that covers this material. We present RansKnow,
+an open corpus of 1{,}128 ransomware-related YouTube video records
+(1{,}034 with transcripts) from 92 cybersecurity channels, with MITRE
+ATT\&CK-aligned family, tactic, tool, and platform features extracted by
+regular expressions. A label-quality audit found that 9 of 41 family
+aliases collide with ordinary words such as \texttt{play} and
+\texttt{hive}, which inflated the most-detected family about $3.5\times$
+before a context-based fix. The corpus has no independent human-annotated
+test set, so baseline, calibration, and conformal results measure
+agreement with the audited pipeline, not real-world accuracy. On that
+basis, baselines reach macro-F1 0.90 on relevance, 0.62 on platform, 0.38
+on dominant tactic, and at most 0.20 on family and tool. Split conformal
+prediction reaches 0.91--0.93 coverage at a 90\% target on the multiclass
+tasks. In out-of-distribution detection, softmax methods fail a sanity
+check against off-topic newsgroup posts (AUROC 0.62), while Mahalanobis
+distance on embeddings passes it (0.94 after controlling for length and
+formatting) but scores below chance on two
+setups whose out-of-distribution videos are selected for naming a family.
+We release the corpus, pipeline, and experiment code. The audit method
+applies to other security text datasets labeled by keywords or regular
+expressions.
 \end{abstract}
 
 % Elsevier asks for 3 to 5 highlights of at most 85 characters each,
@@ -153,58 +138,51 @@ Out-of-distribution detection
 \section{Introduction}
 \label{sec:intro}
 
-Ransomware knowledge is scattered across the same kind of source
-material that generated it in the first place: incident-response
-writeups, conference talks, and vendor threat-intelligence reporting,
-almost none of it structured for downstream NLP or ML use. Structured
-resources do exist -- the MITRE ATT\&CK framework itself
-\citep{strom2018attack}, and datasets built against it from written CTI
-text (\Cref{sec:related}) -- but no open, transcript-level corpus
-covers the specific and large body of ransomware knowledge that
-security professionals communicate \emph{by speaking}: conference
-talks, vendor webinars, and independent-researcher walkthroughs
-published as video. YouTube specifically is a useful aggregation point
-for this material precisely because of its source diversity: DFIR
-vendors publishing incident retrospectives, security conferences
-publishing full talk recordings, and independent researchers publishing
-technical walkthroughs all use the same platform, under different
-incentives and house styles, in a way no single vendor blog or CTI feed
-replicates. That diversity is also why transcribing it is nontrivial --
-92.7\% of this corpus required automatic speech recognition rather than
-official captions (\Cref{sec:transcripts}), which turns out to matter
-for downstream label quality, not just as a data-engineering footnote
-(\Cref{sec:finding-a}).
+Ransomware knowledge is scattered across incident-response writeups,
+conference talks, and vendor threat-intelligence reports, and little of
+it is structured for NLP or machine learning. Structured resources exist,
+including the MITRE ATT\&CK framework \citep{strom2018attack} and datasets
+built from written threat intelligence (\Cref{sec:related}), but we are
+not aware of an open transcript-level corpus covering what security
+professionals say in talks, webinars, and walkthroughs.
 
-This paper makes five contributions. First, RansKnow itself: 1{,}128
-video records, 1{,}034 with extracted transcripts, from 92 cybersecurity
-YouTube channels, with MITRE ATT\&CK-aligned structured features
-(\Cref{sec:construction}), released with its code at
-\url{https://github.com/Henrinnes/RansKnow}. Second, a label-quality audit methodology
-and its concrete findings (\Cref{sec:audit}): a systematic,
-dictionary-driven search for generic-word alias collisions in the
-regex-based extraction pipeline, which found that 9 of 41 family
-aliases collide with ordinary English or business words badly enough to
-inflate the single most-detected family by roughly $3.5\times$ before a
-disambiguation fix (\Cref{tab:alias-audit}). Third, an experiment
-framework and weak-label baseline results across five prediction tasks,
-three feature representations, and five models (\Cref{sec:baselines}),
-reported throughout -- here in the introduction, not only in
-\Cref{sec:limitations} where a reader could miss it -- as agreement
-with the audited extraction pipeline, \emph{not} as independently
-verified accuracy: this project does not include a human-annotated
-evaluation set held out from the labeling pipeline
-(\Cref{sec:gold-scope}), and every quantitative claim from
-\Cref{sec:baselines} through \Cref{sec:conformal} should be read with
-that scope in mind. Fourth, out-of-distribution robustness results
-(\Cref{sec:ood}), which need no correct dominant-tactic label to score,
-although two of the four setups define their out-of-distribution
-populations with the regex. Fifth, counterfactual and
-perturbation-robustness interpretability results
-(\Cref{sec:interpretability}) that connect back to the audit: a
-classifier trained on the fixed labels, scored only on videos it did not
-train on, still ranks the videos the fix removed slightly above other
-negative videos (AUROC 0.58), a weak trace of the word-level fragility
-Finding A identifies in the labeling pipeline itself.
+YouTube gathers this material from incident-response vendors, security
+conferences, and independent researchers, whose incentives and house
+styles differ in a way no single vendor blog or threat feed replicates.
+Transcription is the first obstacle: 92.7\% of this corpus needed
+automatic speech recognition rather than official captions
+(\Cref{sec:transcripts}), and a single misheard term can change a
+jargon-based label (\Cref{sec:finding-b}).
+
+Labeling is the second. RansKnow's labels come from a regex pipeline, and
+the project has no human-annotated evaluation set held out from that
+pipeline (\Cref{sec:gold-scope}). Results from \Cref{sec:baselines}
+through \Cref{sec:conformal} therefore measure agreement with the audited
+pipeline, not verified accuracy.
+
+This paper makes five contributions:
+\begin{enumerate}
+\item \textbf{A corpus.} RansKnow contains 1{,}128 video records, 1{,}034
+  with transcripts, from 92 cybersecurity YouTube channels, with MITRE
+  ATT\&CK-aligned features (\Cref{sec:construction}). The corpus and code
+  are at \url{https://github.com/Henrinnes/RansKnow}.
+\item \textbf{A label-quality audit.} A dictionary-driven search for
+  generic-word alias collisions found that 9 of 41 family aliases collide
+  with ordinary words, which inflated the most-detected family about
+  $3.5\times$ before a disambiguation fix (\Cref{sec:audit},
+  \Cref{tab:alias-audit}).
+\item \textbf{Weak-label baselines.} We report results across five
+  prediction tasks, three feature representations, and five models, with
+  calibration and conformal prediction on top (\Cref{sec:baselines,sec:uncertainty,sec:conformal}).
+\item \textbf{Out-of-distribution results.} These scores need no correct
+  dominant-tactic label, although two of the four setups define their
+  out-of-distribution populations with the regex (\Cref{sec:ood}).
+\item \textbf{Counterfactual and perturbation checks.} A classifier
+  trained on the fixed labels and scored on videos it did not train on
+  still ranks the videos the fix removed slightly above other negatives
+  (AUROC 0.58), a weak trace of the fragility the audit found
+  (\Cref{sec:interpretability}).
+\end{enumerate}
 
 \section{Related Work}
 \label{sec:related}
@@ -417,6 +395,7 @@ Medusa  &   7 &   7 &   0 \\
 \end{table}
 
 \subsection{Finding B: ASR-dominated transcript quality}
+\label{sec:finding-b}
 As noted in Section~\ref{sec:transcripts}, 92.7\% of transcripts are ASR
 output rather than official captions. Aggregate detection-rate
 comparisons across \texttt{Transcript\_Provider} do not show an obvious
@@ -1434,38 +1413,27 @@ every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
 
 \section{Conclusion}
 \label{sec:conclusion}
-RansKnow is a 1{,}128-video, 1{,}034-transcript, MITRE ATT\&CK-aligned
-corpus of ransomware-related YouTube content, and this paper's
-contribution is not the corpus alone. The label-quality audit
-methodology (Section~\ref{sec:audit}) and the interpretability
-diagnostics that verify it against a trained model's actual behavior
-(Section~\ref{sec:interpretability}) are a second, reusable
-contribution: any weak-label security-NLP dataset built the same way
-(keyword or regex extraction over scraped or transcribed text) can
-reuse the alias-collision-audit methodology and the counterfactual/
-perturbation checks even without reusing this specific corpus, and
-should -- Finding A demonstrates concretely that a plausible-looking
-regex label can be dominated by detections a simple context check rejects
-(\Cref{tab:alias-audit}: 71\% of pre-fix \texttt{Play} detections), which
-is precisely the class of error a corpus released without this kind of
-audit would carry silently.
+We presented RansKnow, an open MITRE ATT\&CK-aligned corpus of 1{,}128
+ransomware-related YouTube video records, 1{,}034 with transcripts. The
+audit shows that a plausible regex label can be dominated by detections a
+simple context check rejects: 71\% of pre-fix \texttt{Play} detections
+(\Cref{tab:alias-audit}). A corpus released without such an audit would
+carry this error silently.
 
-The most valuable open follow-up to this specific paper is not further
-modeling. It is independent, human-annotated verification of a subset
-of RansKnow's labels (Section~\ref{sec:limitations}), and it is worth
-being explicit about why that ranks above any modeling extension:
-every quantitative result this paper reports outside
-Section~\ref{sec:ood} would change in \emph{meaning}, not just in
-number, the day that verification exists. A macro-F1 of 0.90 on
-\texttt{relevance} currently means ``a LightGBM classifier on TF-IDF
-reproduces the Knowledge Agent's own regex output at this rate''; the
-same number, computed against even a modest independently-annotated
-subset, would mean something closer to what a reader of an ML paper's
-results table normally assumes a reported score means. Closing that
-gap changes the paper's central claim, not just its confidence
-interval, which is why it is listed first among follow-ups rather than
-alongside ordinary future-work suggestions like additional model
-architectures or task definitions.
+Against the audited labels, models reproduce relevance well (macro-F1
+0.90) but dominant tactic poorly (0.38). In out-of-distribution detection,
+softmax methods fail a sanity check that Mahalanobis distance passes, yet
+Mahalanobis distance scores below chance when out-of-distribution videos
+are selected for naming a family. The audit and the counterfactual and
+perturbation checks can be reused on any dataset labeled by keyword or
+regex extraction over scraped or transcribed text.
+
+The priority for future work is independent human annotation of a subset
+of the labels (Section~\ref{sec:limitations}). Until then, every
+quantitative result outside Section~\ref{sec:ood} describes agreement with
+the pipeline: a macro-F1 of 0.90 on \texttt{relevance} means a LightGBM
+classifier on TF-IDF reproduces the regex output at that rate, not that
+it identifies relevant videos at that rate.
 
 \section*{CRediT authorship contribution statement}
 \todo{List each author's CRediT roles (e.g.\ Conceptualization,
