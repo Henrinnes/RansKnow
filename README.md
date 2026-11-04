@@ -6,7 +6,7 @@ A curated dataset of **1128 video records** (1034 with full transcripts) sourced
 
 ## Background
 
-Ransomware attacks are one of the most damaging categories of cyber threats, yet knowledge about tactics, tools, and affected platforms is scattered across conference talks, incident response reports, and security briefings. RansKnow systematically collects and structures this knowledge from publicly available video content.
+Knowledge about ransomware tactics, tools, and affected platforms is scattered across conference talks, incident response reports, and security briefings. RansKnow collects and structures this knowledge from publicly available video content.
 
 Videos were selected using keyword-based inclusion criteria (ransomware-relevant terms), filtered for technical depth, and processed through a Knowledge Agent pipeline to extract structured features aligned with the MITRE ATT&CK framework.
 
@@ -27,9 +27,9 @@ RansKnow/
 │   └── ... (C01–C101, with gaps for excluded/unmatched channels)
 │
 ├── outputs/                      # Knowledge Agent extraction results
-│   ├── Knowledge_Agent_Features_1034.csv  # v3 — full 1034-row feature CSV (current)
+│   ├── Knowledge_Agent_Features_1034.csv  # v3: full 1034-row feature CSV (current)
 │   ├── Knowledge_Agent_Features_1034.xlsx
-│   ├── Knowledge_Agent_Features_307.csv  # v1 — original 307-row CSV (historical)
+│   ├── Knowledge_Agent_Features_307.csv  # v1: original 307-row CSV (historical)
 │   ├── Knowledge_Agent_Features_307.xlsx
 │   ├── Knowledge_Agent_Output.csv
 │   └── Knowledge_Agent_Uncertainty_Distribution.png
@@ -48,22 +48,22 @@ RansKnow/
 │   ├── rk_pipeline/                      # Experiment framework (tasks, features, models,
 │   │                                      #   splits, metrics, explainers, augmenters)
 │   ├── run_experiment.py                 # CLI: baseline ladder runner (tasks x features x models x splits)
-│   ├── audit_family_aliases.py           # Phase 0.2 — family-alias dictionary-collision audit
-│   ├── build_gold_eval_set.py            # Phase 0.3 — stratified gold-annotation sample
+│   ├── audit_family_aliases.py           # Phase 0.2: family-alias dictionary-collision audit
+│   ├── build_gold_eval_set.py            # Phase 0.3: stratified gold-annotation sample
 │   ├── merge_gold_annotations.py
 │   ├── build_gold_annotation_tool.py     # Builds outputs/Gold_Annotation_Tool.html
 │   ├── score_gold_against_pipeline.py    # Phase 0.3: Knowledge Agent precision/recall against human labels
 │   ├── precompute_external_embeddings.py # Phase 4: sentence embeddings for the 20 Newsgroups sanity check
 │   ├── phase4_leakage_audit.py           # Phase 4: leakage and confound checks on the OOD results
-│   ├── phase0_4_asr_spotcheck.py         # Phase 0.4 — ASR transcript quality spot-check
-│   ├── phase1_multiseed.py               # Phase 1 — multi-seed split variance for Table 3
-│   ├── phase2_calibration.py             # Phase 2 — calibration vs. weak labels
-│   ├── phase3_conformal.py               # Phase 3 — split conformal prediction
-│   ├── phase4_ood_detection.py           # Phase 4 — out-of-distribution detection
-│   ├── phase5_channel_leakage.py         # Phase 5.1 — channel-identity leakage check
-│   ├── phase5_length_confound.py         # Phase 5.1 — transcript-length confound check
-│   ├── phase5_counterfactual_explanations.py  # Phase 5.2 — counterfactual explanations
-│   ├── phase5_perturbation_robustness.py # Phase 5.3 — perturbation-robustness sweep
+│   ├── phase0_4_asr_spotcheck.py         # Phase 0.4: ASR transcript quality spot-check
+│   ├── phase1_multiseed.py               # Phase 1: multi-seed split variance for Table 3
+│   ├── phase2_calibration.py             # Phase 2: calibration vs. weak labels
+│   ├── phase3_conformal.py               # Phase 3: split conformal prediction
+│   ├── phase4_ood_detection.py           # Phase 4: out-of-distribution detection
+│   ├── phase5_channel_leakage.py         # Phase 5.1: channel-identity leakage check
+│   ├── phase5_length_confound.py         # Phase 5.1: transcript-length confound check
+│   ├── phase5_counterfactual_explanations.py  # Phase 5.2: counterfactual explanations
+│   ├── phase5_perturbation_robustness.py # Phase 5.3: perturbation-robustness sweep
 │   ├── precompute_embeddings.py          # Sentence-embedding cache for embedding features
 │   ├── make_paper_figures.py / make_ood_distribution_figure.py / make_ood_tsne_figure.py
 │   ├── export_rulebased_patterns.py / export_demo_models.py
@@ -79,7 +79,7 @@ RansKnow/
 │   └── populate_video_registry_from_transcripts.py
 │
 ├── rubrics/                      # Scoring rubrics and channel registry
-│   ├── Dataset_Channel_Registry_Batch2.xlsx  # Batch 2 — C51–C101 (fetched; 4 excluded, no channel found)
+│   ├── Dataset_Channel_Registry_Batch2.xlsx  # Batch 2: C51–C101 (fetched; 4 excluded, no channel found)
 │   ├── Dataset_Channel_Registry_Populated_25.xlsx
 │   ├── Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx
 │   ├── Ransomware_Family_Coverage_List.xlsx
@@ -87,7 +87,7 @@ RansKnow/
 │
 ├── Figures/                      # Visualisations
 ├── Progress_Mapping/             # Weekly progress tracking
-├── Channel_Registry_1.xlsx       # Master registry — Batch 1 channels (C01–C50)
+├── Channel_Registry_1.xlsx       # Master registry: Batch 1 channels (C01–C50)
 ├── croissant.json                # Croissant metadata (dataset schema + Responsible AI fields)
 ├── Family_Coverage_Targets_Rules.docx
 ├── Ransomware_Transcript_Dataset_Summary.pdf
@@ -208,16 +208,16 @@ All **1034 videos** with real transcripts have been processed through the Knowle
 | C100 | Optiv |
 | C101 | CanSecWest |
 
-Most channels contribute up to **20 videos** each (selected via ransomware-keyword matching against recent uploads), capped by how much matching content each channel actually has — several channels landed below that cap because their catalogs simply don't have more matching videos.
+Most channels contribute up to **20 videos** each, selected by ransomware-keyword matching against recent uploads. Several channels fall below that cap because they have no more matching videos.
 
-### Batch 2 — Completed (C51–C101)
+### Batch 2: completed (C51–C101)
 
 A second batch of candidate channels was fetched to expand coverage from 50 to 92 channels. Of the 51 Batch 2 candidates:
 
 - **42 channels** were successfully fetched and contributed transcripts (listed above).
 - **1 channel** was a confirmed duplicate of an existing Batch 1 channel (Active Countermeasures, C97) and was skipped.
-- **4 channels** — Cyb3rWard0g (C73), GrayHat Conference (C79), Hack.lu Conference (C81), Eric Zimmerman (C95) — have no discoverable dedicated YouTube channel (via API handle lookup or name search) and were marked `Included = No`.
-- **4 channels** — Anomali (C59), HuskyHacks (C68), SecTor (C77), Nextron Systems / Florian Roth (C94) — resolved to real, verified channels but returned zero ransomware-keyword-matching videos within the scanned upload history.
+- **4 channels** have no discoverable dedicated YouTube channel (via API handle lookup or name search) and were marked `Included = No`: Cyb3rWard0g (C73), GrayHat Conference (C79), Hack.lu Conference (C81), and Eric Zimmerman (C95).
+- **4 channels** resolved to real, verified channels but returned no ransomware-keyword-matching videos within the scanned upload history: Anomali (C59), HuskyHacks (C68), SecTor (C77), and Nextron Systems / Florian Roth (C94).
 
 Channel selection rubric, URLs, and inclusion notes: `rubrics/Dataset_Channel_Registry_Batch2.xlsx`
 
@@ -280,21 +280,21 @@ The notebook source is also included at `Scripts/ransknow-getting-started.ipynb`
 
 ## Modeling, Audits & Paper
 
-The dataset is accompanied by a full experiment and audit pipeline, written up in a manuscript for *Computers & Security* at `paper/main.pdf` (source in `paper/main.tex`). Its central argument: the corpus's contribution isn't the transcripts alone, but a label-quality audit of the weak-label extraction pipeline, plus a demonstration of how that weak-label scope propagates through every downstream result. The earlier NeurIPS 2026 Datasets & Benchmarks Track version, including its paper checklist, is preserved in commit `9682a6d`.
+The dataset is accompanied by a full experiment and audit pipeline, written up in a manuscript for *Computers & Security* at `paper/main.pdf` (source in `paper/main.tex`). Alongside the corpus, it contributes a label-quality audit of the weak-label extraction pipeline and shows how the weak labels limit what each downstream result means. The earlier NeurIPS 2026 Datasets & Benchmarks Track version, including its paper checklist, is preserved in commit `9682a6d`.
 
-**Label-quality audit** — `Scripts/audit_family_aliases.py` found 9 of 41 ransomware-family aliases collide with ordinary English/business words (e.g. `play`, `hive`, `cactus`), inflating the top-detected family by roughly 3.5x before a context-window disambiguation fix.
+**Label-quality audit.** `Scripts/audit_family_aliases.py` found 9 of 41 ransomware-family aliases collide with ordinary English/business words (e.g. `play`, `hive`, `cactus`), inflating the top-detected family by roughly 3.5x before a context-window disambiguation fix.
 
-**Baselines (Phase 1)** — `run_experiment.py` sweeps tasks (relevance, dominant tactic, platform, tool, family) x features (structured, TF-IDF, sentence embeddings) x models (rule-based, logistic regression, random forest, GBM) x splits (stratified-random, channel-grouped, temporal). Weak-label macro-F1 reaches 0.90 on binary relevance and 0.62 on platform, 0.38 on dominant-tactic once structured features are excluded (they contain the counts its label is the argmax of), and stays weak (≤0.20) on the family/tool taxonomies. `phase1_multiseed.py` re-runs the best combo per task across 5 stratified-random seeds to report variance.
+**Baselines (Phase 1).** `run_experiment.py` sweeps tasks (relevance, dominant tactic, platform, tool, family) x features (structured, TF-IDF, sentence embeddings) x models (rule-based, logistic regression, linear SVM, random forest, GBM) x splits (stratified-random, channel-grouped, temporal). Weak-label macro-F1 reaches 0.90 on binary relevance and 0.62 on platform, 0.38 on dominant-tactic once structured features are excluded (they contain the counts its label is the argmax of), and stays weak (≤0.20) on the family/tool taxonomies. `phase1_multiseed.py` re-runs the best combo per task across 5 stratified-random seeds to report variance.
 
-**Calibration & conformal prediction (Phases 2–3)** — `phase2_calibration.py` / `phase3_conformal.py` measure calibration against weak labels (ECE 0.02–0.18; a Random Forest tree-vote-entropy signal separates label agreement from disagreement with AUROC 0.68–0.98) and split conformal prediction (0.91–0.93 coverage at a 90% target on the multiclass tasks, within 3 points on two corpus subsets).
+**Calibration & conformal prediction (Phases 2–3).** `phase2_calibration.py` / `phase3_conformal.py` measure calibration against weak labels (ECE 0.02–0.18; a Random Forest tree-vote-entropy signal separates label agreement from disagreement with AUROC 0.68–0.98) and split conformal prediction (0.91–0.93 coverage at a 90% target on the multiclass tasks, within 3 points on two corpus subsets).
 
-**Out-of-distribution detection (Phase 4)** — `phase4_ood_detection.py` tests four distribution-shift setups. Softmax-confidence detectors fail the sanity check against off-topic text (AUROC 0.62), because the classifier confidently labels that text as containing no tactic. Embedding-based Mahalanobis distance passes it (0.94 after controlling for length and formatting) and detects a channel-type shift (0.64 with ID channels held out), but scores well below chance on the two setups whose OOD videos are selected for naming a family. `phase4_leakage_audit.py` checks these results for shared channels, duplicates, unmatched family mentions, and length and formatting effects.
+**Out-of-distribution detection (Phase 4).** `phase4_ood_detection.py` tests four distribution-shift setups. Softmax-confidence detectors fail the sanity check against off-topic text (AUROC 0.62), because the classifier confidently labels that text as containing no tactic. Embedding-based Mahalanobis distance passes it (0.94 after controlling for length and formatting) and detects a channel-type shift (0.64 with ID channels held out), but scores well below chance on the two setups whose OOD videos are selected for naming a family. `phase4_leakage_audit.py` checks these results for shared channels, duplicates, unmatched family mentions, and length and formatting effects.
 
-**Robustness (Phase 5)** — channel-identity leakage (`phase5_channel_leakage.py`), transcript-length confounds (`phase5_length_confound.py`), counterfactual explanations probing the Family=Play word-collision fragility (`phase5_counterfactual_explanations.py`), and an untargeted perturbation-robustness sweep (`phase5_perturbation_robustness.py`).
+**Robustness (Phase 5).** channel-identity leakage (`phase5_channel_leakage.py`), transcript-length confounds (`phase5_length_confound.py`), counterfactual explanations probing the Family=Play word-collision fragility (`phase5_counterfactual_explanations.py`), and an untargeted perturbation-robustness sweep (`phase5_perturbation_robustness.py`).
 
-**Scope caveat, stated explicitly in the paper**: there is no independently human-annotated gold evaluation set. Every baseline, calibration, and conformal-prediction number is agreement with the audited-but-imperfect extraction pipeline, not verified real-world accuracy — OOD detection results are the exception, since they don't depend on label correctness.
+**Scope.** There is no independently human-annotated evaluation set. Every baseline, calibration, and conformal-prediction number is agreement with the audited but imperfect extraction pipeline, not verified real-world accuracy. OOD detection needs no correct dominant-tactic label to score, although the classifier is trained on the weak labels and two of the four setups define their populations with the regex.
 
-**Interactive demo** — `outputs/Inference_Demo.html` (built by `build_inference_demo.py`) runs the rule-based + TF-IDF extraction engine client-side in JS, numerically cross-validated against the Python pipeline via `validate_inference_engine.js`.
+**Interactive demo.** `outputs/Inference_Demo.html` (built by `build_inference_demo.py`) runs the rule-based + TF-IDF extraction engine client-side in JS, numerically cross-validated against the Python pipeline via `validate_inference_engine.js`.
 
 All experiment code and the paper are released alongside the dataset; see [License](#license).
 
@@ -304,11 +304,11 @@ All experiment code and the paper are released alongside the dataset; see [Licen
 
 | Version | Date | Description |
 |---|---|---|
-| v1 | May 2026 | Initial release — Knowledge Agent CSV (307 rows) |
-| v2 | July 2026 | Automated fetch — 761 video records, 424 transcripts, all scripts, rubrics, figures, and documentation |
-| v3 | July 2026 | Whisper ASR fallback — 718 transcripts recovered (94% coverage) across all 761 video records |
-| v4 | July 2026 | Knowledge Agent v2 — 718-row feature CSV (`Knowledge_Agent_Features_718.csv`), fixed tool detection, added Year/DurationSeconds/Transcript_Provider columns |
-| v5 | August 2026 | Batch 2 expansion — 42 new channels (C51–C101), bringing the dataset to 92 channels / 1128 video records / 1034 transcripts; fixed several stale channel URLs; Knowledge Agent v3 — 1034-row feature CSV (`Knowledge_Agent_Features_1034.csv`) |
+| v1 | May 2026 | Initial release: Knowledge Agent CSV (307 rows) |
+| v2 | July 2026 | Automated fetch: 761 video records, 424 transcripts, all scripts, rubrics, figures, and documentation |
+| v3 | July 2026 | Whisper ASR fallback: 718 transcripts recovered (94% coverage) across all 761 video records |
+| v4 | July 2026 | Knowledge Agent v2: 718-row feature CSV (`Knowledge_Agent_Features_718.csv`), fixed tool detection, added Year/DurationSeconds/Transcript_Provider columns |
+| v5 | August 2026 | Batch 2 expansion: 42 new channels (C51–C101), bringing the dataset to 92 channels / 1128 video records / 1034 transcripts; fixed several stale channel URLs; Knowledge Agent v3 with a 1034-row feature CSV (`Knowledge_Agent_Features_1034.csv`) |
 | v6 | August 2026 | Modeling & audit pipeline (`rk_pipeline`), family-alias collision audit, Phases 1–5 (baselines, calibration, conformal prediction, OOD detection, robustness), JS inference demo, Croissant metadata, and the NeurIPS 2026 D&B Track paper submission (`paper/`) |
 | v7 | October 2026 | Paper moved to Elsevier's `elsarticle` template for *Computers & Security*, with highlights, keywords, and the Elsevier declaration sections; NeurIPS checklist removed |
 
@@ -319,5 +319,5 @@ All experiment code and the paper are released alongside the dataset; see [Licen
 This repository has three license scopes:
 
 - **Derived data** (extracted features, labels, and compiled metadata under `outputs/`, `RansKnow_v1/`, and the Kaggle-hosted copy): released under the [CC0 1.0 Universal (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/) licence.
-- **Transcript text** (under `transcripts/`, `RansKnow_v1/`, and the Kaggle-hosted copy): derived from third-party videos and not covered by the CC0 dedication. Rights remain with the speakers and channel owners, and the text is shared here for research use. Rights holders can request removal from future releases by opening an issue on this repository.
+- **Transcript text** (the `.txt` files under `transcripts/` and in the Kaggle-hosted copy): derived from third-party videos and not covered by the CC0 dedication. Rights remain with the speakers and channel owners, and the text is shared here for research use. Rights holders can request removal from future releases by opening an issue on this repository.
 - **Code** (everything under `Scripts/`, including the fetch pipeline, Knowledge Agent, `rk_pipeline` experiment framework, and audit/diagnostic scripts): released under the [MIT License](LICENSE).

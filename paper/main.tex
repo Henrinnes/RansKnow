@@ -1,22 +1,8 @@
-% RansKnow dataset paper -- skeleton
+% RansKnow dataset paper.
 %
-% Status as of this draft: Dataset Construction, Label-Quality Audit, and
-% Interpretability/Perturbation-Robustness (Phase 5) describe work that is
-% DONE and verified against the actual repository state. Baselines (Phase 1)
-% are also complete but explicitly weak-label-only: this project does not
-% include an independent human-annotated evaluation set (see the scope note
-% at the end of Section 3 -- recruiting external annotators would have
-% required ethics approval beyond the project's existing approval for public
-% data, and a single-investigator pass was decided against as still too close to the
-% pipeline being evaluated). Every downstream number is reported as
-% agreement with the audited extraction pipeline, not as verified accuracy.
-% Uncertainty (Sec 5) and Conformal Prediction (Sec 6) are reframed
-% accordingly -- their formal properties still hold relative to the
-% weak-label distribution, just with a correspondingly weaker
-% interpretation, stated explicitly rather than implied. OOD Detection
-% (Sec 8) needs no correct dominant-tactic label to score, but two of its
-% four setups define their OOD populations with the regex. Remaining
-% \todo{} markers are real open items, not silent gaps.
+% Scope: the project has no independent human-annotated evaluation set, so
+% baseline, calibration, and conformal results are reported as agreement
+% with the audited extraction pipeline, not as verified accuracy.
 %
 % Target: Computers & Security (Elsevier), using the standard elsarticle
 % class that Elsevier provides for all its journals. The NeurIPS 2026
@@ -63,8 +49,8 @@
 % Deliberately not using the todonotes package: its margin-note/inline
 % float mechanism collided with this document's real tables and produced
 % an unrecoverable "Float(s) lost" error (confirmed by isolating with
-% [disable] -- the document compiles cleanly without it). This does the
-% same job -- visually flag incomplete sections -- as plain paragraph
+% [disable]; the document compiles cleanly without it). This does the
+% same job (visually flag incomplete sections) as plain paragraph
 % text, which can't collide with anything. The optional [inline] argument
 % below is accepted and ignored, so every existing \todo[inline]{...} /
 % \todo{...} call site works unchanged.
@@ -208,45 +194,34 @@ attack techniques. These works take written text as input. RansKnow
 applies a deterministic regex method to mostly ASR transcripts and audits
 the labels that method produces.
 
-\textbf{Ransomware and cyber-threat-intelligence datasets.} The MITRE
-ATT\&CK framework \citep{strom2018attack} that RansKnow's tactic
-taxonomy is aligned to was designed for exactly this kind of
-cross-source mapping, and prior datasets have built structured
-resources against it from written cyber-threat-intelligence (CTI) text:
-MalwareTextDB \citep{lim2017malwaretextdb} provides span-level
-annotations (39 APT reports, 6{,}819 sentences) for malware
-characteristics, and the more recent AnnoCTR \citep{lange2024annoctr}
-links entities, tactics, and techniques across 400 commercial CTI
-reports, with human annotation throughout. Both are built from written
-prose -- vendor blog posts and reports, produced already in
-structured-adjacent form for a threat-intelligence-consuming audience.
-RansKnow's source material is instead spoken narration, transcribed at
-92.7\% via ASR (\Cref{sec:transcripts}), from a broader and more
-heterogeneous set of speakers (vendor analysts, conference presenters,
-independent researchers) than a CTI report's house style, and its
-structured features are produced entirely by an audited regex/keyword
-pipeline (\Cref{sec:audit}) rather than human annotation -- a different,
-explicitly weaker, point on the label-quality spectrum those two
-datasets occupy, traded for scale and openness (we are not aware of a
-comparable open, transcript-level, MITRE-aligned video corpus, although
-our search was not a systematic review).
+\textbf{Ransomware and cyber-threat-intelligence datasets.} RansKnow's
+tactic taxonomy follows the MITRE ATT\&CK framework
+\citep{strom2018attack}, and prior datasets build on that framework using
+written cyber-threat-intelligence (CTI) text. MalwareTextDB
+\citep{lim2017malwaretextdb} provides span-level annotations of malware
+characteristics (39 APT reports, 6{,}819 sentences), and AnnoCTR
+\citep{lange2024annoctr} links entities, tactics, and techniques across
+400 commercial CTI reports. Both rely on human annotation of written vendor
+reports and blog posts. RansKnow differs in two ways. Its source material
+is spoken narration, 92.7\% of it transcribed by ASR
+(\Cref{sec:transcripts}), from vendor analysts, conference presenters, and
+independent researchers. Its features come from an audited regex and
+keyword pipeline (\Cref{sec:audit}) rather than human annotation, which
+gives weaker labels in exchange for scale and openness. We are not aware of
+a comparable open, transcript-level, MITRE-aligned video corpus, although
+our search was not a systematic review.
 
-\textbf{Weak and distant supervision.} Using an automated heuristic
-in place of human labels is a well-studied tradeoff, not a shortcut
-unique to this project: \citet{mintz2009distant} formalized distant
-supervision for relation extraction by aligning text against a
-knowledge base rather than hand-labeling it, accepting a known noise
-ceiling in exchange for scale, and \citet{ratner2017snorkel}'s Snorkel
-generalizes the idea to multiple, possibly conflicting, weak labeling
-functions combined probabilistically. The Knowledge Agent
-(\Cref{sec:audit}) is a single deterministic labeling function rather
-than an ensemble of weak sources, which makes it simpler to audit (the
-alias-collision analysis in \Cref{sec:finding-a} would be considerably
-harder against a black-box combination of many weak labelers) but
-removes Snorkel-style noise-cancellation-via-redundancy as a mitigation
---- a tradeoff made explicit rather than left implicit, and the direct
-motivation for \Cref{sec:gold-scope}'s scope note running through every
-downstream section. Label-quality research reaches similar concerns from
+\textbf{Weak and distant supervision.} Replacing human labels with an
+automated heuristic is a well-studied tradeoff.
+\citet{mintz2009distant} formalized distant supervision for relation
+extraction by aligning text against a knowledge base, accepting label noise
+in exchange for scale, and \citet{ratner2017snorkel}'s Snorkel combines
+multiple, possibly conflicting, weak labeling functions probabilistically.
+The Knowledge Agent (\Cref{sec:audit}) is a single deterministic labeling
+function. That makes it simpler to audit: the alias-collision analysis in
+\Cref{sec:finding-a} would be harder against a black-box combination of
+weak labelers. It also rules out cancelling noise through redundancy, which
+motivates the scope note in \Cref{sec:gold-scope}. Label-quality research reaches similar concerns from
 the model side: confident learning \citep{northcutt2021confident}
 characterizes and identifies label errors in datasets, and
 \citet{northcutt2021pervasive} estimate an average of 3.3\% label errors
@@ -257,114 +232,99 @@ with ordinary vocabulary.
 
 \textbf{Conformal prediction and out-of-distribution detection.} Split
 conformal prediction \citep{vovk2005algorithmic, lei2018distribution}
-and its distribution-free coverage guarantee (\Cref{sec:conformal})
-have seen growing NLP and security application as a distribution-free
-alternative to ad hoc confidence thresholds; \citet{angelopoulos2023gentle}
-survey the modern toolkit this paper's \Cref{sec:conformal-method} draws
-on directly. Out-of-distribution detection (\Cref{sec:ood}) via
-softmax-confidence baselines \citep{hendrycks2017baseline}, energy
-scores \citep{liu2020energy}, and class-conditional embedding distance
-\citep{lee2018simple} is comparatively less explored specifically for
-weak-label security-NLP classifiers, where -- as \Cref{sec:ood-results}
-shows concretely -- the usual confidence-based methods can fail in a
-domain-specific way (a classifier's most confident predictions
-coinciding with exactly the ``nothing detected'' signature that
-off-topic input also produces).
+offers a distribution-free coverage guarantee (\Cref{sec:conformal}) and
+has seen growing use in NLP and security as an alternative to ad hoc
+confidence thresholds. \citet{angelopoulos2023gentle} survey the methods
+that \Cref{sec:conformal-method} draws on. Out-of-distribution detection
+(\Cref{sec:ood}) with softmax-confidence baselines
+\citep{hendrycks2017baseline}, energy scores \citep{liu2020energy}, and
+class-conditional embedding distance \citep{lee2018simple} is less explored
+for weak-label security NLP classifiers. \Cref{sec:ood-results} shows that
+confidence-based methods can fail there in a domain-specific way: a
+classifier's most confident predictions coincide with the ``nothing
+detected'' signature that off-topic input also produces.
 
 \section{Dataset Construction}
 \label{sec:construction}
 
-RansKnow \citep{ransknow_kaggle, ransknow_github} consists of 1{,}128 video records sourced
-from 92 cybersecurity YouTube channels, of which 1{,}034 have an extracted
-transcript with real content (four of these videos are listed twice, under
+RansKnow \citep{ransknow_kaggle, ransknow_github} consists of 1{,}128 video
+records from 92 cybersecurity YouTube channels. Of these, 1{,}034 have an
+extracted transcript with real content (four videos are listed twice, under
 two registry entries for the same organization, so the 1{,}034 transcripts
-cover 1{,}030 distinct videos); the remaining 94\footnote{Verified directly
-  against the released \texttt{transcripts/} tree, not assumed from
-  $1128-1034$: all 94 are confirmed failed transcript extraction (no
-  method in the fetch cascade, \Cref{sec:transcripts}, produced usable
-  text), not videos excluded post-fetch for another reason.} could not be
-transcribed by any method in the fetch cascade.
+cover 1{,}030 distinct videos). The remaining 94 have no usable
+transcript.\footnote{We checked this against the released
+  \texttt{transcripts/} tree: no method in the fetch cascade
+  (\Cref{sec:transcripts}) produced usable text for any of the 94, and none
+  was excluded after fetching for another reason.}
 
 \subsection{Channel selection}
-Channels were curated in two batches. Batch 1 (50 channels, \texttt{C01}--\texttt{C50})
+We curated channels in two batches. Batch 1 (50 channels, \texttt{C01}--\texttt{C50})
 covers established DFIR vendors, security conferences, and independent
 researchers. Batch 2 (51 candidate channels, \texttt{C51}--\texttt{C101})
 expanded coverage into threat-intelligence vendors, additional conferences,
-and OT/ICS-security and government channels; 42 of the 51 candidates
-yielded usable transcripts, 1 was a confirmed duplicate of an existing
-Batch 1 channel, 4 had no discoverable dedicated YouTube channel, and 4
-resolved to real channels with zero ransomware-keyword-matching content in
-their upload history. Full channel-level provenance for both batches is in
+and OT/ICS-security and government channels. Of the 51 candidates, 42
+yielded usable transcripts, 1 was a confirmed duplicate of a Batch 1
+channel, 4 had no discoverable dedicated YouTube channel, and 4 resolved to
+real channels with no ransomware-keyword-matching content in their upload
+history. Channel-level provenance is released with the corpus in
 \path{rubrics/Dataset_Channel_Registry_Updated_50_fixed_urls.xlsx}
 (Batch 1) and \path{rubrics/Dataset_Channel_Registry_Batch2.xlsx}
-(Batch 2), released alongside the corpus rather than reproduced inline as
-a 92-row table.
+(Batch 2).
 
 \subsection{Video selection}
-Within each channel, videos were selected by scanning recent uploads for a
-fixed 21-term keyword list (\texttt{ransomware}, \texttt{extortion},
-\texttt{lockbit}, \texttt{incident response}, \dots; full list in
-\ref{app:keywords}) matched against title and description, capped
-at 20 videos per channel and a minimum duration of 5 minutes (short clips
-and trailers excluded). This is a convenience sample, not a random or
-exhaustive one, and the selection mechanism itself introduces bias worth
-naming rather than assuming away: a video is only in scope if its
-\emph{title or description} happens to contain one of the 21 terms, which
-conditions the corpus on each channel operator's own titling and
-SEO/description-writing habits. A channel that discusses ransomware
-extensively but titles episodes generically (e.g.\ by client-engagement
-number rather than threat name) would be under-represented regardless of
-its actual content relevance, and channels that lean on a small number of
-high-profile named families (\texttt{lockbit}, \texttt{conti}, \dots) in
-titles for engagement will be over-represented relative to channels
-discussing less headline-grabbing groups. This compounds with
-\Cref{sec:limitations}'s broader sampling-bias point: keyword-based
-inclusion is a second, independent bias layer on top of channel curation,
-not a neutral technical filtering step.
+Within each channel, we scanned recent uploads for a fixed 21-term keyword
+list (\texttt{ransomware}, \texttt{extortion}, \texttt{lockbit},
+\texttt{incident response}, \dots; full list in \ref{app:keywords}) matched
+against title and description, with a cap of 20 videos per channel and a
+minimum duration of 5 minutes to exclude short clips and trailers. This is a
+convenience sample, not a random or exhaustive one. A video is in scope only
+if its \emph{title or description} contains one of the 21 terms, which
+conditions the corpus on each channel operator's titling and description
+habits. A channel that discusses ransomware extensively but titles episodes
+generically (e.g.\ by client-engagement number rather than threat name)
+would be under-represented, and channels that name high-profile families
+(\texttt{lockbit}, \texttt{conti}, \dots) in titles for engagement would be
+over-represented. Keyword-based inclusion therefore adds a second bias on
+top of channel curation (\Cref{sec:limitations}).
 
 \subsection{Transcript acquisition}
 \label{sec:transcripts}
-Transcripts were acquired via a three-stage cascade: (1) the YouTube Data
+We acquired transcripts through a three-stage cascade: (1) the YouTube Data
 API's official captions where available; (2) \texttt{yt-dlp}'s
 auto-generated captions; (3) local Whisper transcription
-\citep{radford2023whisper} as a fallback.
-\textbf{This cascade matters more than a footnote}: only 74 of 1{,}034
-transcripts (7.2\%) came from official captions. 959 (92.7\%) are ASR
-output -- 554 from \texttt{whisper\_base} (the smallest, least accurate
-Whisper checkpoint) and 405 from a local Whisper fallback, 1 from
-\texttt{yt-dlp} captions. This raw composition is Finding B of the
-label-quality audit (\Cref{sec:audit}); the downstream implication --
-what an ASR-dominated corpus does to jargon-term detection specifically
--- is reported there rather than duplicated here.
+\citep{radford2023whisper} as a fallback. Only 74 of 1{,}034 transcripts
+(7.2\%) came from official captions. Another 959 (92.7\%) are ASR output:
+554 from \texttt{whisper\_base} (the smallest, least accurate Whisper
+checkpoint) and 405 from a local Whisper fallback. One transcript came from
+\texttt{yt-dlp} captions. This composition is Finding B of the label-quality
+audit, and \Cref{sec:finding-b} reports its effect on jargon-term detection.
 
 \section{Label-Quality Audit}
 \label{sec:audit}
 
 The Knowledge Agent pipeline (\texttt{Scripts/knowledge\_agent.py})
-extracts structured features from every transcript via regex matching:
+extracts structured features from every transcript with regex matching:
 ransomware family mentions (against a maintained alias list), MITRE
 ATT\&CK tactic mention counts across 10 tactics, offensive tool mentions
-across 8 tools, and platform signals (Windows/Linux/ESXi). Three concrete
-problems were found and are described here rather than left as an implicit
-caveat, because a downstream classifier trained on these labels inherits
-whatever bias they contain.
+across 8 tools, and platform signals (Windows/Linux/ESXi). We report three
+problems here because a classifier trained on these labels inherits their
+bias.
 
 \subsection{Finding A: generic-word alias collisions}
 \label{sec:finding-a}
 Nine of 41 family aliases collide with common English or business words
 (\texttt{play}, \texttt{hive}, \texttt{cactus}, \texttt{agenda},
 \texttt{clop}, \texttt{inc}, \texttt{maze}, \texttt{medusa},
-\texttt{royal}) -- identified programmatically via dictionary lookup
-against \texttt{/usr/share/dict/words}, then confirmed by manual
-transcript inspection (e.g. \texttt{hive} matching ``registry hive,'' a
-routine DFIR term, rather than Hive ransomware). A windowed-context
-disambiguation fix (requiring a ransomware-context term within
-$\sim$15 tokens of the match) was applied and reduces false-positive
-volume substantially without eliminating it -- residual false positives
-still occur when context vocabulary is itself dense (see
-\texttt{Scripts/audit\_family\_aliases.py} for the audit methodology and
-\Cref{tab:alias-audit} for before/after counts). The precision and recall
-of the fixed labels have not been measured against human judgment, so
+\texttt{royal}). We identified them with a dictionary lookup against
+\texttt{/usr/share/dict/words} and confirmed them by inspecting transcripts
+(e.g.\ \texttt{hive} matching ``registry hive,'' a routine DFIR term, rather
+than Hive ransomware). A windowed-context fix, which requires a
+ransomware-context term within $\sim$15 tokens of the match, substantially
+reduces false-positive volume but does not eliminate it: false positives
+still occur where context vocabulary is dense (see
+\texttt{Scripts/audit\_family\_aliases.py} for the method and
+\Cref{tab:alias-audit} for before/after counts). We have not measured the
+precision and recall of the fixed labels against human judgment, so
 \Cref{tab:alias-audit} shows how many detections the fix removed, not how
 many of the remaining detections are correct.
 
@@ -397,73 +357,58 @@ Medusa  &   7 &   7 &   0 \\
 \subsection{Finding B: ASR-dominated transcript quality}
 \label{sec:finding-b}
 As noted in Section~\ref{sec:transcripts}, 92.7\% of transcripts are ASR
-output rather than official captions. Aggregate detection-rate
-comparisons across \texttt{Transcript\_Provider} do not show an obvious
-gap, which is not the same as no effect: individual mistranscriptions
-of rare jargon can matter without moving an aggregate rate, since a
-single missed \texttt{rclone} mention changes that video's
-\texttt{Tool\_Rclone} feature from 1 to 0 regardless of how many other
-videos were transcribed correctly.
+output rather than official captions. Aggregate detection rates across
+\texttt{Transcript\_Provider} show no obvious gap, but mistranscribing rare
+jargon can matter without moving an aggregate rate: a single missed
+\texttt{rclone} mention changes that video's \texttt{Tool\_Rclone} feature
+from 1 to 0.
 
-Source audio is not stored locally (the released dataset ships
-transcripts, not audio), so the originally planned manual
-audio-vs-transcript listening check is automated here instead: for a
-random sample of 40 \texttt{whisper\_base}-transcribed videos (the
-smallest, least accurate checkpoint), the opening 6 minutes of audio
-was re-fetched and re-transcribed with Whisper's \texttt{small}
-checkpoint, treated as a stronger reference, and every occurrence of
-six fixed jargon terms (\texttt{LockBit}, \texttt{Mimikatz},
-\texttt{PsExec}, \texttt{Cobalt Strike}, \texttt{rclone},
-\texttt{BloodHound}, plus known phonetic-mangling variants) in the
-reference transcript was checked against the corresponding stored
-\texttt{whisper\_base} transcript. 35 of 40 videos were successfully
-re-fetched and re-transcribed (5 audio-download failures); across those
-35, the six jargon terms appeared at all in only 3 (video, term)
-instances within the sampled opening 6 minutes -- jargon density is
-low even in ransomware-focused content -- and 1 of those 3 was missed
-entirely by \texttt{whisper\_base}: \texttt{rclone}, mentioned once in
-the stronger reference transcript for one video and zero times
-(correct spelling or a known mangled variant) anywhere in that video's
-stored transcript, while \texttt{bloodhound} (same video) and
-\texttt{cobalt strike} (18 mentions in another video) were both
-correctly detected. A miss rate of 1/3 from a spot-check this small
-(3 instances) is not a precise estimate and should not be read as one --
-the honest conclusion is qualitative, not quantitative: jargon-term
-mistranscription is a real, observed failure mode of this corpus's
-dominant transcription method, consistent with Section~\ref{sec:perturbation}'s
-simulated-ASR-noise sweep, and a larger, unabridged spot-check (full
-video length, not a 6-minute cap; larger sample) is the natural
-follow-up this finding motivates rather than resolves.
+The released dataset contains transcripts, not audio, so we automated the
+planned audio-versus-transcript check. For a random sample of 40
+\texttt{whisper\_base} videos, we re-fetched the opening 6 minutes of audio,
+re-transcribed it with Whisper's \texttt{small} checkpoint as a stronger
+reference, and checked every occurrence of six jargon terms
+(\texttt{LockBit}, \texttt{Mimikatz}, \texttt{PsExec}, \texttt{Cobalt
+Strike}, \texttt{rclone}, \texttt{BloodHound}, plus known phonetic-mangling
+variants) against the stored \texttt{whisper\_base} transcript. Of the 40
+videos, 35 were re-transcribed (5 audio downloads failed). Across those 35,
+the six terms appeared in only 3 (video, term) instances within the sampled
+opening 6 minutes, so jargon density is low even in ransomware-focused
+content. The \texttt{whisper\_base} transcripts missed 1 of the 3 entirely:
+\texttt{rclone} appears once in one video's reference transcript and zero
+times (correct spelling or a known mangled variant) in its stored
+transcript. The other two, \texttt{bloodhound} (same video) and
+\texttt{cobalt strike} (18 mentions in another video), were detected
+correctly. A miss rate of 1/3 from 3 instances is not a precise estimate.
+The conclusion is qualitative: jargon mistranscription is an observed
+failure mode of this corpus's dominant transcription method, consistent with
+Section~\ref{sec:perturbation}'s simulated-ASR-noise sweep. A larger
+spot-check over full video length is the natural follow-up.
 
 \subsection{Scope: no independent ground truth}
 \label{sec:gold-scope}
-An earlier design stage of this project planned a held-out, independently
-annotated evaluation subset (180 videos, stratified by channel type,
-year, and current family-count) specifically to break the circularity of
-evaluating a classifier against the same weak-label pipeline it was
-trained on. That subset was never annotated. Recruiting external annotators
-would have required ethics approval beyond the project's existing approval
-for public data, and was not undertaken; a single-investigator pass was
-considered as a fallback and
-rejected as still too close to the system under evaluation to serve as
-independent ground truth in a way worth claiming in a paper.
+An earlier design of this project planned a held-out, independently
+annotated evaluation subset (180 videos, stratified by channel type, year,
+and current family count) to break the circularity of evaluating a
+classifier against the pipeline that labeled its training data. That subset
+was never annotated. Recruiting external annotators would have required
+ethics approval beyond the project's existing approval for public data, and
+was not undertaken. We considered a single-investigator pass and rejected it
+as too close to the system under evaluation to serve as independent ground
+truth.
 
-The consequence is stated here plainly, and repeated at the point every
-affected result is reported, rather than left as a single Limitations
-bullet a reader could miss: \textbf{every quantitative result in
+As a result, \textbf{every quantitative result in
 Section~\ref{sec:baselines} onward, apart from the population-separation
 scores in Section~\ref{sec:ood} and the behavioral checks in
 Section~\ref{sec:interpretability}, measures agreement
 with the audited Knowledge Agent extraction pipeline (Section~\ref{sec:audit}),
-not verified accuracy against human judgment.} Section~\ref{sec:audit}
-demonstrates concretely that this pipeline's labels contain real,
-non-trivial error even after the disambiguation fix (Finding A); nothing
-downstream corrects for that. Readers should treat macro-F1 and
-calibration numbers in this paper as characterizing how well models
-reproduce a specific, imperfect, documented extraction process --
-not as claims about ransomware-domain understanding in an absolute
-sense. Section~\ref{sec:limitations} returns to this as the paper's
-central limitation.
+not verified accuracy against human judgment.} We repeat this point where
+each affected result is reported. Finding A shows that the pipeline's labels
+contain error even after the disambiguation fix, and nothing downstream
+corrects for it. Macro-F1 and calibration numbers in this paper describe how
+well models reproduce a specific, imperfect, documented extraction process.
+They are not claims about ransomware-domain understanding.
+Section~\ref{sec:limitations} returns to this limitation.
 
 \section{Task Definitions and Baselines}
 \label{sec:baselines}
@@ -497,40 +442,38 @@ Ransomware-relevant   & binary                 &  2 & derived \\
 \end{table}
 
 \subsection{Model ladder and validation protocol}
-Each task is evaluated over two feature representations (TF-IDF and
-mean-pooled sentence embeddings\footnote{384-dim
+Each task is evaluated over two feature representations: TF-IDF and
+mean-pooled sentence embeddings.\footnote{384-dim
   \texttt{all-MiniLM-L6-v2}, chunked at $\sim$200 words per chunk and
-  mean-pooled, computed via a dedicated Python environment
-  (\texttt{torch}~2.5.1) since the reference implementation's default
-  environment ships an older \texttt{torch} that cannot satisfy
+  mean-pooled, computed in a dedicated Python environment
+  (\texttt{torch}~2.5.1) because the reference implementation's default
+  environment ships an older \texttt{torch} that does not satisfy
   \texttt{sentence\_transformers}' \citep{reimers2019sbert} requirements; see
   \texttt{Scripts/precompute\_embeddings.py}. The 20 Newsgroups embeddings
   and the experiments rerun for this version used Python~3.12.3 with
   \texttt{torch}~2.15.0, \texttt{sentence\_transformers}~6.2.0,
-  scikit-learn~1.9.1, and LightGBM~4.7.0.}), with structured Knowledge
-Agent columns added for \texttt{family} and \texttt{dominant\_tactic}
-only, and five models (the
-rule-based Knowledge Agent itself as baseline 0, Logistic Regression,
-Linear SVM, Random Forest, LightGBM \citep{ke2017lightgbm}), under three cross-validation
-protocols: stratified random $k$-fold, \texttt{GroupKFold} by
-\texttt{Channel\_ID} (to detect channel-style leakage -- a model can learn
-``this is CrowdStrike's narration style'' instead of the content), and a
-temporal split (train pre-2024, test 2024+, since 79\% of the corpus is
-from 2024 onward).
+  scikit-learn~1.9.1, and LightGBM~4.7.0.} Structured Knowledge Agent
+columns are added for \texttt{family} and \texttt{dominant\_tactic} only. We
+compare five models (the rule-based Knowledge Agent as baseline 0, Logistic
+Regression, Linear SVM, Random Forest, LightGBM \citep{ke2017lightgbm}) under
+three cross-validation protocols: stratified random $k$-fold,
+\texttt{GroupKFold} by \texttt{Channel\_ID} (to detect channel-style leakage,
+since a model can learn ``this is CrowdStrike's narration style'' instead of
+the content), and a temporal split (train pre-2024, test 2024+, since 79\% of
+the corpus is from 2024 onward).
 
 \subsection{Results}
 \label{sec:baseline-results}
 Per Section~\ref{sec:gold-scope}, every number in this section is
-weak-label agreement -- how well a model reproduces the Knowledge
-Agent's own extraction, not verified accuracy. The rule-based Knowledge
-Agent baseline scores a tautological macro-F1 of 1.000 on every task
-(checked against its own labels by construction; included as baseline 0,
-not as evidence of anything) and is omitted from \Cref{tab:results}
-accordingly. Structured features are excluded from the dominant-tactic
-comparison for a related reason: they contain the tactic counts its label
-is the argmax of. That combination scores 0.813 with LightGBM, which
-measures how well a tree model learns an argmax over its own inputs, so
-\Cref{tab:results} reports the best representation without those counts.
+weak-label agreement: how well a model reproduces the Knowledge Agent's own
+extraction. The rule-based Knowledge Agent baseline scores a tautological
+macro-F1 of 1.000 on every task because it is checked against its own labels,
+so \Cref{tab:results} omits it. Structured features are excluded from the
+dominant-tactic comparison for a related reason: they contain the tactic
+counts its label is the argmax of. That combination scores 0.813 with
+LightGBM, which measures how well a tree model learns an argmax over its own
+inputs, so \Cref{tab:results} reports the best representation without those
+counts.
 
 \begin{table}[htbp]
 \centering
@@ -539,7 +482,7 @@ measures how well a tree model learns an argmax over its own inputs, so
   GBM). Weak-label agreement, not verified accuracy
   (\S\ref{sec:gold-scope}). Mean~$\pm$~std is across 5 stratified-random
   split seeds (0--4) at the reported (representation, model) cell, model
-  \texttt{random\_state} held fixed -- see the paragraph below the table.}
+  \texttt{random\_state} held fixed (see the paragraph below the table).}
 \label{tab:results}
 \begin{fittable}
 \begin{tabular}{lllr}
@@ -556,24 +499,19 @@ Family                 & embedding  & LogReg & $0.115 \pm 0.019$ \\
 \end{fittable}
 \end{table}
 
-The single-seed point estimates used elsewhere in this paper are each
-the seed-0 value of the same cell, within 0.015 of the 5-seed mean for
-every task except \texttt{tool}, whose seed-0 value (0.200) sits 0.034
-above its mean. Std is smallest
-for \texttt{relevance} (0.006) and largest for \texttt{tool} (0.032,
-$\sim$20\% of its own mean), consistent with \texttt{tool}'s
-already-noted instability across CV protocols (\Cref{tab:baselines-full}).
-Only the stratified-random split's train/test partition varies with the
-seed here; \texttt{channel\_grouped} (\texttt{GroupKFold}) and
-\texttt{temporal} (a fixed pre/post-2024 cutoff) are both deterministic
-single partitions with no random component
-(\texttt{Scripts/rk\_pipeline/splits.py}), so a seed sweep is not a
-meaningful question for those two and is not computed for them. Model
-\texttt{random\_state} (RF/GBM) is likewise held fixed at 0 throughout:
-this table isolates variance from which videos land in train vs.\ test
-under 5 different stratified partitions specifically, not full
-stochastic-training variance, and is reported as exactly that rather
-than a broader claim (\texttt{outputs/experiments/phase1\_multiseed.json},
+The single-seed point estimates used elsewhere in this paper are the seed-0
+values of the same cells, within 0.015 of the 5-seed mean for every task
+except \texttt{tool}, whose seed-0 value (0.200) sits 0.034 above its mean.
+Std is smallest for \texttt{relevance} (0.006) and largest for \texttt{tool}
+(0.032, $\sim$20\% of its mean), consistent with \texttt{tool}'s instability
+across CV protocols (\Cref{tab:baselines-full}). Only the stratified-random
+split varies with the seed. \texttt{channel\_grouped} (\texttt{GroupKFold})
+and \texttt{temporal} (a fixed pre/post-2024 cutoff) are deterministic single
+partitions (\texttt{Scripts/rk\_pipeline/splits.py}), so we compute no seed
+sweep for them. Model \texttt{random\_state} (RF/GBM) is held fixed at 0, so
+this table isolates variance from which videos land in train vs.\ test across
+5 stratified partitions, not full training variance
+(\texttt{outputs/experiments/phase1\_multiseed.json},
 \texttt{Scripts/phase1\_multiseed.py}).
 
 Two patterns stand out: (1) GBM is the strongest model on relevance,
@@ -633,37 +571,31 @@ Family            & 0.13 & 0.08 & 0.02 & 0.08 \\
 \end{fittable}
 \end{table}
 
-\Cref{fig:baselines-3d} plots \Cref{tab:baselines-full} as a 3D stem
-plot rather than solid bars: each (task, model) cell is a thin marked
-stem rather than an opaque block, so no value is hidden behind a taller
-neighbor from any viewing angle, which a solid-bar rendering of the
-same data could not guarantee.
+\Cref{fig:baselines-3d} plots \Cref{tab:baselines-full} as a 3D stem plot.
+Thin marked stems keep every value visible from any viewing angle, which a
+solid-bar rendering could not guarantee.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.7\textwidth]{figures/fig_baselines_3d.pdf}
-  \caption{\Cref{tab:baselines-full} as a 3D stem plot -- every point
-    visible regardless of viewing angle, unlike a solid-bar rendering
-    of the same data.}
+  \caption{\Cref{tab:baselines-full} as a 3D stem plot, with every point
+    visible regardless of viewing angle.}
   \label{fig:baselines-3d}
 \end{figure}
 
 \section{Uncertainty Quantification}
 \label{sec:uncertainty}
-\textbf{Scope note (\S\ref{sec:gold-scope} applies here directly):}
-calibration is normally reported against ground truth -- does an 80\%-confidence
-prediction turn out correct roughly 80\% of the time. Without independent
-labels, the only calibration target available here is the weak-label
-distribution itself, which changes what a well-calibrated result would
-mean: a model perfectly calibrated against its own training signal has
-learned to be a confident, well-calibrated echo of a regex, not
-necessarily a well-calibrated model of ransomware content. This section
-is retained, with that meaning made explicit at every reported number,
-because reliability diagrams and Expected Calibration Error against the
-weak labels are still informative about a narrower question worth
-answering: does a model's confidence track its \emph{agreement with the
-extraction pipeline}, or is it uniformly overconfident regardless of
-agreement. The latter would be a red flag on its own.
+\textbf{Scope note (\S\ref{sec:gold-scope} applies here):} calibration is
+normally reported against ground truth: does an 80\%-confidence prediction
+turn out correct roughly 80\% of the time? Without independent labels, the
+only available target is the weak-label distribution, which changes what a
+well-calibrated result means. A model perfectly calibrated against its own
+training signal has learned to echo a regex confidently, which does not make
+it a well-calibrated model of ransomware content. We report these results
+because reliability diagrams and Expected Calibration Error against the weak
+labels still answer a narrower question: does a model's confidence track its
+\emph{agreement with the extraction pipeline}, or is it uniformly
+overconfident regardless of agreement?
 
 \subsection{Calibration against weak labels}
 \label{sec:uncertainty-calibration}
@@ -691,16 +623,15 @@ S_b = \{x : \hat p_{\max}(x) \in I_b\},
 where $\operatorname{acc}(S_b) = \frac{1}{|S_b|}\sum_{x \in S_b} a(x)$ and
 $\operatorname{conf}(S_b) = \frac{1}{|S_b|}\sum_{x \in S_b} \hat p_{\max}(x)$.
 Per the scope note above, $a(x)$ measures agreement with $y^{\mathrm{KA}}$,
-not correctness, so \cref{eq:ece} is a \emph{weak-label ECE}. The
-headline number below the scope note is the confident-disagreement
-rate at threshold $\tau=0.9$,
+not correctness, so \cref{eq:ece} is a \emph{weak-label ECE}. We also report
+the confident-disagreement rate at threshold $\tau=0.9$,
 \begin{equation}
 \label{eq:cdr}
 \mathrm{CDR}_\tau \;=\; \frac{1}{N}\sum_{i=1}^N
   \mathbb{1}\!\left[\hat p_{\max}(x_i) > \tau\right]\cdot\bigl(1-a(x_i)\bigr),
 \end{equation}
 the closest available analogue to a ``confidently wrong'' rate without
-independently verified labels to actually be wrong against.
+independently verified labels.
 
 Each task is evaluated on the 5-fold stratified out-of-fold predictions
 of its best (feature, model) combination from \Cref{tab:results}.
@@ -730,13 +661,11 @@ Family (per-label)& 18612 & 0.018 & 0.019 & 0.095 / --     & --    \\
 \end{table}
 
 \Cref{fig:reliability} plots the reliability curves underlying
-\Cref{tab:calibration}. Two things worth naming honestly rather than
-smoothing over: first, per-bin counts are small (single digits to low
-tens per bin at $N{=}1034$), so individual bin heights are noisy --
-the curves are directionally informative, not point-estimate-precise.
-Dominant tactic has the largest ECE (0.178): without the tactic counts,
-its model is markedly overconfident against the weak labels.
-Second, the low per-label ECE of \texttt{tool} and \texttt{family} reflects
+\Cref{tab:calibration}. Dominant tactic has the largest ECE (0.178): without
+the tactic counts, its model is markedly overconfident against the weak
+labels. Two cautions apply. First, per-bin counts are small (single digits to
+low tens per bin at $N{=}1034$), so individual bin heights are noisy and the
+curves show direction only. Second, the low per-label ECE of \texttt{tool} and \texttt{family} reflects
 class imbalance more than skill. Most of their (sample, class) pairs are
 negative, so predicting ``absent'' agrees with the weak label almost
 everywhere, despite the low macro-F1 in \Cref{tab:results}, which weights
@@ -782,7 +711,7 @@ $H(x,k)$ is averaged over classes $k$ for a per-sample summary.
 \For{fold $(\mathcal{D}_{\mathrm{train}}, \mathcal{D}_{\mathrm{test}}) \in \mathcal{F}$}
   \State fit $\phi$ on $\mathcal{D}_{\mathrm{train}}$; fit Random Forest $\{t_j\}_{j=1}^T$ on $\phi(\mathcal{D}_{\mathrm{train}})$
   \For{$x \in \mathcal{D}_{\mathrm{test}}$}
-    \State $t_j(x) \gets$ individual tree prediction, $j=1,\dots,T$ \Comment{sklearn returns internal integer-encoded classes here, not the original label strings -- see note below}
+    \State $t_j(x) \gets$ individual tree prediction, $j=1,\dots,T$ \Comment{sklearn returns internal integer-encoded classes here, not the original label strings; see note below}
     \State recover original class labels via the fitted forest's class index before comparing to $y(x)$
     \State compute $H(x)$ via \Cref{eq:entropy}; record $a(x) = \mathbb{1}[\text{forest majority vote} = y(x)]$
   \EndFor
@@ -791,35 +720,28 @@ $H(x,k)$ is averaged over classes $k$ for a per-sample summary.
 \end{algorithmic}
 \end{algorithm}
 
-The in-line comment in \Cref{alg:rf-entropy} records a real implementation
-pitfall, not a hypothetical one: scikit-learn \citep{pedregosa2011scikit} fits each tree in a
+The comment in \Cref{alg:rf-entropy} records an implementation pitfall.
+scikit-learn \citep{pedregosa2011scikit} fits each tree in a
 \texttt{RandomForestClassifier} on internally label-encoded integer
 targets, so \texttt{tree.predict()} returns class \emph{indices}, not the
 original label strings the ensemble's own \texttt{.predict()} returns.
-Comparing tree-level votes directly against string labels without
-mapping back through the fitted forest's class index silently produces
-0\% apparent agreement on every multiclass task -- caught in this
-project's own Phase~2 run (initial numbers showed exactly that pattern
-across all three multiclass tasks simultaneously, which is what made it
-legible as a bug rather than a real result) and is recorded here as a
-concrete instance of the caution \Cref{sec:limitations} urges about
-verifying rather than assuming standard library internals.
-\Cref{tab:calibration}'s entropy AUROC column shows the proxy works well
-once fixed: $0.68$--$0.98$ across tasks, best on \texttt{tool} (many
-easy true negatives) and weakest on \texttt{platform}.
+Comparing tree-level votes directly against string labels without mapping
+back through the fitted forest's class index silently produces 0\% apparent
+agreement on every multiclass task. Our initial calibration run showed
+exactly that pattern across all three multiclass tasks, which is how we
+identified the bug. \Cref{tab:calibration}'s entropy AUROC column shows the
+proxy works once fixed: $0.68$--$0.98$ across tasks, best on \texttt{tool}
+(many easy true negatives) and weakest on \texttt{platform}.
 
 \section{Conformal Prediction}
 \label{sec:conformal}
-\textbf{Scope note:} split conformal prediction's distribution-free
-coverage guarantee is a statement about exchangeability with the
-calibration set, not about label correctness -- it holds formally even
-when calibrated against weak labels, because the guarantee is
-``the true \emph{weak} label falls in the predicted set $(1-\alpha)$ of
-the time,'' not ``the true \emph{real-world} label does.'' That
-distinction is the entire content of this scope note: conformal coverage
-against the Knowledge Agent's labels is a well-defined, honestly
-reportable number, but it validates agreement with the extraction
-pipeline, not correctness. Reported as such.
+\textbf{Scope note:} split conformal prediction's distribution-free coverage
+guarantee concerns exchangeability with the calibration set, not label
+correctness. It holds when calibrated against weak labels because the
+guarantee is that the \emph{weak} label falls in the predicted set
+$(1-\alpha)$ of the time, not that the \emph{real-world} label does. Conformal
+coverage against the Knowledge Agent's labels therefore validates agreement
+with the extraction pipeline, not correctness.
 
 \subsection{Method: split conformal with the LAC score}
 \label{sec:conformal-method}
@@ -854,22 +776,20 @@ point, this construction guarantees
 \end{equation}
 with $\alpha{=}0.10$ (90\% target coverage) throughout. As the scope
 note above states, $y_{\mathrm{test}}$ here is the weak label
-$y^{\mathrm{KA}}$: \Cref{eq:coverage} is a real, distribution-free
+$y^{\mathrm{KA}}$: \Cref{eq:coverage} is a distribution-free
 guarantee about agreement with the extraction pipeline, not about
 real-world correctness. For \texttt{dominant\_tactic} and
 \texttt{platform}, \Cref{eq:lac,eq:qhat,eq:predset} apply directly over
-the task's full class vocabulary. \texttt{family} and \texttt{tool} have
-no single multiclass structure to conformalize -- each is an independent
-per-class binary classifier (\Cref{sec:baselines}) -- so each class $k$
-gets its own binary LAC calibration and its own $\hat q_k$, and a
-sample's per-label prediction sets are reported both individually and
-jointly (all labels simultaneously covered).
+the task's full class vocabulary. \texttt{family} and \texttt{tool} are
+independent per-class binary classifiers (\Cref{sec:baselines}) with no single
+multiclass structure, so each class $k$ gets its own binary LAC calibration
+and its own $\hat q_k$, and we report a sample's per-label prediction sets
+both individually and jointly (all labels simultaneously covered).
 
-\Cref{alg:conformal} is run for $5$ repeated random $60/20/20$
-train/calibration/test splits per task, results averaged across repeats
-rather than reported from one arbitrary split -- a single 20\%
-calibration set at this sample size ($n{\approx}200$) is not a reliable
-enough estimate of $\hat q$ to report alone.
+We run \Cref{alg:conformal} for $5$ repeated random $60/20/20$
+train/calibration/test splits per task and average across repeats, because a
+single 20\% calibration set at this sample size ($n{\approx}200$) does not
+estimate $\hat q$ reliably.
 
 \begin{algorithm}[htbp]
 \caption{Split conformal calibration and coverage evaluation}
@@ -916,13 +836,11 @@ Tool (per-label)    &  7 & 0.907 (joint: 0.650) & 0.92/2 & 0.640\textsuperscript
 \end{fittable}
 \end{table}
 
-\Cref{fig:conformal} plots \Cref{tab:conformal} directly. Reading the
-results against the two questions this section set out to answer:
-first, does the guarantee hold empirically -- \texttt{dominant\_tactic}
-and \texttt{platform}'s marginal coverage (0.908, 0.925) both meet the
-0.90 target. The sets differ in how much they say: platform sets average
-1.19 of 4 classes, while dominant-tactic sets average 2.60 of 11, which
-is the price of the target coverage for a model this weak. Second, the
+\Cref{fig:conformal} plots \Cref{tab:conformal}. First, does the guarantee
+hold empirically? Marginal coverage for \texttt{dominant\_tactic} and
+\texttt{platform} (0.908, 0.925) meets the 0.90 target. Platform sets average
+1.19 of 4 classes, while dominant-tactic sets average 2.60 of 11, which is the
+cost of the target coverage for a model this weak. Second, the
 conditional-coverage stress test: all four multiclass slice numbers stay
 within about 3 points of the marginal rate. These slices are subsets of
 the same random splits, so they also appear in the calibration data; they
@@ -960,22 +878,23 @@ list. Only the channel-type and external-corpus partitions are free of it.
 
 \subsection{Setups and methods}
 \label{sec:ood-setups}
-Four setups, each with a stated in-distribution
-(ID)/out-of-distribution (OOD) split, drawn from real structure in the
-corpus rather than synthetic corruption:
+We use four setups, each with a stated in-distribution
+(ID)/out-of-distribution (OOD) split. Three come from the corpus's own
+structure rather than synthetic corruption, and the fourth is an external
+sanity check:
 
 \begin{enumerate}
 \item \textbf{Temporal emergence.} ID: pre-2024 videos. OOD: videos from
   2024 or later mentioning a family whose first appearance in this corpus
-  is 2024 or later -- verified directly against per-family first-occurrence
-  year rather than assumed (Maze, Medusa, Black Basta, INC: 2024;
-  Cactus: 2025), at \Cref{alg:ood-verify}'s assertion step. This is a
-  family's first appearance in this corpus, not its real-world emergence.
+  is 2024 or later. \Cref{alg:ood-verify}'s assertion step checks each
+  family's first-occurrence year (Maze, Medusa, Black Basta, INC: 2024;
+  Cactus: 2025). This is a family's first appearance in this corpus, not its
+  real-world emergence.
 \item \textbf{Channel-type shift.} ID: Vendor + DFIR channels. OOD:
   Conference + Independent channels.
 \item \textbf{Leave-rare-family-out.} ID: videos never mentioning
-  ``Cl0p'' (11 occurrences total -- long-tailed, unlike Conti/LockBit/
-  Qilin/Akira, each with 19+). OOD: the 11 Cl0p-mentioning videos.
+  ``Cl0p'' (11 occurrences in total, unlike Conti, LockBit, Qilin, and Akira,
+  each with 19 or more). OOD: the 11 Cl0p-mentioning videos.
 \item \textbf{External corpus.} ID: RansKnow transcripts. OOD: 20
   Newsgroups \citep{lang1995newsweeder} (\texttt{rec.\allowbreak sport.\allowbreak baseball} + \texttt{sci.\allowbreak space},
   excluding 38 documents left empty after header, footer, and quote
@@ -983,11 +902,11 @@ corpus rather than synthetic corruption:
   an obviously unrelated domain before trusting them on setups 1--3.
 \end{enumerate}
 
-Four detection methods, computed from a shared \texttt{dominant\_tactic}
-classifier (TF-IDF features, LightGBM -- \Cref{tab:results}'s
-best dominant-tactic result, and a natural multiclass fit for the
-softmax-family methods below), refit fresh on each setup's ID-only
-training pool so that no OOD signal leaks into fitting:
+Four detection methods use a shared \texttt{dominant\_tactic} classifier
+(TF-IDF features with LightGBM, the best dominant-tactic result in
+\Cref{tab:results} and a natural multiclass fit for the softmax-family methods
+below). We refit it on each setup's ID-only training pool so that no OOD signal
+leaks into fitting:
 \begin{align}
   s_{\mathrm{MSP}}(x) &= 1 - \max_c \hat p(c\mid x)
     \label{eq:msp}\\
@@ -1003,8 +922,7 @@ training pool so that no OOD signal leaks into fitting:
 \citep{liu2020energy}, computed from LightGBM's raw pre-softmax margins
 $f_c(x)$ (\emph{not} from $\hat p(c\mid x)$: probabilities already sum to
 $1$, which makes \Cref{eq:energy} degenerate to a constant if computed
-from them directly -- a real pitfall caught while implementing this
-section, not a hypothetical one). \Cref{eq:maha} is the class-conditional
+from them). \Cref{eq:maha} is the class-conditional
 Gaussian Mahalanobis distance of \citet{lee2018simple}, with $\phi(x)$ the
 384-dim mean-pooled sentence embedding (\Cref{sec:baselines}'s footnote)
 and $\mu_c,\Sigma$ the ID-train class-conditional means and pooled
@@ -1013,19 +931,20 @@ groups (consistent with \Cref{sec:gold-scope}: no independently verified
 labels exist to group by instead). $\Sigma$ is a Ledoit-Wolf shrinkage
 estimate, because the temporal setup has only 162 training videos in 384
 dimensions and its sample covariance is singular. \Cref{eq:conf-ood} reuses
-\Cref{sec:conformal}'s LAC score, evaluated at the predicted rather than
-true class for OOD flagging -- this is deliberately, not accidentally,
-the same quantity as \Cref{eq:msp}; the two are reported separately for
-comparability with \Cref{eq:qhat}'s calibrated threshold (does a point's
-own score exceed the 90\%-target $\hat q$), which is the operationally
-distinct number.
+\Cref{sec:conformal}'s LAC score, evaluated at the predicted rather than true
+class for OOD flagging. It is deliberately the same formula as \Cref{eq:msp},
+but its classifier is refit on the 75\% of the training pool left after
+holding out a calibration split, so its AUROCs differ slightly. We report it
+separately for comparability with \Cref{eq:qhat}'s calibrated threshold (does
+a point's own score exceed the 90\%-target $\hat q$), which is the
+operationally distinct number.
 
 \begin{algorithm}[htbp]
 \caption{OOD setup evaluation}
 \label{alg:ood-verify}
 \begin{algorithmic}[1]
 \Require corpus $\mathcal{D}$, ID/OOD partition rule for the setup
-\State \textbf{assert} every claimed-emerging family's first-occurrence year matches the setup's stated cutoff \Comment{caught a factual error at this step -- see note below}
+\State \textbf{assert} every claimed-emerging family's first-occurrence year matches the setup's stated cutoff \Comment{caught a factual error at this step; see note below}
 \State split ID pool into $\mathcal{D}_{\mathrm{train}}$ (75\%) / $\mathcal{D}_{\mathrm{test}}^{\mathrm{ID}}$ (25\%)
 \State fit \texttt{dominant\_tactic}/TF-IDF/LightGBM on $\mathcal{D}_{\mathrm{train}}$
 \State score $\mathcal{D}_{\mathrm{test}}^{\mathrm{ID}}$ and $\mathcal{D}_{\mathrm{OOD}}$ under \Cref{eq:msp,eq:energy,eq:maha,eq:conf-ood}
@@ -1033,17 +952,13 @@ distinct number.
 \end{algorithmic}
 \end{algorithm}
 
-The assertion in \Cref{alg:ood-verify} is not decorative: the temporal-
-emergence setup's family list was originally drafted from memory as
-``Qilin, DragonForce, Black Basta,'' before checking actual
-first-occurrence years against the corpus. Qilin's first real occurrence
-is 2019, not post-2023, and DragonForce does not appear in this corpus at
-all -- both would have silently produced a meaningless setup (there is no
-real ID/OOD separation if the ``emerging'' families already appear
-throughout the ID training period). The corrected list (Maze, Medusa,
-Black Basta, INC, Cactus) is the one actually used in \Cref{tab:ood} and
-is verified by \Cref{alg:ood-verify} on every run, not just checked once
-by hand.
+The assertion in \Cref{alg:ood-verify} caught a drafting error. We first
+drafted the temporal setup's family list from memory as ``Qilin, DragonForce,
+Black Basta,'' before checking first-occurrence years against the corpus.
+Qilin first occurs in 2019, not after 2023, and DragonForce does not appear in
+this corpus, so that list would have produced a meaningless setup.
+\Cref{tab:ood} uses the corrected list (Maze, Medusa, Black Basta, INC,
+Cactus), and \Cref{alg:ood-verify} verifies it on every run.
 
 \subsection{Results}
 \label{sec:ood-results}
@@ -1072,8 +987,8 @@ External corpus (sanity) & 259 & 1152 & 0.622 & 0.477 & 0.999 & 0.627 \\
 
 \textbf{The confidence-based methods (MSP, energy, conformal) fail the
 sanity check.} On \texttt{external\_corpus}, MSP reaches only 0.622
-(95\% interval 0.573--0.672) and energy 0.477. Diagnosing \emph{why} is
-informative: 99.0\% of 20 Newsgroups documents are classified
+(95\% interval 0.573--0.672) and energy 0.477. The predictions show why:
+99.0\% of 20 Newsgroups documents are classified
 \texttt{None} (no dominant tactic detected) by the classifier, against
 18.5\% of the ID test set, and with \emph{higher} average confidence
 (mean $\hat p_{\max}$: 0.922 OOD vs.\ 0.895 ID). A sparse, off-topic
@@ -1081,7 +996,7 @@ TF-IDF vector and a tactic-free ransomware transcript both produce the
 same signature, confidently ``no tactics detected,'' so the classifier
 cannot distinguish ``nothing here'' from ``wrong domain entirely.'' This
 is a known blind spot of softmax/probability-based OOD detection in
-general \citep{hendrycks2017baseline}, reproduced concretely here. These
+general \citep{hendrycks2017baseline}, reproduced here. These
 methods reach 0.58--0.60 on channel-type shift and fall below 0.5 on the
 other two setups.
 
@@ -1090,7 +1005,7 @@ check but inverts on the family-based setups.} It reaches 0.999 (95\%
 interval 0.996--1.000) on \texttt{external\_corpus} and 0.672
 (0.618--0.723) on channel-type shift, where Conference/Independent
 channels differ detectably in embedding space; \Cref{sec:ood-leakage} shows
-that both figures are flattered and gives the more conservative values. On temporal emergence
+that both figures are optimistic and gives more conservative values. On temporal emergence
 (0.220, 0.130--0.324) and leave-rare-family-out (0.145, 0.065--0.244) it
 is below chance with intervals that exclude 0.5, so these are not noise:
 OOD videos sit \emph{closer} to the class means than ID videos do. The
@@ -1133,9 +1048,8 @@ method; the zero exceedance rates are in the released JSON
   \label{fig:ood-radar}
 \end{figure}
 
-A single AUROC number per (method, setup) cell is a summary of a
-comparison between two full score \emph{distributions}, and the two
-figures below show more of that picture. \Cref{fig:ood-distributions}
+Each AUROC summarizes a comparison between two score distributions, and the
+two figures below show more of that comparison. \Cref{fig:ood-distributions}
 plots the MSP score density for the ID-test and OOD populations, per
 setup, as a 3D ridgeline: the blue (ID) and red (OOD) curves overlap
 heavily and both peak in the low-score, high-confidence region, the visual
@@ -1217,28 +1131,27 @@ video naming a family absent from training.
 
 \section{Interpretability and Perturbation Robustness}
 \label{sec:interpretability}
-Unlike Sections~\ref{sec:baselines}--\ref{sec:conformal}, this section
-asks questions about model \emph{behavior} -- does it exploit shortcuts,
-what does it rely on, how much do its predictions move under
-semantically-irrelevant edits -- none of which require independent
-ground truth to answer, so Section~\ref{sec:gold-scope}'s scope note
-applies only where a model's training labels matter.
+Unlike Sections~\ref{sec:baselines}--\ref{sec:conformal}, this section asks
+about model \emph{behavior}: does it exploit shortcuts, what does it rely on,
+and how much do its predictions move under semantically irrelevant edits?
+These questions need no independent ground truth, so
+Section~\ref{sec:gold-scope}'s scope note applies only where a model's
+training labels matter.
 
 \subsection{Confound checks}
 \label{sec:confounds}
 \textbf{Length.} Transcript word count correlates moderately with
 \path{Tactic_Total_Mentions} (Pearson $r=0.409$) and weakly with
-\texttt{Family\_Count} ($r=0.131$), but not at all with
-\path{Tool_Total_Mentions} ($r=0.043$, not significant) -- the
-confound is not uniform across signal types. Because it is mathematically
-guaranteed that dividing every tactic's count for one video by that
-video's own word count cannot change which tactic has the highest count
-(argmax is scale-invariant per row), the confound cannot affect how the
-\texttt{Dominant\_Tactic} label itself was derived; the remaining question
-is whether it inflates a model given those counts. Re-scoring logistic
-regression on structured features with length-normalized (mentions per
-1{,}000 words) instead of raw counts gives 0.753 macro-F1 against 0.764, a
-1.1-point difference, not a length-exploitation artifact. This check covers
+\texttt{Family\_Count} ($r=0.131$), and not significantly with
+\path{Tool_Total_Mentions} ($r=0.043$), so the confound is not uniform across
+signal types. Dividing every tactic's count for one video by that video's word
+count cannot change which tactic has the highest count, because argmax is
+scale-invariant per row, so the confound cannot affect how the
+\texttt{Dominant\_Tactic} label was derived. The remaining question is whether
+it inflates a model given those counts. Re-scoring logistic regression on
+structured features with length-normalized (mentions per 1{,}000 words) instead
+of raw counts gives 0.753 macro-F1 against 0.764, a 1.1-point difference, so
+the model is not exploiting length. This check covers
 only the structured representation, which \Cref{tab:results} excludes for
 this task as circular; length is not tested for the TF-IDF model.
 
@@ -1249,110 +1162,98 @@ mentions and re-scoring TF-IDF LogReg under both CV protocols leaves the
 for \texttt{family} (0.028 raw $\to$ 0.031 masked) and for
 \texttt{dominant\_tactic} (0.020 raw $\to$ 0.029 masked). Whatever a
 model exploits when a channel is not held out, it is not the channel
-literally naming itself -- the leakage this split protocol exists to
-catch is stylistic or topical, not addressable by name-masking.
+literally naming itself: the leakage this split protocol exists to catch is
+stylistic or topical, and name-masking does not address it.
 
 \subsection{Counterfactual explanations}
 \label{sec:counterfactual}
-Motivated directly by Finding A: does a classifier trained on the
-\emph{fixed} labels still show the regex's original word-collision
-fragility? TF-IDF+LogReg models were trained on today's corrected
-\texttt{Family} labels in 5 stratified folds, and every video was scored
-only by a model that did not train on it, because the videos in question
-are labeled not-\texttt{Play} in the training data. The test set is the 275
+Finding A raises a question: does a classifier trained on the \emph{fixed}
+labels still show the regex's original word-collision fragility? We trained
+TF-IDF+LogReg models on the corrected \texttt{Family} labels in 5 stratified
+folds and scored every video only with a model that did not train on it,
+because the videos in question are labeled not-\texttt{Play} in the training
+data. The test set is the 275
 videos the Section~\ref{sec:finding-a} fix removed from \texttt{Play},
 meaning the fix's own judgment rather than a per-video human review. Of
 these, 8 (2.9\%) still reach $P(\text{Play})\geq 0.5$, with a maximum of
 0.999. Their median probability is 0.005, against 0.001 for the 648 other
 not-\texttt{Play} videos, and the model ranks them above those videos with
 AUROC 0.58 (standard error about 0.02). That is a weak trace of the
-collision rather than either a clean bill of health or wholesale
-inheritance. It should be read against a weak model: only 18.9\% of the 111
+collision, neither a clean result nor wholesale inheritance. It should be read
+against a weak model: only 18.9\% of the 111
 videos labeled \texttt{Play} reach 0.5, with a median of 0.019.
 
-The complementary question -- what drives the model's confident
-\texttt{Play} predictions -- was then asked with a greedy word-\emph{type}
-removal counterfactual search (remove the vocabulary word whose removal
-most reduces $P(\text{Play})$, repeat until the prediction flips or a
-budget is exhausted) on the 8 labeled \texttt{Play} videos with the highest
-held-out probability (all at least 0.97). \texttt{play} appears in 3 of 8
-removal sets, and \textbf{0 of 8 cases flip on removing ``play'' alone}.
-Every case flips within 1--8 removals, mostly generic words rather than
-ransomware-specific vocabulary: the ASR filler ``uh'' appears in 5 of 8
-sets, and one case flips on removing ``uh'' alone. So the model's confident
-predictions rest on a diffuse, easily disturbed set of words rather than
-one trigger word or a clean ``ransomware vocabulary,'' a finding about the
+We then asked what drives the model's confident \texttt{Play} predictions,
+using a greedy word-\emph{type} removal counterfactual search (remove the
+vocabulary word whose removal most reduces $P(\text{Play})$, repeat until the
+prediction flips or a budget is exhausted) on the 8 labeled \texttt{Play}
+videos with the highest held-out probability (all at least 0.97).
+\texttt{play} appears in 3 of 8 removal sets, and 0 of 8 cases flip on removing
+``play'' alone. Every case flips within 1--8 removals, mostly generic words
+rather than ransomware-specific vocabulary: the ASR filler ``uh'' appears in 5
+of 8 sets, and one case flips on removing ``uh'' alone. The model's confident
+predictions therefore rest on a diffuse, easily disturbed set of words rather
+than one trigger word or a clear ransomware vocabulary, a finding about the
 decision boundary that is separate from the word-collision question.
 
 \subsection{Perturbation robustness}
 \label{sec:perturbation}
-Untargeted counterpart to the counterfactual search above: two
-perturbation types, measuring flip rate (does the top prediction change)
-and mean absolute probability drift on freshly-fit TF-IDF+LogReg models.
-\emph{Simulated ASR noise} (compound proper nouns split apart, e.g.
+As an untargeted counterpart to the counterfactual search, we apply two
+perturbation types and measure flip rate (does the top prediction change) and
+mean absolute probability drift on freshly fit TF-IDF+LogReg models.
+\emph{Simulated ASR noise} (compound proper nouns split apart, e.g.\
 \texttt{WannaCry}$\to$``wanna cry,'' \texttt{Mimikatz}$\to$``mimi cats,''
-plus 8\% random token deletion) was applied to the 74 official-caption
-videos specifically -- the ``clean'' subset, simulating what those
-transcripts would look like if they had gone through the ASR cascade
-that produced the other 92.7\% of the corpus (Finding B). \emph{Synonym
-substitution} (common non-jargon words swapped for synonyms) was applied
-to a 150-video sample.
+plus 8\% random token deletion) is applied to the 74 official-caption videos,
+to simulate what those transcripts would look like after the ASR cascade that
+produced the other 92.7\% of the corpus (Finding B). \emph{Synonym
+substitution} (common non-jargon words swapped for synonyms) is applied to a
+150-video sample.
 
 \texttt{dominant\_tactic}, \texttt{platform}, and \texttt{relevance} are
 essentially unmoved by either perturbation (0.0--0.7\% flip rate, mean
 drift $<0.01$ in every case). \texttt{family} flips 20--26\% of the time
 under both perturbations despite a much smaller mean drift ($\sim$0.002)
-than any other task -- not a new problem, but the same weak-model issue
-from \Cref{tab:results} (\texttt{family}'s best macro-F1 is 0.129)
-surfacing differently: closely-bunched, low-confidence probabilities
-mean a negligible nudge is enough to change which barely-ahead class
-wins. On the framing of ``adversarial'' robustness for this dataset: no
-real adversary submits transcripts to evade this classifier in
-production, so a full gradient-based adversarial-attack framework would
-be disproportionate to what this paper needs; the actual risk surface is
-ASR transcription noise and channel-style variation, which is what this
-sweep directly measures. Combined with Section~\ref{sec:ood}'s
-temporal-emergence and leave-rare-family-out setups, these results are
-the paper's answer to how the system handles evolving, novel, and
-adversarial-adjacent input -- not three separate open questions.
+than any other task. This is the weak-model issue from \Cref{tab:results}
+(\texttt{family}'s best macro-F1 is 0.129) appearing in another form: closely
+bunched, low-confidence probabilities mean a negligible nudge can change which
+class wins. We did not run a gradient-based adversarial attack, because no real
+adversary submits transcripts to evade this classifier in production. The
+practical risks are ASR transcription noise and channel-style variation, which
+this sweep and the channel-grouped protocol address. Together with
+Section~\ref{sec:ood}'s temporal-emergence and leave-rare-family-out setups,
+these results describe how the system handles evolving, novel, and noisy input.
 
 \section{Limitations and Ethics}
 \label{sec:limitations}
 
-This paper's single most consequential limitation is the absence of
-independent ground truth, discussed at length below; it opens this
-section as prose, not because the remaining limitations are
-unimportant, but because they are all of a smaller and more familiar
-kind (sampling bias, ASR noise, source rights, dual use) that most empirical NLP
-papers carry in some form, whereas the ground-truth gap changes what
+The most consequential limitation of this paper is the absence of independent
+ground truth. The other limitations (sampling bias, ASR noise, source rights,
+dual use) are of a more familiar kind, but the ground-truth gap changes what
 every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
-\emph{means}, not merely how confidently it can be stated.
+\emph{means}, not only how confidently it can be stated.
 
 \begin{itemize}
-  \item \textbf{No independent ground truth.} This is the paper's central
-    limitation, not one bullet among several, and is why it is stated
-    repeatedly rather than once: this project does not include a
+  \item \textbf{No independent ground truth.} This project has no
     human-annotated evaluation set independent of the Knowledge Agent
     pipeline (Section~\ref{sec:gold-scope}). Recruiting external annotators
     would have required ethics approval beyond the project's existing
-    approval for public data, and was not undertaken; a single-investigator
-    annotation pass was considered and rejected as
-    still too close to the system under evaluation to count as independent
-    evidence. Every result in Sections~\ref{sec:baselines}--\ref{sec:conformal}
-    is consequently agreement with an audited but demonstrably imperfect
-    extraction pipeline (Finding A), not verified accuracy.
-    Section~\ref{sec:ood}'s OOD scores and Section~\ref{sec:interpretability}'s
-    behavioral diagnostics are less directly affected, although two OOD
-    setups and the \texttt{Play} check are defined using the regex's labels.
-    Independent annotation, with whatever ethics review the
-    authors' institution requires, is the single highest-value extension
-    of this work. It is more valuable than any additional modeling in
-    Sections~\ref{sec:baselines}--\ref{sec:conformal} would be, since none
-    of that modeling can currently be checked against anything but itself.
+    approval for public data, and was not undertaken; we considered a
+    single-investigator annotation pass and rejected it as too close to the
+    system under evaluation to count as independent evidence. Every result in
+    Sections~\ref{sec:baselines}--\ref{sec:conformal} is therefore agreement
+    with an audited but imperfect extraction pipeline (Finding A), not verified
+    accuracy. Section~\ref{sec:ood}'s OOD scores and
+    Section~\ref{sec:interpretability}'s behavioral diagnostics are less
+    directly affected, although two OOD setups and the \texttt{Play} check are
+    defined using the regex's labels. Independent annotation, with whatever
+    ethics review the authors' institution requires, is the highest-value
+    extension of this work, since none of the modeling in
+    Sections~\ref{sec:baselines}--\ref{sec:conformal} can currently be checked
+    against anything but itself.
   \item \textbf{Sampling bias.} The corpus is conditioned on which
     channels operators chose to run, which videos they chose to title and
     describe in keyword-matchable ways, and YouTube's own recommendation
-    and search surfacing -- not a random or exhaustive sample of
+    and search surfacing, so it is not a random or exhaustive sample of
     ransomware-relevant discourse.
   \item \textbf{ASR noise.} 92.7\% of transcripts are machine-transcribed,
     mostly by \texttt{whisper\_base}. Section~\ref{sec:perturbation}'s
@@ -1382,36 +1283,26 @@ every quantitative claim in Sections~\ref{sec:baselines}--\ref{sec:conformal}
     here for research use. A rights holder can have a transcript removed
     from future releases by opening an issue on the repository or by
     contacting the corresponding author.
-  \item \textbf{Dual use.} This is a corpus of ransomware tactics, tools,
-    and case studies extracted from public educational content, and it is
-    worth being direct about what that does and does not change. Every
-    underlying video is already public, already indexed by YouTube's own
-    search, and produced by defenders (vendors, DFIR practitioners,
-    conference speakers) specifically to be watched by other defenders;
-    RansKnow discloses no technique, tool, or tactic that is not already
-    public, and the source material is materially less operationally
-    detailed than existing public resources built for exactly this kind
-    of aggregation -- the MITRE ATT\&CK knowledge base itself, and the
-    CTI reporting datasets in Section~\ref{sec:related}
-    \citep{lim2017malwaretextdb, lange2024annoctr}, both already
-    structure comparable tactic/technique/tool information at finer
-    granularity and higher label quality than RansKnow's weak-label
-    extraction achieves (\Cref{sec:gold-scope}). What RansKnow adds is
-    not new operational detail but a different modality (transcribed
-    spoken narration rather than written reports) and different scale
-    accessible without specialized CTI tooling. The realistic marginal
-    risk is a small reduction in the effort needed to \emph{aggregate}
-    already-scattered public information into one structured, searchable
-    place, rather than any disclosure of non-public technique detail;
-    this is the same tradeoff every public threat-intelligence
-    aggregation resource makes; and the corpus's actual utility, given
-    \Cref{sec:gold-scope}'s weak-label ceiling and Section~\ref{sec:baselines}'s
-    weak family/tool classification performance, currently favors
-    defensive research uses (weak-supervision methodology, corpus-level
-    trend analysis) far more than it favors any operational offensive
-    use, for which primary-source technical documentation would be a far
-    more direct and reliable starting point than this corpus's noisy,
-    ASR-transcribed, regex-extracted labels.
+  \item \textbf{Dual use.} This corpus covers ransomware tactics, tools, and
+    case studies from public educational content. Every underlying video is
+    already public and indexed by YouTube's search, and was produced by
+    defenders (vendors, DFIR practitioners, conference speakers) for other
+    defenders. RansKnow discloses no technique, tool, or tactic that is not
+    already public. The MITRE ATT\&CK knowledge base and the CTI datasets in
+    Section~\ref{sec:related} \citep{lim2017malwaretextdb, lange2024annoctr}
+    already structure comparable information at finer granularity and higher
+    label quality than RansKnow's weak-label extraction
+    (\Cref{sec:gold-scope}). RansKnow adds a different modality (transcribed
+    spoken narration rather than written reports) and a scale accessible
+    without specialized CTI tooling. The realistic marginal risk is a small
+    reduction in the effort needed to \emph{aggregate} already-scattered public
+    information, the same tradeoff every public threat-intelligence aggregation
+    resource makes. Given \Cref{sec:gold-scope}'s weak-label ceiling and
+    Section~\ref{sec:baselines}'s weak family and tool classification, the
+    corpus currently favors defensive research uses (weak-supervision
+    methodology, corpus-level trend analysis) far more than offensive use, for
+    which primary-source technical documentation would be a more direct and
+    reliable starting point.
 \end{itemize}
 
 \section{Conclusion}
@@ -1432,11 +1323,11 @@ perturbation checks can be reused on any dataset labeled by keyword or
 regex extraction over scraped or transcribed text.
 
 The priority for future work is independent human annotation of a subset
-of the labels (Section~\ref{sec:limitations}). Until then, every
-quantitative result outside Section~\ref{sec:ood} describes agreement with
-the pipeline: a macro-F1 of 0.90 on \texttt{relevance} means a LightGBM
-classifier on TF-IDF reproduces the regex output at that rate, not that
-it identifies relevant videos at that rate.
+of the labels (Section~\ref{sec:limitations}). Until then, the baseline,
+calibration, and conformal results describe agreement with the pipeline: a
+macro-F1 of 0.90 on \texttt{relevance} means a LightGBM classifier on TF-IDF
+reproduces the regex output at that rate, not that it identifies relevant
+videos at that rate.
 
 \section*{CRediT authorship contribution statement}
 \textbf{Henry Kabuye:} Conceptualization, Methodology, Software, Data
